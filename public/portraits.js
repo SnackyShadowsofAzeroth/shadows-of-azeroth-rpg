@@ -42,8 +42,9 @@ function selectImage(id,name,status){
    status.textContent="Portrait saved for "+name+".";
    refresh();window.soaPortraits?.refreshMenu?.();
   }catch(e){status.textContent=e?.name==="QuotaExceededError"?"Device storage is full; your existing portrait was preserved.":String(e.message||"Unable to save image.")}
-  input.value="";
+  input.value="";input.remove();
  };
+ document.body.append(input);
  input.click();
 }
 function controls(id,name,cls){
