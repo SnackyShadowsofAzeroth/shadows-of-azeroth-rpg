@@ -1,6 +1,6 @@
 (()=>{"use strict";
 const ROSTER_KEY="soa-character-roster-v1", SLOT_PREFIX="soa-character-slot-v1-", ENTER_KEY="soa-character-entered";
-const SAVES=["soa-save-v1","soa-campaign-v1","soa-companions-v1","soa-campaign-enabled"];
+const SAVES=["soa-save-v1","soa-campaign-v1","soa-companions-v1","soa-reputation-v1","soa-campaign-enabled"];
 const RACES={
  "Human":{faction:"Alliance",classes:["Warrior","Paladin","Hunter","Rogue","Priest","Mage","Warlock"]},
  "Dwarf":{faction:"Alliance",classes:["Warrior","Paladin","Hunter","Rogue","Priest","Shaman"]},
@@ -68,7 +68,7 @@ function create(profile){
  if(!snapshot(active.id)){alert("Unable to back up your current adventure. Character creation has been stopped to protect your save.");return}
  roster.characters.push(p);roster.active=id;active=p;commitRoster();
  write("soa-save-v1",baseState(p));write("soa-campaign-v1",newCampaign(p));
- localStorage.removeItem("soa-companions-v1");localStorage.setItem("soa-campaign-enabled","1");
+ localStorage.removeItem("soa-companions-v1");localStorage.removeItem("soa-reputation-v1");localStorage.setItem("soa-campaign-enabled","1");
  snapshot(id);
  try{sessionStorage.setItem(ENTER_KEY,"1")}catch(e){}
  location.reload();
@@ -201,6 +201,6 @@ document.addEventListener("DOMContentLoaded",()=>{
  profilePanel();
  try{if(sessionStorage.getItem(ENTER_KEY)!=="1")drawMenu()}catch(e){drawMenu()}
  // New-character adventures need their own future companions. Snacky's fixed party should not be shown as theirs.
- if(active.origin==="custom"){const pane=get("companion-panel");if(pane)pane.hidden=true;const journal=get("journal");if(journal?.closest){const legacy=journal.closest("section.panel");if(legacy)legacy.hidden=true}}
+ if(active.origin==="custom"){const pane=get("companion-panel");if(pane)pane.hidden=true;const rep=document.createElement("section");rep.className="panel soa-standalone-reputation";rep.id="soa-standalone-reputation";rep.append(document.createElement("h2"));rep.firstChild.textContent="Reputation";get("soa-profession-panel")?.after(rep);window.soaReputation?.renderInto?.(rep);const journal=get("journal");if(journal?.closest){const legacy=journal.closest("section.panel");if(legacy)legacy.hidden=true}}
 });
 })();
