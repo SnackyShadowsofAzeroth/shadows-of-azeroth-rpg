@@ -140,3 +140,12 @@ Skill-up chances are intentionally diminishing as proficiency rises: **85%** at 
 This updates the previous guaranteed up-to-3-points profession practice behavior: successful practice is now a normal +1 *chance*, just like natural gameplay. Profession checks remain part of the already-resolved Living Campaign action, not a second expenditure of Energy.
 
 Testing: mine an ore vein or inspect a device in a successful Living Campaign action, then inspect the Character Record. Repeat several separate actions; some award +1, others don't. Failed checks award nothing, resuming failed Gemini requests cannot award twice, and each character's professions remain independent.
+
+
+## Natural-resource surveys (v16)
+
+Living Campaign now has a permanent **Survey surrounding resources** choice, inserted immediately after Gemini's lettered actions and before the lettered Custom Action. It performs an Investigate-type action and requests a description of plausible *currently visible* local materials: ore veins, herbs, water, animal hides, or other natural opportunities. It does not gather anything, mint loot, spend special tools, or increase a profession; a **separate custom harvesting/mining action** must follow. Indoor restricted archives cannot suddenly acquire outdoor herb patches or mineable mineral veins. The survey uses the ordinary investigation success/complication roll and time/energy accounting. It remembers any findings in the ongoing scene text and the history passed to Gemini.
+
+Skill progression from successfully gathering is still handled by the existing +1-chance profession rules, limited to professions owned by the active character. The resource-survey action is explicitly excluded from this award path even when it mentions mining or herbs.
+
+Smoke test: after loading a Living Campaign scene, confirm Gemini options are lettered, the next button reads **Survey surrounding resources**, and Custom Action is the subsequent letter. On a survey, verify generated narrative reports plausible observations but grants no resources or skill points. Follow up with a separate gathering action only if a resource was actually identified. Confirm no interruption to regular choices, save, or relationships. Offline shell cache v16.
