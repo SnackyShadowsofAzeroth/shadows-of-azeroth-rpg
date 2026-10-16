@@ -1,0 +1,29 @@
+/* Character Selection — Classic-friendly parchment and dark fantasy framing */
+.soa-character-menu-open{overflow:hidden}
+.soa-menu-overlay{position:fixed;inset:0;z-index:2000;display:grid;place-items:center;padding:12px;background:#0b1118ed;overflow-y:auto;overscroll-behavior:contain}
+.soa-menu-card{width:min(100%,630px);max-height:calc(100dvh - 28px);overflow:auto;overscroll-behavior:contain;padding:clamp(16px,4vw,28px);border:4px ridge #a38a5e;border-radius:14px;background:radial-gradient(ellipse at 15% 5%,#f0dfb0aa,transparent 55%),linear-gradient(150deg,#d6bd8c,#bda275);color:#382519;box-shadow:inset 0 0 0 2px #5f472c,0 20px 60px #000}
+.soa-roster-kicker{font:700 10px system-ui;letter-spacing:.19em;color:#805528}
+.soa-menu-card h1{font-size:clamp(26px,6vw,38px);color:#56391d;text-shadow:0 1px #f8e1aa;margin:8px 0 16px}
+.soa-character-list{display:grid;gap:10px;margin:12px 0 20px}
+.soa-character-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px;background:#574633;border:1px solid #987b4c;border-radius:9px;color:#f5e6c5}
+.soa-character-item>div{display:flex;flex-direction:column;gap:4px;min-width:0}
+.soa-character-item strong{font:700 17px Georgia,serif;color:#efd29a}
+.soa-character-item span{font:12px/1.5 system-ui;color:#e1d1b5}
+.soa-character-item button,.soa-create-form button,.soa-menu-back{width:auto;min-width:108px;margin:0;border:1px solid #ddbd79;background:linear-gradient(#77613d,#493726);color:#fff2d1;text-align:center;font:600 13px system-ui;padding:10px}
+.soa-create-new{margin:15px 0;border-top:1px solid #987b50;padding:12px 0}
+.soa-create-new summary{font:700 17px Georgia,serif;color:#58391d;cursor:pointer;padding:6px}
+.soa-create-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:12px 0}
+.soa-create-form label{display:grid;gap:5px;font:600 12px system-ui;color:#493521}
+.soa-create-form input,.soa-create-form select{width:100%;max-width:100%;min-width:0;padding:11px;border:1px solid #97784a;border-radius:7px;background:#f7e6c2;color:#332414;font:15px system-ui}
+.soa-create-form label:first-child,.soa-create-form p,.soa-create-form button{grid-column:1/-1}
+.soa-create-form .muted{color:#634b32}
+.soa-menu-error{color:#8e251d;font:700 12px system-ui}
+.soa-menu-back{display:block;margin:12px auto 0}
+#soa-characters-button{width:auto;margin:12px auto 3px;padding:8px 18px;min-height:40px;font:600 12px system-ui;background:#263647;color:#f3deb0;border-color:#91774d;text-align:center}
+.soa-profession-row{display:flex;align-items:center;justify-content:space-between;gap:9px;padding:10px 0;border-top:1px solid #83785a55;font:13px system-ui}
+.soa-profession-row strong,.soa-profession-row span{flex:1}
+.soa-profession-row button{width:auto;margin:0;padding:8px 11px;min-height:36px;font-size:12px}
+.soa-profession-panel details summary{cursor:pointer;padding:8px 0;color:inherit}
+body.theme-alternative .soa-profession-row{color:#45301b}
+body.theme-alternative .soa-profession-panel h3{color:#523416}
+@media(max-width:430px){.soa-create-form{grid-template-columns:1fr}.soa-character-item{align-items:flex-start;flex-direction:column}.soa-character-item button{width:100%}}
