@@ -66,3 +66,14 @@ Previous companion saves under `soa-companions-v1` are read and migrated **in pl
 3. Select Challenge Values or Betray Trust to test rivalry; select Make Amends to test rebuilding trust. The changes are deliberate, so avoid these choices in a valued romance playthrough unless you want those story outcomes.
 4. Continue playing, then try Confess Feelings → Become Partners → Propose Marriage → Hold Wedding once their stage and requirements permit. Wedding requires a peaceful in-game location.
 5. Reload and verify the same stages/journal remain. Check that HP, Energy, gold, alarm, and main mission location remain unchanged by optional social interactions.
+
+
+## Story choice and live-refresh reliability fix
+
+Living Campaign choices now validate the AI access code **before** applying an action; missing code scrolls to and focuses the password field. On a valid action, local HP, Energy, time and history are saved immediately, and **all status/story/companion panels re-render without a browser reload** (a true reload would clear the unpersisted private access code). Generated scenes automatically repaint the page.
+
+A pending-action marker is saved before requesting the next scene. If Gemini or network fails, the existing scene remains visible with **Retry generating next scene**, preventing duplicate Energy deductions and duplicate history actions. The pending marker clears only after a valid scene is saved. Buttons are disabled while generating or while a turn is pending. The legacy offline prototype remains playable.
+
+To test: load a saved living campaign, enter the separate AI access code if needed, choose a story action, confirm status displays “Gemini is writing…” followed by the new scene and updated stats. Disconnect network during one generation and verify the pending retry button; reconnect, retry and confirm the chosen action is not applied twice. Social panel interactions still update instantly. The static-shell offline cache is version v8.
+
+This patch was verified by source checks and a JavaScript mock flow for normal success and network failure, **not** by a Cloudflare production browser test.
