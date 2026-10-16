@@ -49,3 +49,20 @@ Independent fan-created project; not affiliated with Blizzard Entertainment.
 
 **Important:** ChatGPT roleplay continuity, local scripted progress, the Gemini living-campaign save, and the companion journal are **separate persistence systems**. This update does not synchronize or overwrite them. Test on an existing browser profile first, with a local backup if available.
 
+
+
+## Bonds of Azeroth — relationship expansion
+
+The former **Flirt** interaction is now part of a broader optional relationship system. The companion panel has **Trust**, **Affection** and **Respect** meters, relationship stages (**Acquaintance**, **Friend**, **Close friend**, **Rival**, **Enemy**), and romantic stages (**Dating**, **Partners**, **Engaged**, **Married**). Actions include Show Interest, Deepen Friendship, Make Amends, Confess Feelings, Become Partners, Propose Marriage, Hold Wedding, Challenge Values, and Betray Trust. Major conflicts can be recorded using the `soaCompanions.applyStoryConsequence(id,kind)` hook with `protect`, `honor`, `deceive`, `cruelty`, or `betray`.
+
+Romance progresses only after adequate trust, affection and shared interactions; the character reciprocates in the game's scripted romance route rather than being awarded romance for one flirt. A proposal creates **Engaged**; a wedding ceremony is a separate event at a peaceful location. Negative choices lower trust and can produce enmity; Make Amends offers a route toward reconciliation. All dialogue is mild and non-explicit.
+
+Previous companion saves under `soa-companions-v1` are read and migrated **in place**, preserving the prior journal and converting old 0–5 rapport values into initial relationship attributes. No reset is performed. Romance choices are **optional offline interactions**; the Gemini narrator now receives the current statuses as context, but the full main-campaign consequence engine does not yet automatically infer every character's reaction from every generated quest choice. The explicit story-consequence hook is ready for deeper integration.
+
+### Test relationships on iPhone
+
+1. Reload online once to update offline assets (service-worker cache v7).
+2. In Bonds of Azeroth, select Pippa → Show Interest, Deepen Friendship, or Ask Advice and check the meters/journal.
+3. Select Challenge Values or Betray Trust to test rivalry; select Make Amends to test rebuilding trust. The changes are deliberate, so avoid these choices in a valued romance playthrough unless you want those story outcomes.
+4. Continue playing, then try Confess Feelings → Become Partners → Propose Marriage → Hold Wedding once their stage and requirements permit. Wedding requires a peaceful in-game location.
+5. Reload and verify the same stages/journal remain. Check that HP, Energy, gold, alarm, and main mission location remain unchanged by optional social interactions.
