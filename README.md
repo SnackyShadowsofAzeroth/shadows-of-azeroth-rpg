@@ -172,3 +172,26 @@ Crossing **-75** creates a **pursuit** story hook; crossing **+75** creates a **
 6. Verify Classic and Alternative parchment appearance and regular story choices still work.
 
 Initial source checks and mock reputation test verified one-time standing changes, threshold notices, and no inventory writes. The actual Cloudflare deployment and on-device rendering remain to be tested.
+
+
+## UI refinement and safety pass (v18)
+
+Reviewed character selection, Living Campaign, companion progression, faction reputation, offline shell, visual themes and save slots. Applied **UI-only navigation refinement** and a **non-destructive multi-character backup** feature.
+
+- **Reputation** now has two switchable views: **Companions & Romance** and **Factions & Enemies**. Previously, both appeared in one very long panel. The selected view persists during redraws within the current session; existing relationship values, faction values and event histories are unchanged.
+- Companion actions now appear in three concise groups: **Everyday interactions** (visible), **Romance & commitments** (expandable), and **Disagreements & reconciliation** (expandable). All twelve original actions remain available.
+- The header provides one-tap **Adventure / Professions / Reputation** in-page navigation. These scroll without changing the selected character, quest progress or any currency.
+- Character selection includes **Download All Character Saves**. This creates a JSON archive with roster metadata and every character's separate offline campaign, Living Campaign, companion relationships and reputation slot. The *active* character is freshly snapshotted before export. The backup does **not** store the Gemini access code or Cloudflare secrets and makes no gameplay state edits.
+- **Important limitation:** The complete backup **cannot currently be imported directly in the UI**. Keep the file for safety and future import-support work. The older Export Save button remains a legacy save export, not a full-roster export.
+- Fixed a Reputation render-target issue so faction updates only refresh their faction container, not the top of the companion page. Existing saved faction data is preserved.
+- Offline shell cache updated to v18; no changes to core combat, dice, profession chances, story resolutions or relationship consequences.
+
+Mock DOM tests verified both Reputation tabs, selected-tab retention after a faction update and redraw, no duplicate ledger, and correct friend/faction separation. A mocked full-roster export included story, companion, reputation, cash/HP and roster data. JavaScript syntax checks passed. Cloudflare production rendering and iPhone UI remain to be checked.
+
+### Post-deployment smoke test
+
+1. Refresh while online once the new build is deployed. Confirm the main story choices still advance normally and all character stats stay the same.
+2. Open Reputation: switch tabs; verify Companions & Romance retains prior trust/affection/respect, and Factions & Enemies retains faction standings and enemies. Expand and close romance/conflict groups.
+3. Use top navigation to jump between Adventure, Professions and Reputation; no reload or turn advance should occur.
+4. In Characters, choose Download All Character Saves; keep the resulting JSON private and somewhere safe. Do not confuse this with a supported in-app restore feature.
+5. Verify Classic / Alternative parchment switching and individual-character saves still work.
