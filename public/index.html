@@ -35,6 +35,17 @@ button.soa-social-action{margin:0;border:1px solid #54657b;background:#233248;pa
 .soa-journal-entries p{font:13px/1.6 system-ui;border-bottom:1px solid #334350;padding-bottom:9px}
 @media(max-width:380px){.soa-person{font-size:11px!important}.soa-companion-info .soa-rapport{margin-left:0;flex-basis:100%}.panel{padding:13px}}
 @media(prefers-reduced-motion:reduce){button{transition:none}}
+</style><style id="soa-relationships">
+.soa-relation-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:10px 0 15px}
+.soa-relation-cell{padding:9px;border:1px solid #35495d;border-radius:10px;background:#101c29}
+.soa-relation-label{font:600 11px system-ui;color:#e0e8e9;margin-bottom:7px}
+.soa-relation-rail{height:7px;border-radius:9px;overflow:hidden;background:#384456}
+.soa-relation-fill{height:100%;border-radius:9px;background:#66aa88}
+.soa-relation-fill.affection{background:#d48ca6}
+.soa-relation-fill.respect{background:#8aa6d8}
+.soa-companion-panel .soa-interactions{grid-template-columns:repeat(2,minmax(0,1fr))}
+.soa-companion-panel button.soa-social-action:disabled{cursor:not-allowed}
+@media(max-width:370px){.soa-relation-metrics{gap:5px}.soa-relation-cell{padding:7px}.soa-relation-label{font-size:10px}}
 </style></head>
 <body><main><header><div class="eyebrow">An unofficial Azeroth-inspired adventure</div><h1>SHADOWS OF AZEROTH</h1><div class="eyebrow">The Hollow Raven · Chapter I</div></header>
 <section class="panel"><div style="display:flex;justify-content:space-between;align-items:center"><h2>Snacky Lugnuts</h2><span class="tag">SI:7 · Combat Swords</span></div><div class="stats"><div class="stat">Health <div class="num" id="hp"></div><div class="bar"><i id="hpbar"></i></div></div><div class="stat">Energy <div class="num" id="energy"></div><div class="bar energy"><i id="enbar"></i></div></div><div class="stat wide">Gold <strong id="gold"></strong></div><div class="stat">Time <strong id="time"></strong></div><div class="stat">Alert <strong id="alert"></strong></div></div><div class="abilities" id="abilities"></div></section>
