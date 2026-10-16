@@ -84,7 +84,7 @@ function exportRosterBackup(){
   if(!saved){alert("Backup stopped: a save slot for "+p.name+" is missing.");return false}
   slots[p.id]=saved;
  }
- const archive={kind:"shadows-of-azeroth-multi-character-backup",version:1,createdAt:new Date().toISOString(),roster:roster,slots:slots};
+ const archive={kind:"shadows-of-azeroth-multi-character-backup",version:1,createdAt:new Date().toISOString(),roster:roster,slots:slots,portraits:window.soaPortraits?.exportPortraits?.(roster.characters.map(p=>p.id))||{}};
  try{
   const blob=new Blob([JSON.stringify(archive,null,2)],{type:"application/json"});
   const url=URL.createObjectURL(blob),link=document.createElement("a");
@@ -133,7 +133,7 @@ function drawMenu(){
  const backup=make("button","Download All Character Saves");backup.type="button";backup.className="soa-roster-backup";backup.onclick=exportRosterBackup;shell.append(backup);
  const backupHelp=make("p","Download a backup of every hero, story, reputation and relationship. Keep the file somewhere safe; in-app full-roster restore is not available yet.","soa-menu-help");shell.append(backupHelp);
  const close=make("button","Return to Game");close.className="soa-menu-back";close.onclick=()=>{overlay.remove();document.documentElement.classList.remove("soa-character-menu-open");try{sessionStorage.setItem(ENTER_KEY,"1")}catch(e){}};
- shell.append(close);overlay.append(shell);document.body.append(overlay);document.documentElement.classList.add("soa-character-menu-open");
+ shell.append(close);overlay.append(shell);document.body.append(overlay);document.documentElement.classList.add("soa-character-menu-open");window.soaPortraits?.refreshMenu?.();
 }
 function profilePanel(){
  const head=document.querySelector("header");if(!head)return;
@@ -148,11 +148,12 @@ function profilePanel(){
  }
  head.append(nav);
  const pane=make("section");pane.className="panel soa-profession-panel";pane.id="soa-profession-panel";
- head.after(pane);drawProfessions();
+ head.after(pane);drawProfessions();window.soaPortraits?.refresh?.();
 }
 function drawProfessions(){
  const root=get("soa-profession-panel");if(!root)return;root.replaceChildren();
  root.append(make("div","CHARACTER RECORD","soa-roster-kicker"),make("h2",active.name+" · "+active.race+" "+active.className));
+ window.soaPortraits?.refresh?.();
  const meta=make("p",active.faction+" · "+(active.specialization||"Unchosen"),"muted");root.append(meta);
  root.append(make("h3","Professions"));
  for(const [name,progress] of Object.entries(active.professions||{})){
