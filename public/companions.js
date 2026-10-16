@@ -103,5 +103,5 @@ load();
 const el=document.createElement("section");el.className="panel soa-companion-panel";el.id="companion-panel";
 const campaign=$("campaign-box");if(campaign)campaign.after(el);else document.querySelector("header")?.after(el);
 draw();
-window.soaCompanions={getRecent:()=>data.entries.slice(-4).map(x=>x.person+": "+x.text.slice(0,150)),getRapport:()=>({...data.rapport}),getRelationships:()=>Object.fromEntries(Object.keys(PEOPLE).map(id=>{const r=rel(id);return [id,{trust:r.trust,affection:r.affection,respect:r.respect,status:status(r),romance:r.romance,grievances:r.grievances}]})),applyStoryConsequence};
+window.soaCompanions={getRecent:()=>data.entries.slice(-4).map(x=>x.person+": "+x.text.slice(0,150)),getRapport:()=>({...data.rapport}),getRelationships:()=>Object.fromEntries(Object.keys(PEOPLE).map(id=>{const r=rel(id);return [id,{trust:r.trust,affection:r.affection,respect:r.respect,status:status(r),romance:r.romance,grievances:r.grievances}]})),applyStoryConsequence,refresh:draw};
 })();
