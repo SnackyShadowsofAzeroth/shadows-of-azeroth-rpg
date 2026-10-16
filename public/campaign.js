@@ -1,6 +1,6 @@
 (()=>{"use strict";
 const KEY="soa-campaign-v1", MAX=24;
-let campaign=null,busy=false,enabled=false,customDraft="",customType="investigate",statusMessage="";
+let campaign=null,busy=false,enabled=false,customDraft="",customType="investigate",customSocialSkill="auto",statusMessage="";
 const get=id=>document.getElementById(id);
 function store(){try{localStorage.setItem(KEY,JSON.stringify(campaign))}catch(e){}}
 function make(){return {turn:0,scene:null,history:[],journal:[],lastError:"",lastAction:"Begin the next chapter from the secured central junction",lastResult:"No further events yet. The six-person expedition is intact; the zero-alarm objective is active.",pending:null}}
@@ -42,7 +42,51 @@ function dialogueFromCustom(action){
  /\b(?:thank\w*|prais\w*|compliment\w*|jok\w*|friendly|friend|kind)\b/i.test(text)?"friendly":"neutral";
  return {target:mentions[0][0],tone};
 }
+// Targeted social checks use d20 and a character's learned background.
+function socialSkill(action){
+ if(action?.socialSkill&&["bluff","bribe","romance","threaten"].includes(action.socialSkill))return action.socialSkill;
+ const text=String(action?.text||"");
+ if(/\b(?:brib\w*|pay off|buy (?:off|their silence)|offer\s+\d+\s*(?:gold|silver|copper|g\b|s\b|c\b))\b/i.test(text))return "bribe";
+ if(/\b(?:threaten\w*|intimidat\w*|menac\w*|coerc\w*|frighten\w*|scare\w*)\b/i.test(text))return "threaten";
+ if(/\b(?:flirt\w*|romanc\w*|seduc\w*|woo\b|court\w*|charm\w*|kiss\w*|confess feelings|show (?:romantic )?interest)\b/i.test(text))return "romance";
+ if(/\b(?:bluff\w*|deceiv\w*|lie\b|pretend\w*|impersonat\w*|mislead\w*|con\b|fabricat\w*|false identity|fake credential)\b/i.test(text))return "bluff";
+ return null;
+}
+function bribeCopper(text){
+ const amounts=[...String(text||"").matchAll(/(\d{1,7})\s*(gold|silver|copper|g\b|s\b|c\b)/gi)];
+ if(!amounts.length)return null;
+ const factors={gold:10000,g:10000,silver:100,s:100,copper:1,c:1};
+ return amounts.reduce((sum,m)=>sum+Number(m[1])*factors[m[2].toLowerCase()],0);
+}
+function socialCheck(action,skill){
+ const amounts=skill==="bribe"?bribeCopper(action.text):null;
+ if(skill==="bribe"&&(!Number.isSafeInteger(amounts)||amounts<=0)){status("Specify an explicit bribe amount, such as 'offer 50 silver to the guard'. No action was spent.");return null}
+ if(skill==="bribe"&&s.money<amounts){status("Not enough money for the proposed bribe. No action was spent.");return null}
+ const bonuses=window.soaCharacters?.getSocialSkills?.()||{bluff:5,bribe:3,romance:3,threaten:2};
+ const bonus=Number(bonuses[skill])||0;
+ const baseDC=action.difficulty==="easy"?10:action.difficulty==="hard"?18:14;
+ // Existing trust is meaningful: hostility makes an advance much less likely.
+ let modifier=0;
+ if(skill==="romance"){
+  const name=String(action.text||"").toLowerCase();
+  const who=name.includes("pippa")?"pippa":name.includes("bromli")?"bromli":name.includes("lethariel")?"lethariel":null;
+  const relationship=who?window.soaCompanions?.getRelationships?.()?.[who]:null;
+  if(relationship&&relationship.trust<0)modifier=4;
+ }
+ const dc=baseDC+modifier,roll=1+Math.floor(Math.random()*20),total=roll+bonus,ok=roll!==1&&(roll===20||total>=dc);
+ let effect="";
+ if(skill==="bluff")effect=ok?"The deception is provisionally believed.":"The target detects inconsistencies or remains unconvinced.";
+ if(skill==="threaten")effect=ok?"The target yields to pressure for now.":"The target refuses to be intimidated.";
+ if(skill==="romance")effect=ok?"The approach is welcomed as a conversation, without guaranteeing romantic reciprocation or consent.":"The approach is not reciprocated or the moment is unsuitable; respect the boundary.";
+ if(skill==="bribe"){
+  if(ok){s.money-=amounts;effect="The offered "+fmtMoney(amounts)+" is accepted and paid; the target cooperates within reason."}
+  else effect="The offer is refused. No money changes hands.";
+ }
+ s.time++;s.en=Math.min(100,s.en+10);
+ return (ok?"Success":"Complication")+": "+skill[0].toUpperCase()+skill.slice(1)+" check: d20 "+roll+" + "+bonus+" = "+total+" vs DC "+dc+". "+effect+" Result is authoritative. Do not fabricate further costs, relationship stages, or compelled consent.";
+}
 function result(action){
+ const skill=socialSkill(action);if(skill)return socialCheck(action,skill);
  const t=action.type;let cost=0,chance=1,damage=0;
  if(t==="stealth"){cost=20;chance=.78-s.alert*.08}
  if(t==="engineering"){cost=10;chance=.75-s.alert*.05}
@@ -77,7 +121,7 @@ function draw(){
  if(!campaign.scene){status(statusMessage||"Ready to generate the next scene.");return}
  const sc=campaign.scene,head=document.createElement("h3"),where=document.createElement("div"),text=document.createElement("p");head.textContent=sc.title||"The Hollow Raven";where.className="muted";where.textContent=sc.location||"Raven Hill";text.style.whiteSpace="pre-line";text.textContent=readableStory(sc.story);box.append(head,where,text);
  if(pending()){const note=document.createElement("p");note.className="soa-pending";note.textContent="Your last decision is saved. The next story scene has not arrived. Retry safely without repeating the action.";box.append(note);const retry=document.createElement("button");retry.className="med";retry.textContent="Retry generating next scene";retry.disabled=busy;retry.onclick=()=>{returnToAdventure("status");advance(campaign.lastAction,campaign.lastResult,true)};box.append(retry)}
- for(const [index,choice] of sc.choices.entries()){const b=document.createElement("button");b.className=choice.difficulty==="easy"?"low":choice.difficulty==="hard"?"high":"med";const headline=document.createElement("strong"),detail=document.createElement("small");headline.textContent=String.fromCharCode(65+index)+") "+choice.text;headline.style.display="block";detail.textContent=(choice.difficulty||"medium")+" difficulty · "+(choice.type||"investigate");detail.style.cssText="display:block;margin-top:5px;color:#bccbd6;font:12px system-ui;text-transform:capitalize";b.append(headline,detail);b.disabled=busy||!!pending();b.onclick=()=>choose(choice);box.append(b)}
+ for(const [index,choice] of sc.choices.entries()){const b=document.createElement("button");b.className=choice.difficulty==="easy"?"low":choice.difficulty==="hard"?"high":"med";const headline=document.createElement("strong"),detail=document.createElement("small");headline.textContent=String.fromCharCode(65+index)+") "+choice.text;headline.style.display="block";detail.textContent=(choice.difficulty||"medium")+" difficulty · "+(socialSkill(choice)||choice.type||"investigate")+(socialSkill(choice)?" · d20":"");detail.style.cssText="display:block;margin-top:5px;color:#bccbd6;font:12px system-ui;text-transform:capitalize";b.append(headline,detail);b.disabled=busy||!!pending();b.onclick=()=>choose(choice);box.append(b)}
  const surveyIndex=sc.choices.length;
  const survey=document.createElement("button");
  survey.type="button";survey.className="low soa-resource-survey";
@@ -90,23 +134,27 @@ function draw(){
  survey.disabled=busy||!!pending()||!navigator.onLine;
  survey.onclick=()=>choose({text:"Survey the immediate surroundings for accessible natural resources suitable for this character's professions. Search carefully for visible ore veins, herbs, fishable water, recoverable hides and other plausible materials; note what is actually present. Do not harvest, mine, gather or award materials yet. If none are accessible, report that clearly.",type:"investigate",difficulty:"medium",survey:true});
  box.append(survey);
- const form=document.createElement("form"),label=document.createElement("label"),input=document.createElement("textarea"),typeLabel=document.createElement("label"),type=document.createElement("select"),submit=document.createElement("button"),help=document.createElement("p");
+ const form=document.createElement("form"),label=document.createElement("label"),input=document.createElement("textarea"),typeLabel=document.createElement("label"),type=document.createElement("select"),skillLabel=document.createElement("label"),skillSelect=document.createElement("select"),submit=document.createElement("button"),help=document.createElement("p");
  label.htmlFor="campaign-custom-action";label.textContent=String.fromCharCode(65+Math.min(sc.choices.length+1,25))+") Custom action — choose your own approach";
  input.id="campaign-custom-action";input.className="ai-input";input.maxLength=300;input.required=true;input.rows=3;input.placeholder="e.g. Ask Pippa to build a distraction while I slip past the guards";input.value=customDraft;input.disabled=busy||!!pending();
  input.oninput=()=>{customDraft=input.value;submit.disabled=busy||!!pending()||!navigator.onLine||!customDraft.trim()};
  typeLabel.htmlFor="campaign-custom-type";typeLabel.textContent="Action type";type.id="campaign-custom-type";type.className="ai-input";type.disabled=busy||!!pending();
  for(const [value,name] of [["investigate","Investigate"],["stealth","Stealth"],["engineering","Engineering"],["social","Social"],["combat","Combat"],["move","Move"],["rest","Rest"]]){const option=document.createElement("option");option.value=value;option.textContent=name;type.append(option)}
  type.value=customType;type.onchange=()=>{customType=type.value};
+ skillLabel.htmlFor="campaign-social-skill";skillLabel.textContent="Social check (optional)";
+ skillSelect.id="campaign-social-skill";skillSelect.className="ai-input";skillSelect.disabled=busy||!!pending();
+ for(const [value,label] of [["auto","Auto-detect"],["bluff","Bluff · Deception"],["bribe","Bribe · Negotiation"],["romance","Romance · Charm"],["threaten","Threaten · Intimidation"]]){const opt=document.createElement("option");opt.value=value;opt.textContent=label;skillSelect.append(opt)}
+ skillSelect.value=customSocialSkill;skillSelect.onchange=()=>{customSocialSkill=skillSelect.value};
  help.id="campaign-custom-help";help.className="muted";help.textContent="Write dialogue with Pippa, Bromli or Lethariel to affect relationships after the scene resolves. Direct conversation is recognized automatically; other actions use the selected type. New scenes require internet.";;input.setAttribute("aria-describedby",help.id);
  submit.type="submit";submit.textContent="Take custom action";submit.disabled=busy||!navigator.onLine||!customDraft.trim();
- form.onsubmit=e=>{e.preventDefault();const text=input.value.trim();if(!text||busy)return;choose({text,type:type.value,difficulty:"medium",custom:true})};form.append(label,input,typeLabel,type,help,submit);box.append(form);
+ form.onsubmit=e=>{e.preventDefault();const text=input.value.trim();if(!text||busy)return;choose({text,type:type.value,difficulty:"medium",custom:true,socialSkill:skillSelect.value==="auto"?undefined:skillSelect.value})};form.append(label,input,typeLabel,type,skillLabel,skillSelect,help,submit);box.append(form);
  const foot=document.createElement("p");foot.className="muted";foot.textContent="Scene "+campaign.turn+" · "+(navigator.onLine?"Online":"Offline saved scene")+" · "+campaign.journal.slice(-2).join(" · ");box.append(foot)
 }
 async function choose(choice){
  if(busy||pending())return;
  if(!navigator.onLine){status("Offline: your saved scene is available. Reconnect to generate another.");return}
  if(!accessCode()){focusAccess();return}
- const detected=dialogueFromCustom(choice);if(detected&&choice.custom&&choice.type==="investigate")choice={...choice,type:"social"};
+ const detected=dialogueFromCustom(choice);if((detected||socialSkill(choice))&&choice.custom&&choice.type==="investigate")choice={...choice,type:"social"};
  const resolution=result(choice);
  if(!resolution){status("Not enough Energy for that action.");return}
  campaign.lastAction=safe(choice.text);campaign.lastResult=resolution;
