@@ -13,16 +13,19 @@ const ACTIONS=[
  {id:"apologize",label:"Make amends",detail:"Repair a damaged bond"},
  {id:"confess",label:"Confess feelings",detail:"Ask about mutual romance"},
  {id:"commit",label:"Become partners",detail:"Discuss a future together"},
- {id:"propose",label:"Propose marriage",detail:"A serious, mutual commitment"}
+ {id:"propose",label:"Propose marriage",detail:"Ask for a shared future"},
+ {id:"wedding",label:"Hold wedding",detail:"Celebrate your commitment"},
+ {id:"argue",label:"Challenge values",detail:"Risk a disagreement"},
+ {id:"betray",label:"Betray their trust",detail:"Potentially become enemies"}
 ];
 let selected="pippa", data={rapport:{pippa:0,bromli:0,lethariel:0},entries:[],relations:{}}, last="";
 const blank=()=>({trust:0,affection:0,respect:0,status:"Acquaintance",romance:"none",grievances:0,interactions:0});
 const clamp=(v,min=-100,max=100)=>Math.max(min,Math.min(max,Number(v)||0));
 const rel=id=>data.relations[id]||(data.relations[id]=blank());
-function status(r){return r.trust<=-65?"Enemy":r.trust<=-25?"Rival":r.romance==="married"?"Married":r.romance==="committed"?"Partners":r.romance==="dating"?"Dating":r.trust>=65?"Close friend":r.trust>=25?"Friend":"Acquaintance"}
+function status(r){return r.trust<=-65?"Enemy":r.trust<=-25?"Rival":r.romance==="married"?"Married":r.romance==="engaged"?"Engaged":r.romance==="committed"?"Partners":r.romance==="dating"?"Dating":r.trust>=65?"Close friend":r.trust>=25?"Friend":"Acquaintance"}
 function adjust(r,change){for(const [k,n] of Object.entries(change))r[k]=clamp(r[k]+n);if(r.trust<=-65){r.romance="none"}r.status=status(r)}
 const $=id=>document.getElementById(id);
-function load(){try{const v=JSON.parse(localStorage.getItem(KEY)||"null");if(v&&v.rapport&&Array.isArray(v.entries)){for(const id of Object.keys(PEOPLE))data.rapport[id]=Math.max(0,Math.min(5,Number(v.rapport[id])||0));data.entries=v.entries.slice(-40).filter(x=>x&&typeof x.text==="string"&&typeof x.person==="string");if(v.relations&&typeof v.relations==="object"){for(const id of Object.keys(PEOPLE)){const old=v.relations[id]||{},r=blank();for(const k of ["trust","affection","respect"])r[k]=clamp(old[k]);r.interactions=clamp(old.interactions,0,999);r.grievances=clamp(old.grievances,0,999);r.romance=["none","dating","committed","married"].includes(old.romance)?old.romance:"none";r.status=status(r);data.relations[id]=r}}else{for(const id of Object.keys(PEOPLE)){const r=rel(id),n=data.rapport[id]||0;r.trust=n*9;r.affection=n*5;r.respect=n*6;r.interactions=n;r.status=status(r)}}}}catch(e){}}
+function load(){try{const v=JSON.parse(localStorage.getItem(KEY)||"null");if(v&&v.rapport&&Array.isArray(v.entries)){for(const id of Object.keys(PEOPLE))data.rapport[id]=Math.max(0,Math.min(5,Number(v.rapport[id])||0));data.entries=v.entries.slice(-40).filter(x=>x&&typeof x.text==="string"&&typeof x.person==="string");if(v.relations&&typeof v.relations==="object"){for(const id of Object.keys(PEOPLE)){const old=v.relations[id]||{},r=blank();for(const k of ["trust","affection","respect"])r[k]=clamp(old[k]);r.interactions=clamp(old.interactions,0,999);r.grievances=clamp(old.grievances,0,999);r.romance=["none","dating","committed","engaged","married"].includes(old.romance)?old.romance:"none";r.status=status(r);data.relations[id]=r}}else{for(const id of Object.keys(PEOPLE)){const r=rel(id),n=data.rapport[id]||0;r.trust=n*9;r.affection=n*5;r.respect=n*6;r.interactions=n;r.status=status(r)}}}}catch(e){}}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){}}
 function add(tag,text){const e=document.createElement(tag);e.textContent=text;return e}
 function locationAllows(id){if(id!=="lethariel")return true;const mode=localStorage.getItem("soa-campaign-enabled")==="1";if(!mode)return false;const scene=window.soaLivingCampaign?.getState?.()?.scene;return /checkpoint|tavern|regroup/i.test(String(scene?.location||""))}
@@ -55,7 +58,10 @@ function interact(kind){
  if(kind==="apologize"){if(r.trust>=10&&r.grievances===0){valid=false;message="There is no outstanding disagreement to settle."}else{change={trust:9,respect:3};r.grievances=Math.max(0,r.grievances-1);message=person+" hears the apology. Trust will take further effort to rebuild."}}
  if(kind==="confess"){if(r.trust<45||r.affection<35||r.interactions<5){valid=false;message="A mutual romance requires more trust, affection, and shared history."}else if(r.romance!=="none"){valid=false;message="That conversation has already happened; nurture your existing relationship."}else{r.romance="dating";change={trust:4,affection:8};message=person+" reciprocates Snacky's feelings and agrees to explore romance at a comfortable pace."}}
  if(kind==="commit"){if(r.romance!=="dating"||r.trust<65||r.affection<60){valid=false;message="A lasting partnership requires an established romance and deeper trust."}else{r.romance="committed";change={trust:5,affection:6};message=person+" agrees to build a future with Snacky."}}
- if(kind==="propose"){if(r.romance!=="committed"||r.trust<82||r.affection<82||r.interactions<12){valid=false;message="Marriage is only possible after meaningful shared experiences and a strong, mutually committed relationship."}else{r.romance="married";change={trust:2,affection:2};message=person+" accepts Snacky's proposal. They will arrange a ceremony when the expedition can safely return."}}
+ if(kind==="propose"){if(r.romance!=="committed"||r.trust<82||r.affection<82||r.interactions<12){valid=false;message="A proposal requires a strong committed partnership and shared history."}else{r.romance="engaged";change={trust:2,affection:2};message=person+" accepts Snacky's proposal. They plan a ceremony once safely back in town."}}
+ if(kind==="wedding"){if(r.romance!=="engaged"){valid=false;message="A wedding requires an accepted proposal."}else if(!/tavern|town|camp|darkshire/i.test(String(window.soaLivingCampaign?.getState?.()?.scene?.location||""))){valid=false;message="Return to a peaceful location, such as Scarlet Raven Tavern, to celebrate the wedding."}else{r.romance="married";change={trust:4,affection:4};message=person+" and Snacky exchange vows before their friends. Their marriage is entered into the relationship journal."}}
+ if(kind==="argue"){change={trust:-14,respect:-10};r.grievances++;message=person+" disagrees strongly with Snacky. Their relationship becomes strained."}
+ if(kind==="betray"){change={trust:-44,respect:-24,affection:-18};r.grievances+=2;message=person+" feels betrayed. This may turn a friend into a rival or enemy."}
  if(!message)return;
  if(valid){adjust(r,change);r.interactions++;data.rapport[selected]=clamp(r.trust/9,0,5)}
  last=message;const label=ACTIONS.find(x=>x.id===kind)?.label||kind;
