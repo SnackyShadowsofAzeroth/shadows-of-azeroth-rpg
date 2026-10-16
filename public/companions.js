@@ -115,6 +115,7 @@ function draw(){
  const top=add("div","REPUTATION · ALLIES, FACTIONS & ENEMIES");top.className="soa-kicker";target.append(top);
  const heading=add("h2","Reputation");heading.className="soa-section-title";target.append(heading);
  const intro=add("p","Companion bonds, faction standings and enemies shape your reputation across Azeroth. Friendship, romance and rivalries remain part of your story.");intro.className="muted";target.append(intro);
+ if(window.soaReputation){const jump=add("button","View faction standings & known enemies ↓");jump.type="button";jump.className="sub soa-reputation-jump";jump.onclick=()=>target.querySelector("#soa-faction-ledger")?.scrollIntoView({behavior:"smooth",block:"start"});target.append(jump)}
  const subhead=add("h3","Companions & personal relationships");subhead.className="soa-section-title";target.append(subhead);
  const nav=add("div","");nav.className="soa-people";nav.setAttribute("role","group");nav.setAttribute("aria-label","Choose companion");
  for(const [id,p] of Object.entries(PEOPLE)){
