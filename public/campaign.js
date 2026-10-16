@@ -12,20 +12,20 @@ function refreshDisplay(){render();draw();window.soaCompanions?.refresh?.()}
 function pending(){return campaign?.pending&&typeof campaign.pending.action==="string"?campaign.pending:null}
 // Conservative explicit-target parsing: never infer a relationship event from ordinary movement.
 function dialogueFromCustom(action){
- if(!action?.custom||action.type!=="social")return null;
+ if(!action?.custom)return null;
  const text=String(action.text||"").slice(0,300);
  const mentions=[["pippa",/\b(?:pippa|sparkwhistle)\b/i],["bromli",/\b(?:bromli|ironkeg)\b/i],["lethariel",/\b(?:lethariel)\b/i]].filter(([id,re])=>re.test(text));
  if(mentions.length!==1)return null;
  // Explicit dialogue intent required; references to a companion in another activity don't count.
- if(!/\b(?:talk|speak|say|tell|ask|chat|converse|compliment|flirt|joke|thank|praise|apologiz\w*|confess|insult|mock|argue|betray|lie|reassure|encourage|comfort|support)\b/i.test(text))return null;
+ if(!/\b(?:talk\w*|speak\w*|say|tell|chat\w*|convers\w*|compliment\w*|flirt\w*|jok\w*|thank\w*|prais\w*|apologiz\w*|confess\w*|insult\w*|mock\w*|argu\w*|betray\w*|lie\b|reassur\w*|encourag\w*|comfort\w*|support\w*)\b/i.test(text))return null;
  const tone=/\b(?:betray|sell out|turn against)\b/i.test(text)?"betray":
  /\b(?:insult|mock|humiliat\w*|threaten)\b/i.test(text)?"insult":
  /\b(?:apologiz\w*|sorry|forgive me)\b/i.test(text)?"apologize":
- /\b(?:flirt|romance|attract\w*|kiss|beautiful|handsome|adorable|crush)\b/i.test(text)?"flirt":
+ /\b(?:flirt\w*|romance|attract\w*|kiss\w*|beautiful|handsome|adorable|crush)\b/i.test(text)?"flirt":
  /\b(?:argue|disagree|challenge)\b/i.test(text)?"disagree":
  /\b(?:support|comfort|reassure|encourage|protect)\b/i.test(text)?"support":
  /\b(?:truth|honest|confess)\b/i.test(text)?"honest":
- /\b(?:thank|praise|compliment|joke|friendly|friend|kind)\b/i.test(text)?"friendly":"neutral";
+ /\b(?:thank\w*|prais\w*|compliment\w*|jok\w*|friendly|friend|kind)\b/i.test(text)?"friendly":"neutral";
  return {target:mentions[0][0],tone};
 }
 function result(action){
@@ -71,7 +71,7 @@ function draw(){
  typeLabel.htmlFor="campaign-custom-type";typeLabel.textContent="Action type";type.id="campaign-custom-type";type.className="ai-input";type.disabled=busy||!!pending();
  for(const [value,name] of [["investigate","Investigate"],["stealth","Stealth"],["engineering","Engineering"],["social","Social"],["combat","Combat"],["move","Move"],["rest","Rest"]]){const option=document.createElement("option");option.value=value;option.textContent=name;type.append(option)}
  type.value=customType;type.onchange=()=>{customType=type.value};
- help.id="campaign-custom-help";help.className="muted";help.textContent="Describe what you attempt. Action type sets the normal Energy cost and roll; custom actions use medium difficulty. New scenes require internet.";input.setAttribute("aria-describedby",help.id);
+ help.id="campaign-custom-help";help.className="muted";help.textContent="Write dialogue with Pippa, Bromli or Lethariel to affect relationships after the scene resolves. Direct conversation is recognized automatically; other actions use the selected type. New scenes require internet.";;input.setAttribute("aria-describedby",help.id);
  submit.type="submit";submit.textContent="Take custom action";submit.disabled=busy||!navigator.onLine||!customDraft.trim();
  form.onsubmit=e=>{e.preventDefault();const text=input.value.trim();if(!text||busy)return;choose({text,type:type.value,difficulty:"medium",custom:true})};form.append(label,input,typeLabel,type,help,submit);box.append(form);
  const foot=document.createElement("p");foot.className="muted";foot.textContent="Scene "+campaign.turn+" · "+(navigator.onLine?"Online":"Offline saved scene")+" · "+campaign.journal.slice(-2).join(" · ");box.append(foot)
@@ -80,10 +80,11 @@ async function choose(choice){
  if(busy||pending())return;
  if(!navigator.onLine){status("Offline: your saved scene is available. Reconnect to generate another.");return}
  if(!accessCode()){focusAccess();return}
+ const detected=dialogueFromCustom(choice);if(detected&&choice.custom&&choice.type==="investigate")choice={...choice,type:"social"};
  const resolution=result(choice);
  if(!resolution){status("Not enough Energy for that action.");return}
  campaign.lastAction=safe(choice.text);campaign.lastResult=resolution;
- campaign.pending={action:campaign.lastAction,resolution,startedAt:Date.now(),dialogue:dialogueFromCustom(choice)};
+ campaign.pending={action:campaign.lastAction,resolution,startedAt:Date.now(),dialogue:detected};
  campaign.history.push("Player: "+campaign.lastAction+" | "+resolution);
  campaign.history=campaign.history.slice(-MAX);store();refreshDisplay();
  await advance(campaign.lastAction,resolution,false);
