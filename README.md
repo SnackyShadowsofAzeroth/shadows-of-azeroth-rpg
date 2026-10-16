@@ -149,3 +149,26 @@ Living Campaign now has a permanent **Survey surrounding resources** choice, ins
 Skill progression from successfully gathering is still handled by the existing +1-chance profession rules, limited to professions owned by the active character. The resource-survey action is explicitly excluded from this award path even when it mentions mining or herbs.
 
 Smoke test: after loading a Living Campaign scene, confirm Gemini options are lettered, the next button reads **Survey surrounding resources**, and Custom Action is the subsequent letter. On a survey, verify generated narrative reports plausible observations but grants no resources or skill points. Follow up with a separate gathering action only if a resource was actually identified. Confirm no interruption to regular choices, save, or relationships. Offline shell cache v16.
+
+
+## Reputation overhaul (v17)
+
+The former **Bonds of Azeroth** panel is now **Reputation**. Existing Pippa/Bromli/Lethariel Trust, Affection, Respect, romance and conflict actions remain unchanged in their original save and are displayed beneath the new heading. A **View faction standings & known enemies** shortcut jumps to the faction ledger.
+
+### Faction standings
+Known factions: SI:7, Stormwind, Night Watch, Ironforge, Horde, Defias Brotherhood and Scarlet Crusade. Each has a separate -100 to +100 standing and **Neutral / Friendly / Honored / Exalted / Unfriendly / Hostile / Hunted** labels. Initial values are narrative starting estimates reflecting character alignment (not claims about externally verified in-game faction reputation). Filter **All / Allies / Hostiles**. Snacky's existing enemies and uncertain figures (Thorne, Harlan Vex, Corvin, Valecroft) also appear as individually tracked standings. The separate-character reputation save key `soa-reputation-v1` is copied with the rest of that hero's snapshot; new heroes begin with their own affiliation-sensitive baseline.
+
+### Actions and thresholds
+On a successful, explicit action naming exactly one faction (such as *help SI:7* or *betray Stormwind*), standings change automatically (+8 for help; -12 for hostility). Explicit successful interactions with known named enemies may change individual standings, too. Ambiguous multi-faction references, failed actions and descriptive mentions without a relevant verb produce no changes. Events are identified and processed only once across retries.
+
+Crossing **-75** creates a **pursuit** story hook; crossing **+75** creates a **patronage** offer hook. These are outstanding opportunities, not actual ambushes, damage, gold or inventory transfers. Gemini receives grounded reputation standings and unresolved events as context and may narrate an appropriate warning, envoy or offer. **Combat and rewards still require explicit decisions and engine-confirmed results.** No money, supplies or enemy spawns are created directly by the reputation panel. Hooks can be marked resolved via the exported reputation API when a future quest/reward engine supports doing so.
+
+### Test checklist
+1. Refresh while online after cache **v17** deploys. Open Reputation and confirm existing Pippa/Bromli/Lethariel affinity values and marriage stages remain.
+2. Use the shortcut to inspect SI:7, Stormwind, Night Watch, factions and known enemies. Verify Faction All / Allies / Hostiles tabs.
+3. In Living Campaign, use a successful action explicitly helping **SI:7** and check its standing rises exactly once. A failed action should not change it.
+4. Check that only reputation changes; HP, Energy, currency, supplies, other characters' saves and actual facility alarms remain unchanged by the reputation system.
+5. Switch heroes and back to confirm independent reputation and the existing preserved companion save.
+6. Verify Classic and Alternative parchment appearance and regular story choices still work.
+
+Initial source checks and mock reputation test verified one-time standing changes, threshold notices, and no inventory writes. The actual Cloudflare deployment and on-device rendering remain to be tested.
