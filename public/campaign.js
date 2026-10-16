@@ -111,7 +111,7 @@ async function advance(action,resolution,retry){
  const data=await response.json().catch(()=>({error:"Invalid server response"}));if(!response.ok)throw Error(data.error||"Request failed");
  if(!Array.isArray(data.choices)||!data.story)throw Error("Incomplete generated scene");
  const completedDialogue=campaign.pending?.dialogue?{...campaign.pending.dialogue,id:"campaign-dialogue-"+campaign.pending.startedAt+"-"+campaign.turn,success:/^Success:/i.test(campaign.pending.resolution)}:null;
- const completedProfession=campaign.pending?{action:campaign.pending.action,resolution:campaign.pending.resolution,id:"profession-"+campaign.pending.startedAt+"-"+campaign.turn}:null;
+ const completedProfession=campaign.pending&&!campaign.pending.survey?{action:campaign.pending.action,resolution:campaign.pending.resolution,id:"profession-"+campaign.pending.startedAt+"-"+campaign.turn}:null;
  campaign.scene=data;campaign.turn++;campaign.pending=null;customDraft="";campaign.history.push("Scene: "+safe(data.title)+" - "+safe(data.story).slice(0,180));campaign.history=campaign.history.slice(-MAX);if(data.journal)campaign.journal.push(safe(data.journal).slice(0,200));campaign.journal=campaign.journal.slice(-100);campaign.lastError="";if(completedDialogue)window.soaCompanions?.applyDialogueOutcome?.(completedDialogue);if(completedProfession)window.soaCharacters?.applyProfession?.(completedProfession.action,completedProfession.resolution,completedProfession.id);store();status("Scene generated and saved. Choose your next action.");
  }catch(e){campaign.lastError=e.message;store();status("AI unavailable: "+e.message+". Your last action is preserved. Tap Retry generating next scene; it will not spend Energy twice.")}finally{busy=false;refreshDisplay()}
 }
