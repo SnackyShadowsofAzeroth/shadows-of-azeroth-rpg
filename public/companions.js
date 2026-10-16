@@ -8,11 +8,21 @@ const ACTIONS=[
  {id:"talk",label:"Catch up",detail:"A brief conversation"},
  {id:"encourage",label:"Encourage",detail:"Raise their spirits"},
  {id:"advice",label:"Ask advice",detail:"Get their perspective"},
- {id:"flirt",label:"Flirt",detail:"A playful, respectful remark"}
+ {id:"flirt",label:"Show interest",detail:"A respectful compliment"},
+ {id:"bond",label:"Deepen friendship",detail:"Build trust together"},
+ {id:"apologize",label:"Make amends",detail:"Repair a damaged bond"},
+ {id:"confess",label:"Confess feelings",detail:"Ask about mutual romance"},
+ {id:"commit",label:"Become partners",detail:"Discuss a future together"},
+ {id:"propose",label:"Propose marriage",detail:"A serious, mutual commitment"}
 ];
-let selected="pippa", data={rapport:{pippa:0,bromli:0,lethariel:0},entries:[]}, last="";
+let selected="pippa", data={rapport:{pippa:0,bromli:0,lethariel:0},entries:[],relations:{}}, last="";
+const blank=()=>({trust:0,affection:0,respect:0,status:"Acquaintance",romance:"none",grievances:0,interactions:0});
+const clamp=(v,min=-100,max=100)=>Math.max(min,Math.min(max,Number(v)||0));
+const rel=id=>data.relations[id]||(data.relations[id]=blank());
+function status(r){return r.trust<=-65?"Enemy":r.trust<=-25?"Rival":r.romance==="married"?"Married":r.romance==="committed"?"Partners":r.romance==="dating"?"Dating":r.trust>=65?"Close friend":r.trust>=25?"Friend":"Acquaintance"}
+function adjust(r,change){for(const [k,n] of Object.entries(change))r[k]=clamp(r[k]+n);if(r.trust<=-65){r.romance="none"}r.status=status(r)}
 const $=id=>document.getElementById(id);
-function load(){try{const v=JSON.parse(localStorage.getItem(KEY)||"null");if(v&&v.rapport&&Array.isArray(v.entries)){for(const id of Object.keys(PEOPLE))data.rapport[id]=Math.max(0,Math.min(5,Number(v.rapport[id])||0));data.entries=v.entries.slice(-30).filter(x=>x&&typeof x.text==="string"&&typeof x.person==="string");}}catch(e){}}
+function load(){try{const v=JSON.parse(localStorage.getItem(KEY)||"null");if(v&&v.rapport&&Array.isArray(v.entries)){for(const id of Object.keys(PEOPLE))data.rapport[id]=Math.max(0,Math.min(5,Number(v.rapport[id])||0));data.entries=v.entries.slice(-40).filter(x=>x&&typeof x.text==="string"&&typeof x.person==="string");if(v.relations&&typeof v.relations==="object"){for(const id of Object.keys(PEOPLE)){const old=v.relations[id]||{},r=blank();for(const k of ["trust","affection","respect"])r[k]=clamp(old[k]);r.interactions=clamp(old.interactions,0,999);r.grievances=clamp(old.grievances,0,999);r.romance=["none","dating","committed","married"].includes(old.romance)?old.romance:"none";r.status=status(r);data.relations[id]=r}}else{for(const id of Object.keys(PEOPLE)){const r=rel(id),n=data.rapport[id]||0;r.trust=n*9;r.affection=n*5;r.respect=n*6;r.interactions=n;r.status=status(r)}}}}catch(e){}}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){}}
 function add(tag,text){const e=document.createElement(tag);e.textContent=text;return e}
 function locationAllows(id){if(id!=="lethariel")return true;const mode=localStorage.getItem("soa-campaign-enabled")==="1";if(!mode)return false;const scene=window.soaLivingCampaign?.getState?.()?.scene;return /checkpoint|tavern|regroup/i.test(String(scene?.location||""))}
@@ -36,11 +46,28 @@ function encounter(id,kind){const level=data.rapport[id]||0;
 }
 function interact(kind){
  if(!locationAllows(selected)){last="That companion is stationed elsewhere. Regroup before speaking in person.";draw();return}
- const response=encounter(selected,kind),person=PEOPLE[selected].name;
- if(kind==="encourage"||kind==="flirt"||kind==="talk")data.rapport[selected]=Math.min(5,(data.rapport[selected]||0)+1);
- const label=ACTIONS.find(a=>a.id===kind)?.label||kind;
- last=response;data.entries.push({person,text:label+": "+response,at:new Date().toISOString()});
- data.entries=data.entries.slice(-30);save();draw();
+ const r=rel(selected),person=PEOPLE[selected].name;let message="",change={},valid=true;
+ if(kind==="talk"){change={trust:5,respect:2};message=encounter(selected,"talk")}
+ if(kind==="encourage"){change={trust:7,respect:5};message=encounter(selected,"encourage")}
+ if(kind==="advice"){change={trust:2,respect:4};message=encounter(selected,"advice")}
+ if(kind==="flirt"){if(r.trust<0){valid=false;message=person+" doesn't welcome this right now. Respect the boundary."}else{change={affection:r.trust>=20?8:3,trust:2};message=encounter(selected,"flirt")}}
+ if(kind==="bond"){if(r.trust<18){valid=false;message="Get to know one another better before sharing a deeper bond."}else{change={trust:9,respect:4,affection:3};message=person+" shares a private hope and appreciates Snacky's attention."}}
+ if(kind==="apologize"){if(r.trust>=10&&r.grievances===0){valid=false;message="There is no outstanding disagreement to settle."}else{change={trust:9,respect:3};r.grievances=Math.max(0,r.grievances-1);message=person+" hears the apology. Trust will take further effort to rebuild."}}
+ if(kind==="confess"){if(r.trust<45||r.affection<35||r.interactions<5){valid=false;message="A mutual romance requires more trust, affection, and shared history."}else if(r.romance!=="none"){valid=false;message="That conversation has already happened; nurture your existing relationship."}else{r.romance="dating";change={trust:4,affection:8};message=person+" reciprocates Snacky's feelings and agrees to explore romance at a comfortable pace."}}
+ if(kind==="commit"){if(r.romance!=="dating"||r.trust<65||r.affection<60){valid=false;message="A lasting partnership requires an established romance and deeper trust."}else{r.romance="committed";change={trust:5,affection:6};message=person+" agrees to build a future with Snacky."}}
+ if(kind==="propose"){if(r.romance!=="committed"||r.trust<82||r.affection<82||r.interactions<12){valid=false;message="Marriage is only possible after meaningful shared experiences and a strong, mutually committed relationship."}else{r.romance="married";change={trust:2,affection:2};message=person+" accepts Snacky's proposal. They will arrange a ceremony when the expedition can safely return."}}
+ if(!message)return;
+ if(valid){adjust(r,change);r.interactions++;data.rapport[selected]=clamp(r.trust/9,0,5)}
+ last=message;const label=ACTIONS.find(x=>x.id===kind)?.label||kind;
+ data.entries.push({person,text:label+": "+message,at:new Date().toISOString()});data.entries=data.entries.slice(-40);save();draw();
+}
+function applyStoryConsequence(id,kind){
+ if(!PEOPLE[id])return false;
+ const impacts={protect:{trust:12,respect:9,affection:4},honor:{trust:10,respect:10},deceive:{trust:-18,respect:-12},cruelty:{trust:-25,respect:-25,affection:-12},betray:{trust:-45,respect:-30,affection:-25}};
+ if(!impacts[kind])return false;const r=rel(id);adjust(r,impacts[kind]);
+ if(["deceive","cruelty","betray"].includes(kind))r.grievances++;r.interactions++;
+ const text=PEOPLE[id].name+" reacts to "+kind+"; relationship: "+status(r)+".";
+ data.entries.push({person:PEOPLE[id].name,text,at:new Date().toISOString()});data.entries=data.entries.slice(-40);save();draw();return true;
 }
 function draw(){
  const target=$("companion-panel");if(!target)return;
