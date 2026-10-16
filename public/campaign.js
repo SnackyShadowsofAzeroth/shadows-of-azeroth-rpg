@@ -10,6 +10,12 @@ function accessCode(){return get("ai-code")?.value.trim()||""}
 function focusAccess(){status("Enter your private AI access code in the AI Story Director panel to continue.");const f=get("ai-code");if(f){f.scrollIntoView({behavior:"smooth",block:"center"});f.focus()}}
 function refreshDisplay(){render();draw();window.soaCompanions?.refresh?.();window.soaCharacters?.refreshProfessions?.()}
 function pending(){return campaign?.pending&&typeof campaign.pending.action==="string"?campaign.pending:null}
+function returnToAdventure(mode="scene"){
+ const destination=mode==="status"?get("campaign-status"):get("campaign-scene")?.querySelector("h3")||get("campaign-status");
+ if(!destination?.scrollIntoView)return;
+ const reduced=window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches===true;
+ destination.scrollIntoView({behavior:reduced?"instant":"smooth",block:"start"});
+}
 // Conservative explicit-target parsing: never infer a relationship event from ordinary movement.
 function dialogueFromCustom(action){
  if(!action?.custom)return null;
@@ -62,7 +68,7 @@ function draw(){
  const box=get("campaign-scene");box.replaceChildren();
  if(!campaign.scene){status(statusMessage||"Ready to generate the next scene.");return}
  const sc=campaign.scene,head=document.createElement("h3"),where=document.createElement("div"),text=document.createElement("p");head.textContent=sc.title||"The Hollow Raven";where.className="muted";where.textContent=sc.location||"Raven Hill";text.style.whiteSpace="pre-line";text.textContent=sc.story;box.append(head,where,text);
- if(pending()){const note=document.createElement("p");note.className="soa-pending";note.textContent="Your last decision is saved. The next story scene has not arrived. Retry safely without repeating the action.";box.append(note);const retry=document.createElement("button");retry.className="med";retry.textContent="Retry generating next scene";retry.disabled=busy;retry.onclick=()=>advance(campaign.lastAction,campaign.lastResult,true);box.append(retry)}
+ if(pending()){const note=document.createElement("p");note.className="soa-pending";note.textContent="Your last decision is saved. The next story scene has not arrived. Retry safely without repeating the action.";box.append(note);const retry=document.createElement("button");retry.className="med";retry.textContent="Retry generating next scene";retry.disabled=busy;retry.onclick=()=>{returnToAdventure("status");advance(campaign.lastAction,campaign.lastResult,true)};box.append(retry)}
  for(const [index,choice] of sc.choices.entries()){const b=document.createElement("button");b.className=choice.difficulty==="easy"?"low":choice.difficulty==="hard"?"high":"med";const headline=document.createElement("strong"),detail=document.createElement("small");headline.textContent=String.fromCharCode(65+index)+") "+choice.text;headline.style.display="block";detail.textContent=(choice.difficulty||"medium")+" difficulty · "+(choice.type||"investigate");detail.style.cssText="display:block;margin-top:5px;color:#bccbd6;font:12px system-ui;text-transform:capitalize";b.append(headline,detail);b.disabled=busy||!!pending();b.onclick=()=>choose(choice);box.append(b)}
  const surveyIndex=sc.choices.length;
  const survey=document.createElement("button");
@@ -99,6 +105,9 @@ async function choose(choice){
  campaign.pending={action:campaign.lastAction,resolution,startedAt:Date.now(),dialogue:detected,survey:choice.survey===true};
  campaign.history.push("Player: "+campaign.lastAction+" | "+resolution);
  campaign.history=campaign.history.slice(-MAX);store();refreshDisplay();
+ // Release the iPhone keyboard and return to the story while Gemini works.
+ if(choice.custom&&document.activeElement?.blur)document.activeElement.blur();
+ returnToAdventure("status");
  await advance(campaign.lastAction,resolution,false);
 }
 async function advance(action,resolution,retry){
@@ -114,7 +123,7 @@ async function advance(action,resolution,retry){
  const completedProfession=campaign.pending&&!campaign.pending.survey?{action:campaign.pending.action,resolution:campaign.pending.resolution,id:"profession-"+campaign.pending.startedAt+"-"+campaign.turn}:null;
  const completedFaction=campaign.pending?{action:campaign.pending.action,resolution:campaign.pending.resolution,id:"faction-"+campaign.pending.startedAt+"-"+campaign.turn}:null;
  campaign.scene=data;campaign.turn++;campaign.pending=null;customDraft="";campaign.history.push("Scene: "+safe(data.title)+" - "+safe(data.story).slice(0,180));campaign.history=campaign.history.slice(-MAX);if(data.journal)campaign.journal.push(safe(data.journal).slice(0,200));campaign.journal=campaign.journal.slice(-100);campaign.lastError="";if(completedDialogue)window.soaCompanions?.applyDialogueOutcome?.(completedDialogue);if(completedProfession)window.soaCharacters?.applyProfession?.(completedProfession.action,completedProfession.resolution,completedProfession.id);if(completedFaction)window.soaReputation?.fromAction?.(completedFaction);store();status("Scene generated and saved. Choose your next action.");
- }catch(e){campaign.lastError=e.message;store();status("AI unavailable: "+e.message+". Your last action is preserved. Tap Retry generating next scene; it will not spend Energy twice.")}finally{busy=false;refreshDisplay()}
+ }catch(e){campaign.lastError=e.message;store();status("AI unavailable: "+e.message+". Your last action is preserved. Tap Retry generating next scene; it will not spend Energy twice.")}finally{busy=false;refreshDisplay();returnToAdventure(campaign?.lastError?"status":"scene")}
 }
 try{campaign=JSON.parse(localStorage.getItem(KEY)||"null")}catch(e){campaign=null}
 enabled=localStorage.getItem("soa-campaign-enabled")==="1";interfaceUI();get("campaign-mode").checked=enabled;
