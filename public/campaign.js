@@ -1,6 +1,6 @@
 (()=>{"use strict";
 const KEY="soa-campaign-v1", MAX=24;
-let campaign=null,busy=false,enabled=false;
+let campaign=null,busy=false,enabled=false,customDraft="",customType="investigate";
 const get=id=>document.getElementById(id);
 function store(){try{localStorage.setItem(KEY,JSON.stringify(campaign))}catch(e){}}
 function make(){return {turn:0,scene:null,history:[],journal:[],lastError:"",lastAction:"Begin the next chapter from the secured central junction",lastResult:"No further events yet. The six-person expedition is intact; the zero-alarm objective is active."}}
@@ -40,9 +40,20 @@ function draw(){
  if(!campaign.scene){get("campaign-status").textContent="Ready to generate the next scene.";return}
  const sc=campaign.scene,head=document.createElement("h3"),where=document.createElement("div"),text=document.createElement("p");head.textContent=sc.title||"The Hollow Raven";where.className="muted";where.textContent=sc.location||"Raven Hill";text.style.whiteSpace="pre-line";text.textContent=sc.story;box.append(head,where,text);
  for(const choice of sc.choices){const b=document.createElement("button");b.textContent=choice.text+" · "+choice.type;b.className=choice.difficulty==="easy"?"low":choice.difficulty==="hard"?"high":"med";b.disabled=busy;b.onclick=()=>choose(choice);box.append(b)}
+ const form=document.createElement("form"),label=document.createElement("label"),input=document.createElement("textarea"),typeLabel=document.createElement("label"),type=document.createElement("select"),submit=document.createElement("button"),help=document.createElement("p");
+ label.htmlFor="campaign-custom-action";label.textContent="Or choose your own action";
+ input.id="campaign-custom-action";input.className="ai-input";input.maxLength=300;input.required=true;input.rows=3;input.placeholder="e.g. Ask Pippa to build a distraction while I slip past the guards";input.value=customDraft;input.disabled=busy;
+ input.oninput=()=>{customDraft=input.value;submit.disabled=busy||!navigator.onLine||!customDraft.trim()};
+ typeLabel.htmlFor="campaign-custom-type";typeLabel.textContent="Action type";type.id="campaign-custom-type";type.className="ai-input";type.disabled=busy;
+ for(const [value,name] of [["investigate","Investigate"],["stealth","Stealth"],["engineering","Engineering"],["social","Social"],["combat","Combat"],["move","Move"],["rest","Rest"]]){const option=document.createElement("option");option.value=value;option.textContent=name;type.append(option)}
+ type.value=customType;type.onchange=()=>{customType=type.value};
+ help.id="campaign-custom-help";help.className="muted";help.textContent="Describe what you attempt. Action type sets the normal Energy cost and roll; custom actions use medium difficulty. New scenes require internet.";input.setAttribute("aria-describedby",help.id);
+ submit.type="submit";submit.textContent="Take custom action";submit.disabled=busy||!navigator.onLine||!customDraft.trim();
+ form.onsubmit=e=>{e.preventDefault();const text=input.value.trim();if(!text||busy)return;choose({text,type:type.value,difficulty:"medium"})};form.append(label,input,typeLabel,type,help,submit);box.append(form);
  const foot=document.createElement("p");foot.className="muted";foot.textContent="Scene "+campaign.turn+" · "+(navigator.onLine?"Online":"Offline saved scene")+" · "+campaign.journal.slice(-2).join(" · ");box.append(foot)
 }
 async function choose(choice){if(busy)return; if(!navigator.onLine){get("campaign-status").textContent="Offline: return to scripted adventure or reconnect to generate your next scene.";return}
+ if(!get("ai-code")?.value.trim()){get("campaign-status").textContent="Enter your private AI access code below before taking an action.";return}
  const resolution=result(choice);if(!resolution){get("campaign-status").textContent="Not enough Energy for that action.";return}
  campaign.lastAction=safe(choice.text);campaign.lastResult=resolution;campaign.history.push("Player: "+campaign.lastAction+" | "+resolution);campaign.history=campaign.history.slice(-MAX);store();render();await advance(campaign.lastAction,resolution,false)}
 async function advance(action,resolution,retry){
@@ -54,7 +65,7 @@ async function advance(action,resolution,retry){
  const response=await fetch("./api/campaign",{method:"POST",headers:{"content-type":"application/json","x-story-access":code},body:JSON.stringify({context:{location:campaign.scene?.location||"Hollow Raven laboratory",previousScene:campaign.scene?.story||"",action,resolution,hp:s.hp,energy:s.en,gold:fmtMoney(s.money),alarm:s.alert,turn:campaign.turn,history:campaign.history,flags:Object.keys(s.flags||{})}})});
  const data=await response.json().catch(()=>({error:"Invalid server response"}));if(!response.ok)throw Error(data.error||"Request failed");
  if(!Array.isArray(data.choices)||!data.story)throw Error("Incomplete generated scene");
- campaign.scene=data;campaign.turn++;campaign.history.push("Scene: "+safe(data.title)+" - "+safe(data.story).slice(0,180));campaign.history=campaign.history.slice(-MAX);if(data.journal)campaign.journal.push(safe(data.journal).slice(0,200));campaign.journal=campaign.journal.slice(-100);campaign.lastError="";store();get("campaign-status").textContent="Scene generated and saved. Choose your next action.";
+ campaign.scene=data;campaign.turn++;customDraft="";campaign.history.push("Scene: "+safe(data.title)+" - "+safe(data.story).slice(0,180));campaign.history=campaign.history.slice(-MAX);if(data.journal)campaign.journal.push(safe(data.journal).slice(0,200));campaign.journal=campaign.journal.slice(-100);campaign.lastError="";store();get("campaign-status").textContent="Scene generated and saved. Choose your next action.";
  }catch(e){campaign.lastError=e.message;store();get("campaign-status").textContent="AI unavailable: "+e.message+". Your game progress remains saved; tap Start / Resume to retry."}finally{busy=false;draw()}
 }
 try{campaign=JSON.parse(localStorage.getItem(KEY)||"null")}catch(e){campaign=null}
