@@ -12,11 +12,11 @@ The `functions/api/story.js` Cloudflare Pages Function is automatically deployed
 
 In Cloudflare dashboard, open **Workers & Pages → your Pages project → Settings → Variables and Secrets** (or Environment variables, depending on UI). Add these to **Production**:
 
-- `OPENAI_API_KEY` — your OpenAI API platform key. Set as encrypted **Secret**, never as a public variable and never commit to GitHub.
+- `GEMINI_API_KEY` — your Google AI Studio Gemini API key. Set as encrypted **Secret**, never as a public variable and never commit to GitHub.
 - `AI_ACCESS_CODE` — a long random passphrase you invent. Also set as **Secret**. Enter this code into the app's AI Story Director panel, *not* your API key.
-- `OPENAI_MODEL` — optional plaintext variable, default `gpt-4.1-mini`. Select a model enabled for your API account.
+- `GEMINI_MODEL` — optional plaintext variable, default `gemini-3.7-flash`. Select a model enabled for your API account.
 
-Save changes and **redeploy** the production deployment so your Function receives the secrets. Check `https://YOUR-SITE.pages.dev/api/story`: a GET should return a JSON status message. In the app, enable AI, provide the access code, and tap Generate narration. Credits must be active at platform.openai.com.
+Save changes and **redeploy** the production deployment so your Function receives the secrets. Check `https://YOUR-SITE.pages.dev/api/story`: a GET should return a JSON status message. In the app, enable AI, provide the access code, and tap Generate narration. Credits must be active at aistudio.google.com.
 
 **Security note:** this access code is a simple shared password, not robust authentication. Anyone who obtains it can make paid AI requests through your site. Since the site is public, consider adding Cloudflare Access, proper identity-based auth, per-user rate limiting, and spending limits before sharing AI functionality widely. Never share your API key or the access code in screenshots, GitHub, or chat. Current AI requests are intentionally restricted to SHORT scene embellishments and do not change stats, inventory, saved game state, or combat decisions. Cloudflare route only accepts same-origin requests plus a shared code; someone with the code could still script requests. Costs apply.
 
@@ -27,3 +27,7 @@ Open the live Pages URL in Safari once, add to Home Screen, and reload online to
 ### Story canon and limits
 
 The prototype resumes at Chapter I, Part LI at 10:23 PM with Snacky at 92/100 HP, 100/100 Energy and 22g 60s 53c. This first AI integration is an OPTIONAL atmospheric narrator only. Future phases can introduce validated AI-proposed dialogue/choices through a rules engine, without allowing AI to invent mechanical outcomes.
+
+## Model lifecycle (October 2026)
+
+Google deprecated `gemini-3.7-flash` on October 8, 2026. The model identifier is accepted but routed automatically to `gemini-3.8-flash`. See https://ai.google.dev/gemini-api/docs/models/gemini-3.7-flash . For actual free-tier RPM/TPM/RPD limits, inspect https://aistudio.google.com/rate-limit ; quotas depend on the Google project and model. Never commit API keys.
