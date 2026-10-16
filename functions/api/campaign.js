@@ -44,7 +44,7 @@ export async function onRequestPost({request,env}){
  const types=new Set(["stealth","combat","social","investigate","move","engineering","rest"]);const diffs=new Set(["easy","medium","hard"]);
  const choices=(Array.isArray(v.choices)?v.choices:[]).slice(0,5).filter(c=>c&&typeof c.text==="string").map(c=>({text:clean(c.text,170),type:types.has(c.type)?c.type:"investigate",difficulty:diffs.has(c.difficulty)?c.difficulty:"medium"}));
  if(choices.length<2||typeof v.story!=="string"||!v.story.trim())return json({error:"AI response incomplete; please retry."},502);
- if(unexpectedRelocation(context.location,v.location,context.action))return json({error:"Story continuity check: Gemini attempted to relocate the party without a chosen travel action. Your existing scene and progress are preserved; tap Retry to regenerate the scene."},409);
+ // Geographic continuity is advisory; do not reject generated scenes.
 
  return json({title:clean(v.title,95),location:clean(v.location,120),story:clean(v.story,2800),choices,journal:clean(v.journal,200),model});
  }catch(e){return json({error:e.name==="AbortError"?"Gemini took too long; offline play remains available.":"Gemini connection failed."},502)}finally{clearTimeout(timeout)}
