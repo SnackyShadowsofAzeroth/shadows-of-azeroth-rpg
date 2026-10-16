@@ -106,3 +106,26 @@ The header now has an **Appearance · SI:7 Field Operations** selector with **Cl
 5. Disconnect after assets have cached and check the theme switch remains available offline.
 
 The appearance selector never changes `soa-save-v1`, `soa-campaign-v1`, `soa-companions-v1`, actions, credentials or secret storage. Automated source/syntax and theme-state tests pass; **Cloudflare production deployment and on-device visual rendering are not yet verified**.
+
+
+## Character selection, new heroes, and professions (v13)
+
+A parchment **character-selection screen** appears on first entry in a browser session. It lets you continue existing **Snacky Lugnuts** (Gnome Rogue, **Mining + Engineering**) or create up to 16 independent heroes. A **☰ Characters** button in the header returns to the menu without resetting the current adventure.
+
+The race/class picker follows the published WoW Forever beta combination matrix: Human, Dwarf, Night Elf, Gnome, Orc, Undead, Tauren, Troll and Skyborne (Alliance High Order or Horde Windshaper class choices). Nine classes: Warrior, Paladin, Hunter, Rogue, Priest, Shaman, Mage, Warlock, Druid. Character creation also chooses two distinct primary professions. Cooking, Fishing and First Aid are available separately for every character.
+
+**Save isolation:** Existing localStorage keys are preserved as the actively loaded working save; the roster keeps independent snapshots under `soa-character-slot-v1-<id>`, with roster metadata under `soa-character-roster-v1`. Before a switch, the current hero is backed up; the destination slot is restored and the app reloads. The original save is copied into the Snacky slot on first setup. The UI stops switching if the current slot cannot be backed up. Relationship records are likewise per-slot. Appearance theme is global and unchanged.
+
+**Profession practice:** Under **Character Record**, each hero can inspect their chosen professions and secondary skills and tap **Practice via Story**. A successful custom action that explicitly describes a relevant profession earns up to 3 points (cap 300), recorded in that hero's profession log. Failures don't award skill, and an action identifier prevents double gains on retry. Profession practice currently tracks **skill progression**, not a full recipe, reagent, inventory or equipment crafting simulation.
+
+**New adventures:** Each newly created character gets a clean AI Living Campaign and character-specific prompt. Gemini is instructed to start an unrelated personal mystery appropriate to the selected faction/race/class/professions, without introducing Snacky's Hollow Raven plot. Online AI access is required to generate new scenes. The original offline scripted campaign is Snacky-specific and is not presented as a different class's adventure. New-character combat currently uses the simplified living-campaign action engine; full class-specific ability trees are a separate future expansion. New characters do not inherit Snacky's companions.
+
+### Essential smoke checks
+
+1. Open on the existing device. Select **Snacky** and verify his existing scene, 22g 60s 53c (or your actual current amount), relationships, and Mining/Engineering; the app must not reset progress.
+2. Open **☰ Characters**, create an Alliance Human Paladin with Herbalism/Alchemy and a unique name. Confirm the new campaign begins with its own story after entering the private AI access code, if needed.
+3. Practice Herbalism via a successful custom story action. Confirm Herbalism rises only once and Snacky's professions remain unchanged.
+4. Switch back to Snacky; confirm the previous scene, currency and companion journal return. Switch to the Paladin and confirm their saved separate story and profession skill.
+5. Check Classic ↔ Alternative parchment theme switching, offline shell, no double rewards on retry, and character menu on next new browser session.
+
+**Important:** Saves remain local to the browser/device and are not cloud synced. The legacy JSON Export Save button exports the *active legacy/offline save* only, not a complete multi-character roster backup. Do not clear browser storage or change browsers expecting these saves to follow automatically.
