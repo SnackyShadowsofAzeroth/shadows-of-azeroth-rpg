@@ -208,3 +208,16 @@ Mock DOM tests verified both Reputation tabs, selected-tab retention after a fac
 **Existing saves:** This update does **not** rewrite a saved Stormwind scene back into Hollow Raven or retroactively reinterpret past player choices. If the saved story already moved, compare its recent scene history and explicit player decisions before deciding whether that narrative is canonical or needs a deliberate correction.
 
 **Test scenarios:** Hollow Raven → Stormwind via simple investigate/move/exit must be rejected; Hollow Raven → Stormwind via “travel to Stormwind” or “take a portal” allowed; Hollow Raven room-to-room movement allowed; Stormwind district movement allowed. Client/server JavaScript syntax and those guardrail scenarios passed. Cache v20; live Cloudflare/Gemini behavior remains to verify.
+
+
+## Canonical story transition: Hollow Raven → Stormwind (v21)
+
+**Player-authorized continuity override:** The Hollow Raven investigation is **solved and completed**. The original mystery's recovered evidence, intelligence about Thorne, Valecroft, Subject Seven, the Memory Anchor, and Protocol Mirrorfall remains historical intelligence for a future SI:7 debrief, **not** a recurring unresolved Hollow Raven mission.
+
+**Active objectives:** Return to Stormwind; confront and defuse the explosives threat through player decisions (do not auto-resolve it); and brief SI:7 on the completed Hollow Raven operation, discoveries, and current situation. If the saved scene is already in Stormwind, respect that location; if elsewhere, narrate necessary travel only when explicitly chosen. Do not teleport party members or assume any mission objective has been completed merely from being listed.
+
+**Restricted premises:** Only verified SI:7 operatives may enter SI:7 headquarters. Snacky is an operative. Pippa Sparkwhistle, Bromli Ironkeg, and Lethariel have no established SI:7 membership; they may accompany him to an appropriate public or external rendezvous, but not into the headquarters itself.
+
+**Romantic dynamics:** Pippa is infatuated with Snacky. Lethariel has romantic feelings for Bromli. Express affection subtly and consistently through dialogue, glances and discretionary character behavior, while preserving personal agency and all saved Trust/Affection/Respect values. Narrative premise is **not** an automatic change to mechanical relationship points or an automatic confession.
+
+**Safety and preservation:** Changes affect future story guidance only. Existing saved scenes, equipment, relationships, profession skills, currency and security flags are not overwritten; new character campaigns remain independent. JS source checks passed. Cache v21.
