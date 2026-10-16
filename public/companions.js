@@ -18,7 +18,7 @@ const ACTIONS=[
  {id:"argue",label:"Challenge values",detail:"Risk a disagreement"},
  {id:"betray",label:"Betray their trust",detail:"Potentially become enemies"}
 ];
-let selected="pippa", activeReputationView="companions", data={rapport:{pippa:0,bromli:0,lethariel:0},entries:[],relations:{},dialogueIds:[]}, last="";
+let selected="pippa", activeReputationView="companions", romanceExpanded=false, conflictExpanded=false, data={rapport:{pippa:0,bromli:0,lethariel:0},entries:[],relations:{},dialogueIds:[]}, last="";
 const blank=()=>({trust:0,affection:0,respect:0,status:"Acquaintance",romance:"none",grievances:0,interactions:0});
 const clamp=(v,min=-100,max=100)=>Math.max(min,Math.min(max,Number(v)||0));
 const rel=id=>data.relations[id]||(data.relations[id]=blank());
@@ -140,8 +140,23 @@ function draw(){
  const r=rel(selected);const stars=add("span",status(r));stars.className="soa-rapport";info.append(stars);companionGroup.append(info);
  const indicators=add("div","");indicators.className="soa-relation-metrics";for(const [name,label] of [["trust","Trust"],["affection","Affection"],["respect","Respect"]]){const unit=add("div","");unit.className="soa-relation-cell";const title=add("div",label+" · "+r[name]);title.className="soa-relation-label";const rail=add("div","");rail.className="soa-relation-rail";const fill=add("div","");fill.className="soa-relation-fill "+name;fill.style.width=((r[name]+100)/2)+"%";rail.append(fill);unit.append(title,rail);indicators.append(unit)}companionGroup.append(indicators);
  if(!locationAllows(selected)){const msg=add("p",p.base);msg.className="muted";companionGroup.append(msg)}
- const grid=add("div","");grid.className="soa-interactions";
- for(const a of ACTIONS){const b=document.createElement("button");b.type="button";b.className="soa-social-action";b.disabled=!locationAllows(selected);b.append(add("strong",a.label),add("small",a.detail));b.onclick=()=>interact(a.id);grid.append(b)}companionGroup.append(grid);
+ const categories=[
+  {label:"Everyday interactions",ids:["talk","encourage","advice","flirt","bond"],expanded:true},
+  {label:"Romance & commitments",ids:["confess","commit","propose","wedding"],expanded:romanceExpanded,key:"romance"},
+  {label:"Disagreements & reconciliation",ids:["apologize","argue","betray"],expanded:conflictExpanded,key:"conflict"}
+ ];
+ for(const category of categories){
+  const wrapper=category.key?document.createElement("details"):add("div","");
+  wrapper.className="soa-relation-action-group";
+  if(category.key){wrapper.open=category.expanded;wrapper.ontoggle=()=>{if(category.key==="romance")romanceExpanded=wrapper.open;else conflictExpanded=wrapper.open};wrapper.append(add("summary",category.label))}
+  else wrapper.append(add("h4",category.label));
+  const grid=add("div","");grid.className="soa-interactions";
+  for(const a of ACTIONS.filter(a=>category.ids.includes(a.id))){
+   const b=document.createElement("button");b.type="button";b.className="soa-social-action";b.disabled=!locationAllows(selected);
+   b.append(add("strong",a.label),add("small",a.detail));b.onclick=()=>interact(a.id);grid.append(b);
+  }
+  wrapper.append(grid);companionGroup.append(wrapper);
+ }
  if(last){const output=add("blockquote",last);output.className="soa-social-result";output.setAttribute("aria-live","polite");companionGroup.append(output)}
  const details=document.createElement("details");details.className="soa-journal";
  const summary=add("summary","Relationship journal ("+data.entries.length+")");details.append(summary);
