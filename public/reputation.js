@@ -87,7 +87,7 @@ function markResolved(id){
  data.notices=data.notices.filter(x=>x.id!==id);
  persist();renderAll();return true;
 }
-function renderAll(){renderInto();const standalone=$("soa-standalone-reputation");if(standalone)renderInto(standalone)}
+function renderAll(){const grouped=$("soa-factions-content");if(grouped)renderInto(grouped);const standalone=$("soa-standalone-reputation");if(standalone)renderInto(standalone)}
 function rowFor(id){
  const f=FACTIONS[id],value=data.factions[id]?.value||0;
  const wrap=node("div",undefined,"soa-faction-row");
@@ -101,7 +101,7 @@ function rowFor(id){
  return wrap;
 }
 function renderInto(target){
- target=target||$("companion-panel");if(!target)return;
+ target=target||$("soa-factions-content")||$("soa-standalone-reputation");if(!target)return;
  const old=target.querySelector("#soa-faction-ledger");if(old)old.remove();
  const section=node("section",undefined,"soa-reputation-ledger");section.id="soa-faction-ledger";
  const title=node("h3","Faction standings");title.className="soa-section-title";section.append(title);
