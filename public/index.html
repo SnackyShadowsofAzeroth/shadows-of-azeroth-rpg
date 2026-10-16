@@ -18,7 +18,7 @@ function tick(cost=0){s.en=Math.min(100,Math.max(0,s.en-cost+10));s.time++;save(
 function go(id,cost=0){tick(cost);s.id=id;render()}
 function addLog(m){if(!s.log.includes(m))s.log.unshift(m)}
 function check(chance){return Math.random()<chance}
-function doChoice(c){if(c.min&&s.en<c.min){alert("Not enough Energy.");return}const before=s.id;if(c.act){c.act()}else{go(c.to,c.cost||0)}if(document.querySelector("#ai-enabled")?.checked&&s.id!==before){queueAiNarration(c.label)}}
+function doChoice(c){if(c.min&&s.en<c.min){alert("Not enough Energy.");return}const priorTick=s.time,priorScene=s.id;if(c.act){c.act()}else{go(c.to,c.cost||0)}if(document.querySelector("#ai-enabled")?.checked&&(s.time!==priorTick||s.id!==priorScene)&&s.id!=="death"){queueAiNarration(c.label)}}
 function choice(label,to,level="low",cost=0){return{label,to,level,cost}}
 function encounter(name,hp,damage){s.enemy={name,hp,max:hp,damage};go("combat")}
 function combat(action){let msg="";let damage=0;let cost=0;let stunned=false;
