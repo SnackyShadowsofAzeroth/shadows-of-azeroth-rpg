@@ -20,13 +20,23 @@ const make=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefi
 const read=(key)=>{try{return JSON.parse(localStorage.getItem(key)||"null")}catch{return null}};
 const write=(key,val)=>{try{localStorage.setItem(key,JSON.stringify(val));return true}catch{return false}};
 function defaults(){
- const professions={Mining:{skill:1,events:0},Engineering:{skill:1,events:0}};
+ const professions={Mining:{skill:225,events:0},Engineering:{skill:225,events:0}};
  return {id:"snacky",name:"Snacky Lugnuts",race:"Gnome",faction:"Alliance",className:"Rogue",specialization:"Combat Swords",professions,secondary:Object.fromEntries(SECONDARY.map(x=>[x,{skill:1,events:0}])),professionLog:[],professionEvents:[],origin:"legacy"};
 }
 function init(){
  roster=read(ROSTER_KEY);
  if(!roster||!Array.isArray(roster.characters)||!roster.characters.length){roster={version:1,active:"snacky",characters:[defaults()]};write(ROSTER_KEY,roster);snapshot("snacky");}
  for(const p of roster.characters){p.professions ||= {};p.secondary ||= {};p.professionLog ||= [];p.professionEvents ||= []}
+ // One-time correction for Snacky only. Preserve any progress above the established 225 baseline.
+ const snacky=roster.characters.find(p=>p.id==="snacky");
+ if(snacky&&!roster.snackyProfession225Applied){
+  for(const profession of ["Mining","Engineering"]){
+   const current=snacky.professions[profession];
+   if(current&&typeof current==="object")current.skill=Math.max(225,Number(current.skill)||0);
+   else snacky.professions[profession]={skill:225,events:0};
+  }
+  roster.snackyProfession225Applied=true;
+ }
  active=roster.characters.find(x=>x.id===roster.active)||roster.characters[0];roster.active=active.id;write(ROSTER_KEY,roster);
 }
 function snapshot(id){
