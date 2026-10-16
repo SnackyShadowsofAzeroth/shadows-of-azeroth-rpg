@@ -1,0 +1,17 @@
+{
+  "name": "Shadows of Azeroth",
+  "short_name": "Shadows",
+  "description": "Offline-first interactive fantasy RPG",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#121820",
+  "theme_color": "#131c27",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
