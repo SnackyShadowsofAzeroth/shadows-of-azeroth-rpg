@@ -18,14 +18,14 @@ const ACTIONS=[
  {id:"argue",label:"Challenge values",detail:"Risk a disagreement"},
  {id:"betray",label:"Betray their trust",detail:"Potentially become enemies"}
 ];
-let selected="pippa", data={rapport:{pippa:0,bromli:0,lethariel:0},entries:[],relations:{}}, last="";
+let selected="pippa", data={rapport:{pippa:0,bromli:0,lethariel:0},entries:[],relations:{},dialogueIds:[]}, last="";
 const blank=()=>({trust:0,affection:0,respect:0,status:"Acquaintance",romance:"none",grievances:0,interactions:0});
 const clamp=(v,min=-100,max=100)=>Math.max(min,Math.min(max,Number(v)||0));
 const rel=id=>data.relations[id]||(data.relations[id]=blank());
 function status(r){return r.trust<=-65?"Enemy":r.trust<=-25?"Rival":r.romance==="married"?"Married":r.romance==="engaged"?"Engaged":r.romance==="committed"?"Partners":r.romance==="dating"?"Dating":r.trust>=65?"Close friend":r.trust>=25?"Friend":"Acquaintance"}
 function adjust(r,change){for(const [k,n] of Object.entries(change))r[k]=clamp(r[k]+n);if(r.trust<=-65){r.romance="none"}r.status=status(r)}
 const $=id=>document.getElementById(id);
-function load(){try{const v=JSON.parse(localStorage.getItem(KEY)||"null");if(v&&v.rapport&&Array.isArray(v.entries)){for(const id of Object.keys(PEOPLE))data.rapport[id]=Math.max(0,Math.min(5,Number(v.rapport[id])||0));data.entries=v.entries.slice(-40).filter(x=>x&&typeof x.text==="string"&&typeof x.person==="string");if(v.relations&&typeof v.relations==="object"){for(const id of Object.keys(PEOPLE)){const old=v.relations[id]||{},r=blank();for(const k of ["trust","affection","respect"])r[k]=clamp(old[k]);r.interactions=clamp(old.interactions,0,999);r.grievances=clamp(old.grievances,0,999);r.romance=["none","dating","committed","engaged","married"].includes(old.romance)?old.romance:"none";r.status=status(r);data.relations[id]=r}}else{for(const id of Object.keys(PEOPLE)){const r=rel(id),n=data.rapport[id]||0;r.trust=n*9;r.affection=n*5;r.respect=n*6;r.interactions=n;r.status=status(r)}}}}catch(e){}}
+function load(){try{const v=JSON.parse(localStorage.getItem(KEY)||"null");if(v&&v.rapport&&Array.isArray(v.entries)){for(const id of Object.keys(PEOPLE))data.rapport[id]=Math.max(0,Math.min(5,Number(v.rapport[id])||0));data.entries=v.entries.slice(-40).filter(x=>x&&typeof x.text==="string"&&typeof x.person==="string");data.dialogueIds=Array.isArray(v.dialogueIds)?v.dialogueIds.filter(x=>typeof x==="string").slice(-100):[];if(v.relations&&typeof v.relations==="object"){for(const id of Object.keys(PEOPLE)){const old=v.relations[id]||{},r=blank();for(const k of ["trust","affection","respect"])r[k]=clamp(old[k]);r.interactions=clamp(old.interactions,0,999);r.grievances=clamp(old.grievances,0,999);r.romance=["none","dating","committed","engaged","married"].includes(old.romance)?old.romance:"none";r.status=status(r);data.relations[id]=r}}else{for(const id of Object.keys(PEOPLE)){const r=rel(id),n=data.rapport[id]||0;r.trust=n*9;r.affection=n*5;r.respect=n*6;r.interactions=n;r.status=status(r)}}}}catch(e){}}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){}}
 function add(tag,text){const e=document.createElement(tag);e.textContent=text;return e}
 function locationAllows(id){if(id!=="lethariel")return true;const mode=localStorage.getItem("soa-campaign-enabled")==="1";if(!mode)return false;const scene=window.soaLivingCampaign?.getState?.()?.scene;return /checkpoint|tavern|regroup/i.test(String(scene?.location||""))}
@@ -75,6 +75,40 @@ function applyStoryConsequence(id,kind){
  const text=PEOPLE[id].name+" reacts to "+kind+"; relationship: "+status(r)+".";
  data.entries.push({person:PEOPLE[id].name,text,at:new Date().toISOString()});data.entries=data.entries.slice(-40);save();draw();return true;
 }
+// Story dialogue adjusts relationships only after its scene is confirmed and saved.
+// The unique action ID makes reloads and retries idempotent.
+function applyDialogueOutcome(event){
+ if(!event||typeof event!=="object")return false;
+ const id=String(event.id||""),target=String(event.target||"");
+ const tone=String(event.tone||"neutral"),success=event.success===true;
+ if(!id||!PEOPLE[target]||!["friendly","support","flirt","honest","disagree","insult","betray","apologize","neutral"].includes(tone))return false;
+ if(data.dialogueIds.includes(id))return false;
+ const changes={
+  friendly:{trust:4,respect:1},
+  support:{trust:7,respect:3,affection:1},
+  flirt:{trust:1,affection:6},
+  honest:{trust:4,respect:6},
+  disagree:{trust:-4,respect:-2},
+  insult:{trust:-12,respect:-10,affection:-5},
+  betray:{trust:-30,respect:-22,affection:-16},
+  apologize:{trust:6,respect:2},
+  neutral:{}
+ };
+ const r=rel(target);
+ let delta=success?changes[tone]:{};
+ // A failed friendly approach has no automatic penalty; an insult or betrayal still hurts.
+ if(!success&&["insult","betray"].includes(tone))delta=changes[tone];
+ if(tone==="flirt"&&r.trust<0)delta={};
+ if(tone==="apologize"&&r.grievances===0)delta={};
+ if(Object.keys(delta).length){adjust(r,delta);r.interactions++;data.rapport[target]=clamp(r.trust/9,0,5)}
+ if(["insult","betray"].includes(tone))r.grievances++;
+ if(tone==="apologize"&&Object.keys(delta).length)r.grievances=Math.max(0,r.grievances-1);
+ data.dialogueIds.push(id);data.dialogueIds=data.dialogueIds.slice(-100);
+ const summary=Object.entries(delta).map(([k,v])=>k+" "+(v>0?"+":"")+v).join(", ");
+ const description="Custom dialogue ("+tone+"): "+(summary||"no change")+"; "+status(r)+".";
+ data.entries.push({person:PEOPLE[target].name,text:description,at:new Date().toISOString()});
+ data.entries=data.entries.slice(-40);save();draw();return true;
+}
 function draw(){
  const target=$("companion-panel");if(!target)return;
  target.replaceChildren();
@@ -103,5 +137,5 @@ load();
 const el=document.createElement("section");el.className="panel soa-companion-panel";el.id="companion-panel";
 const campaign=$("campaign-box");if(campaign)campaign.after(el);else document.querySelector("header")?.after(el);
 draw();
-window.soaCompanions={getRecent:()=>data.entries.slice(-4).map(x=>x.person+": "+x.text.slice(0,150)),getRapport:()=>({...data.rapport}),getRelationships:()=>Object.fromEntries(Object.keys(PEOPLE).map(id=>{const r=rel(id);return [id,{trust:r.trust,affection:r.affection,respect:r.respect,status:status(r),romance:r.romance,grievances:r.grievances}]})),applyStoryConsequence,refresh:draw};
+window.soaCompanions={getRecent:()=>data.entries.slice(-4).map(x=>x.person+": "+x.text.slice(0,150)),getRapport:()=>({...data.rapport}),getRelationships:()=>Object.fromEntries(Object.keys(PEOPLE).map(id=>{const r=rel(id);return [id,{trust:r.trust,affection:r.affection,respect:r.respect,status:status(r),romance:r.romance,grievances:r.grievances}]})),applyStoryConsequence,applyDialogueOutcome,refresh:draw};
 })();
