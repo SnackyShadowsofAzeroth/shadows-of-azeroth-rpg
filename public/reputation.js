@@ -59,7 +59,7 @@ function applyChange({id,faction,delta,source}){
  // Issue ONE hook at a threshold crossing; this is narrative only, NEVER coins, items or damage.
  if(before>-75&&after<=-75)data.notices.push({faction,kind:"pursuit",id:id+":pursuit"});
  if(before<75&&after>=75)data.notices.push({faction,kind:"patronage",id:id+":patronage"});
- data.notices=data.notices.slice(-30);persist();renderInto();return true;
+ data.notices=data.notices.slice(-30);persist();renderAll();return true;
 }
 function fromAction({id,action,resolution}){
  if(!id||!/^Success:/i.test(String(resolution||"")))return false;
@@ -74,8 +74,9 @@ function fromAction({id,action,resolution}){
 function markResolved(id){
  const n=data.notices.find(x=>x.id===id);if(!n)return false;
  data.notices=data.notices.filter(x=>x.id!==id);
- persist();renderInto();return true;
+ persist();renderAll();return true;
 }
+function renderAll(){renderInto();const standalone=$("soa-standalone-reputation");if(standalone)renderInto(standalone)}
 function rowFor(id){
  const f=FACTIONS[id],value=data.factions[id]?.value||0;
  const wrap=node("div",undefined,"soa-faction-row");
@@ -114,5 +115,5 @@ function renderInto(target){
  target.append(section);
 }
 load();
-window.soaReputation={getStandings:standing,getDevelopments:pendingNotices,applyChange,fromAction,markResolved,renderInto};
+window.soaReputation={getStandings:standing,getDevelopments:pendingNotices,applyChange,fromAction,markResolved,renderInto,refresh:renderAll};
 })();
