@@ -145,7 +145,7 @@ function prefill(prof){
 // Profession-based checks and ordinary world gathering can award a single skill point.
 // Stable rolls and recorded action IDs make retries idempotent.
 const PROF_MATCH={
- Mining:/\b(?:min(?:e|es|ed|ing)|ore vein|ore deposit|prospect\w*|excavat\w*|extract\w* ore|pickaxe)\b/i,
+ Mining:/\b(?:min(?:e|es|ed|ing)|ore vein|ore deposit|prospect\w*|excavat\w*|extract\w* ore|gather\w* (?:copper |tin |iron |silver |gold |mithril |thorium )?ore|harvest\w* ore|pickaxe)\b/i,
  Engineering:/\b(?:engineer\w*|mechanic\w*|tinker\w*|clockwork|gadget\w*|device|apparatus|circuit\w*|wiring|calibrat\w*|construct\w*)\b/i,
  Herbalism:/\b(?:herb\w*|botan\w*|forag\w*|gather\w* (?:plants?|flowers?|roots?)|harvest\w* (?:plants?|flowers?|roots?))\b/i,
  Alchemy:/\b(?:alchem\w*|potion\w*|elixir\w*|transmut\w*|brew\w* (?:mixture|draught))\b/i,
@@ -160,7 +160,7 @@ const PROF_MATCH={
 };
 const PROF_INTENT=/\b(?:practic\w*|train\w*|craft\w*|build\w*|assembl\w*|creat\w*|make|use|work|operat\w*|repair\w*|fix|calibrat\w*|examin\w*|inspect\w*|analyz\w*|identify|test|disarm\w*|dismantl\w*|forge\w*|brew\w*|mix\w*|sew\w*|stitch\w*|enchant\w*|skin\w*|cook\w*|bandag\w*|tend\w*|harvest\w*|gather\w*|collect\w*|mine\w*|prospect\w*|fish\w*|cast\w*|reel\w*|forag\w*|extract\w*|smelt\w*|pick\w*)\b/i;
 const GATHER={
- Mining:/\b(?:min(?:e|es|ed|ing)|excavat\w*|prospect\w*|extract\w* ore)\b/i,
+ Mining:/\b(?:min(?:e|es|ed|ing)|excavat\w*|prospect\w*|extract\w* ore|gather\w* (?:copper |tin |iron |silver |gold |mithril |thorium )?ore|harvest\w* ore)\b/i,
  Herbalism:/\b(?:gather\w*|pick\w*|harvest\w*|forag\w*|collect\w*)\b.{0,65}\b(?:herb\w*|plants?|flowers?|roots?)\b|\b(?:herb\w*|plants?|flowers?|roots?)\b.{0,35}\b(?:gather\w*|pick\w*|harvest\w*)\b/i,
  Skinning:/\b(?:skin\w*|flay\w*|harvest\w* (?:hide|pelt))\b/i,
  Fishing:/\b(?:fish\w*|angl\w*|cast\w* (?:a |the )?(?:line|hook)|reel\w* (?:in )?(?:fish|catch))\b/i
