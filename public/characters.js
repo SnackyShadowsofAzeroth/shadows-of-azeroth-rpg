@@ -31,7 +31,7 @@ function init(){
 }
 function snapshot(id){
  const data={};for(const key of SAVES)data[key]=localStorage.getItem(key);
- write(SLOT_PREFIX+id,data);
+ return write(SLOT_PREFIX+id,data);
 }
 function restore(id){
  const data=read(SLOT_PREFIX+id);if(!data)return false;
@@ -40,13 +40,13 @@ function restore(id){
 }
 function baseState(profile){return {id:"junction",hp:100,en:100,money:0,time:0,alert:0,seen:[],flags:{},enemy:null,log:["A new journey begins for "+profile.name,"The first chapter awaits."]}}
 function newCampaign(profile){
- return {turn:0,scene:null,history:[],journal:[],lastError:"",lastAction:"Begin a completely new, character-specific adventure for "+profile.name+", a "+profile.faction+" "+profile.race+" "+profile.className+". Start in "+(profile.faction==="Alliance"?"the Eastern Kingdoms":"Kalimdor")+" with an atmospheric personal mystery, a meaningful first encounter and 3–5 choices. Do not start at Hollow Raven or involve Snacky's mission.",lastResult:"New protagonist and prologue, no previous battles or rewards.",pending:null};
+ return {turn:0,scene:null,history:[],journal:[],lastError:"",lastAction:"Begin a completely new, character-specific adventure for "+profile.name+", an adventurer of the "+profile.faction+" — "+profile.race+" "+profile.className+". Start in "+(profile.faction==="Alliance"?"the Eastern Kingdoms":"Kalimdor")+" with an atmospheric personal mystery, a meaningful first encounter and 3–5 choices. Do not start at Hollow Raven or involve Snacky's mission.",lastResult:"New protagonist and prologue, no previous battles or rewards.",pending:null};
 }
 function selectedProfile(){return {...active,professions:Object.fromEntries(Object.entries(active.professions||{}).map(([k,v])=>[k,v.skill||1]))}}
 function commitRoster(){write(ROSTER_KEY,roster)}
 function enter(id){
  if(!roster.characters.some(x=>x.id===id))return;
- if(id!==active.id){snapshot(active.id);if(!restore(id))return;active=roster.characters.find(x=>x.id===id);roster.active=id;commitRoster()}
+ if(id!==active.id){if(!snapshot(active.id)){alert("Cannot switch: unable to back up your current character. Check available device storage.");return}if(!restore(id))return;active=roster.characters.find(x=>x.id===id);roster.active=id;commitRoster()}
  try{sessionStorage.setItem(ENTER_KEY,"1")}catch(e){}
  location.reload();
 }
@@ -55,7 +55,7 @@ function create(profile){
  const id="hero-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,7);
  const p={...profile,id,origin:"custom",specialization:"Unchosen",professions:Object.fromEntries(profile.professionNames.map(n=>[n,{skill:1,events:0}])),secondary:Object.fromEntries(SECONDARY.map(n=>[n,{skill:1,events:0}])),professionEvents:[],professionLog:[]};
  delete p.professionNames;
- snapshot(active.id);
+ if(!snapshot(active.id)){alert("Unable to back up your current adventure. Character creation has been stopped to protect your save.");return}
  roster.characters.push(p);roster.active=id;active=p;commitRoster();
  write("soa-save-v1",baseState(p));write("soa-campaign-v1",newCampaign(p));
  localStorage.removeItem("soa-companions-v1");localStorage.setItem("soa-campaign-enabled","1");
