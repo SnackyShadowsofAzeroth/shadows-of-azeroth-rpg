@@ -9,6 +9,7 @@ const FACTIONS={
  "defias":{name:"Defias Brotherhood",affiliation:"Outlaw organization",base:0},
  "scarlet":{name:"Scarlet Crusade",affiliation:"Militant order",base:0}
 };
+const FIGURES={thorne:{name:"Commander Aldren Thorne",role:"Hollow Raven command",base:-65,pattern:/\b(?:Aldren Thorne|Commander Thorne|Thorne)\b/i},harlan:{name:"Harlan Vex",role:"Captured operative",base:-45,pattern:/\b(?:Harlan Vex|Harlan)\b/i},corvin:{name:"Corvin",role:"Captured crossbowman",base:-40,pattern:/\bCorvin\b/i},valecroft:{name:"Magister Oren Valecroft",role:"Identity and intentions unresolved",base:0,pattern:/\b(?:Oren Valecroft|Magister Valecroft|Valecroft)\b/i}};
 const aliases={
  si7:/\b(?:SI:?7|Stormwind intelligence)\b/i,
  stormwind:/\bStormwind\b/i,
@@ -22,7 +23,7 @@ const good= /\b(?:help\w*|aid\w*|rescu\w*|defend\w*|protect\w*|deliver\w*|suppor
 const bad=/\b(?:betray\w*|attack\w*|steal\w*|sabotag\w*|assault\w*|rob\w*|ambush\w*|harm\w*|deceiv\w*|threaten\w*)\b/i;
 const reputationLabel=n=>n<=-75?"Hunted":n<=-50?"Hostile":n<=-20?"Unfriendly":n<20?"Neutral":n<50?"Friendly":n<75?"Honored":"Exalted";
 const clamp=n=>Math.max(-100,Math.min(100,Math.round(Number(n)||0)));
-let data={factions:{},events:[],handled:[],notices:[]};
+let data={factions:{},individuals:{},events:[],handled:[],notices:[]};
 const $=id=>document.getElementById(id);
 const node=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e};
 const character=()=>window.soaCharacters?.profile?.()?.id||"snacky";
@@ -39,6 +40,7 @@ function load(){
  try{const saved=JSON.parse(localStorage.getItem(KEY)||"null");
   if(saved&&saved.factions&&typeof saved.factions==="object"){
     for(const [key,entry] of Object.entries(saved.factions)){if(FACTIONS[key])data.factions[key]={value:clamp(entry?.value)}}
+    if(saved.individuals&&typeof saved.individuals==="object")for(const [key,entry] of Object.entries(saved.individuals)){if(FIGURES[key])data.individuals[key]={value:clamp(entry?.value)}};
     data.events=Array.isArray(saved.events)?saved.events.slice(-50):[];
     data.handled=Array.isArray(saved.handled)?saved.handled.filter(x=>typeof x==="string").slice(-200):[];
     data.notices=Array.isArray(saved.notices)?saved.notices.slice(-30):[];
@@ -46,6 +48,7 @@ function load(){
  }catch(e){}
  const base=baseline(character());
  for(const [key,entry] of Object.entries(base))if(!data.factions[key])data.factions[key]=entry;
+ if(character()==="snacky")for(const [id,figure] of Object.entries(FIGURES))if(!data.individuals[id])data.individuals[id]={value:figure.base};
  persist();
 }
 function persist(){try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){}}
@@ -64,13 +67,21 @@ function applyChange({id,faction,delta,source}){
 function fromAction({id,action,resolution}){
  if(!id||!/^Success:/i.test(String(resolution||"")))return false;
  const text=String(action||"").slice(0,360);
- const matches=Object.keys(aliases).filter(key=>aliases[key].test(text));
- // If action explicitly names multiple factions, let the story resolve it rather than guess.
- if(matches.length!==1)return false;
  const positive=good.test(text),negative=bad.test(text);
  if(positive===negative)return false;
- return applyChange({id,faction:matches[0],delta:positive?8:-12,source:text});
+ const matches=Object.keys(aliases).filter(key=>aliases[key].test(text));
+ if(matches.length===1)return applyChange({id,faction:matches[0],delta:positive?8:-12,source:text});
+ if(matches.length>1)return false;
+ if(character()!=="snacky"||data.handled.includes(id))return false;
+ const named=Object.keys(FIGURES).filter(key=>FIGURES[key].pattern.test(text));
+ if(named.length!==1||!data.individuals[named[0]])return false;
+ const record=data.individuals[named[0]],delta=positive?7:-10,before=record.value;
+ record.value=clamp(before+delta);
+ data.handled.push(id);data.handled=data.handled.slice(-200);
+ data.events.push({individual:named[0],delta:record.value-before,source:text,at:new Date().toISOString()});data.events=data.events.slice(-50);
+ persist();renderAll();return true;
 }
+
 function markResolved(id){
  const n=data.notices.find(x=>x.id===id);if(!n)return false;
  data.notices=data.notices.filter(x=>x.id!==id);
@@ -101,6 +112,19 @@ function renderInto(target){
  function drawRows(){records.replaceChildren();for(const key of Object.keys(FACTIONS)){const n=data.factions[key]?.value||0;if(filter==="Allies"&&n<20)continue;if(filter==="Hostiles"&&n>-20)continue;records.append(rowFor(key))}if(!records.children.length)records.append(node("p","No factions in this category yet.","muted"))}
  for(const name of all){const b=node("button",name,"soa-reputation-tab");b.type="button";b.setAttribute("aria-pressed",String(name===filter));b.onclick=()=>{filter=name;for(const v of tabs.children)v.setAttribute("aria-pressed",String(v===b));drawRows()};tabs.append(b)}
  section.append(tabs,records);drawRows();
+ if(Object.keys(data.individuals).length){
+  const heading=node("h3","Known individuals");heading.className="soa-section-title";heading.style.marginTop="18px";section.append(heading);
+  const list=node("div",undefined,"soa-faction-list");
+  for(const [id,record] of Object.entries(data.individuals)){
+   const figure=FIGURES[id];if(!figure)continue;
+   const entry=node("div",undefined,"soa-faction-row");
+   const top=node("div",undefined,"soa-faction-top");
+   top.append(node("strong",figure.name),node("span",reputationLabel(record.value)+" · "+(record.value>0?"+":"")+record.value));
+   const note=node("div",figure.role,"soa-faction-note");entry.append(top,note);list.append(entry);
+  }
+  section.append(list);
+ }
+
  if(data.notices.length){
   const alerts=node("div",undefined,"soa-reputation-alerts");alerts.append(node("h3","Developments awaiting resolution"));
   for(const entry of data.notices.slice(-5)){
@@ -110,7 +134,7 @@ function renderInto(target){
  }
  const history=node("details",undefined,"soa-reputation-history");history.append(node("summary","Faction history ("+data.events.length+")"));
  if(!data.events.length)history.append(node("p","Your reputation will change through meaningful faction-related actions."));
- for(const e of data.events.slice(-8).reverse()){history.append(node("p",(FACTIONS[e.faction]?.name||"Faction")+" "+(e.delta>=0?"+":"")+e.delta+" — "+e.source))}
+ for(const e of data.events.slice(-8).reverse()){history.append(node("p",(FACTIONS[e.faction]?.name||FIGURES[e.individual]?.name||"Unknown")+" "+(e.delta>=0?"+":"")+e.delta+" — "+e.source))}
  section.append(history);
  target.append(section);
 }
