@@ -239,3 +239,14 @@ Portraits are **independent of gameplay saves**: changing one cannot modify inve
 The World of Warcraft-style parchment quest-journal look is now the **one permanent theme**. The page loads with `class="theme-alternative"` on the body and no longer offers a Classic or Alternative appearance selector. The unused `theme.js` switch and switch-only CSS were deleted. The former saved theme preference `soa-ui-theme-v1` is ignored so visitors who previously selected Classic automatically see parchment; their other local data is unchanged.
 
 The CSS-only parchment panel styling is retained, and the offline cache is bumped to **v23**. No gameplay, campaign, inventory, profession, reputation, portrait or character save handlers were modified for this change. Source integration and JavaScript syntax checks passed; live Cloudflare/iPhone display still requires a refresh and confirmation.
+
+
+## Distinct social ability checks (v25)
+
+Living Campaign now supports explicit **Bluff, Bribe, Romance, and Threaten** checks. Choose a naturally described action or specify one of these under **Social check (optional)** in Custom Action. Each recognized check rolls **d20 + a character-specific class/background skill bonus vs DC** (Easy 10, Medium 14, Hard 18). The character sheet's expandable **Social skills** section displays the four bonuses; Snacky's SI:7 Rogue training gives Bluff **+6**, Bribe **+3**, Romance **+3**, Threaten **+2**. A natural 1 fails and a natural 20 succeeds. Romance against an explicitly distrusting companion receives +4 DC.
+
+Bribes require an explicit amount, such as `offer 50 silver to the guard`; they are paid from local money **only if accepted**. Missing amounts or insufficient funds stop without consuming the action. Bluff and Threaten can succeed or fail and affect the narrative, not silently modify faction reputation. Romance outcomes are conversations, never compelled consent or automatic commitment.
+
+Other actions retain their previous action-type calculation, Energy costs and effects. Social rolls consume one time tick; the existing +10 Energy regeneration still applies. Results are persisted with the chosen action before requesting Gemini; retrying a failed generation does **not** reroll, spend the bribe twice or repeat the action. Gemini receives the authoritative die/bonus/DC and must not invent additional deductions or romance stages.
+
+Safety test: check Bluff, Bribe, Romance and Threaten on different characters; verify explicit bribes affect currency only on an accepted attempt; check insufficient balance/missing amount; retry Gemini without repeating payments; inspect saved relationships and reputation. JavaScript syntax and mocked social check tests passed. Live Cloudflare deployment/on-device selection still needs confirmation. Shell cache v25.
