@@ -52,6 +52,25 @@ function baseState(profile){return {id:"junction",hp:100,en:100,money:0,time:0,a
 function newCampaign(profile){
  return {turn:0,scene:null,history:[],journal:[],lastError:"",lastAction:"Begin a completely new, character-specific adventure for "+profile.name+", an adventurer of the "+profile.faction+" — "+profile.race+" "+profile.className+". Start in "+(profile.faction==="Alliance"?"the Eastern Kingdoms":"Kalimdor")+" with an atmospheric personal mystery, a meaningful first encounter and 3–5 choices. Do not start at Hollow Raven or involve Snacky's mission.",lastResult:"New protagonist and prologue, no previous battles or rewards.",pending:null};
 }
+// Social bonuses are per-character, derived from established class/race backgrounds.
+// All figures are visible on the Character Record. Existing saves need no migration.
+const SOCIAL_BASE={
+ Rogue:{bluff:5,bribe:3,romance:3,threaten:2},
+ Warrior:{bluff:1,bribe:2,romance:2,threaten:5},
+ Paladin:{bluff:1,bribe:3,romance:4,threaten:3},
+ Hunter:{bluff:2,bribe:2,romance:2,threaten:3},
+ Priest:{bluff:2,bribe:3,romance:5,threaten:2},
+ Mage:{bluff:4,bribe:4,romance:2,threaten:2},
+ Warlock:{bluff:4,bribe:3,romance:2,threaten:5},
+ Shaman:{bluff:2,bribe:3,romance:3,threaten:3},
+ Druid:{bluff:2,bribe:2,romance:4,threaten:2}
+};
+function socialSkills(){
+ const base=SOCIAL_BASE[active.className]||SOCIAL_BASE.Rogue;
+ // Snacky's training as an SI:7 operative is reflected in his bluff score.
+ const si7=active.id==="snacky"?1:0;
+ return {bluff:base.bluff+si7,bribe:base.bribe,romance:base.romance,threaten:base.threaten};
+}
 function selectedProfile(){return {...active,professions:Object.fromEntries(Object.entries(active.professions||{}).map(([k,v])=>[k,v.skill||1]))}}
 function commitRoster(){write(ROSTER_KEY,roster)}
 function enter(id){
@@ -155,6 +174,16 @@ function drawProfessions(){
  root.append(make("div","CHARACTER RECORD","soa-roster-kicker"),make("h2",active.name+" · "+active.race+" "+active.className));
  window.soaPortraits?.refresh?.();
  const meta=make("p",active.faction+" · "+(active.specialization||"Unchosen"),"muted");root.append(meta);
+ const social=make("details");social.className="soa-social-stats";
+ social.append(make("summary","Social skills · bluff, bribe, romance, threaten"));
+ const scores=make("div",undefined,"soa-social-score-grid");
+ for(const [skill,bonus] of Object.entries(socialSkills())){
+  const score=make("div",undefined,"soa-social-score");
+  score.append(make("strong",skill[0].toUpperCase()+skill.slice(1)),make("span","+"+bonus));
+  scores.append(score);
+ }
+ social.append(scores,make("p","Living Campaign social actions use d20 + skill versus a difficulty check. Bribery requires an explicitly offered amount; affection still requires mutual consent.","muted"));
+ root.append(social);
  root.append(make("h3","Professions"));
  for(const [name,progress] of Object.entries(active.professions||{})){
   const row=make("div",undefined,"soa-profession-row");row.append(make("strong",name),make("span","Skill "+progress.skill+"/300"));
@@ -225,7 +254,7 @@ function applyProfession(action,resolution,id){
  return !!(found&&success);
 }
 init();
-window.soaCharacters={profile:selectedProfile,isNewCharacter:()=>active.origin==="custom",initialLocalState:baseState,applyProfession,showMenu:drawMenu,refreshProfessions:drawProfessions,exportRosterBackup};
+window.soaCharacters={profile:selectedProfile,isNewCharacter:()=>active.origin==="custom",initialLocalState:baseState,applyProfession,showMenu:drawMenu,refreshProfessions:drawProfessions,exportRosterBackup,getSocialSkills:socialSkills};
 window.addEventListener("pagehide",()=>snapshot(active.id));
 document.addEventListener("DOMContentLoaded",()=>{
  profilePanel();
