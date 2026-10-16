@@ -136,7 +136,8 @@ function applyProfession(action,resolution,id){
  if(!id||!active||active.professionEvents.includes(id))return false;
  const txt=String(action||"").toLowerCase();const good=/^Success:/i.test(String(resolution||""));
  const patterns={Mining:/\b(min(e|ing|ed)|ore vein|excavat(e|ion))\b/,Engineering:/\b(engineer|mechanic|device|gadget|tinker|construct)\b/,Herbalism:/\b(herb|gather plant|botany)\b/,Alchemy:/\b(alchem|brew potion|elixir|transmut)\b/,Blacksmithing:/\b(blacksmith|forge|smithing|anvil)\b/,Enchanting:/\b(enchant|imbue|disenchant)\b/,Leatherworking:/\b(leatherwork|stitch leather|craft leather)\b/,Skinning:/\b(skin(ning)?|flay|hide)\b/,Tailoring:/\b(tailor|sew|weav(e|ing)|stitch cloth)\b/,Cooking:/\b(cook|prepare meal|roast)\b/,Fishing:/\b(fish(ing)?|cast line)\b/,"First Aid":/\b(first aid|bandag(e|ing))\b/};
- const found=Object.keys(patterns).find(name=>(active.professions[name]||active.secondary[name])&&patterns[name].test(txt));
+ const practiced=/\b(practic\w*|craft\w*|build\w*|assembl\w*|creat\w*|min(e|ing|ed)|gather\w*|pick\w*|harvest\w*|repair\w*|brew\w*|mix\w*|forg(e|ing)|shap\w*|enchant\w*|imbu\w*|skinn\w*|flay\w*|sew\w*|weav\w*|stitch\w*|cook\w*|prepar\w*|fish\w*|cast\w*|appl\w*|bandag\w*|refin\w*)\b/.test(txt);
+ const found=practiced?Object.keys(patterns).find(name=>(active.professions[name]||active.secondary[name])&&patterns[name].test(txt)):null;
  active.professionEvents.push(id);active.professionEvents=active.professionEvents.slice(-150);
  if(found&&good){const skill=active.professions[found]||active.secondary[found];const gained=Math.min(3,300-skill.skill);skill.skill+=gained;skill.events=(skill.events||0)+1;active.professionLog.push(found+" +"+gained+" skill");active.professionLog=active.professionLog.slice(-30)}
  commitRoster();drawProfessions();return !!(found&&good);
