@@ -19,7 +19,7 @@ function result(action){
  const ok=Math.random()<chance;
  s.en=Math.min(100,s.en-cost+10);s.time++; if(!ok&&["stealth","engineering","combat"].includes(t)){s.alert=Math.min(3,s.alert+1);damage=t==="combat"?8:t==="stealth"?3:0;s.hp=Math.max(1,s.hp-damage)}
  if(ok&&t==="rest")s.hp=Math.min(100,s.hp+4);
- if(ok&&t==="combat"){s.money+=75;addLog("Combat encounter survived; 75 copper recovered")}
+ // Defeating an opponent does not itself loot them: currency changes require explicit search/loot actions.
  const msg=ok?"Success":"Complication";
  let effect=t==="combat"?(ok?"The immediate opponent is overcome in a single abstract skirmish.":"The opponent remains a threat; Snacky takes "+damage+" damage."):t==="stealth"?(ok?"Snacky remains concealed.":"A noise attracts nearby attention."):t==="engineering"?(ok?"Pippa's mechanism works as intended.":"The apparatus sparks and raises suspicion."):t==="social"?(ok?"The approach is received favorably.":"The target refuses to cooperate."):t==="rest"?(ok?"The party regains composure.":"The party cannot safely rest."):ok?"The action achieves its immediate intent.":"The action encounters resistance.";
  return msg+": "+effect+" Result is authoritative; do not invent additional mechanical effects.";
