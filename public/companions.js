@@ -18,7 +18,7 @@ const ACTIONS=[
  {id:"argue",label:"Challenge values",detail:"Risk a disagreement"},
  {id:"betray",label:"Betray their trust",detail:"Potentially become enemies"}
 ];
-let selected="pippa", data={rapport:{pippa:0,bromli:0,lethariel:0},entries:[],relations:{},dialogueIds:[]}, last="";
+let selected="pippa", activeReputationView="companions", data={rapport:{pippa:0,bromli:0,lethariel:0},entries:[],relations:{},dialogueIds:[]}, last="";
 const blank=()=>({trust:0,affection:0,respect:0,status:"Acquaintance",romance:"none",grievances:0,interactions:0});
 const clamp=(v,min=-100,max=100)=>Math.max(min,Math.min(max,Number(v)||0));
 const rel=id=>data.relations[id]||(data.relations[id]=blank());
@@ -115,26 +115,41 @@ function draw(){
  const top=add("div","REPUTATION · ALLIES, FACTIONS & ENEMIES");top.className="soa-kicker";target.append(top);
  const heading=add("h2","Reputation");heading.className="soa-section-title";target.append(heading);
  const intro=add("p","Companion bonds, faction standings and enemies shape your reputation across Azeroth. Friendship, romance and rivalries remain part of your story.");intro.className="muted";target.append(intro);
- if(window.soaReputation){const jump=add("button","View faction standings & known enemies ↓");jump.type="button";jump.className="sub soa-reputation-jump";jump.onclick=()=>target.querySelector("#soa-faction-ledger")?.scrollIntoView({behavior:"smooth",block:"start"});target.append(jump)}
- const subhead=add("h3","Companions & personal relationships");subhead.className="soa-section-title";target.append(subhead);
+ const views=add("div","");views.className="soa-reputation-view-tabs";views.setAttribute("role","group");views.setAttribute("aria-label","Reputation section");
+ const companionsButton=add("button","Companions & Romance"),factionsButton=add("button","Factions & Enemies");
+ for(const btn of [companionsButton,factionsButton]){btn.type="button";btn.className="soa-reputation-view-button";views.append(btn)}
+ target.append(views);
+ const companionGroup=add("div","");companionGroup.id="soa-companions-content";target.append(companionGroup);
+ const factionGroup=add("div","");factionGroup.id="soa-factions-content";target.append(factionGroup);
+ function showView(view){
+  activeReputationView=view==="factions"?"factions":"companions";
+  companionGroup.hidden=activeReputationView!=="companions";
+  factionGroup.hidden=activeReputationView!=="factions";
+  companionsButton.setAttribute("aria-pressed",String(activeReputationView==="companions"));
+  factionsButton.setAttribute("aria-pressed",String(activeReputationView==="factions"));
+ }
+ companionsButton.onclick=()=>showView("companions");
+ factionsButton.onclick=()=>showView("factions");
+ showView(activeReputationView);
+ const subhead=add("h3","Companions & personal relationships");subhead.className="soa-section-title";companionGroup.append(subhead);
  const nav=add("div","");nav.className="soa-people";nav.setAttribute("role","group");nav.setAttribute("aria-label","Choose companion");
  for(const [id,p] of Object.entries(PEOPLE)){
   const b=document.createElement("button");b.type="button";b.className="soa-person"+(id===selected?" selected":"");b.setAttribute("aria-pressed",id===selected?"true":"false");b.textContent=p.icon+" "+p.name.split(" ")[0];b.onclick=()=>{selected=id;last="";draw()};nav.append(b)
- }target.append(nav);
+ }companionGroup.append(nav);
  const p=PEOPLE[selected],info=add("div","");info.className="soa-companion-info";info.append(add("strong",p.name),add("span",p.role));
- const r=rel(selected);const stars=add("span",status(r));stars.className="soa-rapport";info.append(stars);target.append(info);
- const indicators=add("div","");indicators.className="soa-relation-metrics";for(const [name,label] of [["trust","Trust"],["affection","Affection"],["respect","Respect"]]){const unit=add("div","");unit.className="soa-relation-cell";const title=add("div",label+" · "+r[name]);title.className="soa-relation-label";const rail=add("div","");rail.className="soa-relation-rail";const fill=add("div","");fill.className="soa-relation-fill "+name;fill.style.width=((r[name]+100)/2)+"%";rail.append(fill);unit.append(title,rail);indicators.append(unit)}target.append(indicators);
- if(!locationAllows(selected)){const msg=add("p",p.base);msg.className="muted";target.append(msg)}
+ const r=rel(selected);const stars=add("span",status(r));stars.className="soa-rapport";info.append(stars);companionGroup.append(info);
+ const indicators=add("div","");indicators.className="soa-relation-metrics";for(const [name,label] of [["trust","Trust"],["affection","Affection"],["respect","Respect"]]){const unit=add("div","");unit.className="soa-relation-cell";const title=add("div",label+" · "+r[name]);title.className="soa-relation-label";const rail=add("div","");rail.className="soa-relation-rail";const fill=add("div","");fill.className="soa-relation-fill "+name;fill.style.width=((r[name]+100)/2)+"%";rail.append(fill);unit.append(title,rail);indicators.append(unit)}companionGroup.append(indicators);
+ if(!locationAllows(selected)){const msg=add("p",p.base);msg.className="muted";companionGroup.append(msg)}
  const grid=add("div","");grid.className="soa-interactions";
- for(const a of ACTIONS){const b=document.createElement("button");b.type="button";b.className="soa-social-action";b.disabled=!locationAllows(selected);b.append(add("strong",a.label),add("small",a.detail));b.onclick=()=>interact(a.id);grid.append(b)}target.append(grid);
- if(last){const output=add("blockquote",last);output.className="soa-social-result";output.setAttribute("aria-live","polite");target.append(output)}
+ for(const a of ACTIONS){const b=document.createElement("button");b.type="button";b.className="soa-social-action";b.disabled=!locationAllows(selected);b.append(add("strong",a.label),add("small",a.detail));b.onclick=()=>interact(a.id);grid.append(b)}companionGroup.append(grid);
+ if(last){const output=add("blockquote",last);output.className="soa-social-result";output.setAttribute("aria-live","polite");companionGroup.append(output)}
  const details=document.createElement("details");details.className="soa-journal";
  const summary=add("summary","Relationship journal ("+data.entries.length+")");details.append(summary);
  const entries=add("div","");entries.className="soa-journal-entries";
  if(!data.entries.length)entries.append(add("p","Your first companion moment awaits."));
  for(const entry of data.entries.slice(-8).reverse()){const e=add("p",entry.person+" — "+entry.text);entries.append(e)}
- details.append(entries);target.append(details);
- window.soaReputation?.renderInto?.(target);
+ details.append(entries);companionGroup.append(details);
+ window.soaReputation?.renderInto?.(factionGroup);
 }
 load();
 const el=document.createElement("section");el.className="panel soa-companion-panel";el.id="companion-panel";
