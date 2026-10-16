@@ -105,6 +105,8 @@ function drawMenu(){
 }
 function profilePanel(){
  const head=document.querySelector("header");if(!head)return;
+ const title=get("soa-player-name"),tag=get("soa-player-class");if(title)title.textContent=active.name;if(tag)tag.textContent=active.id==="snacky"?"SI:7 · Combat Swords":active.faction+" · "+active.race+" "+active.className;
+ if(typeof render==="function")render();
  const menu=make("button","☰ Characters");menu.id="soa-characters-button";menu.type="button";menu.onclick=drawMenu;head.append(menu);
  const pane=make("section");pane.className="panel soa-profession-panel";pane.id="soa-profession-panel";
  head.after(pane);drawProfessions();
@@ -140,7 +142,7 @@ function applyProfession(action,resolution,id){
  commitRoster();drawProfessions();return !!(found&&good);
 }
 init();
-window.soaCharacters={profile:selectedProfile,isNewCharacter:()=>active.origin==="custom",initialLocalState:baseState,applyProfession,showMenu:drawMenu};
+window.soaCharacters={profile:selectedProfile,isNewCharacter:()=>active.origin==="custom",initialLocalState:baseState,applyProfession,showMenu:drawMenu,refreshProfessions:drawProfessions};
 window.addEventListener("pagehide",()=>snapshot(active.id));
 document.addEventListener("DOMContentLoaded",()=>{
  profilePanel();
