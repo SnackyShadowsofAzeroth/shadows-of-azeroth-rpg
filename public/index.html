@@ -93,4 +93,4 @@ document.querySelector("#ai-enabled").checked=localStorage.getItem("soa-ai-enabl
 document.querySelector("#ai-test").onclick=()=>aiCall(true);
 document.querySelector("#ai-generate").onclick=()=>aiCall(false);
 load();render();if("serviceWorker"in navigator)navigator.serviceWorker.register("./sw.js").catch(()=>{});
-</script></body></html>
+</script><script src="./campaign.js" defer></script></body></html>
