@@ -77,3 +77,12 @@ A pending-action marker is saved before requesting the next scene. If Gemini or 
 To test: load a saved living campaign, enter the separate AI access code if needed, choose a story action, confirm status displays “Gemini is writing…” followed by the new scene and updated stats. Disconnect network during one generation and verify the pending retry button; reconnect, retry and confirm the chosen action is not applied twice. Social panel interactions still update instantly. The static-shell offline cache is version v8.
 
 This patch was verified by source checks and a JavaScript mock flow for normal success and network failure, **not** by a Cloudflare production browser test.
+
+
+## Custom dialogue now changes relationships
+
+In Living Campaign, write an explicit conversational custom action mentioning exactly one companion, such as **"Snacky flirts with Pippa"**, **"Snacky thanks Bromli for saving him"**, or **"Snacky apologizes to Lethariel."** The game recognizes the target and tone, automatically treats conversational actions as Social when the category is left on its default Investigate setting, and applies an appropriate trust/affection/respect change **only after Gemini successfully returns and saves the next scene**. Unclear actions, multiple named companions, and non-dialogue actions (e.g. "Ask Pippa to repair the door") leave relationships unchanged instead of guessing. A failed Social roll will not award friendship/romance points; overtly hurtful speech may still carry a penalty. Companions' journal and meters update immediately.
+
+Relationship effects are associated with a unique saved action ID to prevent double changes after retries or reloads. The next scene request includes the current relationship state. Existing saves, companion actions, and offline prototype remain unchanged; only online Living Campaign custom dialogue triggers this bridge. Cache version v9.
+
+**Manual check:** in Living Campaign, enter a code, write "Snacky flirts with Pippa" in Custom Action (category may remain Investigate), submit, wait for the scene, then inspect Pippa's affection meter and journal. Repeat with an apology or insult and verify different attributes; simulate a network failure and retry to ensure the same event is not counted twice. Avoid negative examples on a treasured relationship save unless intentionally roleplaying consequences.
