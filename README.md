@@ -195,3 +195,16 @@ Mock DOM tests verified both Reputation tabs, selected-tab retention after a fac
 3. Use top navigation to jump between Adventure, Professions and Reputation; no reload or turn advance should occur.
 4. In Characters, choose Download All Character Saves; keep the resulting JSON private and somewhere safe. Do not confuse this with a supported in-app restore feature.
 5. Verify Classic / Alternative parchment switching and individual-character saves still work.
+
+
+## Campaign continuity audit and guardrails (v20)
+
+**Problem discovered:** The Gemini director had only the last 12 history snippets (220 characters each), the prior scene, and a generic instruction to maintain continuity. Older motives and key evidence could drop out of immediate context, allowing a new unconnected mission (e.g. Stormwind explosives) to appear while Snacky was still investigating Hollow Raven.
+
+**Improvements:** The Living Campaign now sends 20 recent history events, records longer scene snippets with explicit locations, includes the last 12 journal discoveries, and supplies a persistent **historical mission-origin anchor** per character. A historical origin is not proof that all the old objectives remain unfinished. The server's continuity instructions explicitly preserve established causality, unresolved leads, companion locations, and the player's authority over travel. New conspiracies may be introduced as leads, but not as unchosen completed journeys.
+
+**Defensive response validation:** Server rejects a new scene that moves from one recognized major location to another (e.g. Hollow Raven to Stormwind) without an explicit matching destination in the chosen travel action or a teleport/portal/hearth action. A rejected scene does not replace the saved scene, does not deduct a second Energy cost, and shows the existing safe **Retry generating next scene** flow. Ordinary movement within the same region remains allowed. This is a targeted guardrail rather than perfect geographic understanding.
+
+**Existing saves:** This update does **not** rewrite a saved Stormwind scene back into Hollow Raven or retroactively reinterpret past player choices. If the saved story already moved, compare its recent scene history and explicit player decisions before deciding whether that narrative is canonical or needs a deliberate correction.
+
+**Test scenarios:** Hollow Raven → Stormwind via simple investigate/move/exit must be rejected; Hollow Raven → Stormwind via “travel to Stormwind” or “take a portal” allowed; Hollow Raven room-to-room movement allowed; Stormwind district movement allowed. Client/server JavaScript syntax and those guardrail scenarios passed. Cache v20; live Cloudflare/Gemini behavior remains to verify.
