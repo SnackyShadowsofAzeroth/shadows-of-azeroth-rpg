@@ -1,6 +1,6 @@
 // Static-shell offline cache. API requests are network-only and are never cached.
-const CACHE="shadows-of-azeroth-v12";
-const FILES=["./","./index.html","./manifest.webmanifest","./icon.svg","./campaign.js","./companions.js","./theme.css","./theme.js"];
+const CACHE="shadows-of-azeroth-v13";
+const FILES=["./","./index.html","./manifest.webmanifest","./icon.svg","./campaign.js","./companions.js","./theme.css","./theme.js","./characters.css","./characters.js"];
 self.addEventListener("install",event=>{
   event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(FILES)).then(()=>self.skipWaiting()));
 });
