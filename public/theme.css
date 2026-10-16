@@ -1,0 +1,90 @@
+/* Stormwind SI:7 — optional theme. Default classic theme remains untouched. */
+body.theme-stormwind-si7 {
+  --si7-ink: #e8e2d5;
+  --si7-gold: #d9ba7d;
+  --si7-red: #a64d57;
+  --si7-stone: #485565;
+  color: var(--si7-ink);
+  background-color: #1a2531;
+  background-image:
+    radial-gradient(ellipse at 50% 0%, rgba(180,194,206,.20), transparent 36%),
+    linear-gradient(180deg, rgba(8,14,22,.48), rgba(8,13,20,.8)),
+    repeating-linear-gradient(0deg, transparent 0 92px, rgba(7,12,19,.68) 92px 98px, transparent 98px 184px),
+    repeating-linear-gradient(90deg, transparent 0 176px, rgba(7,12,19,.55) 176px 181px, transparent 181px 360px),
+    linear-gradient(136deg, #75828d, #506071 50%, #344453);
+  background-attachment: fixed;
+}
+body.theme-stormwind-si7::before {
+  content:"";
+  position:fixed;inset:0;pointer-events:none;z-index:0;
+  opacity:.28;
+  background:
+    repeating-linear-gradient(90deg,transparent 0 72px,rgba(226,234,239,.075) 72px 74px,transparent 74px 148px),
+    radial-gradient(ellipse at 20% 20%,rgba(255,221,157,.17),transparent 40%),
+    radial-gradient(ellipse at 90% 85%,rgba(136,25,43,.19),transparent 55%);
+}
+body.theme-stormwind-si7 main {position:relative;z-index:1}
+body.theme-stormwind-si7 header {position:relative;padding-top:31px}
+body.theme-stormwind-si7 header::before {
+  content:"✦  STORMWIND INTELLIGENCE  ✦";display:block;
+  font:700 10px/1.5 system-ui,sans-serif;letter-spacing:.27em;
+  color:#dbbc83;margin-bottom:9px;text-shadow:0 2px 8px #060a12;
+}
+body.theme-stormwind-si7 header h1 {
+  color:#efd7a5;
+  text-shadow:0 2px 3px #04080d,0 0 27px #b4854f55;
+}
+body.theme-stormwind-si7 .panel {
+  background:linear-gradient(157deg,rgba(28,39,52,.97),rgba(14,23,35,.98));
+  border-color:#768092;
+  box-shadow:0 2px 0 #b59b684d inset,0 12px 36px #05091085;
+}
+body.theme-stormwind-si7 .panel h2,
+body.theme-stormwind-si7 .panel h3 {color:#e8c98c}
+body.theme-stormwind-si7 .panel > .eyebrow,
+body.theme-stormwind-si7 .soa-kicker {color:#d9b78a}
+body.theme-stormwind-si7 .muted {color:#bfcbd8}
+body.theme-stormwind-si7 .stat,
+body.theme-stormwind-si7 .soa-relation-cell,
+body.theme-stormwind-si7 .soa-companion-info {background:#111d2b;border-color:#45556a}
+body.theme-stormwind-si7 .tag {color:#f1dce0}
+body.theme-stormwind-si7 #campaign-box {border-top:3px solid #8f4250}
+body.theme-stormwind-si7 #campaign-box h2::after {
+  content:"  •  CLASSIFIED";font:700 9px system-ui,sans-serif;letter-spacing:.17em;color:#d49a9f;
+}
+body.theme-stormwind-si7 button.low{background:linear-gradient(92deg,#214135,#273747);border-left-color:#69b98e}
+body.theme-stormwind-si7 button.med{background:linear-gradient(92deg,#54432c,#283748);border-left-color:#e2bc72}
+body.theme-stormwind-si7 button.high{background:linear-gradient(92deg,#5a3038,#283748);border-left-color:#db7c88}
+body.theme-stormwind-si7 .soa-social-action {background:#273548;border-color:#727f91}
+body.theme-stormwind-si7 .soa-person.selected {background:#46343a;border-color:#c28a8e;color:#fff4eb}
+body.theme-stormwind-si7 .soa-social-result{border-left-color:#ba7380}
+body.theme-stormwind-si7 .bar i{background:#22b45e}
+body.theme-stormwind-si7 .bar.energy i{background:#f0ca23}
+.soa-theme-switch {
+  display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;
+  padding:11px 8px 3px;max-width:420px;margin:0 auto;
+}
+.soa-theme-label {
+  flex-basis:100%;text-align:center;font:700 10px/1.5 system-ui,sans-serif;
+  letter-spacing:.15em;color:#c6d1dc;text-transform:uppercase;
+}
+.soa-theme-switch button {
+  width:auto;min-width:136px;margin:0;
+  padding:9px 12px;min-height:42px;text-align:center;border-radius:9px;
+  font:600 12px system-ui,sans-serif;
+  background:#162331;color:#d8e1e9;border:1px solid #65758a;
+}
+.soa-theme-switch button[aria-pressed="true"] {
+  border-color:#d5b777;
+  color:#fff0d2;
+  background:linear-gradient(145deg,#5b4331,#283746);
+  box-shadow:inset 0 0 0 1px #d6b77955;
+}
+.soa-theme-switch button:focus-visible {outline:2px solid #efcf8a;outline-offset:3px}
+.soa-theme-note {
+  flex-basis:100%;font:11px/1.5 system-ui,sans-serif;
+  color:#b4c2d0;text-align:center;margin:2px 0 0;
+}
+body.theme-stormwind-si7 .soa-theme-note {color:#e1d2bd}
+@media(max-width:380px){.soa-theme-switch{gap:6px}.soa-theme-switch button{min-width:125px}}
+@media(prefers-reduced-motion:reduce){.soa-theme-switch button{transition:none}}
