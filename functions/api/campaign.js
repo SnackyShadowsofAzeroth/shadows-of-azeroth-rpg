@@ -14,7 +14,12 @@ function intentionalTravel(action){
 }
 function unexpectedRelocation(before,after,action){
  const origin=regionOf(before),destination=regionOf(after);
- return !!(origin&&destination&&origin!==destination&&!intentionalTravel(action));
+ if(!origin||!destination||origin===destination)return false;
+ // A generic "leave the room" or "move to the console" is NOT permission
+ // to teleport to a distant town. Require a named destination or a portal.
+ const explicitDestination=regionOf(action)===destination;
+ const explicitMagicTravel=/\b(?:teleport\w*|portal\b|hearth\w*)\b/i.test(String(action||""));
+ return !(intentionalTravel(action)&&(explicitDestination||explicitMagicTravel));
 }
 
 export async function onRequestPost({request,env}){
