@@ -112,9 +112,10 @@ function applyDialogueOutcome(event){
 function draw(){
  const target=$("companion-panel");if(!target)return;
  target.replaceChildren();
- const top=add("div","RELATIONSHIPS · FRIENDSHIP AND RIVALRY");top.className="soa-kicker";target.append(top);
- const heading=add("h2","Bonds of Azeroth");heading.className="soa-section-title";target.append(heading);
- const intro=add("p","Build friendship, explore mutual romance, commit or marry. Choices can also damage trust and create rivals or enemies. Optional conversations do not advance the mission or spend Energy.");intro.className="muted";target.append(intro);
+ const top=add("div","REPUTATION · ALLIES, FACTIONS & ENEMIES");top.className="soa-kicker";target.append(top);
+ const heading=add("h2","Reputation");heading.className="soa-section-title";target.append(heading);
+ const intro=add("p","Companion bonds, faction standings and enemies shape your reputation across Azeroth. Friendship, romance and rivalries remain part of your story.");intro.className="muted";target.append(intro);
+ const subhead=add("h3","Companions & personal relationships");subhead.className="soa-section-title";target.append(subhead);
  const nav=add("div","");nav.className="soa-people";nav.setAttribute("role","group");nav.setAttribute("aria-label","Choose companion");
  for(const [id,p] of Object.entries(PEOPLE)){
   const b=document.createElement("button");b.type="button";b.className="soa-person"+(id===selected?" selected":"");b.setAttribute("aria-pressed",id===selected?"true":"false");b.textContent=p.icon+" "+p.name.split(" ")[0];b.onclick=()=>{selected=id;last="";draw()};nav.append(b)
@@ -132,6 +133,7 @@ function draw(){
  if(!data.entries.length)entries.append(add("p","Your first companion moment awaits."));
  for(const entry of data.entries.slice(-8).reverse()){const e=add("p",entry.person+" — "+entry.text);entries.append(e)}
  details.append(entries);target.append(details);
+ window.soaReputation?.renderInto?.(target);
 }
 load();
 const el=document.createElement("section");el.className="panel soa-companion-panel";el.id="companion-panel";
