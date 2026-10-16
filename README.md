@@ -116,7 +116,7 @@ The race/class picker follows the published WoW Forever beta combination matrix:
 
 **Save isolation:** Existing localStorage keys are preserved as the actively loaded working save; the roster keeps independent snapshots under `soa-character-slot-v1-<id>`, with roster metadata under `soa-character-roster-v1`. Before a switch, the current hero is backed up; the destination slot is restored and the app reloads. The original save is copied into the Snacky slot on first setup. The UI stops switching if the current slot cannot be backed up. Relationship records are likewise per-slot. Appearance theme is global and unchanged.
 
-**Profession practice:** Under **Character Record**, each hero can inspect their chosen professions and secondary skills and tap **Practice via Story**. A successful custom action that explicitly describes a relevant profession earns up to 3 points (cap 300), recorded in that hero's profession log. Failures don't award skill, and an action identifier prevents double gains on retry. Profession practice currently tracks **skill progression**, not a full recipe, reagent, inventory or equipment crafting simulation.
+**Profession practice:** Under **Character Record**, each hero can inspect their chosen professions and secondary skills and tap **Practice via Story**. A successful profession-relevant action gets a level-scaled chance at +1 skill (cap 300), recorded in that hero's profession log. Failures don't award skill, and an action identifier prevents double gains on retry. Profession practice currently tracks **skill progression**, not a full recipe, reagent, inventory or equipment crafting simulation.
 
 **New adventures:** Each newly created character gets a clean AI Living Campaign and character-specific prompt. Gemini is instructed to start an unrelated personal mystery appropriate to the selected faction/race/class/professions, without introducing Snacky's Hollow Raven plot. Online AI access is required to generate new scenes. The original offline scripted campaign is Snacky-specific and is not presented as a different class's adventure. New-character combat currently uses the simplified living-campaign action engine; full class-specific ability trees are a separate future expansion. New characters do not inherit Snacky's companions.
 
@@ -129,3 +129,14 @@ The race/class picker follows the published WoW Forever beta combination matrix:
 5. Check Classic ↔ Alternative parchment theme switching, offline shell, no double rewards on retry, and character menu on next new browser session.
 
 **Important:** Saves remain local to the browser/device and are not cloud synced. The legacy JSON Export Save button exports the *active legacy/offline save* only, not a complete multi-character roster backup. Do not clear browser storage or change browsers expecting these saves to follow automatically.
+
+
+## Natural profession progression (v15)
+
+Profession-required skill checks and ordinary field gathering now have a chance to award **exactly +1 skill point** on a successful, profession-relevant action. Mining ore, gathering herbs, skinning beasts, fishing, crafting, diagnosing or repairing mechanisms, and appropriate secondary profession work all qualify when the character has that profession. Mere references to a profession in dialogue do not qualify.
+
+Skill-up chances are intentionally diminishing as proficiency rises: **85%** at 1–74, **70%** at 75–149, **55%** at 150–224, **35%** at 225–274, and **20%** at 275–299. At 300 there is no further gain. A failed action never awards skill. Rolls are stable for the saved action identifier, avoiding rerolls on Gemini retries, and processed IDs prevent repeated awards. Profession log records +1 or a successful no-gain check. The existing individual-character skill levels, including Snacky's established **Mining 225/300 and Engineering 225/300**, are preserved.
+
+This updates the previous guaranteed up-to-3-points profession practice behavior: successful practice is now a normal +1 *chance*, just like natural gameplay. Profession checks remain part of the already-resolved Living Campaign action, not a second expenditure of Energy.
+
+Testing: mine an ore vein or inspect a device in a successful Living Campaign action, then inspect the Character Record. Repeat several separate actions; some award +1, others don't. Failed checks award nothing, resuming failed Gemini requests cannot award twice, and each character's professions remain independent.
