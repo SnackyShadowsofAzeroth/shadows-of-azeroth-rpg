@@ -221,3 +221,14 @@ Mock DOM tests verified both Reputation tabs, selected-tab retention after a fac
 **Romantic dynamics:** Pippa is infatuated with Snacky. Lethariel has romantic feelings for Bromli. Express affection subtly and consistently through dialogue, glances and discretionary character behavior, while preserving personal agency and all saved Trust/Affection/Respect values. Narrative premise is **not** an automatic change to mechanical relationship points or an automatic confession.
 
 **Safety and preservation:** Changes affect future story guidance only. Existing saved scenes, equipment, relationships, profession skills, currency and security flags are not overwritten; new character campaigns remain independent. JS source checks passed. Cache v21.
+
+
+## Per-character portrait upload (v22)
+
+The **Character Record** now has an avatar preview, **Upload Portrait / Change Portrait**, and **Remove** controls. The **Choose Your Hero** roster also displays each character's image or an initial when none is set. JPG, PNG and WebP files up to 12 MB are accepted; the browser resizes and center-crops images to a square 320×320 JPEG and stores a compressed local data URL under `soa-portrait-v1-<character-id>` (below ~210 KB per character). This reduces storage pressure and enables local/offline viewing on iOS.
+
+Portraits are **independent of gameplay saves**: changing one cannot modify inventory, relationships, story or character stats. Existing characters begin without a portrait until one is uploaded. The **Download All Character Saves** archive now includes a `portraits` object with all stored character portraits; no secret or external image hosting is involved. The older one-character export still does not include the new portraits; there is still no full-roster restore/import UI.
+
+**How to use:** save the generated portrait image to Photos or Files on your iPhone, open Shadows of Azeroth, select Snacky, scroll/tap Professions (Character Record), tap Upload Portrait, choose the image, and confirm it appears both in the character sheet and on the main menu. Portrait selection/removal needs explicit confirmation for removal. Other heroes can upload separate photos.
+
+**Smoke test:** upload image for Snacky; reload and switch characters; verify it follows Snacky only. Replace with another image and inspect roster display. Remove and verify an initial returns. Test dark Classic and Alternative parchment. Download All Character Saves and verify the `portraits` object in the JSON. Refresh after Cloudflare deploys cache version v22. Source syntax verified, but live iPhone image-picking is not yet verified.
