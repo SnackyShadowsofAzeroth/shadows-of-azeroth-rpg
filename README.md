@@ -86,3 +86,23 @@ In Living Campaign, write an explicit conversational custom action mentioning ex
 Relationship effects are associated with a unique saved action ID to prevent double changes after retries or reloads. The next scene request includes the current relationship state. Existing saves, companion actions, and offline prototype remain unchanged; only online Living Campaign custom dialogue triggers this bridge. Cache version v9.
 
 **Manual check:** in Living Campaign, enter a code, write "Snacky flirts with Pippa" in Custom Action (category may remain Investigate), submit, wait for the scene, then inspect Pippa's affection meter and journal. Repeat with an apology or insult and verify different attributes; simulate a network failure and retry to ensure the same event is not counted twice. Avoid negative examples on a treasured relationship save unless intentionally roleplaying consequences.
+
+
+## Reversible Stormwind SI:7 visual theme (v10)
+
+The header now has an **Appearance · SI:7 Field Operations** selector with **Classic** and **Stormwind SI:7** buttons. Classic is the unchanged default for users without a saved theme preference. Stormwind uses CSS-only slate-blue stonework, torchlike atmospheric gradients, a dossier-inspired red/gold accent, and the original legible green Health/yellow Energy bars. It is deliberately lightweight: **no third-party images, no downloads, and no changes to game logic**. The theme is applied through the `theme-stormwind-si7` class on `body`.
+
+- `public/theme.css`: all optional theme styles scoped under `body.theme-stormwind-si7`, with additional shared selector styling.
+- `public/theme.js`: instant accessible pressed-state toggle, optional persistence under **`soa-ui-theme-v1`**, and one-tap Classic restoration without reloading.
+- `public/index.html`: links only the extra stylesheet and script; the existing inline game engine, campaign script and companion script remain unchanged.
+- `public/sw.js`: cache **v10**, pre-caches theme assets for offline switching and continues excluding API calls from cache.
+
+### Safe testing
+
+1. Open the existing game once online and refresh; verify its familiar appearance and existing story/companions/saves.
+2. Tap **Stormwind SI:7** beneath the title. Verify panels, buttons, Health/Energy, story choices, and relationships remain legible and usable.
+3. Tap **Classic** and verify the original appearance returns immediately. No page reload required and no save reset.
+4. Select Stormwind again, refresh and ensure the selection persists; select Classic again when finished.
+5. Disconnect after assets have cached and check the theme switch remains available offline.
+
+The appearance selector never changes `soa-save-v1`, `soa-campaign-v1`, `soa-companions-v1`, actions, credentials or secret storage. Automated source/syntax and theme-state tests pass; **Cloudflare production deployment and on-device visual rendering are not yet verified**.
