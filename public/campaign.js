@@ -5,6 +5,8 @@ const get=id=>document.getElementById(id);
 function store(){try{localStorage.setItem(KEY,JSON.stringify(campaign))}catch(e){}}
 function make(){return {turn:0,scene:null,history:[],journal:[],lastError:"",lastAction:"Begin the next chapter from the secured central junction",lastResult:"No further events yet. The six-person expedition is intact; the zero-alarm objective is active.",pending:null}}
 function safe(text){return String(text||"").slice(0,2600)}
+function readableStory(text){return String(text||"").replace(/\bPipprained in her satchel\b/gi,"Pippa rummaged in her satchel").replace(/\bPipprained\b/gi,"Pippa")}
+
 function status(message){statusMessage=message;const el=get("campaign-status");if(el)el.textContent=message}
 function accessCode(){return get("ai-code")?.value.trim()||""}
 function focusAccess(){status("Enter your private AI access code in the AI Story Director panel to continue.");const f=get("ai-code");if(f){f.scrollIntoView({behavior:"smooth",block:"center"});f.focus()}}
@@ -73,7 +75,7 @@ function draw(){
  if(!enabled||!campaign)return;showOriginal(false);
  const box=get("campaign-scene");box.replaceChildren();
  if(!campaign.scene){status(statusMessage||"Ready to generate the next scene.");return}
- const sc=campaign.scene,head=document.createElement("h3"),where=document.createElement("div"),text=document.createElement("p");head.textContent=sc.title||"The Hollow Raven";where.className="muted";where.textContent=sc.location||"Raven Hill";text.style.whiteSpace="pre-line";text.textContent=sc.story;box.append(head,where,text);
+ const sc=campaign.scene,head=document.createElement("h3"),where=document.createElement("div"),text=document.createElement("p");head.textContent=sc.title||"The Hollow Raven";where.className="muted";where.textContent=sc.location||"Raven Hill";text.style.whiteSpace="pre-line";text.textContent=readableStory(sc.story);box.append(head,where,text);
  if(pending()){const note=document.createElement("p");note.className="soa-pending";note.textContent="Your last decision is saved. The next story scene has not arrived. Retry safely without repeating the action.";box.append(note);const retry=document.createElement("button");retry.className="med";retry.textContent="Retry generating next scene";retry.disabled=busy;retry.onclick=()=>{returnToAdventure("status");advance(campaign.lastAction,campaign.lastResult,true)};box.append(retry)}
  for(const [index,choice] of sc.choices.entries()){const b=document.createElement("button");b.className=choice.difficulty==="easy"?"low":choice.difficulty==="hard"?"high":"med";const headline=document.createElement("strong"),detail=document.createElement("small");headline.textContent=String.fromCharCode(65+index)+") "+choice.text;headline.style.display="block";detail.textContent=(choice.difficulty||"medium")+" difficulty · "+(choice.type||"investigate");detail.style.cssText="display:block;margin-top:5px;color:#bccbd6;font:12px system-ui;text-transform:capitalize";b.append(headline,detail);b.disabled=busy||!!pending();b.onclick=()=>choose(choice);box.append(b)}
  const surveyIndex=sc.choices.length;
