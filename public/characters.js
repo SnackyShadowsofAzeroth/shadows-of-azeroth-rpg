@@ -74,6 +74,26 @@ function create(profile){
  location.reload();
 }
 function selectOptions(select,values){select.replaceChildren();for(const val of values){const op=make("option",val);op.value=val;select.append(op)}}
+// Non-destructive multi-character backup. Does not include AI access codes or API secrets.
+// The current live working save is snapshotted before the archive is generated.
+function exportRosterBackup(){
+ if(!snapshot(active.id)){alert("Couldn't safely read your current save for export. No data was changed.");return false}
+ const slots={};
+ for(const p of roster.characters){
+  const saved=read(SLOT_PREFIX+p.id);
+  if(!saved){alert("Backup stopped: a save slot for "+p.name+" is missing.");return false}
+  slots[p.id]=saved;
+ }
+ const archive={kind:"shadows-of-azeroth-multi-character-backup",version:1,createdAt:new Date().toISOString(),roster:roster,slots:slots};
+ try{
+  const blob=new Blob([JSON.stringify(archive,null,2)],{type:"application/json"});
+  const url=URL.createObjectURL(blob),link=document.createElement("a");
+  link.href=url;link.download="shadows-of-azeroth-all-characters.json";
+  document.body.append(link);link.click();link.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),3000);
+  return true;
+ }catch(e){alert("Unable to download backup: "+e.message);return false}
+}
 function drawMenu(){
  let overlay=get("soa-character-menu");if(overlay)overlay.remove();
  overlay=make("div",undefined,"soa-menu-overlay");overlay.id="soa-character-menu";
@@ -110,6 +130,8 @@ function drawMenu(){
  const submit=make("button","Create Character & Start Story");submit.type="submit";form.append(submit);
  form.onsubmit=e=>{e.preventDefault();const n=name.value.trim();if(n.length<2||n.length>36){warning.textContent="Enter a name between 2 and 36 characters.";return}if(prof1.value===prof2.value){warning.textContent="Choose two different primary professions.";return}if(roster.characters.some(x=>x.name.toLowerCase()===n.toLowerCase())){warning.textContent="That character name is already in your roster.";return}create({name:n,race:race.value,faction:faction.value,className:className.value,professionNames:[prof1.value,prof2.value]})};
  expand.append(form);shell.append(expand);
+ const backup=make("button","Download All Character Saves");backup.type="button";backup.className="soa-roster-backup";backup.onclick=exportRosterBackup;shell.append(backup);
+ const backupHelp=make("p","Download a backup of every hero, story, reputation and relationship. Keep the file somewhere safe; in-app full-roster restore is not available yet.","soa-menu-help");shell.append(backupHelp);
  const close=make("button","Return to Game");close.className="soa-menu-back";close.onclick=()=>{overlay.remove();document.documentElement.classList.remove("soa-character-menu-open");try{sessionStorage.setItem(ENTER_KEY,"1")}catch(e){}};
  shell.append(close);overlay.append(shell);document.body.append(overlay);document.documentElement.classList.add("soa-character-menu-open");
 }
@@ -195,7 +217,7 @@ function applyProfession(action,resolution,id){
  return !!(found&&success);
 }
 init();
-window.soaCharacters={profile:selectedProfile,isNewCharacter:()=>active.origin==="custom",initialLocalState:baseState,applyProfession,showMenu:drawMenu,refreshProfessions:drawProfessions};
+window.soaCharacters={profile:selectedProfile,isNewCharacter:()=>active.origin==="custom",initialLocalState:baseState,applyProfession,showMenu:drawMenu,refreshProfessions:drawProfessions,exportRosterBackup};
 window.addEventListener("pagehide",()=>snapshot(active.id));
 document.addEventListener("DOMContentLoaded",()=>{
  profilePanel();
