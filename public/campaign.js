@@ -10,6 +10,24 @@ function accessCode(){return get("ai-code")?.value.trim()||""}
 function focusAccess(){status("Enter your private AI access code in the AI Story Director panel to continue.");const f=get("ai-code");if(f){f.scrollIntoView({behavior:"smooth",block:"center"});f.focus()}}
 function refreshDisplay(){render();draw();window.soaCompanions?.refresh?.()}
 function pending(){return campaign?.pending&&typeof campaign.pending.action==="string"?campaign.pending:null}
+// Conservative explicit-target parsing: never infer a relationship event from ordinary movement.
+function dialogueFromCustom(action){
+ if(!action?.custom||action.type!=="social")return null;
+ const text=String(action.text||"").slice(0,300);
+ const mentions=[["pippa",/\b(?:pippa|sparkwhistle)\b/i],["bromli",/\b(?:bromli|ironkeg)\b/i],["lethariel",/\b(?:lethariel)\b/i]].filter(([id,re])=>re.test(text));
+ if(mentions.length!==1)return null;
+ // Explicit dialogue intent required; references to a companion in another activity don't count.
+ if(!/\b(?:talk|speak|say|tell|ask|chat|converse|compliment|flirt|joke|thank|praise|apologiz\w*|confess|insult|mock|argue|betray|lie|reassure|encourage|comfort|support)\b/i.test(text))return null;
+ const tone=/\b(?:betray|sell out|turn against)\b/i.test(text)?"betray":
+ /\b(?:insult|mock|humiliat\w*|threaten)\b/i.test(text)?"insult":
+ /\b(?:apologiz\w*|sorry|forgive me)\b/i.test(text)?"apologize":
+ /\b(?:flirt|romance|attract\w*|kiss|beautiful|handsome|adorable|crush)\b/i.test(text)?"flirt":
+ /\b(?:argue|disagree|challenge)\b/i.test(text)?"disagree":
+ /\b(?:support|comfort|reassure|encourage|protect)\b/i.test(text)?"support":
+ /\b(?:truth|honest|confess)\b/i.test(text)?"honest":
+ /\b(?:thank|praise|compliment|joke|friendly|friend|kind)\b/i.test(text)?"friendly":"neutral";
+ return {target:mentions[0][0],tone};
+}
 function result(action){
  const t=action.type;let cost=0,chance=1,damage=0;
  if(t==="stealth"){cost=20;chance=.78-s.alert*.08}
@@ -55,7 +73,7 @@ function draw(){
  type.value=customType;type.onchange=()=>{customType=type.value};
  help.id="campaign-custom-help";help.className="muted";help.textContent="Describe what you attempt. Action type sets the normal Energy cost and roll; custom actions use medium difficulty. New scenes require internet.";input.setAttribute("aria-describedby",help.id);
  submit.type="submit";submit.textContent="Take custom action";submit.disabled=busy||!navigator.onLine||!customDraft.trim();
- form.onsubmit=e=>{e.preventDefault();const text=input.value.trim();if(!text||busy)return;choose({text,type:type.value,difficulty:"medium"})};form.append(label,input,typeLabel,type,help,submit);box.append(form);
+ form.onsubmit=e=>{e.preventDefault();const text=input.value.trim();if(!text||busy)return;choose({text,type:type.value,difficulty:"medium",custom:true})};form.append(label,input,typeLabel,type,help,submit);box.append(form);
  const foot=document.createElement("p");foot.className="muted";foot.textContent="Scene "+campaign.turn+" · "+(navigator.onLine?"Online":"Offline saved scene")+" · "+campaign.journal.slice(-2).join(" · ");box.append(foot)
 }
 async function choose(choice){
@@ -65,7 +83,7 @@ async function choose(choice){
  const resolution=result(choice);
  if(!resolution){status("Not enough Energy for that action.");return}
  campaign.lastAction=safe(choice.text);campaign.lastResult=resolution;
- campaign.pending={action:campaign.lastAction,resolution,startedAt:Date.now()};
+ campaign.pending={action:campaign.lastAction,resolution,startedAt:Date.now(),dialogue:dialogueFromCustom(choice)};
  campaign.history.push("Player: "+campaign.lastAction+" | "+resolution);
  campaign.history=campaign.history.slice(-MAX);store();refreshDisplay();
  await advance(campaign.lastAction,resolution,false);
@@ -79,7 +97,8 @@ async function advance(action,resolution,retry){
  const response=await fetch("./api/campaign",{method:"POST",headers:{"content-type":"application/json","x-story-access":code},body:JSON.stringify({context:{location:campaign.scene?.location||"Hollow Raven laboratory",previousScene:campaign.scene?.story||"",action,resolution,hp:s.hp,energy:s.en,gold:fmtMoney(s.money),alarm:s.alert,turn:campaign.turn,history:campaign.history,flags:Object.keys(s.flags||{}),companionMoments:window.soaCompanions?.getRecent?.()||[],relationships:window.soaCompanions?.getRelationships?.()||{}}})});
  const data=await response.json().catch(()=>({error:"Invalid server response"}));if(!response.ok)throw Error(data.error||"Request failed");
  if(!Array.isArray(data.choices)||!data.story)throw Error("Incomplete generated scene");
- campaign.scene=data;campaign.turn++;campaign.pending=null;customDraft="";campaign.history.push("Scene: "+safe(data.title)+" - "+safe(data.story).slice(0,180));campaign.history=campaign.history.slice(-MAX);if(data.journal)campaign.journal.push(safe(data.journal).slice(0,200));campaign.journal=campaign.journal.slice(-100);campaign.lastError="";store();status("Scene generated and saved. Choose your next action.");
+ const completedDialogue=campaign.pending?.dialogue?{...campaign.pending.dialogue,id:"campaign-dialogue-"+campaign.pending.startedAt+"-"+campaign.turn,success:/^Success:/i.test(campaign.pending.resolution)}:null;
+ campaign.scene=data;campaign.turn++;campaign.pending=null;customDraft="";campaign.history.push("Scene: "+safe(data.title)+" - "+safe(data.story).slice(0,180));campaign.history=campaign.history.slice(-MAX);if(data.journal)campaign.journal.push(safe(data.journal).slice(0,200));campaign.journal=campaign.journal.slice(-100);campaign.lastError="";store();if(completedDialogue)window.soaCompanions?.applyDialogueOutcome?.(completedDialogue);status("Scene generated and saved. Choose your next action.");
  }catch(e){campaign.lastError=e.message;store();status("AI unavailable: "+e.message+". Your last action is preserved. Tap Retry generating next scene; it will not spend Energy twice.")}finally{busy=false;refreshDisplay()}
 }
 try{campaign=JSON.parse(localStorage.getItem(KEY)||"null")}catch(e){campaign=null}
