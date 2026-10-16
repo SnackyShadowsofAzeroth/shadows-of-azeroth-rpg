@@ -58,10 +58,18 @@ function draw(){
  form.onsubmit=e=>{e.preventDefault();const text=input.value.trim();if(!text||busy)return;choose({text,type:type.value,difficulty:"medium"})};form.append(label,input,typeLabel,type,help,submit);box.append(form);
  const foot=document.createElement("p");foot.className="muted";foot.textContent="Scene "+campaign.turn+" · "+(navigator.onLine?"Online":"Offline saved scene")+" · "+campaign.journal.slice(-2).join(" · ");box.append(foot)
 }
-async function choose(choice){if(busy)return; if(!navigator.onLine){get("campaign-status").textContent="Offline: return to scripted adventure or reconnect to generate your next scene.";return}
- if(!get("ai-code")?.value.trim()){get("campaign-status").textContent="Enter your private AI access code below before taking an action.";return}
- const resolution=result(choice);if(!resolution){get("campaign-status").textContent="Not enough Energy for that action.";return}
- campaign.lastAction=safe(choice.text);campaign.lastResult=resolution;campaign.history.push("Player: "+campaign.lastAction+" | "+resolution);campaign.history=campaign.history.slice(-MAX);store();render();await advance(campaign.lastAction,resolution,false)}
+async function choose(choice){
+ if(busy||pending())return;
+ if(!navigator.onLine){status("Offline: your saved scene is available. Reconnect to generate another.");return}
+ if(!accessCode()){focusAccess();return}
+ const resolution=result(choice);
+ if(!resolution){status("Not enough Energy for that action.");return}
+ campaign.lastAction=safe(choice.text);campaign.lastResult=resolution;
+ campaign.pending={action:campaign.lastAction,resolution,startedAt:Date.now()};
+ campaign.history.push("Player: "+campaign.lastAction+" | "+resolution);
+ campaign.history=campaign.history.slice(-MAX);store();refreshDisplay();
+ await advance(campaign.lastAction,resolution,false);
+}
 async function advance(action,resolution,retry){
  if(busy)return;if(!navigator.onLine){get("campaign-status").textContent="Offline: saved scene available; new scenes require internet.";draw();return}
  const code=accessCode();
