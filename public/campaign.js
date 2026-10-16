@@ -64,8 +64,20 @@ function draw(){
  const sc=campaign.scene,head=document.createElement("h3"),where=document.createElement("div"),text=document.createElement("p");head.textContent=sc.title||"The Hollow Raven";where.className="muted";where.textContent=sc.location||"Raven Hill";text.style.whiteSpace="pre-line";text.textContent=sc.story;box.append(head,where,text);
  if(pending()){const note=document.createElement("p");note.className="soa-pending";note.textContent="Your last decision is saved. The next story scene has not arrived. Retry safely without repeating the action.";box.append(note);const retry=document.createElement("button");retry.className="med";retry.textContent="Retry generating next scene";retry.disabled=busy;retry.onclick=()=>advance(campaign.lastAction,campaign.lastResult,true);box.append(retry)}
  for(const [index,choice] of sc.choices.entries()){const b=document.createElement("button");b.className=choice.difficulty==="easy"?"low":choice.difficulty==="hard"?"high":"med";const headline=document.createElement("strong"),detail=document.createElement("small");headline.textContent=String.fromCharCode(65+index)+") "+choice.text;headline.style.display="block";detail.textContent=(choice.difficulty||"medium")+" difficulty · "+(choice.type||"investigate");detail.style.cssText="display:block;margin-top:5px;color:#bccbd6;font:12px system-ui;text-transform:capitalize";b.append(headline,detail);b.disabled=busy||!!pending();b.onclick=()=>choose(choice);box.append(b)}
+ const surveyIndex=sc.choices.length;
+ const survey=document.createElement("button");
+ survey.type="button";survey.className="low soa-resource-survey";
+ const surveyTitle=document.createElement("strong"),surveyHint=document.createElement("small");
+ surveyTitle.textContent=String.fromCharCode(65+surveyIndex)+") Survey surrounding resources";
+ surveyTitle.style.display="block";
+ surveyHint.textContent="Look for ore, herbs, water and other natural materials · Investigate";
+ surveyHint.style.cssText="display:block;margin-top:5px;color:#d6dfd2;font:12px system-ui";
+ survey.append(surveyTitle,surveyHint);
+ survey.disabled=busy||!!pending()||!navigator.onLine;
+ survey.onclick=()=>choose({text:"Survey the immediate surroundings for accessible natural resources suitable for this character's professions. Search carefully for visible ore veins, herbs, fishable water, recoverable hides and other plausible materials; note what is actually present. Do not harvest, mine, gather or award materials yet. If none are accessible, report that clearly.",type:"investigate",difficulty:"medium",survey:true});
+ box.append(survey);
  const form=document.createElement("form"),label=document.createElement("label"),input=document.createElement("textarea"),typeLabel=document.createElement("label"),type=document.createElement("select"),submit=document.createElement("button"),help=document.createElement("p");
- label.htmlFor="campaign-custom-action";label.textContent=String.fromCharCode(65+Math.min(sc.choices.length,25))+") Custom action — choose your own approach";
+ label.htmlFor="campaign-custom-action";label.textContent=String.fromCharCode(65+Math.min(sc.choices.length+1,25))+") Custom action — choose your own approach";
  input.id="campaign-custom-action";input.className="ai-input";input.maxLength=300;input.required=true;input.rows=3;input.placeholder="e.g. Ask Pippa to build a distraction while I slip past the guards";input.value=customDraft;input.disabled=busy||!!pending();
  input.oninput=()=>{customDraft=input.value;submit.disabled=busy||!!pending()||!navigator.onLine||!customDraft.trim()};
  typeLabel.htmlFor="campaign-custom-type";typeLabel.textContent="Action type";type.id="campaign-custom-type";type.className="ai-input";type.disabled=busy||!!pending();
@@ -84,7 +96,7 @@ async function choose(choice){
  const resolution=result(choice);
  if(!resolution){status("Not enough Energy for that action.");return}
  campaign.lastAction=safe(choice.text);campaign.lastResult=resolution;
- campaign.pending={action:campaign.lastAction,resolution,startedAt:Date.now(),dialogue:detected};
+ campaign.pending={action:campaign.lastAction,resolution,startedAt:Date.now(),dialogue:detected,survey:choice.survey===true};
  campaign.history.push("Player: "+campaign.lastAction+" | "+resolution);
  campaign.history=campaign.history.slice(-MAX);store();refreshDisplay();
  await advance(campaign.lastAction,resolution,false);
@@ -95,7 +107,7 @@ async function advance(action,resolution,retry){
  if(!code){focusAccess();draw();return}
  busy=true;status("Gemini is writing the next scene…");draw();
  try{
- const response=await fetch("./api/campaign",{method:"POST",headers:{"content-type":"application/json","x-story-access":code},body:JSON.stringify({context:{location:campaign.scene?.location||(window.soaCharacters?.isNewCharacter?.()?"New adventurer prologue":"Hollow Raven laboratory"),previousScene:campaign.scene?.story||"",action,resolution,hp:s.hp,energy:s.en,gold:fmtMoney(s.money),alarm:s.alert,turn:campaign.turn,history:campaign.history,flags:Object.keys(s.flags||{}),companionMoments:window.soaCompanions?.getRecent?.()||[],relationships:window.soaCompanions?.getRelationships?.()||{},character:window.soaCharacters?.profile?.()||null}})});
+ const response=await fetch("./api/campaign",{method:"POST",headers:{"content-type":"application/json","x-story-access":code},body:JSON.stringify({context:{location:campaign.scene?.location||(window.soaCharacters?.isNewCharacter?.()?"New adventurer prologue":"Hollow Raven laboratory"),previousScene:campaign.scene?.story||"",action,resolution,hp:s.hp,energy:s.en,gold:fmtMoney(s.money),alarm:s.alert,turn:campaign.turn,history:campaign.history,flags:Object.keys(s.flags||{}),companionMoments:window.soaCompanions?.getRecent?.()||[],relationships:window.soaCompanions?.getRelationships?.()||{},character:window.soaCharacters?.profile?.()||null,resourceSurvey:campaign.pending?.survey===true}})});
  const data=await response.json().catch(()=>({error:"Invalid server response"}));if(!response.ok)throw Error(data.error||"Request failed");
  if(!Array.isArray(data.choices)||!data.story)throw Error("Incomplete generated scene");
  const completedDialogue=campaign.pending?.dialogue?{...campaign.pending.dialogue,id:"campaign-dialogue-"+campaign.pending.startedAt+"-"+campaign.turn,success:/^Success:/i.test(campaign.pending.resolution)}:null;
