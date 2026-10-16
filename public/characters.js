@@ -148,6 +148,6 @@ document.addEventListener("DOMContentLoaded",()=>{
  profilePanel();
  try{if(sessionStorage.getItem(ENTER_KEY)!=="1")drawMenu()}catch(e){drawMenu()}
  // New-character adventures need their own future companions. Snacky's fixed party should not be shown as theirs.
- if(active.origin==="custom"){const pane=get("companion-panel");if(pane)pane.hidden=true}
+ if(active.origin==="custom"){const pane=get("companion-panel");if(pane)pane.hidden=true;const journal=get("journal");if(journal?.closest){const legacy=journal.closest("section.panel");if(legacy)legacy.hidden=true}}
 });
 })();
