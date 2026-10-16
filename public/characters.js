@@ -142,15 +142,57 @@ function prefill(prof){
  const tasks={Mining:"Carefully mine a nearby ore vein and assess the stone.",Engineering:"Use portable tools to craft a simple mechanical device.",Herbalism:"Search for and carefully gather a useful local herb.",Alchemy:"Mix a simple alchemical preparation using available supplies.",Blacksmithing:"Practice shaping metal with a suitable forge and tools.",Enchanting:"Practice a minor enchantment on a suitable material.",Leatherworking:"Craft a basic leather item using available materials.",Skinning:"Carefully skin a suitable fallen beast.",Tailoring:"Sew a simple cloth item with available fabric.",Cooking:"Prepare a simple cooked meal from available food.",Fishing:"Fish in nearby accessible water.", "First Aid":"Practice making and applying a clean bandage."};
  action.value=tasks[prof]||"Practice "+prof+" safely";action.dispatchEvent(new Event("input",{bubbles:true}));if(type){type.value="engineering";type.dispatchEvent(new Event("change",{bubbles:true}))}action.scrollIntoView({behavior:"smooth",block:"center"});
 }
+// Profession-based checks and ordinary world gathering can award a single skill point.
+// Stable rolls and recorded action IDs make retries idempotent.
+const PROF_MATCH={
+ Mining:/\b(?:min(?:e|es|ed|ing)|ore vein|ore deposit|prospect\w*|excavat\w*|extract\w* ore|pickaxe)\b/i,
+ Engineering:/\b(?:engineer\w*|mechanic\w*|tinker\w*|clockwork|gadget\w*|device|apparatus|circuit\w*|wiring|calibrat\w*|construct\w*)\b/i,
+ Herbalism:/\b(?:herb\w*|botan\w*|forag\w*|gather\w* (?:plants?|flowers?|roots?)|harvest\w* (?:plants?|flowers?|roots?))\b/i,
+ Alchemy:/\b(?:alchem\w*|potion\w*|elixir\w*|transmut\w*|brew\w* (?:mixture|draught))\b/i,
+ Blacksmithing:/\b(?:blacksmith\w*|smith\w*|anvil|forge\w*|smelt\w*|hammer\w* (?:metal|iron|steel))\b/i,
+ Enchanting:/\b(?:enchant\w*|disenchant\w*|imbu\w*|runic infusion)\b/i,
+ Leatherworking:/\b(?:leatherwork\w*|craft\w* leather|sew\w* leather|stitch\w* leather|cure\w* hide|tan(?:ning)? hides?)\b/i,
+ Skinning:/\b(?:skinn\w*|flay\w*|peel\w* hide|harvest\w* (?:hide|pelt))\b/i,
+ Tailoring:/\b(?:tailor\w*|sew\w*|weav\w*|stitch\w* (?:cloth|fabric)|craft\w* (?:robe|cloak))\b/i,
+ Cooking:/\b(?:cook\w*|roast\w*|bake\w*|prepar\w* (?:meal|food|stew))\b/i,
+ Fishing:/\b(?:fish\w*|angl\w*|cast\w* (?:a |the )?(?:line|hook)|reel\w* (?:in )?(?:fish|catch))\b/i,
+ "First Aid":/\b(?:first aid|bandag\w*|dress\w* (?:wound|injury)|stitch\w* wound|tend\w* wounds?)\b/i
+};
+const PROF_INTENT=/\b(?:practic\w*|train\w*|craft\w*|build\w*|assembl\w*|creat\w*|make|use|work|operat\w*|repair\w*|fix|calibrat\w*|examin\w*|inspect\w*|analyz\w*|identify|test|disarm\w*|dismantl\w*|forge\w*|brew\w*|mix\w*|sew\w*|stitch\w*|enchant\w*|skin\w*|cook\w*|bandag\w*|tend\w*|harvest\w*|gather\w*|collect\w*|mine\w*|prospect\w*|fish\w*|cast\w*|reel\w*|forag\w*|extract\w*|smelt\w*|pick\w*)\b/i;
+const GATHER={
+ Mining:/\b(?:min(?:e|es|ed|ing)|excavat\w*|prospect\w*|extract\w* ore)\b/i,
+ Herbalism:/\b(?:gather\w*|pick\w*|harvest\w*|forag\w*|collect\w*)\b.{0,65}\b(?:herb\w*|plants?|flowers?|roots?)\b|\b(?:herb\w*|plants?|flowers?|roots?)\b.{0,35}\b(?:gather\w*|pick\w*|harvest\w*)\b/i,
+ Skinning:/\b(?:skinn\w*|flay\w*|harvest\w* (?:hide|pelt))\b/i,
+ Fishing:/\b(?:fish\w*|angl\w*|cast\w* (?:a |the )?(?:line|hook)|reel\w* (?:in )?(?:fish|catch))\b/i
+};
+function professionChance(level){return level<75?.85:level<150?.70:level<225?.55:level<275?.35:.20}
+function professionRoll(id,name){
+ let h=2166136261;
+ for(const ch of id+"|"+name){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)}
+ h^=h>>>16;h=Math.imul(h,0x7feb352d);h^=h>>>15;h=Math.imul(h,0x846ca68b);h^=h>>>16;
+ return (h>>>0)/4294967296;
+}
 function applyProfession(action,resolution,id){
  if(!id||!active||active.professionEvents.includes(id))return false;
- const txt=String(action||"").toLowerCase();const good=/^Success:/i.test(String(resolution||""));
- const patterns={Mining:/\b(min(e|ing|ed)|ore vein|excavat(e|ion))\b/,Engineering:/\b(engineer|mechanic|device|gadget|tinker|construct)\b/,Herbalism:/\b(herb|gather plant|botany)\b/,Alchemy:/\b(alchem|brew potion|elixir|transmut)\b/,Blacksmithing:/\b(blacksmith|forge|smithing|anvil)\b/,Enchanting:/\b(enchant|imbue|disenchant)\b/,Leatherworking:/\b(leatherwork|stitch leather|craft leather)\b/,Skinning:/\b(skin(ning)?|flay|hide)\b/,Tailoring:/\b(tailor|sew|weav(e|ing)|stitch cloth)\b/,Cooking:/\b(cook|prepare meal|roast)\b/,Fishing:/\b(fish(ing)?|cast line)\b/,"First Aid":/\b(first aid|bandag(e|ing))\b/};
- const practiced=/\b(practic\w*|craft\w*|build\w*|assembl\w*|creat\w*|min(e|ing|ed)|gather\w*|pick\w*|harvest\w*|repair\w*|brew\w*|mix\w*|forg(e|ing)|shap\w*|enchant\w*|imbu\w*|skinn\w*|flay\w*|sew\w*|weav\w*|stitch\w*|cook\w*|prepar\w*|fish\w*|cast\w*|appl\w*|bandag\w*|refin\w*)\b/.test(txt);
- const found=practiced?Object.keys(patterns).find(name=>(active.professions[name]||active.secondary[name])&&patterns[name].test(txt)):null;
+ const txt=String(action||"").slice(0,500);
+ const success=/^Success:/i.test(String(resolution||""));
+ const owned={...active.professions,...active.secondary};
+ const found=PROF_INTENT.test(txt)?Object.keys(PROF_MATCH).find(name=>owned[name]&&PROF_MATCH[name].test(txt)):null;
  active.professionEvents.push(id);active.professionEvents=active.professionEvents.slice(-150);
- if(found&&good){const skill=active.professions[found]||active.secondary[found];const gained=Math.min(3,300-skill.skill);skill.skill+=gained;skill.events=(skill.events||0)+1;active.professionLog.push(found+" +"+gained+" skill");active.professionLog=active.professionLog.slice(-30)}
- commitRoster();drawProfessions();return !!(found&&good);
+ if(found&&success){
+  const record=owned[found],level=Math.max(1,Math.min(300,Number(record.skill)||1));
+  const gathered=!!GATHER[found]?.test(txt);
+  const gained=level<300&&professionRoll(id,found)<professionChance(level);
+  if(gained){
+   record.skill=level+1;record.events=(Number(record.events)||0)+1;
+   active.professionLog.push(found+" +1 skill ("+(gathered?"gathering":"skill check")+", "+record.skill+"/300)");
+  }else{
+   active.professionLog.push(found+" check completed — no skill gain"+(level>=300?" (maximum reached)":""));
+  }
+  active.professionLog=active.professionLog.slice(-30);
+ }
+ commitRoster();drawProfessions();
+ return !!(found&&success);
 }
 init();
 window.soaCharacters={profile:selectedProfile,isNewCharacter:()=>active.origin==="custom",initialLocalState:baseState,applyProfession,showMenu:drawMenu,refreshProfessions:drawProfessions};
