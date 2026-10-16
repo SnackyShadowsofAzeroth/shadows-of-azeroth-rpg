@@ -1,33 +1,30 @@
-# Shadows of Azeroth — Hybrid RPG
+# Shadows of Azeroth — Living Campaign (v0.3)
 
-An unofficial, offline-first mobile RPG prototype featuring Snacky Lugnuts. This is not affiliated with Blizzard Entertainment.
+Cloudflare Pages iPhone offline-first game with an OPTIONAL Gemini 3.5 Flash-Lite living campaign.
 
-## Cloudflare Pages configuration
+## How to play
 
-Connect this repository to **Cloudflare Pages via Git integration**. Production branch: `main`; framework: None; build command: blank; output directory: `public`.
+1. In Cloudflare Pages configure secret `GEMINI_API_KEY`, secret `AI_ACCESS_CODE`, and optional variable `GEMINI_MODEL=gemini-3.5-flash-lite` in the Production environment. Redeploy after changing variables. No keys belong in GitHub.
+2. Open your deployed HTTPS site on iPhone Safari. Enter your private AI access code in the AI Story Director field.
+3. Enable **Living Campaign** at the top of the page and select **Start / Resume AI campaign** once. After that, every campaign choice automatically sends the confirmed local outcome to `/api/campaign` and updates the scene with new choices. No separate Generate Narration button is necessary.
+4. Saves are local. Use JSON save export for the original offline engine. The AI campaign additionally uses localStorage key `soa-campaign-v1` and is not yet included in the legacy export file.
 
-The `functions/api/story.js` Cloudflare Pages Function is automatically deployed from the repository root (not the public folder). The app's normal offline PWA logic and saves still work without AI.
+## Architecture
 
-### Required server secrets
+- `public/index.html`: offline turn-based starter adventure and status panel
+- `public/campaign.js`: living story state and auto-turn progression, separate persistent localStorage
+- `functions/api/campaign.js`: server-side Gemini structured output, validates JSON shape, holds encrypted Gemini key
+- `functions/api/story.js`: optional atmospheric narration endpoint
+- `public/sw.js`: offline shell cache
 
-In Cloudflare dashboard, open **Workers & Pages → your Pages project → Settings → Variables and Secrets** (or Environment variables, depending on UI). Add these to **Production**:
+Cloudflare Pages settings: branch `main`, framework none, build command blank, output `public`. Pages Functions deploy from the top-level `functions` directory.
 
-- `GEMINI_API_KEY` — your Google AI Studio Gemini API key. Set as encrypted **Secret**, never as a public variable and never commit to GitHub.
-- `AI_ACCESS_CODE` — a long random passphrase you invent. Also set as **Secret**. Enter this code into the app's AI Story Director panel, *not* your API key.
-- `GEMINI_MODEL` — optional plaintext variable, default `gemini-3.5-flash-lite`. Select a model enabled for your API account.
+## Important scope
 
-Save changes and **redeploy** the production deployment so your Function receives the secrets. Check `https://YOUR-SITE.pages.dev/api/story`: a GET should return a JSON status message. In the app, enable AI, provide the access code, and tap Generate narration. Credits must be active at aistudio.google.com.
+The living campaign is **open-ended**, not a complete preauthored recreation of the entire ChatGPT narrative. It generates each future scene and choices from a rolling recap with short retained journal. Stats remain game-engine-owned. Abstract combat/skill resolution in this initial version is simpler than the original granular Combat Swords system. No AI generation is possible offline, but existing generated scenes can be viewed and the original scripted adventure remains available. Avoid playing simultaneous turns on two devices; saves do not sync. Using Gemini is subject to Google's current project quota and availability.
 
-**Security note:** this access code is a simple shared password, not robust authentication. Anyone who obtains it can make paid AI requests through your site. Since the site is public, consider adding Cloudflare Access, proper identity-based auth, per-user rate limiting, and spending limits before sharing AI functionality widely. Never share your API key or the access code in screenshots, GitHub, or chat. Current AI requests are intentionally restricted to SHORT scene embellishments and do not change stats, inventory, saved game state, or combat decisions. Cloudflare route only accepts same-origin requests plus a shared code; someone with the code could still script requests. Costs apply.
+## Safety and abuse
 
-### Offline behavior
+Never paste either secret into GitHub. Your AI access code is a shared password, not production-grade authentication. For public distribution add user authentication, per-user rate limits and spend caps to avoid API quota abuse. The browser only receives scene text and validated choices; it cannot read `GEMINI_API_KEY`.
 
-Open the live Pages URL in Safari once, add to Home Screen, and reload online to cache the game. Core story, turn-based combat, auto-saves, and JSON save export/import work offline. AI narration requires internet. Save data is local to that browser installation and doesn't synchronize across devices.
-
-### Story canon and limits
-
-The prototype resumes at Chapter I, Part LI at 10:23 PM with Snacky at 92/100 HP, 100/100 Energy and 22g 60s 53c. This first AI integration is an OPTIONAL atmospheric narrator only. Future phases can introduce validated AI-proposed dialogue/choices through a rules engine, without allowing AI to invent mechanical outcomes.
-
-## Model lifecycle (October 2026)
-
-Google deprecated `gemini-3.5-flash-lite` on October 8, 2026. The model identifier is accepted but routed automatically to `gemini-3.8-flash`. See https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash-lite . For actual free-tier RPM/TPM/RPD limits, inspect https://aistudio.google.com/rate-limit ; quotas depend on the Google project and model. Never commit API keys.
+Independent fan-created project; not affiliated with Blizzard Entertainment.
