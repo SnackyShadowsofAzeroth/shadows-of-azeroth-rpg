@@ -232,3 +232,10 @@ Portraits are **independent of gameplay saves**: changing one cannot modify inve
 **How to use:** save the generated portrait image to Photos or Files on your iPhone, open Shadows of Azeroth, select Snacky, scroll/tap Professions (Character Record), tap Upload Portrait, choose the image, and confirm it appears both in the character sheet and on the main menu. Portrait selection/removal needs explicit confirmation for removal. Other heroes can upload separate photos.
 
 **Smoke test:** upload image for Snacky; reload and switch characters; verify it follows Snacky only. Replace with another image and inspect roster display. Remove and verify an initial returns. Test dark Classic and Alternative parchment. Download All Character Saves and verify the `portraits` object in the JSON. Refresh after Cloudflare deploys cache version v22. Source syntax verified, but live iPhone image-picking is not yet verified.
+
+
+## Definitive parchment appearance (v23)
+
+The World of Warcraft-style parchment quest-journal look is now the **one permanent theme**. The page loads with `class="theme-alternative"` on the body and no longer offers a Classic or Alternative appearance selector. The unused `theme.js` switch and switch-only CSS were deleted. The former saved theme preference `soa-ui-theme-v1` is ignored so visitors who previously selected Classic automatically see parchment; their other local data is unchanged.
+
+The CSS-only parchment panel styling is retained, and the offline cache is bumped to **v23**. No gameplay, campaign, inventory, profession, reputation, portrait or character save handlers were modified for this change. Source integration and JavaScript syntax checks passed; live Cloudflare/iPhone display still requires a refresh and confirmation.
