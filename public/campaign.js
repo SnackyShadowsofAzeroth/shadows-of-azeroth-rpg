@@ -10,6 +10,12 @@ function accessCode(){return get("ai-code")?.value.trim()||""}
 function focusAccess(){status("Enter your private AI access code in the AI Story Director panel to continue.");const f=get("ai-code");if(f){f.scrollIntoView({behavior:"smooth",block:"center"});f.focus()}}
 function refreshDisplay(){render();draw();window.soaCompanions?.refresh?.();window.soaCharacters?.refreshProfessions?.()}
 function pending(){return campaign?.pending&&typeof campaign.pending.action==="string"?campaign.pending:null}
+function originOfCampaign(){
+ const hero=window.soaCharacters?.profile?.();
+ if(hero&&hero.id!=="snacky")return "Separate personal adventure for "+String(hero.name||"this hero").slice(0,36)+"; do not merge with Snacky's Hollow Raven story.";
+ return "Snacky originally entered Hollow Raven beneath Raven Hill investigating stolen/missing SI:7 intelligence, the Memory Anchor, Subject Seven, Thorne, Valecroft and Protocol Mirrorfall. This is historical origin, not proof any objective remains unresolved; use confirmed history to determine current progress.";
+}
+
 function returnToAdventure(mode="scene"){
  const destination=mode==="status"?get("campaign-status"):get("campaign-scene")?.querySelector("h3")||get("campaign-status");
  if(!destination?.scrollIntoView)return;
@@ -116,7 +122,7 @@ async function advance(action,resolution,retry){
  if(!code){focusAccess();draw();return}
  busy=true;status("Gemini is writing the next scene…");draw();
  try{
- const response=await fetch("./api/campaign",{method:"POST",headers:{"content-type":"application/json","x-story-access":code},body:JSON.stringify({context:{location:campaign.scene?.location||(window.soaCharacters?.isNewCharacter?.()?"New adventurer prologue":"Hollow Raven laboratory"),previousTitle:campaign.scene?.title||"",previousScene:campaign.scene?.story||"",recentDiscoveries:campaign.journal.slice(-12),action,resolution,hp:s.hp,energy:s.en,gold:fmtMoney(s.money),alarm:s.alert,turn:campaign.turn,history:campaign.history.slice(-20),flags:Object.keys(s.flags||{}),companionMoments:window.soaCompanions?.getRecent?.()||[],relationships:window.soaCompanions?.getRelationships?.()||{},character:window.soaCharacters?.profile?.()||null,reputation:window.soaReputation?.getStandings?.()||{},reputationDevelopments:window.soaReputation?.getDevelopments?.()||[],resourceSurvey:campaign.pending?.survey===true}})});
+ const response=await fetch("./api/campaign",{method:"POST",headers:{"content-type":"application/json","x-story-access":code},body:JSON.stringify({context:{location:campaign.scene?.location||(window.soaCharacters?.isNewCharacter?.()?"New adventurer prologue":"Hollow Raven laboratory"),previousTitle:campaign.scene?.title||"",previousScene:campaign.scene?.story||"",campaignOrigin:originOfCampaign(),recentDiscoveries:campaign.journal.slice(-12),action,resolution,hp:s.hp,energy:s.en,gold:fmtMoney(s.money),alarm:s.alert,turn:campaign.turn,history:campaign.history.slice(-20),flags:Object.keys(s.flags||{}),companionMoments:window.soaCompanions?.getRecent?.()||[],relationships:window.soaCompanions?.getRelationships?.()||{},character:window.soaCharacters?.profile?.()||null,reputation:window.soaReputation?.getStandings?.()||{},reputationDevelopments:window.soaReputation?.getDevelopments?.()||[],resourceSurvey:campaign.pending?.survey===true}})});
  const data=await response.json().catch(()=>({error:"Invalid server response"}));if(!response.ok)throw Error(data.error||"Request failed");
  if(!Array.isArray(data.choices)||!data.story)throw Error("Incomplete generated scene");
  const completedDialogue=campaign.pending?.dialogue?{...campaign.pending.dialogue,id:"campaign-dialogue-"+campaign.pending.startedAt+"-"+campaign.turn,success:/^Success:/i.test(campaign.pending.resolution)}:null;
