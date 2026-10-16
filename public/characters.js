@@ -152,7 +152,7 @@ const PROF_MATCH={
  Blacksmithing:/\b(?:blacksmith\w*|smith\w*|anvil|forge\w*|smelt\w*|hammer\w* (?:metal|iron|steel))\b/i,
  Enchanting:/\b(?:enchant\w*|disenchant\w*|imbu\w*|runic infusion)\b/i,
  Leatherworking:/\b(?:leatherwork\w*|craft\w* leather|sew\w* leather|stitch\w* leather|cure\w* hide|tan(?:ning)? hides?)\b/i,
- Skinning:/\b(?:skinn\w*|flay\w*|peel\w* hide|harvest\w* (?:hide|pelt))\b/i,
+ Skinning:/\b(?:skin\w*|flay\w*|peel\w* hide|harvest\w* (?:hide|pelt))\b/i,
  Tailoring:/\b(?:tailor\w*|sew\w*|weav\w*|stitch\w* (?:cloth|fabric)|craft\w* (?:robe|cloak))\b/i,
  Cooking:/\b(?:cook\w*|roast\w*|bake\w*|prepar\w* (?:meal|food|stew))\b/i,
  Fishing:/\b(?:fish\w*|angl\w*|cast\w* (?:a |the )?(?:line|hook)|reel\w* (?:in )?(?:fish|catch))\b/i,
@@ -162,7 +162,7 @@ const PROF_INTENT=/\b(?:practic\w*|train\w*|craft\w*|build\w*|assembl\w*|creat\w
 const GATHER={
  Mining:/\b(?:min(?:e|es|ed|ing)|excavat\w*|prospect\w*|extract\w* ore)\b/i,
  Herbalism:/\b(?:gather\w*|pick\w*|harvest\w*|forag\w*|collect\w*)\b.{0,65}\b(?:herb\w*|plants?|flowers?|roots?)\b|\b(?:herb\w*|plants?|flowers?|roots?)\b.{0,35}\b(?:gather\w*|pick\w*|harvest\w*)\b/i,
- Skinning:/\b(?:skinn\w*|flay\w*|harvest\w* (?:hide|pelt))\b/i,
+ Skinning:/\b(?:skin\w*|flay\w*|harvest\w* (?:hide|pelt))\b/i,
  Fishing:/\b(?:fish\w*|angl\w*|cast\w* (?:a |the )?(?:line|hook)|reel\w* (?:in )?(?:fish|catch))\b/i
 };
 function professionChance(level){return level<75?.85:level<150?.70:level<225?.55:level<275?.35:.20}
