@@ -44,3 +44,12 @@ body.theme-alternative .soa-quick-nav button.soa-quick-link{background:linear-gr
 #campaign-status{scroll-margin-top:20px}
 #campaign-scene>h3{scroll-margin-top:20px}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+
+/* Individual social checks, grouped without crowding the character record. */
+.soa-social-stats{margin:10px 0 16px;padding:9px 12px;border:1px solid #7d766455;border-radius:9px}
+.soa-social-stats summary{font:700 13px/1.5 system-ui;cursor:pointer;padding:7px 0}
+.soa-social-score-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:11px 0}
+.soa-social-score{display:flex;align-items:center;justify-content:space-between;gap:9px;border:1px solid #77796966;border-radius:8px;padding:9px;font:12px system-ui}
+.soa-social-score span{font-variant-numeric:tabular-nums;font-size:15px;font-weight:750}
+body.theme-alternative .soa-social-stats{border-color:#967851}
+body.theme-alternative .soa-social-score{background:#efd6a76b;border-color:#967951;color:#492c17}
