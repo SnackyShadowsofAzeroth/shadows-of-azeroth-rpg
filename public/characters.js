@@ -72,7 +72,7 @@ function socialSkills(){
  const trained=window.soaProgression?.bonus;
  return {bluff:base.bluff+si7+(trained?.("bluff")||0),bribe:base.bribe+(trained?.("bribe")||0),romance:base.romance+(trained?.("romance")||0),threaten:base.threaten+(trained?.("threaten")||0)};
 }
-function selectedProfile(){return {...active,professions:Object.fromEntries(Object.entries(active.professions||{}).map(([k,v])=>[k,v.skill||1]))}}
+function selectedProfile(){return {...active,level:window.soaProgression?.level?.()||10,professions:Object.fromEntries(Object.entries(active.professions||{}).map(([k,v])=>[k,v.skill||1]))}}
 function commitRoster(){write(ROSTER_KEY,roster)}
 function enter(id){
  if(!roster.characters.some(x=>x.id===id))return;
