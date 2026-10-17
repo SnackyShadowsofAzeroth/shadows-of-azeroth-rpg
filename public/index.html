@@ -84,6 +84,7 @@ function combat(action){let msg="";let damage=0;let cost=0;let stunned=false;
  if(s.flags.evade)s.flags.evade--;
  s.flags.combatmsg=msg;s.flags.lastCombat={enemy:previousEnemy.name,dealt:Math.max(0,previousEnemy.hp-s.enemy.hp),received:Math.max(0,previousHero-s.hp),before:previousEnemy.hp,after:s.enemy.hp,max:previousEnemy.max,heroBefore:previousHero,heroAfter:s.hp,defeated:false};if(s.hp===0)s.id="death";render()}
 function node(){switch(s.id){
+ case"new-hero-start":return {title:"A New Journey",chapter:"Level 1 · A Fresh Beginning",text:(Array.isArray(s.log)?s.log.slice(0,2).join("\n\n"):"A new adventurer begins alone.")+"\n\nYour journey starts here. Activate the Living Campaign to discover your first class-appropriate quest. There are no established companions or previous missions.",opts:[]};
  case"junction":return{title:"The Spoils of Silence",chapter:"Part LI · 10:23 PM",text:"The corridor beneath Raven Hill settles into an uneasy quiet. The patrol crossbowman lies dead; Harlan Vex remains bound, disarmed, and thoroughly questioned.\n\nPippa studies the central junction's maintenance plates. Somewhere beyond the steel, machinery ticks in patient intervals. No alarm has sounded.\n\nYour six-member expedition waits for a command.",opts:[
  {label:"Examine the trapped central junction (carefully)",level:"low",to:"trap"},
  choice("Send Pippa to study the maintenance wiring","wires","med"),
