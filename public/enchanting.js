@@ -59,6 +59,16 @@ function apply(c,{key,recipeId,method,location,wallet}){
  st.history=st.history.slice(-100);
  return {wallet:wallet-cost,message:(method==="vendor"?"The enchanter":"You")+" applied "+recipe.name+" to "+target.name+" for "+format(cost)+(dust?" and "+dust+" Arcane Dust":"")+".",receipt};
 }
+const TRAINING=[{skill:25,copper:10000},{skill:50,copper:20000},{skill:75,copper:35000},{skill:125,copper:70000}];
+function train(c,level,location,wallet){
+ if(!owned())return {error:"Enchanting must be your primary profession."};
+ if(!VENDOR.test(String(location||"")))return {error:"Visit a trainer in a major city."};
+ const tier=TRAINING.find(x=>x.skill===level),st=getState(c);
+ if(!tier||(st.skill||1)>=level)return {error:"That training rank is unavailable."};
+ if(!safeInt(wallet)||wallet<tier.copper)return {error:"Insufficient money to train Enchanting."};
+ st.skill=level;st.history.push({trained:true,skill:level,cost:tier.copper});
+ return {wallet:wallet-tier.copper,message:"Enchanter training complete: Enchanting skill "+level+" for "+format(tier.copper)+"."};
+}
 function disenchant(c,index){
  const st=getState(c),q=c.quests,item=q?.inventory?.[index];
  if(!owned())return {error:"Train Enchanting first."};
@@ -90,6 +100,10 @@ function panel(c,location,wallet,commit){
     };el.append(button)
    }
   }
+ }
+ if(owned()&&VENDOR.test(String(location))){
+  const next=TRAINING.find(x=>x.skill>(st.skill||1));
+  if(next){const trainButton=document.createElement("button");trainButton.type="button";trainButton.textContent="Train Enchanting skill "+next.skill+" · "+format(next.copper);trainButton.onclick=()=>{if(!window.confirm("Pay "+format(next.copper)+" for professional enchanting instruction?"))return;const result=train(c,next.skill,location,wallet());if(result.error){window.alert(result.error);return}commit(result);window.soaLivingCampaign?.refreshUI?.()};el.append(trainButton)}
  }
  const targets=eligibleSlots(c);
  if(!targets.length){const note=document.createElement("p");note.textContent="No equipped items available.";el.append(note);return el}
@@ -123,5 +137,5 @@ function panel(c,location,wallet,commit){
  for(const x of st.history.slice(-15).reverse()){const line=document.createElement("p");line.textContent=x.disenchanted?"Disenchanted "+x.item+" · +"+x.dust+" dust":x.item+" · "+x.recipe+" · "+format(x.cost);history.append(line)}el.append(history);
  return el;
 }
-window.soaEnchanting={ENCHANTS,VENDOR,getState,apply,disenchant,bonuses,panel,eligibleSlots};
+window.soaEnchanting={ENCHANTS,TRAINING,VENDOR,getState,train,apply,disenchant,bonuses,panel,eligibleSlots};
 })();
