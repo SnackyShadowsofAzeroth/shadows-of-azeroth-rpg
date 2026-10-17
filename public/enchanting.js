@@ -78,7 +78,19 @@ function panel(c,location,wallet,commit){
  const st=getState(c),p=document.createElement("p");
  p.textContent="NPC services in major cities. Self-enchanting requires the Enchanting primary profession, trained skill and Arcane Dust. One enchant per item; new enchants replace the old effect.";el.append(p);
  const status=document.createElement("p");status.textContent="Enchanting profession: "+(owned()?"Trained · Skill "+st.skill:"Not trained")+" · Arcane Dust: "+(st.materials?.ArcaneDust||0);el.append(status);
- if(!owned()){const note=document.createElement("p");note.textContent="To pursue Enchanting yourself, choose it as a primary profession through character creation or the profession system. Snacky's current Mining and Engineering are retained; no profession is replaced automatically.";el.append(note)}
+ if(!owned()){const note=document.createElement("p");note.textContent="To pursue Enchanting yourself, choose it as a primary profession through character creation or the profession system. Snacky's current Mining and Engineering are retained; no profession is replaced automatically.";el.append(note);
+  if(VENDOR.test(String(location))){
+   const profs=Object.keys(professions()).filter(x=>x!=="Enchanting");
+   for(const former of profs){const button=document.createElement("button");button.type="button";button.textContent="Unlearn "+former+" and train Enchanting";
+    button.onclick=()=>{
+     if(!window.confirm("Permanently unlearn "+former+" and lose its profession skill progress? Existing items remain, but some may have profession-use requirements. This cannot be undone."))return;
+     const result=window.soaCharacters?.retrainPrimaryProfession?.(former,"Enchanting");
+     if(result?.error){window.alert(result.error);return}
+     const updated=getState(c);updated.skill=1;commit(result);window.soaLivingCampaign?.refreshUI?.();
+    };el.append(button)
+   }
+  }
+ }
  const targets=eligibleSlots(c);
  if(!targets.length){const note=document.createElement("p");note.textContent="No equipped items available.";el.append(note);return el}
  for(const target of targets){
