@@ -176,3 +176,12 @@ body.theme-alternative .soa-battle-history summary{cursor:pointer;min-height:44p
 body.theme-alternative .soa-battle-history p{font:12px/1.6 system-ui;color:#563b24;border-bottom:1px solid #96774e44;margin:0;padding:8px 2px}
 @media(max-width:370px){body.theme-alternative .soa-combat-abilities{grid-template-columns:1fr}body.theme-alternative .soa-combat-person-heading{align-items:flex-start;flex-direction:column}}
 @media(prefers-reduced-motion:reduce){body.theme-alternative .soa-combat-ally-fill{transition:none}}
+
+
+body.theme-alternative .soa-combat-hint{font:12px/1.55 system-ui;color:#654b31;margin:9px 0}
+body.theme-alternative .soa-hp-setup{margin-top:9px;padding:7px 0;border-top:1px solid #b9a17a}
+body.theme-alternative .soa-hp-setup summary{cursor:pointer;min-height:38px;font:650 12px/1.5 system-ui;color:#66502f;padding:8px 1px}
+body.theme-alternative .soa-hp-setup form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding-top:8px}
+body.theme-alternative .soa-hp-setup input{min-width:0;padding:10px;border:1px solid #a38b60;border-radius:6px;background:#fff2d1;color:#462c16;font:14px system-ui}
+body.theme-alternative .soa-hp-setup button{grid-column:1/-1;width:100%;margin:0;min-height:42px}
+body.theme-alternative .soa-hp-setup .soa-combat-hint{grid-column:1/-1;margin:0}
