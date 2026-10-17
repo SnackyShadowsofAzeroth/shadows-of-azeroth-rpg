@@ -117,3 +117,35 @@ body.theme-alternative .soa-quick-nav button{
 @media(prefers-reduced-motion:reduce){
   body.theme-alternative #campaign-scene>button{transition:none}
 }
+
+
+/* Combat ledger — visible mechanical damage and accessible enemy health. */
+body.theme-alternative .soa-enemy-status,
+body.theme-alternative .soa-battle-status{
+  margin:18px 0 23px;padding:15px;
+  border:2px solid #946c49;border-radius:11px;
+  background:linear-gradient(150deg,#ebd7aa,#cdb082);
+  color:#402717;
+  box-shadow:inset 0 1px #fff1cc,0 5px 14px #2c1e1640;
+}
+body.theme-alternative .soa-enemy-status h4,
+body.theme-alternative .soa-battle-status h4{
+  font:700 17px Georgia,serif;color:#5b301c;
+  margin:0 0 12px;
+}
+body.theme-alternative .soa-foe,
+body.theme-alternative .soa-battle-enemy{margin:11px 0;padding:11px;border:1px solid #a18a65;border-radius:9px;background:#f8e7c398}
+body.theme-alternative .soa-foe-heading,
+body.theme-alternative .soa-battle-label{display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;align-items:center;font:13px/1.4 system-ui,sans-serif}
+body.theme-alternative .soa-foe-heading span,
+body.theme-alternative .soa-battle-label span{font-variant-numeric:tabular-nums;font-weight:700;white-space:nowrap}
+body.theme-alternative .soa-foe-track,
+body.theme-alternative .soa-battle-track{height:11px;overflow:hidden;border-radius:9px;margin-top:9px;background:#8b644b7a;box-shadow:inset 0 1px 3px #43291e66}
+body.theme-alternative .soa-foe-fill,
+body.theme-alternative .soa-battle-fill{height:100%;border-radius:9px;background:linear-gradient(90deg,#a93e40,#da6461);transition:width .25s ease}
+body.theme-alternative .soa-exchange,
+body.theme-alternative .soa-battle-report{margin-top:12px;padding:12px 13px;border-left:4px solid #a44b3e;border-radius:4px 8px 8px 4px;background:#fff1d0a8;font:13px/1.55 system-ui,sans-serif}
+body.theme-alternative .soa-exchange p,
+body.theme-alternative .soa-battle-report p{margin:6px 0 0;color:#4c3020}
+body.theme-alternative #soa-offline-combat[hidden]{display:none}
+@media(prefers-reduced-motion:reduce){body.theme-alternative .soa-battle-fill,body.theme-alternative .soa-foe-fill{transition:none}}
