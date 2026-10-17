@@ -118,3 +118,9 @@ Added three region-bound, engine-authored missions with immutable reward terms a
 - public/abilities.js applies equipped attribute and AC modifiers to hero-derived stats; combat.js's hero d20 roll and damage add item bonuses in public/campaign.js. Stats for companions are unchanged. Class restrictions checked both when equipping and when computing bonuses.
 - Verified JavaScript parsing; simulated equipping kit, gloves and Shadowblade yielding +1 DEX, +1 AC, +1 attack and +2 damage; derived hero Dexterity moved from 20 to 21, AC 17 to 18 in an isolated test fixture.
 - Limitations: no live Cloudflare/iPhone test; older base-engine scripted combat is not fully equipment-integrated. Only items in the catalog can be equipped. Current model permits one slot per type and does not model dual wielding or armor categories. Changes reversible by unlinking equipment.js, removing its calls from campaign.js and abilities.js, then bumping service worker cache, without changing old saves.
+
+
+## 2026-10-16 equipment visibility and legacy narration cleanup
+- UI-only: Equipment & Reward Inventory expandable section now appears at the TOP of the Living Campaign scene, before story paragraphs, for easy access. It shows collected items, slot occupancy via Equip/Unequip labels, bonuses and restrictions. Requires an item to have been earned for it to appear in inventory.
+- The original AI Story Director was narrating the old Hollow Raven scripted prototype, unrelated to the current Gemini living campaign. In Living Campaign mode we hide legacy narration focus, generate button, spinner, stale output and errors with body.soa-living-mode; preserve the access-code field and Cloudflare test control used by living campaign. Offline scripted mode shows the legacy narration controls again.
+- UI rollback: revert the related additions to public/index.html and public/campaign.js only; preserve game saves and logic. Offline cache v32. Live iPhone UI not verified.
