@@ -149,3 +149,30 @@ body.theme-alternative .soa-exchange p,
 body.theme-alternative .soa-battle-report p{margin:6px 0 0;color:#4c3020}
 body.theme-alternative #soa-offline-combat[hidden]{display:none}
 @media(prefers-reduced-motion:reduce){body.theme-alternative .soa-battle-fill,body.theme-alternative .soa-foe-fill{transition:none}}
+
+
+/* Battle Overview: allies, enemies, target selection and tactical abilities. */
+body.theme-alternative .soa-enemy-status{position:relative;margin:20px 0 25px}
+body.theme-alternative .soa-enemy-status>h4{display:flex;align-items:center;gap:8px;margin:0 0 14px;font-size:20px}
+body.theme-alternative .soa-enemy-status>h4::before{content:"⚔";color:#8a4b37}
+body.theme-alternative .soa-combat-roster{padding:12px 11px;margin:8px 0 15px;border:1px solid #8e8760;border-radius:10px;background:#e9d8b8a6}
+body.theme-alternative .soa-combat-roster h4{color:#466348;margin:0 0 9px;font:700 15px Georgia,serif}
+body.theme-alternative .soa-combat-person{padding:10px;margin:7px 0;background:#f8ebce99;border:1px solid #a49c74;border-radius:8px}
+body.theme-alternative .soa-combat-person-heading{display:flex;gap:9px;align-items:center;justify-content:space-between;flex-wrap:wrap;font:13px/1.5 system-ui}
+body.theme-alternative .soa-combat-person-heading span{font-variant-numeric:tabular-nums;font-weight:700}
+body.theme-alternative .soa-combat-ally-rail{height:12px;overflow:hidden;margin:8px 0 0;border-radius:9px;background:#7a765b87;box-shadow:inset 0 1px 3px #3a352967}
+body.theme-alternative .soa-combat-ally-fill{height:100%;border-radius:9px;background:linear-gradient(90deg,#3d815b,#7db184);transition:width .25s ease}
+body.theme-alternative .soa-hp-unknown{background:repeating-linear-gradient(115deg,#b9ad8c,#b9ad8c 9px,#e2d3ae 9px,#e2d3ae 18px);border:1px solid #8d8066;box-shadow:none}
+body.theme-alternative .soa-combat-targets{margin:14px 0;padding:12px 10px;border:1px solid #937958;border-radius:10px;background:#f9e7c398;display:grid;gap:7px}
+body.theme-alternative .soa-combat-targets>strong,body.theme-alternative .soa-combat-abilities>strong{display:block;font:700 14px/1.5 Georgia,serif;color:#52351e}
+body.theme-alternative .soa-target-button,body.theme-alternative .soa-ability-button{width:100%;min-height:44px;margin:0;padding:10px;border:1px solid #9f8054;border-radius:8px;background:linear-gradient(#76543a,#4b3328);color:#fff0d2;text-align:left;font:650 13px/1.45 system-ui}
+body.theme-alternative .soa-ally-target-button{background:linear-gradient(#5d755c,#344e3d);border-color:#658b6b}
+body.theme-alternative .soa-target-button[aria-pressed="true"]{border:2px solid #f4d681;box-shadow:inset 0 0 0 1px #f6e3b9,0 0 0 2px #846b3b}
+body.theme-alternative .soa-target-button:disabled,body.theme-alternative .soa-ability-button:disabled{opacity:.49;cursor:not-allowed}
+body.theme-alternative .soa-combat-abilities{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;border-top:1px solid #917756;padding-top:13px;margin:10px 0}
+body.theme-alternative .soa-combat-abilities>strong{grid-column:1/-1}
+body.theme-alternative .soa-battle-history{margin-top:16px;padding-top:11px;border-top:1px solid #997951}
+body.theme-alternative .soa-battle-history summary{cursor:pointer;min-height:44px;font:700 13px/1.7 system-ui;color:#513a21}
+body.theme-alternative .soa-battle-history p{font:12px/1.6 system-ui;color:#563b24;border-bottom:1px solid #96774e44;margin:0;padding:8px 2px}
+@media(max-width:370px){body.theme-alternative .soa-combat-abilities{grid-template-columns:1fr}body.theme-alternative .soa-combat-person-heading{align-items:flex-start;flex-direction:column}}
+@media(prefers-reduced-motion:reduce){body.theme-alternative .soa-combat-ally-fill{transition:none}}
