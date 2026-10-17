@@ -99,3 +99,9 @@ Outstanding priorities: complete automated integration tests for combat, save sw
 - Gemini prompt strengthened to avoid inventing a paid retainer or item if the engine did not confirm it.
 - Tested accept -> kill -> claim (+1g25s) -> duplicate rejection; JavaScript parses. Live Cloudflare/iPhone not verified.
 - IMPORTANT: This is a first-phase bounty system, not a general-purpose dynamically generated quest ledger. Existing SI:7 quartermaster retainer is still UNVERIFIED and has not been retroactively credited; arbitrary AI-created quests still cannot produce currency/items safely. Bounty item inventory is reward storage, not equippable item-stat handling. Rare drops from the limited currently seeded elite contracts may not occur until more eligible unique difficult bounties are available. To reach complete quest support, add engine-owned quest creation and verified completion criteria, a reliable game calendar / world-zone representation, equipment stats and inventory integration.
+
+
+## Stormwind explosives mission party payout (2026-10-16)
+- User authorized exactly 5 gold total for entire crew for COMPLETED defusal beneath Stormwind; NOT 5g per member. Integrated one-time canonical reward in `public/quests.js` (`mission:stormwind-explosives-defused:v1`, 50000 copper) with persisted claimed receipt and reward history.
+- `public/campaign.js` applies the reward to Snacky's existing shared wallet once on the living campaign screen, calls both campaign store and base-engine save, and shows the exact +5g payment in a clear story receipt. Dedicated quartermaster dialogue included in transaction ledger.
+- Existing standalone bounty payouts and local save fields remain unchanged; no reallocation of already held money. Source tests verify first grant +50000 copper and next grant denied. Offline cache v28. Browser Cloudflare runtime testing still needed. Beware not to duplicate if externally imported save lacks the new claim receipt.
