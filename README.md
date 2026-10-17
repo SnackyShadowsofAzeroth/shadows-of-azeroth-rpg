@@ -375,3 +375,25 @@ JavaScript syntax checks and simulated companion profile / save migration checks
 - Offline service-worker cache **v36** includes both `progression.js` and `progression.css`.
 
 **Validation:** Parsing checks passed for all edited scripts. Simulated checks confirmed skill gains and training, bonus/odds behavior, receipt-based duplicate protection, different progression for each companion, level 59→60 cap with zero overflow, registered extra expedition members, and delayed once-only XP after a battle is fully won. Full browser/cloud deployment and iPhone presentation have not yet been verified.
+
+
+## Fresh character creation and veteran protection (v37)
+
+**Grandfathered adventurers remain unchanged.** Snacky and his established party start at level 10 (or retain any level already earned), and older created hero slots retain their existing progression. Their money, history, companions, and story scenes are not rewritten.
+
+**All characters created after this update** receive `startLevel:1` and an explicitly saved `startingZone`. Their local save begins with **1,500 copper (15 silver)**, HP 100, Energy 100, zero alarm, no previous victories, and the solo `new-hero-start` introductory screen rather than the veteran Hollow Raven checkpoint. Fresh progression saves contain **only the new hero**; no companion progression records or inherited parties are created. Newly encountered named companions can be recruited through earned gameplay.
+
+Starting zones correspond to the chosen race's standard class-accessible level-one origin:
+- Human — **Northshire Valley, Elwynn Forest**
+- Dwarf / Gnome — **Coldridge Valley, Dun Morogh**
+- Night Elf — **Shadowglen, Teldrassil**
+- Orc / Troll — **Valley of Trials, Durotar**
+- Undead — **Deathknell, Tirisfal Glades**
+- Tauren — **Red Cloud Mesa, Mulgore**
+- Skyborne (custom fictional race) — **Skyborne Enclave**, an original starting settlement
+
+The first AI scene is constrained to that actual location, independently of the veteran campaign, and begins with no established companions, prior contacts, rewards, or completed missions. The starter screen's Party & Evidence panel becomes **Solo Journey & Supplies**, displaying the new player's actual starting details. Later scenes can develop friendships and parties normally.
+
+The new leveling logic permits levels **1–60** and preserves existing saves at level 10+; character creation and inactive roster displays respect the new `startLevel` flag. `soa-progression-v1` remains slot-isolated and backed up with the hero's other files.
+
+**Verification:** All modified scripts passed syntax parsing. Simulated loading showed established Snacky at level 10 with original allies; existing custom heroes at level 10; new heroes at level 1 with **only the hero progression record**; and a returning level-3 new hero resuming at level 3 without resets. Tests checked all race starting-zone mappings, 1,500-copper balance, correct solo opening scene, and independent campaign creation. Static shell cache updated to **v37**. Live Cloudflare deployment and iPhone rendering still require verification.
