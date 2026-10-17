@@ -122,6 +122,17 @@ function draw(){
  const sc=campaign.scene,head=document.createElement("h3"),where=document.createElement("div"),text=document.createElement("p");
  const kicker=document.createElement("div");kicker.className="soa-scene-kicker";kicker.textContent="FIELD CHRONICLE · SCENE "+campaign.turn;box.append(kicker);head.textContent=sc.title||"The Hollow Raven";where.className="muted";where.textContent=sc.location||"Raven Hill";text.className="soa-story-prose";text.style.whiteSpace="pre-line";text.textContent=readableStory(sc.story);box.append(head,where,text);
  if(pending()){const note=document.createElement("p");note.className="soa-pending";note.textContent="Your last decision is saved. The next story scene has not arrived. Retry safely without repeating the action.";box.append(note);const retry=document.createElement("button");retry.className="med";retry.textContent="Retry generating next scene";retry.disabled=busy;retry.onclick=()=>{returnToAdventure("status");advance(campaign.lastAction,campaign.lastResult,true)};box.append(retry)}
+ if(campaign.journal.length){
+  const notes=document.createElement("details");notes.className="soa-field-notes";
+  const summary=document.createElement("summary");summary.textContent="Field notes · "+campaign.journal.length+" discoveries";notes.append(summary);
+  const list=document.createElement("ul");
+  for(const fact of campaign.journal.slice(-8).reverse()){const item=document.createElement("li");item.textContent=fact;list.append(item)}
+  notes.append(list);box.append(notes);
+ }
+ const choicesHeader=document.createElement("div");choicesHeader.className="soa-choices-heading";
+ const title=document.createElement("strong");title.textContent="Choose your next move";
+ const count=document.createElement("span");count.textContent=sc.choices.length+" paths + resources + custom";
+ choicesHeader.append(title,count);box.append(choicesHeader);
  for(const [index,choice] of sc.choices.entries()){const b=document.createElement("button");b.className=choice.difficulty==="easy"?"low":choice.difficulty==="hard"?"high":"med";const headline=document.createElement("strong"),detail=document.createElement("small");headline.textContent=String.fromCharCode(65+index)+") "+choice.text;headline.style.display="block";detail.textContent=(choice.difficulty||"medium")+" difficulty · "+(socialSkill(choice)||choice.type||"investigate")+(socialSkill(choice)?" · d20":"");detail.style.cssText="display:block;margin-top:5px;color:#bccbd6;font:12px system-ui;text-transform:capitalize";b.append(headline,detail);b.disabled=busy||!!pending();b.onclick=()=>choose(choice);box.append(b)}
  const surveyIndex=sc.choices.length;
  const survey=document.createElement("button");
