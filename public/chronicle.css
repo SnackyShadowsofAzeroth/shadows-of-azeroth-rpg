@@ -191,3 +191,5 @@ body.theme-alternative .soa-assist-button{width:100%;min-height:45px;margin:5px 
 body.theme-alternative .soa-assist-button:disabled{opacity:.48;cursor:not-allowed}
 body.theme-alternative .soa-foe-defeated{opacity:.77}
 body.theme-alternative .soa-foe-defeated .soa-foe-heading strong:after{content:" · Defeated";color:#7c4942;font-size:11px}
+
+body.theme-alternative .soa-hostile-heading{font:700 15px/1.5 Georgia,serif;color:#894234;margin:13px 0 9px;border-bottom:1px solid #bba07c;padding-bottom:6px}
