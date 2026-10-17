@@ -361,7 +361,7 @@ function result(action){
  const skill=socialSkill(action);if(skill)return socialCheck(action,skill);
  const t=action.type,{cost,target}=actionOdds(action);let damage=0;
  if(s.en<cost)return null;
- const ok=Math.random()<chance;
+ const rolled=1+Math.floor(Math.random()*100),ok=rolled<=target;
  s.en=Math.min(100,s.en-cost+10);s.time++; if(!ok&&["stealth","engineering","combat"].includes(t)){s.alert=Math.min(3,s.alert+1);damage=t==="combat"?8:t==="stealth"?3:0;s.hp=Math.max(1,s.hp-damage)}
  if(ok&&t==="rest")s.hp=Math.min(100,s.hp+4);
  // Defeating an opponent does not itself loot them: currency changes require explicit search/loot actions.
