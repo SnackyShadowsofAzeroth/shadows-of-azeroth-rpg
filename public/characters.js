@@ -263,6 +263,20 @@ function profilePanel(){
  const pane=make("section");pane.className="panel soa-profession-panel";pane.id="soa-profession-panel";
  head.after(pane);drawProfessions();window.soaPortraits?.refresh?.();
 }
+// Keep the page's top-level panels in the same sequence as the section tabs.
+// These panels are created by separate scripts, so their DOMContentLoaded order
+// must not decide which section players encounter first.
+function organizeGameSections(){
+ const main=document.querySelector("main");if(!main)return;
+ const reputationId=active.origin==="custom"?"soa-standalone-reputation":"companion-panel";
+ const ordered=["campaign-box","soa-chronicle","soa-profession-panel",reputationId,"soa-save-settings"]
+  .map(get).filter(panel=>panel?.parentElement===main);
+ if(!ordered.length)return;
+ const selected=new Set(ordered);
+ const anchor=[...main.children].find(node=>node.matches?.("section.panel")&&!selected.has(node))||main.querySelector(":scope > footer");
+ if(!anchor)return;
+ ordered.forEach(panel=>main.insertBefore(panel,anchor));
+}
 function drawProfessions(){
  const root=get("soa-profession-panel");if(!root)return;root.replaceChildren();
  root.append(make("div","CHARACTER RECORD","soa-roster-kicker"),make("h2",active.name+" · "+active.race+" "+active.className));
@@ -374,5 +388,6 @@ document.addEventListener("DOMContentLoaded",()=>{
  try{if(sessionStorage.getItem(ENTER_KEY)!=="1")drawMenu()}catch(e){drawMenu()}
  // New-character adventures need their own future companions. Snacky's fixed party should not be shown as theirs.
  if(active.origin==="custom"){const pane=get("companion-panel");if(pane)pane.hidden=true;const rep=document.createElement("section");rep.className="panel soa-standalone-reputation";rep.id="soa-standalone-reputation";rep.append(document.createElement("h2"));rep.firstChild.textContent="Reputation";get("soa-profession-panel")?.after(rep);window.soaReputation?.renderInto?.(rep);const journal=get("journal");if(journal?.closest){const legacy=journal.closest("section.panel");if(legacy)legacy.hidden=true}}
+ organizeGameSections();
 });
 })();
