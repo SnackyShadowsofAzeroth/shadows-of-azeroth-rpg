@@ -4,14 +4,14 @@ const BOARDS=[
  {region:/stormwind|old town|elwynn/i,place:"Stormwind Bounty Board",contracts:[
   {id:"sw-defias",title:"Defias Saboteur",target:"Defias Saboteur",description:"A wanted Defias explosives specialist operating near Old Town.",copper:12500,level:8,rarity:"standard",items:["SI:7 Supply Voucher"]},
   {id:"sw-smuggler",title:"Dockside Smuggler",target:"Dockside Smuggler",description:"Wanted for trafficking stolen military supplies.",copper:8700,level:6,rarity:"standard",items:[]},
-  {id:"sw-master",title:"The Masked Defias Captain",target:"Masked Defias Captain",description:"Dangerous veteran commander. High-risk bounty.",copper:50000,level:14,rarity:"elite",items:["Captain's Signet"]}]},
+  {id:"sw-master",title:"The Masked Defias Captain",target:"Masked Defias Captain",description:"Dangerous veteran commander. High-risk bounty.",copper:50000,level:14,rarity:"elite",items:["Captain's Signet","Defias Shadowblade"]}]},
  {region:/darkshire|duskwood|raven hill/i,place:"Darkshire Bounty Board",contracts:[
   {id:"dw-grave",title:"Raven Hill Grave-Robber",target:"Raven Hill Grave-Robber",description:"A grave robber supplying a necromantic circle.",copper:7800,level:6,rarity:"standard",items:[]},
   {id:"dw-ghoul",title:"The Rotting Ghoul",target:"Rotting Ghoul",description:"An undead predator stalking the cemetery.",copper:14600,level:9,rarity:"standard",items:["Purified Bone Charm"]},
   {id:"dw-wraith",title:"Wraith of the Blackwood",target:"Wraith of the Blackwood",description:"Extremely dangerous spectral bounty.",copper:54000,level:15,rarity:"elite",items:["Wraithbound Trinket"]}]},
  {region:/ironforge|dun morogh/i,place:"Ironforge Bounty Board",contracts:[
   {id:"if-bandit",title:"Mountain Pass Bandit",target:"Mountain Pass Bandit",description:"A robber attacking supply caravans.",copper:9400,level:7,rarity:"standard",items:[]},
-  {id:"if-golem",title:"Runaway War Golem",target:"Runaway War Golem",description:"A lethal machine loose in the mountain passes.",copper:57000,level:15,rarity:"elite",items:["Reinforced Gear"]}]}
+  {id:"if-golem",title:"Runaway War Golem",target:"Runaway War Golem",description:"A lethal machine loose in the mountain passes.",copper:57000,level:15,rarity:"elite",items:["Reinforced Gear","Ironforge Warhammer"]}]}
 ];
 const format=n=>{const c=Math.max(0,Math.floor(n));return [Math.floor(c/10000)+"g",Math.floor(c%10000/100)+"s",c%100+"c"].join(" ")};
 const boardAt=location=>BOARDS.find(b=>b.region.test(String(location||"")));
