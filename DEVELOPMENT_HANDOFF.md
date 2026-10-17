@@ -1,0 +1,28 @@
+# Shadows of Azeroth — Development Handoff
+Updated: 2026-10-16
+
+## Repository
+GitHub: SnackyShadowsofAzeroth/shadows-of-azeroth-rpg
+Cloudflare Pages connects to main. Static files: public/. Server endpoints: functions/api/story.js and functions/api/campaign.js. Google Gemini default: gemini-3.5-flash-lite (Cloudflare environment may override). NEVER commit or print API secrets.
+
+## Game
+Offline-first iPhone PWA; Gemini online living campaign; original Snacky Lugnuts save must be preserved. Player decisions resolve deterministically through local JS, Gemini writes validated narrative. Campaign continuity comes from saved game state, NOT ChatGPT conversation context.
+
+## Approved character requirements
+- Male/female creation option.
+- Valid race/faction/class combinations maintained in public/characters.js.
+- New level-1 heroes start in their race's starting zone alone, with 15 silver and modest class starter equipment, never Snacky's late-game gear.
+- Distinct primary professions and independent save slots; legacy Snacky campaign retained.
+- D&D-inspired six ability scores are already present in public/abilities.js. The original game's HP bars and skill systems still need broader integration testing.
+- Hidden special-case for exactly male Gnome Rogue named Snacky Lugnuts with both Mining and Engineering. Do not reveal it in creation UI or apply to other heroes. Current implementation grants a small +1 bluff modifier; this is intentionally modest, though exact reward was not conclusively recovered from the truncated previous chat.
+
+## Confirmed changes this session
+public/characters.js updated on main (commit 5862c9b): gender field, basic gear definitions, precise Easter egg check, and initial equipment data in new-character save. The file remains intact, including save-slot and export functions. Source inspections confirm the changes exist, but live iPhone behavior is NOT verified.
+
+## Known limitations / TODO
+- Cloudflare production verification and Gemini API live test still needed.
+- Review whether the new starting equipment is displayed and used by an actual inventory UI; initial implementation stores equipment in the local save.
+- Thoroughly test all race/class combinations and male/female selection, new-character start locations, save switching, progression and Easter egg behavior.
+- Do not send empty GitHub file content or overwrite files without first fetching their existing SHA/content.
+- Keep conversations shorter; read this handoff and repository code in a new session.
+- Before changes that may reset or affect saves, request backup and explicit permission.
