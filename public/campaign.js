@@ -72,19 +72,16 @@ function socialTarget(action,skill){
  return {bonus,dc:baseDC+modifier};
 }
 function actionOdds(action){
- const t=action.type;let cost=0,chance=1;
- if(t==="stealth"){cost=20;chance=.78-s.alert*.08}
- if(t==="engineering"){cost=10;chance=.75-s.alert*.05}
- if(t==="social"){cost=0;chance=.8-s.alert*.08}
- if(t==="combat"){cost=35;chance=.68-s.alert*.04}
- if(t==="investigate"){cost=10;chance=.88}
- if(t==="move"){cost=0;chance=.95}
- if(t==="rest"){cost=0;chance=.94}
- const trained=window.soaProgression?.bonus?.(t==="investigate"?"investigate":t==="engineering"?"engineering":t==="stealth"?"stealth":t==="combat"?"combat":t==="social"?"social":"")||0;
- const level=window.soaProgression?.level?.()||10;
- chance+=(window.soaAbilities?.percent?.(t)||0);
- chance=Math.max(.25,Math.min(.97,chance+(action.difficulty==="easy"?.09:action.difficulty==="hard"?-.2:0)+Math.max(0,level-10)*.0015+trained*.008));
- return {cost,target:Math.round(chance*100)};
+ const t=action.type, text=String(action.text||"").toLowerCase();
+ const costs={stealth:20,engineering:10,social:0,combat:35,investigate:10,move:0,rest:0};
+ const relevant=/\\b(?:pick|lock|tinker|wire|mechanism|repair|device|engineer|disable trap)\\b/.test(text)?"engineering":/\\b(?:hide|sneak|stealth|shadow|slip past|ambush|conceal|pickpocket)\\b/.test(text)?"stealth":/\\b(?:search|inspect|investigate|examine|study|track|deduce|analyze|observe)\\b/.test(text)?"investigate":/\\b(?:climb|leap|jump|sprint|run|swim|dodge|balance)\\b/.test(text)?"move":/\\b(?:persuade|convince|negotiate|discuss|appeal|talk)\\b/.test(text)?"social":/\\b(?:rest|sleep|recover)\\b/.test(text)?"rest":t;
+ const base={stealth:68,engineering:64,social:65,combat:55,investigate:70,move:76,rest:83}[relevant]??65;
+ const modifier=window.soaAbilities?.modifier?.(relevant)||0;
+ const trained=window.soaProgression?.bonus?.(relevant)||0;
+ const level=window.soaProgression?.level?.()||1;
+ const difficulty=action.difficulty==="easy"?12:action.difficulty==="hard"?-22:0;
+ const target=Math.max(10,Math.min(95,Math.round(base+modifier*5+trained*2+Math.max(0,level-1)*.2+difficulty-(s.alert||0)*5)));
+ return {cost:costs[t]??0,target,skill:relevant,modifier,trained};
 }
 function combatAccuracy(action){
  const rank=window.soaProgression?.bonus?.("combat")||0,level=window.soaProgression?.level?.()||10;
@@ -114,7 +111,7 @@ function dicePreview(action){
   return {primary:"🎲 d20 "+(bonus>=0?"+ "+bonus:"− "+Math.abs(bonus))+" vs DC "+dc,secondary:"CHA-based "+skill+" check · Natural 1 fails, 20 succeeds"};
  }
  const {cost,target}=actionOdds(action);
- return {primary:"🎲 d100 · succeed on 1–"+target,secondary:cost+" Energy · "+target+"% success at current alarm"};
+ const odds=actionOdds(action);return {primary:"🎲 "+odds.skill+" · d100 ≤ "+target+" ("+target+"%)",secondary:cost+" Energy · ability modifier "+(odds.modifier>=0?"+":"")+odds.modifier+" · training +"+odds.trained};
 }
 
 function socialCheck(action,skill){
