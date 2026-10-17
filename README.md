@@ -325,3 +325,16 @@ Personal interactions with Pippa, Bromli, and Lethariel now display as **in-stor
 **Scope:** An interaction records `source:"interaction"`, a `sceneTurn`, and text in the existing companion save. Only the **three most recent** companion interactions from the current scene display within its narrative, so they do not repeat forever across successive generated scenes. Older saves lack these presentation fields but their previous relationship progress and history remain intact. The recent-companion context sent to Gemini now deduplicates identical entries, reducing the chance of reinforcing previously repeated phrases.
 
 **Validation:** Verified distinct Bromli conversation lines over successive interactions, contextual underground dialogue, unchanged relationship-storage keys, removed duplicate Journal display, hook-up to main Adventure and source parsing. Offline shell cache **v32**. Cloudflare live deployment and on-device Safari testing remain unverified.
+
+
+## Transparent dice previews on story choices (v33)
+
+Every Living Campaign story choice now shows a non-rolling preview beneath the difficulty/type label:
+- **Bluff, Bribe, Romance, Threaten:** `d20 + character-specific skill bonus vs DC` (Easy DC 10 / Medium DC 14 / Hard DC 18, plus applicable relationship hostility modifier). Natural 1 always fails; natural 20 succeeds. Missing bribe amounts still block action when selected.
+- **Engineering, Stealth, Investigate, Social, Move, Rest, abstract Combat:** `d100` with the exact success range computed from the **existing** action odds, current alarm and difficulty, plus Energy cost. The resolver now makes a discrete d100 roll using this same target and writes the rolled result into the action resolution string for Gemini. The probabilities and other game effects are otherwise unchanged.
+- **Tracked combat:** shows d100 hit threshold and strike (1d11+13 HP) or kick (1d7+5 HP) damage dice; conditional Riposte shows automatic 24 HP on a valid parry; Evasion has no attack roll. The preview and action resolver share ability detection and hit-rate computation so they remain consistent.
+- **Survey resources** shows its investigate d100 roll; **Custom action** has a reactive preview that changes when text, type or social skill selection changes.
+
+No roll is made simply by reading the preview, and dice previews do not modify time, saves or Energy. The actual random roll occurs only after selecting the action. The parchment cards use compact mobile typography and retain green/amber/red difficulty borders. Offline cache **v33**.
+
+Verified normal success/failure, social DC bonuses including hostile-romance modifier, combat dice preview, input integration, JavaScript parsing and that inspecting a preview does not change game state. Cloudflare deployment / iPhone live display still require independent confirmation.
