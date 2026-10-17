@@ -338,3 +338,18 @@ Every Living Campaign story choice now shows a non-rolling preview beneath the d
 No roll is made simply by reading the preview, and dice previews do not modify time, saves or Energy. The actual random roll occurs only after selecting the action. The parchment cards use compact mobile typography and retain green/amber/red difficulty borders. Offline cache **v33**.
 
 Verified normal success/failure, social DC bonuses including hostile-romance modifier, combat dice preview, input integration, JavaScript parsing and that inspecting a preview does not change game state. Cloudflare deployment / iPhone live display still require independent confirmation.
+
+
+## Companion identities and class specializations (v34)
+
+The three established companions now have canonical, structured race/class/specialization profiles in `public/companions.js`:
+
+- **Lethariel Moonguard** — Night Elf **Restoration Priest**, specializing in restorative healing and support (formerly shown with only her given name).
+- **Pippa Sparkwhistle** — Gnome **Subtlety Rogue**, specializing in stealth reconnaissance; engineering remains an established secondary expertise.
+- **Bromli Ironkeg** — Dwarf **Protection Paladin**, a frontline guardian empowered by the Light; no longer described as a Warrior.
+
+The Reputation/Companions section displays these profiles. The Living Campaign now passes structured companion profiles to the server director, and its canonical instructions require Gemini to use the correct full name, class, specialization and role rather than the old generic roles. Explicitly referencing “Moonguard” in a custom dialogue action now recognizes Lethariel.
+
+**Backward compatibility:** Companion ID keys `pippa`, `bromli`, `lethariel` are unchanged, so trust, affection, respect, romance and interaction history remain in place. Historical relationship entries whose person is exactly `Lethariel` display `Lethariel Moonguard`. Active combat records, stored health ledger keys, last damage recipients and recent combat logs also use her full new name while retaining the existing numerical HP. The original story text and discovery notes are not rewritten.
+
+JavaScript syntax checks and simulated companion profile / save migration checks passed. Offline cache **v34**. Production Cloudflare deploy and live iPhone rendering remain to be confirmed.
