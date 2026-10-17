@@ -19,13 +19,13 @@ const ACTIONS=[
  {id:"betray",label:"Betray their trust",detail:"Potentially become enemies"}
 ];
 let selected="pippa", activeReputationView="companions", romanceExpanded=false, conflictExpanded=false, data={rapport:{pippa:0,bromli:0,lethariel:0},entries:[],relations:{},dialogueIds:[]}, last="";
-const blank=()=>({trust:0,affection:0,respect:0,status:"Acquaintance",romance:"none",grievances:0,interactions:0});
+const blank=()=>({trust:0,affection:0,respect:0,status:"Acquaintance",romance:"none",grievances:0,interactions:0,memories:[],nights:0,lastNightDay:null});
 const clamp=(v,min=-100,max=100)=>Math.max(min,Math.min(max,Number(v)||0));
 const rel=id=>data.relations[id]||(data.relations[id]=blank());
 function status(r){return r.trust<=-65?"Enemy":r.trust<=-25?"Rival":r.romance==="married"?"Married":r.romance==="engaged"?"Engaged":r.romance==="committed"?"Partners":r.romance==="dating"?"Dating":r.trust>=65?"Close friend":r.trust>=25?"Friend":"Acquaintance"}
 function adjust(r,change){for(const [k,n] of Object.entries(change))r[k]=clamp(r[k]+n);if(r.trust<=-65){r.romance="none"}r.status=status(r)}
 const $=id=>document.getElementById(id);
-function load(){try{const v=JSON.parse(localStorage.getItem(KEY)||"null");if(v&&v.rapport&&Array.isArray(v.entries)){for(const id of Object.keys(PEOPLE))data.rapport[id]=Math.max(0,Math.min(5,Number(v.rapport[id])||0));data.entries=v.entries.slice(-40).filter(x=>x&&typeof x.text==="string"&&typeof x.person==="string").map(x=>x.person==="Lethariel"?{...x,person:"Lethariel Moonguard"}:x);data.dialogueIds=Array.isArray(v.dialogueIds)?v.dialogueIds.filter(x=>typeof x==="string").slice(-100):[];if(v.relations&&typeof v.relations==="object"){for(const id of Object.keys(PEOPLE)){const old=v.relations[id]||{},r=blank();for(const k of ["trust","affection","respect"])r[k]=clamp(old[k]);r.interactions=clamp(old.interactions,0,999);r.grievances=clamp(old.grievances,0,999);r.romance=["none","dating","committed","engaged","married"].includes(old.romance)?old.romance:"none";r.status=status(r);data.relations[id]=r}}else{for(const id of Object.keys(PEOPLE)){const r=rel(id),n=data.rapport[id]||0;r.trust=n*9;r.affection=n*5;r.respect=n*6;r.interactions=n;r.status=status(r)}}}}catch(e){}}
+function load(){try{const v=JSON.parse(localStorage.getItem(KEY)||"null");if(v&&v.rapport&&Array.isArray(v.entries)){for(const id of Object.keys(PEOPLE))data.rapport[id]=Math.max(0,Math.min(5,Number(v.rapport[id])||0));data.entries=v.entries.slice(-40).filter(x=>x&&typeof x.text==="string"&&typeof x.person==="string").map(x=>x.person==="Lethariel"?{...x,person:"Lethariel Moonguard"}:x);data.dialogueIds=Array.isArray(v.dialogueIds)?v.dialogueIds.filter(x=>typeof x==="string").slice(-100):[];if(v.relations&&typeof v.relations==="object"){for(const id of Object.keys(PEOPLE)){const old=v.relations[id]||{},r=blank();for(const k of ["trust","affection","respect"])r[k]=clamp(old[k]);r.interactions=clamp(old.interactions,0,999);r.grievances=clamp(old.grievances,0,999);r.romance=["none","dating","committed","engaged","married"].includes(old.romance)?old.romance:"none";r.memories=Array.isArray(old.memories)?old.memories.slice(-15):[];r.nights=Math.max(0,Number(old.nights)||0);r.lastNightDay=old.lastNightDay??null;r.status=status(r);data.relations[id]=r}}else{for(const id of Object.keys(PEOPLE)){const r=rel(id),n=data.rapport[id]||0;r.trust=n*9;r.affection=n*5;r.respect=n*6;r.interactions=n;r.status=status(r)}}}}catch(e){}}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){}}
 function add(tag,text){const e=document.createElement(tag);e.textContent=text;return e}
 function locationAllows(id){if(id!=="lethariel")return true;const mode=localStorage.getItem("soa-campaign-enabled")==="1";if(!mode)return false;const scene=window.soaLivingCampaign?.getState?.()?.scene;return /checkpoint|tavern|regroup/i.test(String(scene?.location||""))}
@@ -69,6 +69,38 @@ function encounter(id,kind){
  for(let k=0;k<lines.length;k++){const candidate=lines[(start+k)%lines.length];if(!recent.some(x=>x.includes(candidate)))return candidate}
  return lines[start];
 }
+function recordMemory(id,kind,message){
+ const r=rel(id);r.memories||=[];
+ const memories={talk:"Shared conversation",encourage:"Encouragement remembered",advice:"Offered personal advice",flirt:"A moment of attraction",bond:"Shared private confidence",confess:"Mutual feelings acknowledged",commit:"Chose partnership",propose:"Promised a future",wedding:"Marriage ceremony",apologize:"Attempted reconciliation",argue:"A difficult disagreement",betray:"Trust was betrayed",overnight:"Spent a peaceful night together"};
+ const summary=memories[kind]||"Personal moment";
+ r.memories.push({kind,text:summary,at:new Date().toISOString()});r.memories=r.memories.slice(-15);
+}
+function overnightRest(){
+ const id=selected,r=rel(id),profile=window.soaCharacters?.profile?.();
+ if(profile?.id!=="snacky"){last="This established companion route belongs to Snacky's adventure.";draw();return}
+ if(!locationAllows(id)){last="You must be together before arranging an overnight stay.";draw();return}
+ if(!["dating","committed","engaged","married"].includes(r.romance)||r.trust<65||r.affection<70||r.respect<35||r.grievances>0){
+  last="A shared overnight stay requires an established mutual romance, high trust and affection, respect, and no unresolved grievance.";draw();return
+ }
+ const scene=window.soaLivingCampaign?.getState?.()?.scene||{},place=String(scene.location||"");
+ if(!/tavern|inn|safehouse|home|quarters|lodging|camp|rest area|sanctuary/i.test(place)){
+  last="Find safe private lodging or a peaceful camp before spending the night together.";draw();return
+ }
+ const adventure=window.soaLivingCampaign?.getState?.();
+ if(Array.isArray(adventure?.enemies)&&adventure.enemies.some(x=>x.hp>0)){
+  last="A hostile encounter is active. Rest is unsafe.";draw();return
+ }
+ const dayKey=String(adventure?.turn??0)+"|"+place;
+ if(r.lastNightDay===dayKey){last="You already shared a peaceful night here. Continue adventuring before resting together again.";draw();return}
+ const receipt="shared-night:"+id+":"+String(adventure?.turn??0)+":"+String(adventure?.actionSerial??0);
+ const reward=window.soaProgression?.overnightBond?.({receipt,companionId:id,quality:r.affection>=85&&r.trust>=80?2:1});
+ if(!reward?.awarded){last="The morning reward could not be recorded. No relationship change was made.";draw();return}
+ r.lastNightDay=dayKey;r.nights=(r.nights||0)+1;
+ adjust(r,{trust:2,affection:2});recordMemory(id,"overnight");
+ const message="You and "+PEOPLE[id].name+" spend a quiet, consensual evening together. The scene fades to the following morning; renewed companionship grants +"+reward.awarded+" XP. No further reward can be claimed for this rest.";
+ data.entries.push({person:PEOPLE[id].name,text:message,kind:"overnight",at:new Date().toISOString(),source:"interaction",sceneTurn:adventure?.turn??null});data.entries=data.entries.slice(-40);
+ last=message;save();draw();window.soaLivingCampaign?.refreshUI?.();
+}
 function interact(kind){
  if(!locationAllows(selected)){last="That companion is stationed elsewhere. Regroup before speaking in person.";draw();return}
  const r=rel(selected),person=PEOPLE[selected].name;let message="",change={},valid=true;
@@ -85,7 +117,7 @@ function interact(kind){
  if(kind==="argue"){change={trust:-14,respect:-10};r.grievances++;message=person+" disagrees strongly with Snacky. Their relationship becomes strained."}
  if(kind==="betray"){change={trust:-44,respect:-24,affection:-18};r.grievances+=2;message=person+" feels betrayed. This may turn a friend into a rival or enemy."}
  if(!message)return;
- if(valid){adjust(r,change);r.interactions++;data.rapport[selected]=clamp(r.trust/9,0,5)}
+ if(valid){adjust(r,change);r.interactions++;recordMemory(selected,kind);data.rapport[selected]=clamp(r.trust/9,0,5)}
  last=message;const label=ACTIONS.find(x=>x.id===kind)?.label||kind;
  const moment={person,text:label+": "+message,dialogue:message,kind,at:new Date().toISOString(),source:"interaction",sceneTurn:window.soaLivingCampaign?.getState?.()?.turn??null};
  data.entries.push(moment);data.entries=data.entries.slice(-40);save();draw();
@@ -179,6 +211,7 @@ function draw(){
  const sheet=window.soaAbilities?.card?.(selected);if(sheet)companionGroup.append(sheet);
  const indicators=add("div","");indicators.className="soa-relation-metrics";for(const [name,label] of [["trust","Trust"],["affection","Affection"],["respect","Respect"]]){const unit=add("div","");unit.className="soa-relation-cell";const title=add("div",label+" · "+r[name]);title.className="soa-relation-label";const rail=add("div","");rail.className="soa-relation-rail";const fill=add("div","");fill.className="soa-relation-fill "+name;fill.style.width=((r[name]+100)/2)+"%";rail.append(fill);unit.append(title,rail);indicators.append(unit)}companionGroup.append(indicators);
  if(!locationAllows(selected)){const msg=add("p",p.base);msg.className="muted";companionGroup.append(msg)}
+ const nights=add("button","Spend the night together · restful morning XP");nights.type="button";nights.className="soa-social-action";nights.onclick=overnightRest;companionGroup.append(nights);
  const categories=[
   {label:"Everyday interactions",ids:["talk","encourage","advice","flirt","bond"],expanded:true},
   {label:"Romance & commitments",ids:["confess","commit","propose","wedding"],expanded:romanceExpanded,key:"romance"},
@@ -203,5 +236,5 @@ load();
 const el=document.createElement("section");el.className="panel soa-companion-panel";el.id="companion-panel";
 const campaign=$("campaign-box");if(campaign)campaign.after(el);else document.querySelector("header")?.after(el);
 draw();
-window.soaCompanions={getProfiles:()=>Object.fromEntries(Object.entries(PEOPLE).map(([id,p])=>[id,{name:p.name,race:p.race,className:p.className,specialization:p.specialization,level:window.soaProgression?.level?.(id)||10,role:p.role}])),getRecent:()=>{const seen=new Set();return data.entries.slice().reverse().filter(x=>{const key=(x.person+"|"+x.text).toLowerCase().replace(/\s+/g," ").trim();if(seen.has(key))return false;seen.add(key);return true}).slice(0,4).reverse().map(x=>x.person+": "+x.text.slice(0,150))},getAdventureMoments:()=>{const turn=window.soaLivingCampaign?.getState?.()?.turn;return data.entries.filter(x=>x.source==="interaction"&&typeof x.dialogue==="string"&&x.sceneTurn===turn).slice(-3)},getRapport:()=>({...data.rapport}),getConversationContext:()=>Object.fromEntries(Object.keys(PEOPLE).map(id=>{const r=rel(id);return [id,{stage:status(r),romance:r.romance,trust:r.trust,affection:r.affection,respect:r.respect,interactions:r.interactions,grievances:r.grievances,recentMoments:data.entries.filter(x=>x.person===PEOPLE[id].name).slice(-4).map(x=>x.text.slice(0,150))}]})),getRelationships:()=>Object.fromEntries(Object.keys(PEOPLE).map(id=>{const r=rel(id);return [id,{trust:r.trust,affection:r.affection,respect:r.respect,status:status(r),romance:r.romance,grievances:r.grievances}]})),applyStoryConsequence,applyDialogueOutcome,refresh:draw,refreshProgress:draw};
+window.soaCompanions={getProfiles:()=>Object.fromEntries(Object.entries(PEOPLE).map(([id,p])=>[id,{name:p.name,race:p.race,className:p.className,specialization:p.specialization,level:window.soaProgression?.level?.(id)||10,role:p.role}])),getRecent:()=>{const seen=new Set();return data.entries.slice().reverse().filter(x=>{const key=(x.person+"|"+x.text).toLowerCase().replace(/\s+/g," ").trim();if(seen.has(key))return false;seen.add(key);return true}).slice(0,4).reverse().map(x=>x.person+": "+x.text.slice(0,150))},getAdventureMoments:()=>{const turn=window.soaLivingCampaign?.getState?.()?.turn;return data.entries.filter(x=>x.source==="interaction"&&typeof x.dialogue==="string"&&x.sceneTurn===turn).slice(-3)},getRapport:()=>({...data.rapport}),getConversationContext:()=>Object.fromEntries(Object.keys(PEOPLE).map(id=>{const r=rel(id);return [id,{stage:status(r),romance:r.romance,trust:r.trust,affection:r.affection,respect:r.respect,interactions:r.interactions,grievances:r.grievances,nights:r.nights||0,memories:(r.memories||[]).slice(-8).map(m=>m.text),recentMoments:data.entries.filter(x=>x.person===PEOPLE[id].name).slice(-4).map(x=>x.text.slice(0,150))}]})),getRelationships:()=>Object.fromEntries(Object.keys(PEOPLE).map(id=>{const r=rel(id);return [id,{trust:r.trust,affection:r.affection,respect:r.respect,status:status(r),romance:r.romance,grievances:r.grievances}]})),applyStoryConsequence,applyDialogueOutcome,refresh:draw,refreshProgress:draw};
 })();
