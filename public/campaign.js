@@ -493,7 +493,19 @@ async function advance(action,resolution,retry){
  updateLivingEnemies(data);reconcileCombatAllies(data);campaign.scene=data;campaign.turn++;window.soaChronicle?.receive?.(campaign,data);campaign.pending=null;customDraft="";customSocialSkill="auto";campaign.history.push("Scene: "+safe(data.title)+" @ "+safe(data.location)+" — "+safe(data.story).slice(0,380));campaign.history=campaign.history.slice(-MAX);if(data.journal)campaign.journal.push(safe(data.journal).slice(0,200));campaign.journal=campaign.journal.slice(-100);campaign.lastError="";if(completedDialogue)window.soaCompanions?.applyDialogueOutcome?.(completedDialogue);if(completedProfession)window.soaCharacters?.applyProfession?.(completedProfession.action,completedProfession.resolution,completedProfession.id);if(completedFaction)window.soaReputation?.fromAction?.(completedFaction);store();status("Scene generated and saved. Choose your next action.");
  }catch(e){campaign.lastError=e.message;store();status("AI unavailable: "+e.message+". Your last action is preserved. Tap Retry generating next scene; it will not spend Energy twice.")}finally{busy=false;refreshDisplay();returnToAdventure(campaign?.lastError?"status":"scene")}
 }
+function migrateCompanionDisplayNames(){
+ if(!campaign)return;
+ const canonical=name=>name==="Lethariel"?"Lethariel Moonguard":name;
+ if(Array.isArray(campaign.combatAllies))for(const ally of campaign.combatAllies)if(ally&&typeof ally.name==="string")ally.name=canonical(ally.name);
+ if(campaign.partyHealth&&typeof campaign.partyHealth==="object"&&campaign.partyHealth.Lethariel){
+  if(!campaign.partyHealth["Lethariel Moonguard"])campaign.partyHealth["Lethariel Moonguard"]=campaign.partyHealth.Lethariel;
+  delete campaign.partyHealth.Lethariel;
+ }
+ if(campaign.lastExchange?.recipient==="Lethariel")campaign.lastExchange.recipient="Lethariel Moonguard";
+ if(Array.isArray(campaign.combatLog))for(const row of campaign.combatLog)if(Array.isArray(row?.events))for(const event of row.events)if(event?.name==="Lethariel")event.name="Lethariel Moonguard";
+}
 try{campaign=JSON.parse(localStorage.getItem(KEY)||"null")}catch(e){campaign=null}
+migrateCompanionDisplayNames();
 enabled=localStorage.getItem("soa-campaign-enabled")==="1";if(campaign){window.soaChronicle?.attach?.(campaign);store()}window.soaChronicleSetSave?.(store);interfaceUI();get("campaign-mode").checked=enabled;
 if(enabled){if(!campaign)campaign=make();draw();if(!campaign.scene&&navigator.onLine)advance(campaign.lastAction,campaign.lastResult,true)}
 window.soaLivingCampaign={getState:()=>campaign,enabled:()=>enabled,refreshUI:()=>{draw()}};})();
