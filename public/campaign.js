@@ -358,6 +358,20 @@ function draw(){
  const sc=campaign.scene,head=document.createElement("h3"),where=document.createElement("div"),text=document.createElement("p");
  const transition=window.soaChronicle?.banner?.(campaign);if(transition)box.append(transition);
  const kicker=document.createElement("div");kicker.className="soa-scene-kicker";const position=window.soaChronicle?.progress?.(campaign);kicker.textContent=position?"ACT "+position.actRoman+" · CHAPTER "+position.chapterRoman+" · SCENE "+position.scene:"FIELD CHRONICLE · SCENE "+campaign.turn;box.append(kicker);head.textContent=sc.title||"The Hollow Raven";where.className="muted";where.textContent=sc.location||"Raven Hill";text.className="soa-story-prose";text.style.whiteSpace="pre-line";text.textContent=readableStory(sc.story);box.append(head,where,text);
+ const moments=window.soaCompanions?.getAdventureMoments?.()||[];
+ if(moments.length){
+  const dialogue=document.createElement("section");dialogue.className="soa-companion-dialogue";dialogue.id="soa-companion-dialogue";
+  dialogue.setAttribute("aria-label","Companion conversations");
+  const label=document.createElement("div");label.className="soa-companion-dialogue-heading";label.textContent="COMPANION CONVERSATIONS";
+  dialogue.append(label);
+  for(const moment of moments){
+   const entry=document.createElement("blockquote");entry.className="soa-companion-quote";
+   const who=document.createElement("strong");who.textContent=moment.person;
+   const words=document.createElement("p");words.textContent=moment.dialogue;
+   entry.append(who,words);dialogue.append(entry);
+  }
+  box.append(dialogue);
+ }
  if(pending()){const note=document.createElement("p");note.className="soa-pending";note.textContent="Your last decision is saved. The next story scene has not arrived. Retry safely without repeating the action.";box.append(note);const retry=document.createElement("button");retry.className="med";retry.textContent="Retry generating next scene";retry.disabled=busy;retry.onclick=()=>{returnToAdventure("status");advance(campaign.lastAction,campaign.lastResult,true)};box.append(retry)}
  if(campaign.journal.length){
   const notes=document.createElement("details");notes.className="soa-field-notes";
