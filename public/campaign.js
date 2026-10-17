@@ -58,22 +58,56 @@ function bribeCopper(text){
  const factors={gold:10000,g:10000,silver:100,s:100,copper:1,c:1};
  return amounts.reduce((sum,m)=>sum+Number(m[1])*factors[m[2].toLowerCase()],0);
 }
+function socialTarget(action,skill){
+ const bonuses=window.soaCharacters?.getSocialSkills?.()||{bluff:5,bribe:3,romance:3,threaten:2};
+ const bonus=Number(bonuses[skill])||0;
+ const baseDC=action.difficulty==="easy"?10:action.difficulty==="hard"?18:14;
+ let modifier=0;
+ if(skill==="romance"){
+  const text=String(action.text||"").toLowerCase();
+  const who=text.includes("pippa")?"pippa":text.includes("bromli")?"bromli":text.includes("lethariel")?"lethariel":null;
+  const relationship=who?window.soaCompanions?.getRelationships?.()?.[who]:null;
+  if(relationship&&relationship.trust<0)modifier=4;
+ }
+ return {bonus,dc:baseDC+modifier};
+}
+function actionOdds(action){
+ const t=action.type;let cost=0,chance=1;
+ if(t==="stealth"){cost=20;chance=.78-s.alert*.08}
+ if(t==="engineering"){cost=10;chance=.75-s.alert*.05}
+ if(t==="social"){cost=0;chance=.8-s.alert*.08}
+ if(t==="combat"){cost=35;chance=.68-s.alert*.04}
+ if(t==="investigate"){cost=10;chance=.88}
+ if(t==="move"){cost=0;chance=.95}
+ if(t==="rest"){cost=0;chance=.94}
+ chance=Math.max(.25,Math.min(.97,chance+(action.difficulty==="easy"?.09:action.difficulty==="hard"?-.2:0)));
+ return {cost,target:Math.round(chance*100)};
+}
+function combatAccuracy(action){
+ return Math.max(.25,Math.min(.90,.74-s.alert*.04+(action.difficulty==="easy"?.08:action.difficulty==="hard"?-.13:0)));
+}
+function dicePreview(action){
+ const skill=socialSkill(action);
+ if(skill){
+  const {bonus,dc}=socialTarget(action,skill);
+  return {primary:"🎲 d20 "+(bonus>=0?"+ "+bonus:"− "+Math.abs(bonus))+" vs DC "+dc,secondary:skill[0].toUpperCase()+skill.slice(1)+" check · Natural 1 fails, 20 succeeds"};
+ }
+ if(action.type==="combat"&&livingEnemies().length){
+  const inferred=String(action.ability||(/\bkick\b/i.test(action.text)?"kick":/\b(?:evasion|evade)\b/i.test(action.text)?"evasion":/\briposte\b/i.test(action.text)?"riposte":"strike")).toLowerCase();
+  if(inferred==="evasion")return {primary:"🎲 No attack roll",secondary:"Defensive exchange · 0 Energy"};
+  if(inferred==="riposte")return {primary:"🎲 Automatic hit after parry",secondary:"24 HP on a valid Riposte · 10 Energy"};
+  const chance=Math.round(combatAccuracy(action)*100);
+  return {primary:"🎲 d100 · hit on 1–"+chance,secondary:(inferred==="kick"?"1d7 + 5 damage · 25 Energy":"1d11 + 13 damage · 35 Energy")};
+ }
+ const {cost,target}=actionOdds(action);
+ return {primary:"🎲 d100 · succeed on 1–"+target,secondary:cost+" Energy · "+target+"% success at current alarm"};
+}
 function socialCheck(action,skill){
  const amounts=skill==="bribe"?bribeCopper(action.text):null;
  if(skill==="bribe"&&(!Number.isSafeInteger(amounts)||amounts<=0)){status("Specify an explicit bribe amount, such as 'offer 50 silver to the guard'. No action was spent.");return null}
  if(skill==="bribe"&&s.money<amounts){status("Not enough money for the proposed bribe. No action was spent.");return null}
- const bonuses=window.soaCharacters?.getSocialSkills?.()||{bluff:5,bribe:3,romance:3,threaten:2};
- const bonus=Number(bonuses[skill])||0;
- const baseDC=action.difficulty==="easy"?10:action.difficulty==="hard"?18:14;
- // Existing trust is meaningful: hostility makes an advance much less likely.
- let modifier=0;
- if(skill==="romance"){
-  const name=String(action.text||"").toLowerCase();
-  const who=name.includes("pippa")?"pippa":name.includes("bromli")?"bromli":name.includes("lethariel")?"lethariel":null;
-  const relationship=who?window.soaCompanions?.getRelationships?.()?.[who]:null;
-  if(relationship&&relationship.trust<0)modifier=4;
- }
- const dc=baseDC+modifier,roll=1+Math.floor(Math.random()*20),total=roll+bonus,ok=roll!==1&&(roll===20||total>=dc);
+ const {bonus,dc}=socialTarget(action,skill);
+ const roll=1+Math.floor(Math.random()*20),total=roll+bonus,ok=roll!==1&&(roll===20||total>=dc);
  let effect="";
  if(skill==="bluff")effect=ok?"The deception is provisionally believed.":"The target detects inconsistencies or remains unconvinced.";
  if(skill==="threaten")effect=ok?"The target yields to pressure for now.":"The target refuses to be intimidated.";
@@ -102,8 +136,9 @@ function fightExchange(action){
  const enemy=matches.length===1?matches[0]:matches.length>1?null:selected||(targets.length===1?targets[0]:null);
  if(!enemy&&ability!=="evasion"){status("Select a specific enemy target before attacking. No action spent.");return null}
  const target=enemy||targets[0],oldHP=target.hp,heroHP=s.hp,oldEnergy=s.en;
- const accuracy=Math.max(.25,Math.min(.90,.74-s.alert*.04+(action.difficulty==="easy"?.08:action.difficulty==="hard"?-.13:0)));
- const hit=ability==="riposte"?true:ability==="evasion"?false:Math.random()<accuracy;
+ const accuracy=combatAccuracy(action);
+ const attackRoll=ability==="riposte"||ability==="evasion"?null:1+Math.floor(Math.random()*100);
+ const hit=ability==="riposte"?true:ability==="evasion"?false:attackRoll<=Math.round(accuracy*100);
  const rolled=ability==="strike"?14+Math.floor(Math.random()*11):ability==="kick"?6+Math.floor(Math.random()*7):ability==="riposte"?24:0;
  const dealt=hit?Math.min(target.hp,rolled):0;target.hp=Math.max(0,target.hp-dealt);
  const defeated=target.hp===0;
@@ -128,7 +163,7 @@ function fightExchange(action){
  campaign.parryReady=parry;
  s.en=Math.min(100,s.en-price+10);s.time++;
  campaign.combatRound=(Number(campaign.combatRound)||0)+1;
- const event={round:campaign.combatRound,ability,target:target.name,dealt,taken,hit,defeated,enemyBefore:oldHP,enemyAfter:target.hp,enemyMax:target.maxHp,heroBefore:heroHP,heroAfter:s.hp,energyBefore:oldEnergy,energyAfter:s.en,recipient:receivedName,recipientBefore,recipientAfter,parry};
+ const event={round:campaign.combatRound,ability,attackRoll,hitTarget:Math.round(accuracy*100),target:target.name,dealt,taken,hit,defeated,enemyBefore:oldHP,enemyAfter:target.hp,enemyMax:target.maxHp,heroBefore:heroHP,heroAfter:s.hp,energyBefore:oldEnergy,energyAfter:s.en,recipient:receivedName,recipientBefore,recipientAfter,parry};
  campaign.lastExchange=event;
  recordCombatDelta(target,dealt,taken,receivedName,recipientBefore,recipientAfter);
  if(defeated){
@@ -137,7 +172,8 @@ function fightExchange(action){
   campaign.defeatedEnemies.push(String(campaign.enemyLocation||campaign.scene?.location||"")+"|"+target.name.toLowerCase());
   campaign.defeatedEnemies=campaign.defeatedEnemies.slice(-80);
  }
- const report=(ability==="evasion"?"Defensive evasion; no attack.":hit?"Used "+ability+" on "+target.name+" for "+dealt+" HP.":"Used "+ability+" on "+target.name+" but missed.")+
+ const report=(ability==="evasion"?"Defensive evasion; no attack roll.":hit?"Used "+ability+" on "+target.name+" for "+dealt+" HP.":"Used "+ability+" on "+target.name+" but missed.")+
+  (attackRoll!==null?" d100 hit roll "+attackRoll+" vs "+event.hitTarget+".":"")+
   " Enemy "+target.name+" HP "+oldHP+"/"+target.maxHp+" → "+target.hp+"/"+target.maxHp+". "+
   (retaliates?target.name+" retaliates against "+receivedName+" for "+taken+" HP ("+recipientBefore+" → "+recipientAfter+").":"No damage received.")+
   " Player HP "+heroHP+" → "+s.hp+"; Energy "+oldEnergy+" → "+s.en+"."+
@@ -323,15 +359,7 @@ function drawEnemyStatus(box){
 function result(action){
  if(action.type==="combat"&&livingEnemies().length)return fightExchange(action);
  const skill=socialSkill(action);if(skill)return socialCheck(action,skill);
- const t=action.type;let cost=0,chance=1,damage=0;
- if(t==="stealth"){cost=20;chance=.78-s.alert*.08}
- if(t==="engineering"){cost=10;chance=.75-s.alert*.05}
- if(t==="social"){cost=0;chance=.8-s.alert*.08}
- if(t==="combat"){cost=35;chance=.68-s.alert*.04}
- if(t==="investigate"){cost=10;chance=.88}
- if(t==="move"){cost=0;chance=.95}
- if(t==="rest"){cost=0;chance=.94}
- chance=Math.max(.25,Math.min(.97,chance+(action.difficulty==="easy"?.09:action.difficulty==="hard"?-.2:0)));
+ const t=action.type,{cost,target}=actionOdds(action);let damage=0;
  if(s.en<cost)return null;
  const ok=Math.random()<chance;
  s.en=Math.min(100,s.en-cost+10);s.time++; if(!ok&&["stealth","engineering","combat"].includes(t)){s.alert=Math.min(3,s.alert+1);damage=t==="combat"?8:t==="stealth"?3:0;s.hp=Math.max(1,s.hp-damage)}
@@ -339,7 +367,7 @@ function result(action){
  // Defeating an opponent does not itself loot them: currency changes require explicit search/loot actions.
  const msg=ok?"Success":"Complication";
  let effect=t==="combat"?(ok?"The immediate opponent is overcome in a single abstract skirmish.":"The opponent remains a threat; Snacky takes "+damage+" damage."):t==="stealth"?(ok?"Snacky remains concealed.":"A noise attracts nearby attention."):t==="engineering"?(ok?"Pippa's mechanism works as intended.":"The apparatus sparks and raises suspicion."):t==="social"?(ok?"The approach is received favorably.":"The target refuses to cooperate."):t==="rest"?(ok?"The party regains composure.":"The party cannot safely rest."):ok?"The action achieves its immediate intent.":"The action encounters resistance.";
- return msg+": "+effect+" Result is authoritative; do not invent additional mechanical effects.";
+ return msg+": d100 roll "+rolled+" vs target "+target+" ("+(ok?"success":"failure")+"). "+effect+" Result is authoritative; do not invent additional mechanical effects.";
 }
 function interfaceUI(){
  if(get("campaign-box"))return;
