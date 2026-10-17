@@ -18,8 +18,8 @@ function sections(){return [...document.querySelectorAll("main > section.panel")
 function group(section){
  if(section.id==="campaign-box"||section.querySelector("#choices"))return "adventure";
  if(section.id==="soa-profession-panel"||section.querySelector("#hpbar"))return "character";
- if(section.id==="soa-chronicle"||section.querySelector("#journal"))return "journal";
- if(section.id==="companion-panel"||section.id==="soa-standalone-reputation")return "companions";
+ if(section.id==="soa-chronicle"||section.querySelector("#soa-chronicle")||section.querySelector("#journal"))return "journal";
+ if(section.id==="companion-panel"||section.id==="soa-standalone-reputation"||section.querySelector("#soa-companions-content"))return "companions";
  if(section.querySelector("#ai-enabled")||section.querySelector("#export"))return "settings";
  return "adventure";
 }
