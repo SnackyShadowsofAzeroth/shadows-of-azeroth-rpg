@@ -193,3 +193,12 @@ body.theme-alternative .soa-foe-defeated{opacity:.77}
 body.theme-alternative .soa-foe-defeated .soa-foe-heading strong:after{content:" · Defeated";color:#7c4942;font-size:11px}
 
 body.theme-alternative .soa-hostile-heading{font:700 15px/1.5 Georgia,serif;color:#894234;margin:13px 0 9px;border-bottom:1px solid #bba07c;padding-bottom:6px}
+
+
+/* Companion voices flow within the adventure, not the relationship menu. */
+body.theme-alternative .soa-companion-dialogue{margin:20px 0 22px;border-top:1px solid #a48a5c;padding-top:14px;scroll-margin-top:20px}
+body.theme-alternative .soa-companion-dialogue-heading{font:700 10px/1.5 system-ui;letter-spacing:.18em;color:#765435;margin-bottom:10px}
+body.theme-alternative .soa-companion-quote{margin:9px 0 13px;padding:13px 17px;border-left:4px solid #9b6e37;border-radius:3px 11px 11px 3px;background:linear-gradient(145deg,#f9e4ba,#edd0a0);box-shadow:0 2px 7px #3a251b19}
+body.theme-alternative .soa-companion-quote strong{display:block;font:700 13px/1.5 system-ui;color:#78502a;margin-bottom:6px}
+body.theme-alternative .soa-companion-quote p{margin:0;font:400 clamp(17px,4.1vw,20px)/1.64 Georgia,serif;color:#49301e;overflow-wrap:break-word}
+@media(prefers-reduced-motion:reduce){body.theme-alternative .soa-companion-dialogue{scroll-behavior:auto}}
