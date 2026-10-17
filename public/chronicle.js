@@ -2,6 +2,7 @@
 /* Chronicle v1: save-bound act/chapter and quest journal. No automatic quest
    completion or teleportation. Player confirms each milestone explicitly. */
 const clean=(value,n=120)=>String(value??"").trim().slice(0,n);
+const MAX_COMPLETED_QUESTS=20;
 const roman=n=>{const vals=[["X",10],["IX",9],["V",5],["IV",4],["I",1]];let out="";for(const [symbol,v] of vals){while(n>=v){out+=symbol;n-=v}}return out||"I"};
 const el=(tag,value,cls)=>{const e=document.createElement(tag);if(value!==undefined)e.textContent=value;if(cls)e.className=cls;return e};
 const get=id=>document.getElementById(id);
@@ -31,12 +32,26 @@ function attach(c){
  if(!Array.isArray(d.archives))d.archives=[];
  if(!Array.isArray(d.quests))d.quests=[];
  if(!Array.isArray(d.entries))d.entries=[];
+ trimCompletedQuests(d);
  current=c;
  return d;
 }
+function completedTime(q){
+ const value=q?.completedAt;
+ if(typeof value==="number"&&Number.isFinite(value))return value;
+ const parsed=Date.parse(value||"");return Number.isFinite(parsed)?parsed:0;
+}
+function trimCompletedQuests(d){
+ const completed=d.quests.map((quest,index)=>({quest,index})).filter(item=>item.quest?.status==="completed");
+ for(const {quest,index} of completed)if(quest.completedAt==null)quest.completedAt=index+1;
+ if(completed.length<=MAX_COMPLETED_QUESTS)return;
+ completed.sort((a,b)=>completedTime(a.quest)-completedTime(b.quest)||a.index-b.index);
+ const retained=new Set(completed.slice(-MAX_COMPLETED_QUESTS).map(item=>item.quest));
+ d.quests=d.quests.filter(quest=>quest?.status!=="completed"||retained.has(quest));
+}
 function context(c){
  const d=attach(c);if(!d)return null;
- return {act:d.act,actTitle:d.actTitle,chapter:d.chapter,chapterTitle:d.chapterTitle,activeQuests:d.quests.filter(q=>q.status==="active").slice(0,8).map(q=>({title:clean(q.title),objectives:q.objectives.filter(o=>!o.done).map(o=>clean(o.label))})),completedQuests:d.quests.filter(q=>q.status==="completed").slice(-6).map(q=>clean(q.title)),recentArchives:d.archives.slice(-4).map(x=>({act:x.act,chapter:x.chapter,title:clean(x.chapterTitle),summary:clean(x.summary,180)}))};
+ return {act:d.act,actTitle:d.actTitle,chapter:d.chapter,chapterTitle:d.chapterTitle,activeQuests:d.quests.filter(q=>q.status==="active").slice(0,8).map(q=>({title:clean(q.title),objectives:q.objectives.filter(o=>!o.done).map(o=>clean(o.label))})),completedQuests:d.quests.filter(q=>q.status==="completed").sort((a,b)=>completedTime(b)-completedTime(a)).slice(0,6).map(q=>clean(q.title)),recentArchives:d.archives.slice(-4).map(x=>({act:x.act,chapter:x.chapter,title:clean(x.chapterTitle),summary:clean(x.summary,180)}))};
 }
 function receive(c,scene){
  const d=attach(c);if(!d||!scene||d.pendingMilestone)return;
@@ -64,7 +79,8 @@ function completeObjective(c,questId,objectiveId){
  if(!q)return;
  const o=q.objectives.find(x=>x.id===objectiveId&&!x.done);if(!o)return;
  if(!window.confirm("Mark this objective complete? Only confirm if it actually happened in your adventure."))return;
- o.done=true;if(q.objectives.every(x=>x.done))q.status="completed";
+ o.done=true;if(q.objectives.every(x=>x.done)){q.status="completed";q.completedAt=Date.now()}
+ trimCompletedQuests(d);
  save();render();
 }
 function journalPanel(c,d){
@@ -107,10 +123,10 @@ function questPanel(d){
    part.append(row);
   }area.append(part);
  }
- const completed=d.quests.filter(q=>q.status==="completed");
- const past=el("details");past.append(el("summary","Completed quests ("+completed.length+")"));
+ const completed=d.quests.filter(q=>q.status==="completed").sort((a,b)=>completedTime(b)-completedTime(a));
+ const past=el("details",undefined,"soa-collapsible-quests");past.append(el("summary","Completed quests ("+completed.length+" of "+MAX_COMPLETED_QUESTS+" most recent)"));
  if(!completed.length)past.append(el("p","None recorded yet.","muted"));
- for(const q of completed.slice(-15).reverse())past.append(el("p","✓ "+q.title,"soa-journal-record"));
+ for(const q of completed)past.append(el("p","✓ "+q.title,"soa-journal-record"));
  area.append(past);
  return area;
 }

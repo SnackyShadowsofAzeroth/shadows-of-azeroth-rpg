@@ -11,6 +11,10 @@ body.theme-alternative .soa-quest-entry{border:1px solid #a68d61;border-radius:1
 body.theme-alternative .soa-quest-entry h4{margin:0 0 10px;font:700 16px Georgia,serif;color:#56341e}
 body.theme-alternative .soa-quest-objective{display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid #b3986d;padding:10px 0;font:13px/1.5 system-ui}
 body.theme-alternative .soa-quest-objective button{width:auto;min-height:35px;padding:6px 9px;margin:0;flex-shrink:0;font:600 11px system-ui}
+body.theme-alternative .soa-collapsible-quests{margin:14px 0 0;padding-top:8px;border-top:1px solid #a58a61}
+body.theme-alternative .soa-collapsible-quests>summary{min-height:44px;padding:8px 1px;color:#563a20;font:700 14px/1.5 system-ui;cursor:pointer}
+body.theme-alternative .soa-collapsible-quests[open]>summary{margin-bottom:5px}
+body.theme-alternative .soa-collapsible-quests>.soa-journal-record{border-bottom:1px solid #96744975}
 body.theme-alternative .soa-journal-record{border-bottom:1px solid #96744975;margin:0;padding:10px 2px;color:#503a24;font:13px/1.6 system-ui}
 body.theme-alternative .soa-personal-journal{margin-top:8px}
 body.theme-alternative .soa-journal-compose,

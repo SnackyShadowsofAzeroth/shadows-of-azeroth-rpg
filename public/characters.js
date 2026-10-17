@@ -24,15 +24,15 @@ const make=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefi
 // Keep grouped game content visible. Details elements remain useful as semantic containers,
 // but players should not have to expand menus to reach their contents.
 function keepGameSectionsExpanded(root=document){
- const expand=scope=>scope.querySelectorAll?.("details").forEach(node=>{node.open=true});
+ const expand=scope=>scope.querySelectorAll?.("details:not(.soa-collapsible-quests)").forEach(node=>{node.open=true});
  expand(root);
  const observer=new MutationObserver(records=>records.forEach(record=>record.addedNodes.forEach(node=>{
   if(node.nodeType!==1)return;
-  if(node.matches("details"))node.open=true;
+  if(node.matches("details")&&!node.classList.contains("soa-collapsible-quests"))node.open=true;
   expand(node);
  })));
  observer.observe(document.documentElement,{childList:true,subtree:true});
- document.addEventListener("toggle",event=>{if(event.target instanceof HTMLDetailsElement&&!event.target.open)event.target.open=true},true);
+ document.addEventListener("toggle",event=>{if(event.target instanceof HTMLDetailsElement&&!event.target.open&&!event.target.classList.contains("soa-collapsible-quests"))event.target.open=true},true);
 }
 keepGameSectionsExpanded();
 const read=(key)=>{try{return JSON.parse(localStorage.getItem(key)||"null")}catch{return null}};
