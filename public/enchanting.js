@@ -54,7 +54,7 @@ function apply(c,{key,recipeId,method,location,wallet}){
  const entry={id:recipe.id,item:target.name,method,atTurn:c.turn||0};
  st.materials.ArcaneDust=(st.materials.ArcaneDust||0)-dust;
  st.enchants[key]=entry;
- if(method==="self")st.skill=Math.min(300,(st.skill||1)+(st.skill<recipe.skill+30?2:1));
+ if(method==="self"){st.skill=Math.min(300,(st.skill||1)+(st.skill<recipe.skill+30?2:1));window.soaCharacters?.updateCraftSkill?.("Enchanting",st.skill)}
  st.history.push({receipt,slot:target.slot,item:target.name,recipe:recipe.name,cost,dust,method});
  st.history=st.history.slice(-100);
  return {wallet:wallet-cost,message:(method==="vendor"?"The enchanter":"You")+" applied "+recipe.name+" to "+target.name+" for "+format(cost)+(dust?" and "+dust+" Arcane Dust":"")+".",receipt};
@@ -66,7 +66,7 @@ function train(c,level,location,wallet){
  const tier=TRAINING.find(x=>x.skill===level),st=getState(c);
  if(!tier||(st.skill||1)>=level)return {error:"That training rank is unavailable."};
  if(!safeInt(wallet)||wallet<tier.copper)return {error:"Insufficient money to train Enchanting."};
- st.skill=level;st.history.push({trained:true,skill:level,cost:tier.copper});
+ st.skill=level;window.soaCharacters?.updateCraftSkill?.("Enchanting",level);st.history.push({trained:true,skill:level,cost:tier.copper});
  return {wallet:wallet-tier.copper,message:"Enchanter training complete: Enchanting skill "+level+" for "+format(tier.copper)+"."};
 }
 function disenchant(c,index){
