@@ -86,22 +86,30 @@ function actionOdds(action){
 function combatAccuracy(action){
  return Math.max(.25,Math.min(.90,.74-s.alert*.04+(action.difficulty==="easy"?.08:action.difficulty==="hard"?-.13:0)));
 }
+function resolvedCombatAbility(action){
+ const description=String(action.text||"");
+ const rogue=window.soaCharacters?.profile?.()?.className==="Rogue";
+ const inferred=rogue&&/\briposte\b/i.test(description)?"riposte":rogue&&/\b(?:evasion|evade)\b/i.test(description)?"evasion":rogue&&/\bkick\b/i.test(description)?"kick":"strike";
+ return ["strike","kick","evasion","riposte"].includes(action.ability)?action.ability:inferred;
+}
 function dicePreview(action){
+ // Combat takes priority over social keyword detection, matching the resolver.
+ if(action.type==="combat"&&livingEnemies().length){
+  const ability=resolvedCombatAbility(action);
+  if(ability==="evasion")return {primary:"🎲 No attack roll",secondary:"Defensive exchange · 0 Energy"};
+  if(ability==="riposte")return {primary:"🎲 Automatic hit after parry",secondary:"24 HP on a valid Riposte · 10 Energy"};
+  const chance=Math.round(combatAccuracy(action)*100);
+  return {primary:"🎲 d100 · hit on 1–"+chance,secondary:ability==="kick"?"1d7 + 5 damage · 25 Energy":"1d11 + 13 damage · 35 Energy"};
+ }
  const skill=socialSkill(action);
  if(skill){
   const {bonus,dc}=socialTarget(action,skill);
   return {primary:"🎲 d20 "+(bonus>=0?"+ "+bonus:"− "+Math.abs(bonus))+" vs DC "+dc,secondary:skill[0].toUpperCase()+skill.slice(1)+" check · Natural 1 fails, 20 succeeds"};
  }
- if(action.type==="combat"&&livingEnemies().length){
-  const inferred=String(action.ability||(/\bkick\b/i.test(action.text)?"kick":/\b(?:evasion|evade)\b/i.test(action.text)?"evasion":/\briposte\b/i.test(action.text)?"riposte":"strike")).toLowerCase();
-  if(inferred==="evasion")return {primary:"🎲 No attack roll",secondary:"Defensive exchange · 0 Energy"};
-  if(inferred==="riposte")return {primary:"🎲 Automatic hit after parry",secondary:"24 HP on a valid Riposte · 10 Energy"};
-  const chance=Math.round(combatAccuracy(action)*100);
-  return {primary:"🎲 d100 · hit on 1–"+chance,secondary:(inferred==="kick"?"1d7 + 5 damage · 25 Energy":"1d11 + 13 damage · 35 Energy")};
- }
  const {cost,target}=actionOdds(action);
  return {primary:"🎲 d100 · succeed on 1–"+target,secondary:cost+" Energy · "+target+"% success at current alarm"};
 }
+
 function socialCheck(action,skill){
  const amounts=skill==="bribe"?bribeCopper(action.text):null;
  if(skill==="bribe"&&(!Number.isSafeInteger(amounts)||amounts<=0)){status("Specify an explicit bribe amount, such as 'offer 50 silver to the guard'. No action was spent.");return null}
@@ -123,10 +131,7 @@ function livingEnemies(){return Array.isArray(campaign?.enemies)?campaign.enemie
 function fightExchange(action){
  const targets=livingEnemies();
  if(!targets.length)return null;
- const description=String(action.text||"");
- const rogue=window.soaCharacters?.profile?.()?.className==="Rogue";
- const inferred=rogue&&/\b(?:riposte)\b/i.test(description)?"riposte":rogue&&/\b(?:evasion|evade)\b/i.test(description)?"evasion":rogue&&/\bkick\b/i.test(description)?"kick":"strike";
- const ability=["strike","kick","evasion","riposte"].includes(action.ability)?action.ability:inferred;
+ const ability=resolvedCombatAbility(action);
  const price={strike:35,kick:25,evasion:0,riposte:10}[ability];
  if(ability==="riposte"&&!campaign.parryReady){status("Riposte requires a parry in the previous exchange. No action spent.");return null}
  if(s.en<price){status("Not enough Energy for "+ability+" ("+price+" required). No action spent.");return null}
