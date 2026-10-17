@@ -89,7 +89,7 @@ function panel(c,location,wallet,commit){
  if(!atEnchanter(location)&&!atTrainer(location))return null;
  const el=document.createElement("details"),head=document.createElement("summary");el.open=sessionStorage.getItem("soa-enchanting-panel-open")==="1";el.ontoggle=()=>sessionStorage.setItem("soa-enchanting-panel-open",el.open?"1":"0");head.textContent="Enchanting · Enchanter Services & Crafting";el.append(head);
  const st=getState(c),p=document.createElement("p");
- p.textContent="NPC services in major cities. Self-enchanting requires the Enchanting primary profession, trained skill and Arcane Dust. One enchant per item; new enchants replace the old effect.";el.append(p);
+ p.textContent="You have reached an enchanting specialist. Browse the available services here; new enchantments replace existing effects on the same item.";el.append(p);
  const status=document.createElement("p");status.textContent="Enchanting profession: "+(owned()?"Trained · Skill "+st.skill:"Not trained")+" · Arcane Dust: "+(st.materials?.ArcaneDust||0);el.append(status);
  if(!owned()){const note=document.createElement("p");note.textContent="To pursue Enchanting yourself, choose it as a primary profession through character creation or the profession system. Snacky's current Mining and Engineering are retained; no profession is replaced automatically.";el.append(note);
   if(atTrainer(location)){
