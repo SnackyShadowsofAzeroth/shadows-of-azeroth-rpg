@@ -89,32 +89,56 @@ function livingEnemies(){return Array.isArray(campaign?.enemies)?campaign.enemie
 function fightExchange(action){
  const targets=livingEnemies();
  if(!targets.length)return null;
- if(s.en<35){status("Not enough Energy for combat (35 required).");return null}
+ const ability=["strike","kick","evasion","riposte"].includes(action.ability)?action.ability:"strike";
+ const price={strike:35,kick:25,evasion:0,riposte:10}[ability];
+ if(ability==="riposte"&&!campaign.parryReady){status("Riposte requires a parry in the previous exchange. No action spent.");return null}
+ if(s.en<price){status("Not enough Energy for "+ability+" ("+price+" required). No action spent.");return null}
  const requested=String(action.text||"").toLowerCase();
  const matches=targets.filter(e=>requested.includes(e.name.toLowerCase()));
  const selected=targets.find(e=>e.name===selectedCombatTarget);
- const enemy=matches.length===1?matches[0]:matches.length>1?null:(selected||(targets.length===1?targets[0]:null));
- if(!enemy){status("Choose one target by name in a Custom Combat action.");return null}
- const oldHP=enemy.hp,heroHP=s.hp,oldEnergy=s.en;
+ const enemy=matches.length===1?matches[0]:matches.length>1?null:selected||(targets.length===1?targets[0]:null);
+ if(!enemy&&ability!=="evasion"){status("Select a specific enemy target before attacking. No action spent.");return null}
+ const target=enemy||targets[0],oldHP=target.hp,heroHP=s.hp,oldEnergy=s.en;
  const accuracy=Math.max(.25,Math.min(.90,.74-s.alert*.04+(action.difficulty==="easy"?.08:action.difficulty==="hard"?-.13:0)));
- const hit=Math.random()<accuracy;
- const dealt=hit?Math.min(enemy.hp,14+Math.floor(Math.random()*11)):0;
- enemy.hp=Math.max(0,enemy.hp-dealt);
- const retaliates=enemy.hp>0&&Math.random()<.46;
- const taken=retaliates?Math.min(Math.max(0,s.hp-1),4+Math.floor(Math.random()*8)):0;
- s.hp=Math.max(1,s.hp-taken);s.en=Math.min(100,s.en-35+10);s.time++;
- const defeated=enemy.hp===0;
+ const hit=ability==="riposte"?true:ability==="evasion"?false:Math.random()<accuracy;
+ const rolled=ability==="strike"?14+Math.floor(Math.random()*11):ability==="kick"?6+Math.floor(Math.random()*7):ability==="riposte"?24:0;
+ const dealt=hit?Math.min(target.hp,rolled):0;target.hp=Math.max(0,target.hp-dealt);
+ const defeated=target.hp===0;
+ const retaliates=!defeated&&ability!=="evasion"&&!(ability==="kick"&&hit)&&Math.random()<.46;
+ const eligible=retaliates?combatParty().filter(e=>!e.player&&Number.isInteger(e.hp)&&e.hp>0&&e.maxHp>0):[];
+ const allyRecipient=eligible.length&&Math.random()<.35?eligible[Math.floor(Math.random()*eligible.length)]:null;
+ const amount=retaliates?4+Math.floor(Math.random()*8):0;
+ const receivedName=allyRecipient?.name||(window.soaCharacters?.profile?.()?.name||"Your hero");
+ let taken=0,recipientBefore=allyRecipient?allyRecipient.hp:s.hp,recipientAfter=recipientBefore;
+ if(retaliates){
+  if(allyRecipient){
+   const record=campaign.combatAllies.find(a=>a.name===allyRecipient.name);
+   taken=Math.min(record.hp,amount);
+   record.hp=Math.max(0,record.hp-taken);recipientAfter=record.hp;
+  }else{
+   taken=Math.min(Math.max(0,s.hp-1),amount);
+   s.hp=Math.max(1,s.hp-taken);recipientAfter=s.hp;
+  }
+ }
+ const parry=retaliates&&!allyRecipient&&taken===0&&Math.random()<.5;
+ campaign.parryReady=parry;
+ s.en=Math.min(100,s.en-price+10);s.time++;
  campaign.combatRound=(Number(campaign.combatRound)||0)+1;
- campaign.lastExchange={round:campaign.combatRound,target:enemy.name,dealt,taken,hit,defeated,enemyBefore:oldHP,enemyAfter:enemy.hp,enemyMax:enemy.maxHp,heroBefore:heroHP,heroAfter:s.hp,energyBefore:oldEnergy,energyAfter:s.en};
- recordCombatDelta(enemy,dealt,taken,heroHP,s.hp);
+ const event={round:campaign.combatRound,ability,target:target.name,dealt,taken,hit,defeated,enemyBefore:oldHP,enemyAfter:target.hp,enemyMax:target.maxHp,heroBefore:heroHP,heroAfter:s.hp,energyBefore:oldEnergy,energyAfter:s.en,recipient:receivedName,recipientBefore,recipientAfter,parry};
+ campaign.lastExchange=event;
+ recordCombatDelta(target,dealt,taken,receivedName,recipientBefore,recipientAfter);
  if(defeated){
-  if(selectedCombatTarget===enemy.name)selectedCombatTarget=null;
+  if(selectedCombatTarget===target.name)selectedCombatTarget=null;
   campaign.defeatedEnemies||=[];
-  campaign.defeatedEnemies.push(String(campaign.enemyLocation||campaign.scene?.location||"")+"|"+enemy.name.toLowerCase());
+  campaign.defeatedEnemies.push(String(campaign.enemyLocation||campaign.scene?.location||"")+"|"+target.name.toLowerCase());
   campaign.defeatedEnemies=campaign.defeatedEnemies.slice(-80);
  }
- const effect=(hit?"Hit "+enemy.name+" for "+dealt+" HP.":"Missed "+enemy.name+".")+" Enemy HP "+oldHP+"/"+enemy.maxHp+" -> "+enemy.hp+"/"+enemy.maxHp+". "+(retaliates?"Enemy retaliates for "+taken+" HP.":"Enemy causes no damage.")+" Player HP "+heroHP+" -> "+s.hp+"; Energy "+oldEnergy+" -> "+s.en+". "+(defeated?"Opponent defeated. ":"");
- return (hit?"Success":"Complication")+": Combat exchange "+campaign.combatRound+": "+effect+"Exactly one combat exchange. No automatic loot or additional actions.";
+ const report=(ability==="evasion"?"Defensive evasion; no attack.":hit?"Used "+ability+" on "+target.name+" for "+dealt+" HP.":"Used "+ability+" on "+target.name+" but missed.")+
+  " Enemy "+target.name+" HP "+oldHP+"/"+target.maxHp+" → "+target.hp+"/"+target.maxHp+". "+
+  (retaliates?target.name+" retaliates against "+receivedName+" for "+taken+" HP ("+recipientBefore+" → "+recipientAfter+").":"No damage received.")+
+  " Player HP "+heroHP+" → "+s.hp+"; Energy "+oldEnergy+" → "+s.en+"."+
+  (defeated?" Opponent defeated.":"")+" Exactly ONE consequential combat exchange resolved. No automatic loot, extra turns, or unconfirmed healing.";
+ return (hit||ability==="evasion"?"Success":"Complication")+": Combat exchange "+campaign.combatRound+": "+report;
 }
 function updateLivingEnemies(scene){
  if(!Array.isArray(scene?.enemies))return;
@@ -159,11 +183,11 @@ function reconcileCombatAllies(scene){
  if(!incoming.length&&campaign.pending?.combat&&knownSameScene)return;
  campaign.combatAllies=incoming;campaign.allyLocation=currentLocation;
 }
-function recordCombatDelta(enemy,dealt,taken,before,after){
+function recordCombatDelta(enemy,dealt,taken,recipient,recipientBefore,recipientAfter){
  const log=Array.isArray(campaign.combatLog)?campaign.combatLog:[];
  log.push({round:campaign.combatRound,events:[
   {name:enemy.name,side:"enemy",delta:-dealt,after:enemy.hp,maxHp:enemy.maxHp},
-  {name:window.soaCharacters?.profile?.()?.name||"Your hero",side:"ally",delta:-taken,after,maxHp:100}
+  {name:recipient,side:"ally",delta:-taken,before:recipientBefore,after:recipientAfter,maxHp:recipient===(window.soaCharacters?.profile?.()?.name||"Your hero")?100:campaign.combatAllies?.find(a=>a.name===recipient)?.maxHp||null}
  ]});
  campaign.combatLog=log.slice(-12);
 }
