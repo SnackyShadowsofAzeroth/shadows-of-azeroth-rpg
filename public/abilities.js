@@ -32,8 +32,8 @@ const get=id=>{
  const savingThrows=Object.fromEntries(KEYS.map(k=>[k,modifiers[k]+(SAVES[p.className]?.includes(k)?proficiency:0)]));
  return {name:p.name||"Adventurer",race:p.race||"",className:p.className||"",level:lv,stats:values,modifiers,proficiency,hitDie,maxHp:hp,armorClass,initiative:modifiers.DEX,passivePerception:10+modifiers.WIS,savingThrows,special:statId(id,p)==="snacky"?"SI:7 field veteran · +1 DEX and WIS":null};
 };
-const skillAbility={bluff:"CHA",bribe:"CHA",romance:"CHA",threaten:"CHA",social:"CHA",stealth:"DEX",engineering:"INT",investigate:"WIS",combat:"DEX"};
-const modifier=(name,id="hero")=>{const ab=skillAbility[name];return ab?get(id).modifiers[ab]:0};
+const skillAbility={bluff:"CHA",bribe:"CHA",romance:"CHA",threaten:"CHA",social:"CHA",stealth:"DEX",engineering:"INT",investigate:"WIS",combat:"DEX",move:"DEX",rest:"CON"};
+const modifier=(name,id="hero")=>{const p=profileFor(id),ab=name==="combat"&&(p.className==="Paladin"||p.className==="Warrior")?"STR":skillAbility[name];return ab?get(id).modifiers[ab]:0};
 const percent=(name,id="hero")=>modifier(name,id)*.0125;
 const card=(id="hero")=>{
  const s=get(id),box=document.createElement("section");box.className="soa-ability-sheet";
@@ -46,7 +46,7 @@ const card=(id="hero")=>{
   const mod=document.createElement("em");mod.textContent=(s.modifiers[key]>=0?"+":"")+s.modifiers[key];
   cell.append(label,score,mod);grid.append(cell);
  }box.append(grid);
- const hp=document.createElement("p");hp.className="soa-ability-caption";hp.textContent="Class HP: "+s.maxHp+" · AC "+s.armorClass+" · Initiative "+(s.initiative>=0?"+":"")+s.initiative+" · Passive Perception "+s.passivePerception;box.append(hp);
+ const hp=document.createElement("p");hp.className="soa-ability-caption";hp.textContent="D&D class HP benchmark: "+s.maxHp+" · AC "+s.armorClass+" · Initiative "+(s.initiative>=0?"+":"")+s.initiative+" · Passive Perception "+s.passivePerception;box.append(hp);
  const saves=document.createElement("p");saves.className="soa-ability-caption";saves.textContent="Saving throws: "+KEYS.map(k=>k+" "+(s.savingThrows[k]>=0?"+":"")+s.savingThrows[k]).join(" · ");box.append(saves);
  if(s.special){const special=document.createElement("p");special.className="soa-ability-special";special.textContent="✦ "+s.special;box.append(special)}
  return box;
