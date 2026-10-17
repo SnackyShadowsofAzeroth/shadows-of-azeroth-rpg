@@ -225,3 +225,22 @@ body.theme-alternative #campaign-scene>button small{margin-top:7px}
 @media(max-width:430px){
  body.theme-alternative .soa-roll-preview{padding:8px 10px}
 }
+
+
+/* iPhone safe-area polish: section jumps stop below the status-bar region. */
+body.theme-alternative #campaign-box,
+body.theme-alternative #soa-chronicle,
+body.theme-alternative #soa-profession-panel,
+body.theme-alternative #companion-panel,
+body.theme-alternative #soa-standalone-reputation,
+body.theme-alternative #soa-companion-dialogue {
+  scroll-margin-top:max(68px, env(safe-area-inset-top));
+}
+body.theme-alternative button:focus-visible,
+body.theme-alternative summary:focus-visible,
+body.theme-alternative input:focus-visible,
+body.theme-alternative select:focus-visible,
+body.theme-alternative textarea:focus-visible {
+  outline:3px solid #ca9851;
+  outline-offset:3px;
+}
