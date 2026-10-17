@@ -24,14 +24,14 @@ const SNACKY_LOADOUT=[
  ["Waist","Highlander's Chain Girdle"],
  ["Legs","Triprunner Dungarees"],
  ["Feet","Feet of the Lynx"],
- ["Neck","Ironspine’s Eye"],
+ ["Ring 1","Ironspine’s Eye"],
  ["Finger","Field Researcher's Ring"],
  ["Main hand","Ruby-Adorned Blade"],
  ["Off hand","Bloody Brass Knuckles"],
  ["Sidearm","Toxic Revenger"],
  ["Ranged","Golemsight Long Gun"]
 ];
-const SLOT_KEY={"Head":"head","Back":"back","Shoulders":"shoulders","Chest":"chest","Wrists":"wrists","Hands":"hands","Waist":"waist","Legs":"legs","Feet":"feet","Neck":"neck","Finger":"finger2","Main hand":"mainhand","Off hand":"offhand","Sidearm":"sidearm","Ranged":"ranged"};
+const SLOT_KEY={"Head":"head","Back":"back","Shoulders":"shoulders","Chest":"chest","Wrists":"wrists","Hands":"hands","Waist":"waist","Legs":"legs","Feet":"feet","Neck":"neck","Ring 1":"finger1","Ring 2":"finger2","Main hand":"mainhand","Off hand":"offhand","Sidearm":"sidearm","Ranged":"ranged"};
 function canonicalSlots(){return SNACKY_LOADOUT.map(([slot,name])=>({slot:SLOT_KEY[slot]||slot.toLowerCase(),name,display:slot}));}
 function baselineModifiers(){
  const z={DEX:0,STR:0,CON:0,WIS:0,ac:0,damage:0,attack:0};
@@ -39,7 +39,7 @@ function baselineModifiers(){
  const sum={AGI:0,STR:0,STA:0,SPI:0,AP:0,armor:0};
  for(const x of canonicalSlots()){
   const record=window.soaForeverItems?.byName?.(x.name);
-  if(!record?.verified||x.slot==="waist")continue; // contested highlander item compatibility
+  if(!record?.verified)continue;
   for(const k of ["AGI","STR","STA","SPI","AP"])sum[k]+=record.stats?.[k]||0;
   sum.armor+=record.armor||0;
  }
