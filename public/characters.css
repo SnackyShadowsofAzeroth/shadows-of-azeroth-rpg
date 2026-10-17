@@ -48,6 +48,13 @@ body.theme-alternative .soa-quick-nav button.soa-quick-link{background:linear-gr
 .soa-quick-nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:100;padding:7px;border:1px solid #9f8156;border-radius:10px;background:#211b16ed;box-shadow:0 4px 12px #0005;backdrop-filter:blur(12px)}
 @media(max-width:360px){.soa-quick-nav{gap:5px}.soa-quick-nav button.soa-quick-link{font-size:11px}}
 
+/* Compact return-to-top shortcut on each main game panel. */
+.soa-panel-topline{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:24px;margin:0 0 8px}
+.soa-panel-topline>.soa-roster-kicker,.soa-panel-topline>.soa-chronicle-kicker,.soa-panel-topline>.eyebrow{min-width:0;margin:0}
+.soa-panel-topline>.soa-back-to-top{flex:0 0 auto;width:auto;min-height:30px;margin:0;padding:4px 9px;border:1px solid #a58a5d;border-radius:7px;background:linear-gradient(#574638,#342a23);color:#f4e3bf;font:700 11px/1.2 system-ui;text-align:center;white-space:nowrap}
+.soa-back-to-top:focus-visible{outline:2px solid #efd18a;outline-offset:3px}
+body.theme-alternative .soa-panel-topline>.soa-back-to-top{background:linear-gradient(#695238,#392b23);border-color:#ad915e;color:#f5e5c5}
+
 /* Keep the new-scene anchor comfortably within the viewport on mobile. */
 #campaign-status{scroll-margin-top:20px}
 #campaign-scene>h3{scroll-margin-top:20px}
