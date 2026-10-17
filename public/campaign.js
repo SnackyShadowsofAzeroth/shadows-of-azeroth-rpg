@@ -161,11 +161,23 @@ function resolvedSkillName(choice){
  const t=String(choice.type||"");
  return ["stealth","engineering","investigate","social","combat"].includes(t)?t:null;
 }
+function meaningfulSocialPractice(choice,skill){
+ if(!["social","romance","bluff","bribe","threaten"].includes(skill))return true;
+ const text=String(choice?.text||"").toLowerCase();
+ // Relationship conversations are their own reward, not character-XP farms.
+ const consequential=/\b(?:persuad\w*|convinc\w*|negotiat\w*|bargain\w*|interrogat\w*|secure (?:a |the )?(?:release|agreement|permission|access)|request (?:clearance|authorization)|win (?:support|approval)|broker\w*|resolve (?:the |a )?(?:dispute|conflict)|sway\w*|obtain (?:information|intel|evidence)|brib\w*|intimidat\w*|threaten\w*|deceiv\w*|impersonat\w*)\b/i;
+ const casual=/\b(?:chat\w*|catch up|small talk|flirt\w*|compliment\w*|jok\w*|banter|kiss\w*|hold hands|ask (?:how|about|advice)|say hello|thank\w*|encourag\w*|share feelings)\b/i;
+ if(consequential.test(text))return true;
+ if(casual.test(text)||skill==="romance")return false;
+ // Unspecified generic 'talk' and 'social' checks do not earn farming XP.
+ return skill!=="social";
+}
 function recordActionPractice(choice,resolution,receipt){
  const skill=resolvedSkillName(choice);
  if(!skill)return;
  const success=/^Success:/i.test(String(resolution||""));
- const earned=window.soaProgression?.check?.({receipt,name:skill,success,difficulty:choice.difficulty||"medium"});
+ const meaningful=meaningfulSocialPractice(choice,skill);
+ const earned=window.soaProgression?.check?.({receipt,name:skill,success,difficulty:choice.difficulty||"medium",meaningful});
  if(earned?.awarded){
   campaign.lastProgression=(success?"Successful":"Attempted")+" "+skill+" check · +"+earned.awarded+" XP"+(earned.rankUp?" · "+skill+" skill rank increased!":"")+(earned.levels?" · LEVEL UP!":"");
  }
@@ -176,7 +188,7 @@ function recordActionPractice(choice,resolution,receipt){
  for(const [name,id] of possible){
   if(!text.includes(name)||!scene.includes(name))continue;
   const allowed=id==="pippa"?(skill==="engineering"||skill==="stealth"||skill==="investigate"):id==="bromli"?(skill==="combat"||skill==="investigate"):id==="lethariel"?(skill==="social"||skill==="investigate"):false;
-  if(allowed)window.soaProgression?.check?.({receipt:"companion:"+receipt,name:skill,success,difficulty:choice.difficulty||"medium",actorId:id});
+  if(allowed&&meaningful)window.soaProgression?.check?.({receipt:"companion:"+receipt,name:skill,success,difficulty:choice.difficulty||"medium",actorId:id});
  }
 }
 function companionExchange(action){
