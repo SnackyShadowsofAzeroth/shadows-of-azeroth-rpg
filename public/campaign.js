@@ -120,7 +120,7 @@ function fightExchange(action){
    s.hp=Math.max(1,s.hp-taken);recipientAfter=s.hp;
   }
  }
- const parry=retaliates&&!allyRecipient&&taken===0&&Math.random()<.5;
+ const parry=!retaliates&&!defeated&&ability!=="evasion"&&Math.random()<.25;
  campaign.parryReady=parry;
  s.en=Math.min(100,s.en-price+10);s.time++;
  campaign.combatRound=(Number(campaign.combatRound)||0)+1;
@@ -180,7 +180,7 @@ function reconcileCombatAllies(scene){
   // Only accept an actual HP number from a confirmed prior record or new scene.
   incoming.push(previous&&previous.hp!==null?{...previous,name}:{name,maxHp:max,hp,role:String(e.role||"Ally").slice(0,32)});
  }
- if(!incoming.length&&campaign.pending?.combat&&knownSameScene)return;
+ if(!incoming.length&&campaign.pending?.combat&&existing.length)return;
  campaign.combatAllies=incoming;campaign.allyLocation=currentLocation;
 }
 function recordCombatDelta(enemy,dealt,taken,recipient,recipientBefore,recipientAfter){
@@ -210,7 +210,7 @@ function drawEnemyStatus(box){
   const summary=document.createElement("div");summary.className="soa-exchange";
   const title=document.createElement("strong");title.textContent="Last exchange · Round "+exchange.round;
   const dealt=document.createElement("p");dealt.textContent=exchange.hit?"Damage dealt: "+exchange.dealt+" HP to "+exchange.target+" ("+exchange.enemyBefore+" → "+exchange.enemyAfter+"/"+exchange.enemyMax+").":"Missed "+exchange.target+" · 0 damage.";
-  const taken=document.createElement("p");taken.textContent="Damage received: "+exchange.taken+" HP · Your health "+exchange.heroBefore+" → "+exchange.heroAfter+".";
+  const taken=document.createElement("p");taken.textContent="Damage received by "+(exchange.recipient||"your hero")+": "+exchange.taken+" HP · "+(exchange.recipientBefore??exchange.heroBefore)+" → "+(exchange.recipientAfter??exchange.heroAfter)+" HP.";
   summary.append(title,dealt,taken);if(exchange.defeated){const note=document.createElement("p");note.textContent=exchange.target+" defeated; no loot collected automatically.";summary.append(note)}section.append(summary);
  }
  const roster=document.createElement("section");roster.className="soa-combat-roster";
@@ -221,6 +221,9 @@ function drawEnemyStatus(box){
   const name=document.createElement("strong");name.textContent=ally.name;
   const hp=document.createElement("span");hp.textContent=Number.isFinite(ally.hp)&&Number.isFinite(ally.maxHp)?ally.hp+" / "+ally.maxHp+" HP":"HP unconfirmed";
   heading.append(name,hp);item.append(heading);
+  if(!Number.isFinite(ally.hp)||!Number.isFinite(ally.maxHp)){
+   const unknown=document.createElement("div");unknown.className="soa-combat-ally-rail soa-hp-unknown";unknown.setAttribute("aria-label",ally.name+" health unconfirmed");item.append(unknown);
+  }
   if(Number.isFinite(ally.hp)&&Number.isFinite(ally.maxHp)&&ally.maxHp>0){
    const bar=document.createElement("div");bar.className="soa-combat-ally-rail";bar.setAttribute("role","progressbar");bar.setAttribute("aria-label",ally.name+" health");bar.setAttribute("aria-valuemin","0");bar.setAttribute("aria-valuemax",String(ally.maxHp));bar.setAttribute("aria-valuenow",String(ally.hp));
    const fill=document.createElement("div");fill.className="soa-combat-ally-fill";fill.style.width=Math.max(0,Math.min(100,ally.hp/ally.maxHp*100))+"%";bar.append(fill);item.append(bar);
@@ -244,6 +247,20 @@ function drawEnemyStatus(box){
   picker.append(button);
  }
  if(enemies.length)section.append(picker);
+ const skills=document.createElement("div");skills.className="soa-combat-abilities";
+ const abilitiesLabel=document.createElement("strong");abilitiesLabel.textContent="Combat abilities";skills.append(abilitiesLabel);
+ const rogue=window.soaCharacters?.profile?.()?.className==="Rogue";
+ const available=rogue?[["strike","Strike",35],["kick","Kick · interrupt",25],["evasion","Evasion",0],["riposte","Riposte · after parry",10]]:[["strike","Attack",35],["evasion","Defend",0]];
+ for(const [id,label,cost] of available){
+  const button=document.createElement("button");button.type="button";button.className="soa-ability-button";
+  button.textContent=label+" · "+cost+" Energy";
+  button.disabled=busy||!!pending()||s.en<cost||(id==="riposte"&&!campaign.parryReady)||(id!=="evasion"&&!enemies.some(e=>e.name===selectedCombatTarget)&&enemies.length>1);
+  button.onclick=()=>{const target=enemies.find(e=>e.name===selectedCombatTarget)||enemies[0];if(!target)return;
+   choose({text:(window.soaCharacters?.profile?.()?.name||"Hero")+" uses "+label+" against "+target.name,type:"combat",difficulty:"medium",ability:id});
+  };
+  skills.append(button);
+ }
+ if(enemies.length)section.append(skills);
  if(Array.isArray(campaign.combatLog)&&campaign.combatLog.length){
   const history=document.createElement("details");history.className="soa-battle-history";const head=document.createElement("summary");head.textContent="Damage log · "+campaign.combatLog.length+" exchanges";history.append(head);
   for(const entry of campaign.combatLog.slice(-5).reverse()){const line=document.createElement("p");line.textContent="Round "+entry.round+": "+entry.events.map(e=>e.name+" "+(e.delta<0?e.delta+" HP":"no damage")+" ("+e.after+"/"+e.maxHp+")").join(" · ");history.append(line)}section.append(history);
