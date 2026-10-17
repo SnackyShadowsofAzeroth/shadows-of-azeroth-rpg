@@ -81,7 +81,7 @@ function actionOdds(action){
  const level=window.soaProgression?.level?.()||1;
  const difficulty=action.difficulty==="easy"?12:action.difficulty==="hard"?-22:0;
  const target=Math.max(10,Math.min(95,Math.round(base+modifier*5+trained*2+Math.max(0,level-1)*.2+difficulty-(s.alert||0)*5)));
- return {cost:costs[t]??0,target,skill:relevant,modifier,trained};
+ return {cost:costs[relevant]??costs[t]??0,target,skill:relevant,modifier,trained};
 }
 function combatAccuracy(action){
  const rank=window.soaProgression?.bonus?.("combat")||0,level=window.soaProgression?.level?.()||10;
@@ -102,7 +102,7 @@ function dicePreview(action){
   const attacker=window.soaAbilities?.get?.("hero");
   const bonus=(attacker?.proficiency||2)+(attacker?.modifiers?.DEX||0);
   const targets=livingEnemies(),selected=targets.find(e=>e.name===selectedCombatTarget)||targets[0];
-  const ac=window.soaCombatRules?.enemyAC(selected)||12;
+  const ac=window.soaCombatRules?.statBlock?.(selected)?.ac||12;
   return {primary:"🎲 d20 + "+bonus+" vs AC "+ac+" · natural 20 critical",secondary:ability==="kick"?"1d6 + "+(4+(attacker?.modifiers?.DEX||0))+" damage · 25 Energy · interrupt on hit":"1d10 + "+(10+(attacker?.modifiers?.DEX||0))+" damage · 35 Energy"};
  }
  const skill=socialSkill(action);
@@ -110,8 +110,8 @@ function dicePreview(action){
   const {bonus,dc}=socialTarget(action,skill);
   return {primary:"🎲 d20 "+(bonus>=0?"+ "+bonus:"− "+Math.abs(bonus))+" vs DC "+dc,secondary:"CHA-based "+skill+" check · Natural 1 fails, 20 succeeds"};
  }
- const {cost,target}=actionOdds(action);
- const odds=actionOdds(action);return {primary:"🎲 "+odds.skill+" · d100 ≤ "+target+" ("+target+"%)",secondary:cost+" Energy · ability modifier "+(odds.modifier>=0?"+":"")+odds.modifier+" · training +"+odds.trained};
+ const odds=actionOdds(action);
+ const {cost,target}=odds;return {primary:"🎲 "+odds.skill+" · d100 ≤ "+target+" ("+target+"%)",secondary:cost+" Energy · ability modifier "+(odds.modifier>=0?"+":"")+odds.modifier+" · training +"+odds.trained};
 }
 
 function socialCheck(action,skill){
