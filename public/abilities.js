@@ -24,11 +24,13 @@ const get=id=>{
  const priority=p.className==="Paladin"?"STR":p.className==="Priest"||p.className==="Druid"||p.className==="Shaman"?"WIS":p.className==="Mage"?"INT":p.className==="Warlock"?"CHA":p.className==="Warrior"?"STR":"DEX";
  const values={};
  KEYS.forEach((k,i)=>{values[k]=Math.min(20,base[i]+(racial[k]||0)+(boon[k]||0)+(k===priority?Math.floor(lv/4):0))});
+ const equipment=id==="hero"?(window.soaEquipment?.modifiers?.()||{}):{};
+ if(id==="hero")for(const k of KEYS)values[k]=Math.max(1,Math.min(22,values[k]+(Number(equipment[k])||0)));
  const hitDie=HIT_DIE[p.className]||8,con=MOD(values.CON);
  const hp=Math.max(1,hitDie+con+(lv-1)*(Math.ceil(hitDie/2)+1+con));
  const modifiers=Object.fromEntries(KEYS.map(k=>[k,MOD(values[k])]));
  const proficiency=2+Math.floor((lv-1)/4);
- const armorClass=10+modifiers.DEX+(p.className==="Paladin"||p.className==="Warrior"?4:p.className==="Priest"?1:2);
+ const armorClass=10+modifiers.DEX+(p.className==="Paladin"||p.className==="Warrior"?4:p.className==="Priest"?1:2)+(id==="hero"?(Number(equipment.ac)||0):0);
  const savingThrows=Object.fromEntries(KEYS.map(k=>[k,modifiers[k]+(SAVES[p.className]?.includes(k)?proficiency:0)]));
  return {name:p.name||"Adventurer",race:p.race||"",className:p.className||"",level:lv,stats:values,modifiers,proficiency,hitDie,maxHp:hp,armorClass,initiative:modifiers.DEX,passivePerception:10+modifiers.WIS,savingThrows,special:statId(id,p)==="snacky"?"SI:7 field veteran · +2 DEX and WIS":null};
 };
