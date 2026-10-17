@@ -309,6 +309,7 @@ function fightExchange(action){
  campaign.lastExchange=event;
  recordCombatDelta(target,dealt,taken,receivedName,recipientBefore,recipientAfter);
  if(defeated){
+  window.soaQuests?.onDefeat?.(campaign,target.name);
   if(!encounter.defeated.some(x=>x.name===target.name))encounter.defeated.push({name:target.name,maxHp:target.maxHp});
   if(!livingEnemies().length)encounter.pendingVictory=true;
   if(selectedCombatTarget===target.name)selectedCombatTarget=null;
@@ -562,8 +563,9 @@ function draw(){
  const box=get("campaign-scene");box.replaceChildren();
  if(!campaign.scene){status(statusMessage||"Ready to generate the next scene.");return}
  const sc=campaign.scene,head=document.createElement("h3"),where=document.createElement("div"),text=document.createElement("p");
+ const questPanel=window.soaQuests?.panel?.(campaign,sc.location,()=>s.money,(result)=>{if(result?.error){status(result.error);return}if(Number.isInteger(result?.wallet))s.money=result.wallet;store();render();draw();status(result?.description||result?.message||"Contract updated.");}) || null;
  const transition=window.soaChronicle?.banner?.(campaign);if(transition)box.append(transition);
- const kicker=document.createElement("div");kicker.className="soa-scene-kicker";const position=window.soaChronicle?.progress?.(campaign);kicker.textContent=position?"ACT "+position.actRoman+" · CHAPTER "+position.chapterRoman+" · SCENE "+position.scene:"FIELD CHRONICLE · SCENE "+campaign.turn;box.append(kicker);head.textContent=sc.title||"The Hollow Raven";where.className="muted";where.textContent=sc.location||"Raven Hill";text.className="soa-story-prose";text.style.whiteSpace="pre-line";text.textContent=readableStory(sc.story);box.append(head,where,text);
+ const kicker=document.createElement("div");kicker.className="soa-scene-kicker";const position=window.soaChronicle?.progress?.(campaign);kicker.textContent=position?"ACT "+position.actRoman+" · CHAPTER "+position.chapterRoman+" · SCENE "+position.scene:"FIELD CHRONICLE · SCENE "+campaign.turn;box.append(kicker);head.textContent=sc.title||"The Hollow Raven";where.className="muted";where.textContent=sc.location||"Raven Hill";text.className="soa-story-prose";text.style.whiteSpace="pre-line";text.textContent=readableStory(sc.story);box.append(head,where,text);if(questPanel)box.append(questPanel);
  if(/\\b(?:coins?|silver|gold|copper|retainer|payment|payout|reward|stipend|wages)\\b/i.test(sc.story||"")&&/\\b(?:hands? (?:over|you)|slides? (?:an? |the )?(?:iron-bound )?(?:lockbox|coins?)|paid|pays|receiv(?:e|ed)|collect(?:ed)?|claim(?:ed)?|authorized|rewarded)\\b/i.test(sc.story||"")&&!campaign.lastPayment){
   const notice=document.createElement("p");notice.className="soa-level-toast";
   notice.textContent="Payment mentioned in narration · Amount not verified · No currency credited by the game engine.";
