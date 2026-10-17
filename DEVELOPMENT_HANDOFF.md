@@ -35,3 +35,11 @@ public/characters.js updated on main (commit 5862c9b): gender field, basic gear 
 - Combat UI reveals attack totals and AC, and keeps the one-exchange-at-a-time flow. HP remains derived and manual editing is removed. Offline game scripts remain in use.
 - Source JS syntax and deterministic attack-rule edge cases tested (natural 1, natural 20, advantage, disadvantage, critical damage).
 - Caveat: unknown enemies still receive a deterministic estimated AC/attack modifier from HP until creature stat blocks are implemented; full live iPhone and Cloudflare deployment testing remains pending. Preserve existing saves.
+
+
+## Tactical NPC upgrade (2026-10-16, additional)
+- public/combat-rules.js has named opponent archetypes (undead, beast, armored, skirmisher, caster, guard), with explicit AC, attack modifiers and damage die instead of deriving all stats from HP. Specific enemy metadata may override values.
+- Weapon damage varies by player class/action; bludgeoning, piercing, slashing and force types are tracked. Skeleton-type opponents resist poison and are vulnerable to bludgeoning; non-matching types do normal damage.
+- d20 initiative is rolled and recorded for hero and current foe when starting an encounter. Current order is informational; full ordered turns/multi-enemy initiative queue remain future work.
+- Existing companion assistance menu remains; full class-specific party actions still need deeper development. Cache v16.
+- Verified JavaScript parsing and representative archetype, resistance, natural 1 / natural 20 rules. Live Cloudflare and iPhone verification pending.
