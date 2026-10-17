@@ -144,7 +144,7 @@ function banner(c){
  wrap.append(button);return wrap;
 }
 function progress(c){
- const d=attach(c);return d?{act:d.act,actTitle:d.actTitle,chapter:d.chapter,chapterTitle:d.chapterTitle,scene:Number(c.turn)||0}:null;
+ const d=attach(c);return d?{act:d.act,actRoman:roman(d.act),actTitle:d.actTitle,chapter:d.chapter,chapterRoman:roman(d.chapter),chapterTitle:d.chapterTitle,scene:Number(c.turn)||0}:null;
 }
 window.soaChronicle={attach,context,receive,render,banner,progress};
 document.addEventListener("DOMContentLoaded",()=>{
