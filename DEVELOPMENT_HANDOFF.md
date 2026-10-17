@@ -166,3 +166,10 @@ Added three region-bound, engine-authored missions with immutable reward terms a
 - User asked to move displayed equipped items under Health, Energy, Gold, Time, Alert and cooldowns in main character status card. `public/index.html` adds `#soa-equipped-slot` and compact two-column parchment layout with a collapsed-by-default `Equipped Gear` disclosure. The original primary inventory now shows only spare quest rewards; the long canonical equipped grid was removed from that inventory panel. `public/equipment.js` builds dynamic baseline Snacky loadout + equipped quest rewards with small item-stat lines and enchant labels. `public/campaign.js` refreshes this card during Living Campaign rerenders.
 - Fixed malformed legacy time such as 10:69 PM by wrapping minutes at 60. Existing clock convention remains simplified; no time state migration. Browser live validation still required.
 - UI-only change; does not change stored equipment, loadout, enchantments, quest items or saves. Cache v39. Rollback: revert specific renderStatus addition and inventory panel removal in `public/equipment.js`, remove `#soa-equipped-slot` and styles from `public/index.html`, and remove renderStatus hook in `public/campaign.js`; bump service-worker cache. Do not revert whole repository, as it has later gameplay changes.
+
+
+## Horde faction and Skyborne allegiance (2026-10-17)
+- Character creation now presents the race-appropriate faction: Alliance races are locked to Alliance, Horde races are locked to Horde, and Skyborne can select either faction.
+- Skyborne share Warrior, Hunter, Rogue, and Druid. The Druid note identifies unique bird-inspired forms. Alliance High Order Skyborne may choose Mage; Horde Windshaper Skyborne may choose Shaman. Changing faction refreshes the class list and removes incompatible choices.
+- Creation validates race/faction/class combinations before saving. Skyborne characters store and display their allegiance label (High Order Skyborne · Alliance or Windshaper Skyborne · Horde); their opening story prompt carries that identity and the Skyborne Druid form detail.
+- No existing saves or characters are migrated or reset. Offline cache v48.
