@@ -77,3 +77,11 @@ Changes:
 - Offline cache v20 ensures assets refresh.
 Verification: all reviewed JS scripts parse; deterministic example odds/costs tested: lock 87% at 10 Energy, investigation 74% at 10, stealth 84% at 20, climb 83% at 0 (sample level 10 fixture only). Existing save schemas retained, no reset/migration forced.
 Outstanding priorities: complete automated integration tests for combat, save switching, full consent/overnight flow; true day clock; cloud browser tests of deployment and Gemini response; rate limiting/auth hardening for a publicly reachable AI endpoint; refactor oversized campaign.js into testable modules. Avoid broad refactors without backup and a test harness.
+
+
+## Mobile UI tabs (2026-10-16)
+- New files: public/mobile-layout.js and public/mobile-layout.css; linked from public/index.html, cached in public/sw.js v21.
+- On iPhone-width viewports: five sticky bottom tabs: Adventure, Character, Journal, Companions, Settings. Keeps existing panels in the DOM, merely hides sections outside active tab, retaining event handlers, progress, and localStorage saves. Compact sticky HP/Energy/Currency indicator added.
+- Active tab saved under soa-layout-v1; desktop original long-scroll layout remains unchanged. Character menu overlay and native in-panel controls remain.
+- Rollback plan: remove the <link ... mobile-layout.css> and <script src="./mobile-layout.js" defer> tags from public/index.html, bump service-worker cache version, and redeploy. Files can remain in repository unused. PRE-UI baseline commit: fd9cb267032efa7cd979efbcdfb572380acb3ce5 (note gameplay changes after this commit SHOULD NOT be reverted). Last preceding non-UI app change commit: c8b49b2a250e70024138985968392e34bce3c54c. Revert ONLY UI related files, not whole repository history or saves.
+- Known verification gap: must test live Safari with screen reader/safe-area and validate dynamic panels, all tab targets, and scroll navigation. No existing user saves reset.
