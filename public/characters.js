@@ -235,7 +235,7 @@ function profilePanel(){
  if(typeof render==="function")render();
  const menu=make("button","☰ Characters");menu.id="soa-characters-button";menu.type="button";menu.onclick=drawMenu;head.append(menu);
  const nav=make("nav",undefined,"soa-quick-nav");nav.setAttribute("aria-label","Game sections");
- for(const [label,targetId] of [["Adventure","campaign-box"],["Journal","soa-chronicle"],["Character","soa-profession-panel"],["Reputation",active.origin==="custom"?"soa-standalone-reputation":"companion-panel"]]){
+ for(const [label,targetId] of [["Adventure","campaign-box"],["Quest","soa-chronicle"],["Character","soa-profession-panel"],["Reputation",active.origin==="custom"?"soa-standalone-reputation":"companion-panel"]]){
   const jump=make("button",label);jump.type="button";jump.className="soa-quick-link";
   jump.onclick=()=>{const dest=get(targetId);if(dest){dest.scrollIntoView({behavior:"smooth",block:"start"})}};
   nav.append(jump);
