@@ -250,3 +250,24 @@ Bribes require an explicit amount, such as `offer 50 silver to the guard`; they 
 Other actions retain their previous action-type calculation, Energy costs and effects. Social rolls consume one time tick; the existing +10 Energy regeneration still applies. Results are persisted with the chosen action before requesting Gemini; retrying a failed generation does **not** reroll, spend the bribe twice or repeat the action. Gemini receives the authoritative die/bonus/DC and must not invent additional deductions or romance stages.
 
 Safety test: check Bluff, Bribe, Romance and Threaten on different characters; verify explicit bribes affect currency only on an accepted attempt; check insufficient balance/missing amount; retry Gemini without repeating payments; inspect saved relationships and reputation. JavaScript syntax and mocked social check tests passed. Live Cloudflare deployment/on-device selection still needs confirmation. Shell cache v25.
+
+
+## The Field Chronicle — immersion & usability refinement (v28)
+
+This refinement deliberately preserves the definitive parchment theme, character roster, romance, faction reputation, profession chances, existing saved scenes, Gemini API access, and action outcomes. It is a presentation-focused update following source reviews of the campaign, roster, companions, reputation, portrait modules, server director, and offline shell.
+
+### Changes
+
+- **Narrative:** The AI scene now has a subtle **FIELD CHRONICLE · SCENE N** kicker and more comfortable mobile-friendly parchment typography. Story text remains text-only and is never passed through unsafe HTML.
+- **Discoveries:** A collapsible **Field notes** section displays the last eight confirmed journal entries and the total count; it does not edit the journal or consume actions.
+- **Choices:** A dedicated **Choose your next move** divider shows the number of generated story paths, separate from Survey and Custom. Six AI-generated options remain lettered A–F; Survey is G, and Custom is H for six-option scenes.
+- **Custom actions:** The submit button now visibly disables while a story outcome is pending, so a waiting user cannot submit a second action while Retry is available. The existing pending/retry protection still avoids duplicate mechanical costs.
+- **Status:** The scene footer shows local-save and connectivity status rather than repeating journal entries already available in Field notes.
+- **New heroes:** Starting prompts for brand-new non-Snacky heroes now ask for six distinct choices, consistent with the main director. Snacky's fresh-campaign fallback recognizes that Hollow Raven is complete and the Stormwind threat is active; existing saved campaign states are not migrated or rewritten.
+- **Styles:** New `public/chronicle.css` is loaded last, scoped under `body.theme-alternative`, for legible action panels, mobile responsive narration, collapsible notes, and accessible focus states. No heavy images or external dependencies.
+
+### Verification
+
+All JavaScript files and the inline game engine passed parsing checks. A simulated six-choice stored scene displayed A–F, Survey G, a custom-action form, field notes, and headings **without mutating its saved stats or story**. A separate pending-scene test confirmed its custom submit and survey are disabled, the retry control remains available, and the saved scene stays unchanged. Offline service worker cache version **v28** includes `chronicle.css`.
+
+On-device Safari rendering and production Cloudflare deployment still need confirmation. A local save remains on that device; use **Download All Character Saves** periodically and retain the resulting private JSON. Full-roster import remains future work.
