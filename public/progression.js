@@ -63,7 +63,7 @@ function award(id,amount,receipt,reason){
  refresh();
  return {awarded:amount,levels:actor.level-previous,level:actor.level};
 }
-function check({receipt,name,success,difficulty,actorId="hero"}){
+function check({receipt,name,success,difficulty,actorId="hero",practiceOnly=false}){
  if(!receipt||!identity(actorId)||!SKILLS.includes(name)||data.receipts.includes("check:"+actorId+":"+receipt))return {awarded:0,rankUp:false};
  const actor=score(actorId),value=skill(actorId,name);
  const old=value.rank;
@@ -75,7 +75,13 @@ function check({receipt,name,success,difficulty,actorId="hero"}){
  if(value.rank===MAX_RANK)value.practice=0;
  actor.skills[name]=value;
  const amount=success?(difficulty==="hard"?30:difficulty==="easy"?16:23):7;
- const result=award(actorId,amount,"check:"+actorId+":"+receipt,(success?"Passed ":"Attempted ")+(LABELS[name]||name)+" check");
+ let result;
+ if(practiceOnly){
+  data.receipts.push("check:"+actorId+":"+receipt);data.receipts=data.receipts.slice(-800);
+  persist();result={awarded:0,levels:0,level:actor.level};
+ }else{
+  result=award(actorId,amount,"check:"+actorId+":"+receipt,(success?"Passed ":"Attempted ")+(LABELS[name]||name)+" check");
+ }
  // Persist receipts in award, even if actor reaches XP cap.
  refresh();return {...result,rankUp:value.rank>old,rank:value.rank,skill:name};
 }
@@ -85,12 +91,12 @@ function battle({receipt,defeated,allies}){
  const amount=clamp(foes.reduce((sum,foe)=>sum+55+Math.round(clamp(foe.maxHp,1,500)*.8),0),0,5000);
  if(!amount)return {awarded:0,party:[]};
  const hero=award(HERO,amount,"battle:"+receipt,"Encounter won · "+foes.length+" foe"+(foes.length===1?"":"s"));
- check({receipt:"victory:"+receipt,name:"combat",success:true,difficulty:"medium",actorId:HERO});
+ check({receipt:"victory:"+receipt,name:"combat",success:true,difficulty:"medium",actorId:HERO,practiceOnly:true});
  const party=[];
  for(const id of new Set(Array.isArray(allies)?allies:[])){
   if(!identity(id)||id===HERO)continue;
   const reward=award(id,Math.max(1,Math.round(amount*.7)),"party:"+receipt+":"+id,"Shared battle victory");
-  check({receipt:"victory:"+receipt,name:"combat",success:true,difficulty:"medium",actorId:id});
+  check({receipt:"victory:"+receipt,name:"combat",success:true,difficulty:"medium",actorId:id,practiceOnly:true});
   party.push({id,...reward});
  }
  refresh();return {...hero,party};
