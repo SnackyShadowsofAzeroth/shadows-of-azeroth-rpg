@@ -58,8 +58,11 @@ function restore(id){
  try{
   for(const key of SAVES)previous[key]=localStorage.getItem(key);
   for(const key of SAVES){
-   if(data[key]===null||data[key]===undefined)localStorage.removeItem(key);
-   else localStorage.setItem(key,data[key]);
+   const next=data[key]===null||data[key]===undefined?null:data[key];
+   // Avoid unnecessary writes, particularly important if iOS storage is nearly full.
+   if(next===previous[key])continue;
+   if(next===null)localStorage.removeItem(key);
+   else localStorage.setItem(key,next);
   }
   return true;
  }catch{
