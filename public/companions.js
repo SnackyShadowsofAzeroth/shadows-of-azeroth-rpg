@@ -176,6 +176,7 @@ function draw(){
  const identity=add("p",p.race+" · "+p.specialization+" "+p.className);identity.className="soa-companion-class";info.append(identity);
  const r=rel(selected);const stars=add("span",status(r));stars.className="soa-rapport";info.append(stars);companionGroup.append(info);
  const leveling=window.soaProgression?.companionBadge?.(selected);if(leveling)companionGroup.append(leveling);
+ const sheet=window.soaAbilities?.card?.(selected);if(sheet)companionGroup.append(sheet);
  const indicators=add("div","");indicators.className="soa-relation-metrics";for(const [name,label] of [["trust","Trust"],["affection","Affection"],["respect","Respect"]]){const unit=add("div","");unit.className="soa-relation-cell";const title=add("div",label+" · "+r[name]);title.className="soa-relation-label";const rail=add("div","");rail.className="soa-relation-rail";const fill=add("div","");fill.className="soa-relation-fill "+name;fill.style.width=((r[name]+100)/2)+"%";rail.append(fill);unit.append(title,rail);indicators.append(unit)}companionGroup.append(indicators);
  if(!locationAllows(selected)){const msg=add("p",p.base);msg.className="muted";companionGroup.append(msg)}
  const categories=[
