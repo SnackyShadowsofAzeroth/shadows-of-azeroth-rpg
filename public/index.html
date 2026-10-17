@@ -66,7 +66,7 @@ function addLog(m){if(!s.log.includes(m))s.log.unshift(m)}
 function check(chance){return Math.random()<chance}
 function doChoice(c){if(c.min&&s.en<c.min){alert("Not enough Energy.");return}const priorTick=s.time,priorScene=s.id;if(c.act){c.act()}else{go(c.to,c.cost||0)}if(document.querySelector("#ai-enabled")?.checked&&(s.time!==priorTick||s.id!==priorScene)&&s.id!=="death"){queueAiNarration(c.label)}}
 function choice(label,to,level="low",cost=0){return{label,to,level,cost}}
-function encounter(name,hp,damage){s.enemy={name,hp,max:hp,damage};go("combat")}
+function encounter(name,hp,damage){delete s.flags.lastCombat;s.enemy={name,hp,max:hp,damage};go("combat")}
 function combat(action){let msg="";let damage=0;let cost=0;let stunned=false;
  const previousEnemy=s.enemy?{name:s.enemy.name,hp:s.enemy.hp,max:s.enemy.max}:null;const previousHero=s.hp;
  if(action==="strike"){cost=35;damage=18+Math.floor(Math.random()*15);msg="Snacky cuts across the enemy's guard."}
@@ -104,7 +104,7 @@ function render(){save();document.querySelector("#hp").textContent=s.hp+"/100";d
  const sceneNode=document.querySelector("#scene");
  let combatPane=document.querySelector("#soa-offline-combat");
  if(!combatPane){combatPane=document.createElement("section");combatPane.id="soa-offline-combat";combatPane.className="soa-battle-status";sceneNode.after(combatPane)}
- combatPane.replaceChildren();const foe=s.enemy,last=s.flags.lastCombat;
+ combatPane.replaceChildren();const foe=s.enemy,last=/^(?:combat|afterbattle|death)$/.test(s.id)?s.flags.lastCombat:null;
  combatPane.hidden=!foe&&!last;
  if(foe||last){
   const label=document.createElement("h4");label.textContent="Combat status";combatPane.append(label);
