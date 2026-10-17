@@ -1,8 +1,8 @@
 (()=>{"use strict";
 const KEY="soa-companions-v1", PEOPLE={
- pippa:{name:"Pippa Sparkwhistle",role:"Gnome engineer · scout",icon:"⚙",base:"Pippa adjusts her emerald-tinted goggles, keeping a watchful eye on the corridor."},
- bromli:{name:"Bromli Ironkeg",role:"Dwarf warrior · scout",icon:"🛡",base:"Bromli rests a gauntleted hand on his warhammer."},
- lethariel:{name:"Lethariel",role:"Night elf priestess · rear guard",icon:"✦",base:"Lethariel is currently assigned to checkpoint security, away from the Archive scouting party."}
+ pippa:{name:"Pippa Sparkwhistle",race:"Gnome",className:"Rogue",specialization:"Subtlety",role:"Gnome · Subtlety Rogue · engineering specialist",icon:"🗡",base:"Pippa checks the shadows along the corridor, one hand resting near her concealed blades and the other on her engineering satchel."},
+ bromli:{name:"Bromli Ironkeg",race:"Dwarf",className:"Paladin",specialization:"Protection",role:"Dwarf · Protection Paladin · frontline guardian",icon:"🛡",base:"Bromli steadies his shield and warhammer, ready to hold the line with the Light."},
+ lethariel:{name:"Lethariel Moonguard",race:"Night Elf",className:"Priest",specialization:"Restoration",role:"Night elf · Restoration Priest · healer",icon:"✦",base:"Lethariel Moonguard watches over the party, conserving her restorative magic for those who need it."}
 };
 const ACTIONS=[
  {id:"talk",label:"Catch up",detail:"A brief conversation"},
@@ -163,6 +163,7 @@ function draw(){
   const b=document.createElement("button");b.type="button";b.className="soa-person"+(id===selected?" selected":"");b.setAttribute("aria-pressed",id===selected?"true":"false");b.textContent=p.icon+" "+p.name.split(" ")[0];b.onclick=()=>{selected=id;last="";draw()};nav.append(b)
  }companionGroup.append(nav);
  const p=PEOPLE[selected],info=add("div","");info.className="soa-companion-info";info.append(add("strong",p.name),add("span",p.role));
+ const identity=add("p",p.race+" · "+p.specialization+" "+p.className);identity.className="soa-companion-class";info.append(identity);
  const r=rel(selected);const stars=add("span",status(r));stars.className="soa-rapport";info.append(stars);companionGroup.append(info);
  const indicators=add("div","");indicators.className="soa-relation-metrics";for(const [name,label] of [["trust","Trust"],["affection","Affection"],["respect","Respect"]]){const unit=add("div","");unit.className="soa-relation-cell";const title=add("div",label+" · "+r[name]);title.className="soa-relation-label";const rail=add("div","");rail.className="soa-relation-rail";const fill=add("div","");fill.className="soa-relation-fill "+name;fill.style.width=((r[name]+100)/2)+"%";rail.append(fill);unit.append(title,rail);indicators.append(unit)}companionGroup.append(indicators);
  if(!locationAllows(selected)){const msg=add("p",p.base);msg.className="muted";companionGroup.append(msg)}
@@ -190,5 +191,5 @@ load();
 const el=document.createElement("section");el.className="panel soa-companion-panel";el.id="companion-panel";
 const campaign=$("campaign-box");if(campaign)campaign.after(el);else document.querySelector("header")?.after(el);
 draw();
-window.soaCompanions={getRecent:()=>{const seen=new Set();return data.entries.slice().reverse().filter(x=>{const key=(x.person+"|"+x.text).toLowerCase().replace(/\s+/g," ").trim();if(seen.has(key))return false;seen.add(key);return true}).slice(0,4).reverse().map(x=>x.person+": "+x.text.slice(0,150))},getAdventureMoments:()=>{const turn=window.soaLivingCampaign?.getState?.()?.turn;return data.entries.filter(x=>x.source==="interaction"&&typeof x.dialogue==="string"&&x.sceneTurn===turn).slice(-3)},getRapport:()=>({...data.rapport}),getRelationships:()=>Object.fromEntries(Object.keys(PEOPLE).map(id=>{const r=rel(id);return [id,{trust:r.trust,affection:r.affection,respect:r.respect,status:status(r),romance:r.romance,grievances:r.grievances}]})),applyStoryConsequence,applyDialogueOutcome,refresh:draw};
+window.soaCompanions={getProfiles:()=>Object.fromEntries(Object.entries(PEOPLE).map(([id,p])=>[id,{name:p.name,race:p.race,className:p.className,specialization:p.specialization,role:p.role}])),getRecent:()=>{const seen=new Set();return data.entries.slice().reverse().filter(x=>{const key=(x.person+"|"+x.text).toLowerCase().replace(/\s+/g," ").trim();if(seen.has(key))return false;seen.add(key);return true}).slice(0,4).reverse().map(x=>x.person+": "+x.text.slice(0,150))},getAdventureMoments:()=>{const turn=window.soaLivingCampaign?.getState?.()?.turn;return data.entries.filter(x=>x.source==="interaction"&&typeof x.dialogue==="string"&&x.sceneTurn===turn).slice(-3)},getRapport:()=>({...data.rapport}),getRelationships:()=>Object.fromEntries(Object.keys(PEOPLE).map(id=>{const r=rel(id);return [id,{trust:r.trust,affection:r.affection,respect:r.respect,status:status(r),romance:r.romance,grievances:r.grievances}]})),applyStoryConsequence,applyDialogueOutcome,refresh:draw};
 })();
