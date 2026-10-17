@@ -66,7 +66,7 @@ function addLog(m){if(!s.log.includes(m))s.log.unshift(m)}
 function check(chance){return Math.random()<chance}
 function doChoice(c){if(c.min&&s.en<c.min){alert("Not enough Energy.");return}const priorTick=s.time,priorScene=s.id;if(c.act){c.act()}else{go(c.to,c.cost||0)}if(document.querySelector("#ai-enabled")?.checked&&(s.time!==priorTick||s.id!==priorScene)&&s.id!=="death"){queueAiNarration(c.label)}}
 function choice(label,to,level="low",cost=0){return{label,to,level,cost}}
-function encounter(name,hp,damage){delete s.flags.lastCombat;s.enemy={name,hp,max:hp,damage};go("combat")}
+function encounter(name,hp,damage){delete s.flags.lastCombat;s.flags.encounterSerial=(Number(s.flags.encounterSerial)||0)+1;s.flags.roundSerial=0;s.enemy={name,hp,max:hp,damage};go("combat")}
 function combat(action){let msg="";let damage=0;let cost=0;let stunned=false;
  const previousEnemy=s.enemy?{name:s.enemy.name,hp:s.enemy.hp,max:s.enemy.max}:null;const previousHero=s.hp;
  if(action==="strike"){cost=35;damage=18+Math.floor(Math.random()*15);msg="Snacky cuts across the enemy's guard."}
@@ -74,8 +74,12 @@ function combat(action){let msg="";let damage=0;let cost=0;let stunned=false;
  if(action==="evade"){s.flags.evade=2;msg="Snacky adopts a defensive stance."}
  if(action==="vanish"){if(s.alert>1){msg="Too much attention: the foe tracks Snacky's position."}else{s.enemy=null;s.flags.vanished=true;go("afterbattle");return}}
  if(action==="riposte"){if(!s.flags.parry){alert("Riposte requires a successful parry.");return}cost=10;damage=24;delete s.flags.parry;msg="A precise Riposte finds the opening."}
- if(s.en<cost){alert("Not enough Energy.");return}tick(cost);s.enemy.hp=Math.max(0,s.enemy.hp-damage);
- if(s.enemy.hp<=0){s.flags.lastCombat={enemy:previousEnemy.name,dealt:Math.max(0,previousEnemy.hp-s.enemy.hp),received:0,before:previousEnemy.hp,after:0,max:previousEnemy.max,heroBefore:previousHero,heroAfter:s.hp,defeated:true};s.money+=86;addLog(s.enemy.name+" defeated · 86 copper automatically pocketed");s.enemy=null;s.flags.defeated=true;s.id="afterbattle";render();return}
+ if(s.en<cost){alert("Not enough Energy.");return}tick(cost);s.flags.roundSerial=(Number(s.flags.roundSerial)||0)+1;
+ if(action!=="vanish")window.soaProgression?.check?.({receipt:"offline-"+s.flags.encounterSerial+"-round-"+s.flags.roundSerial,name:"combat",success:damage>0,difficulty:"medium"});
+ s.enemy.hp=Math.max(0,s.enemy.hp-damage);
+ if(s.enemy.hp<=0){s.flags.lastCombat={enemy:previousEnemy.name,dealt:Math.max(0,previousEnemy.hp-s.enemy.hp),received:0,before:previousEnemy.hp,after:0,max:previousEnemy.max,heroBefore:previousHero,heroAfter:s.hp,defeated:true};const xp=window.soaProgression?.battle?.({receipt:"offline-"+s.flags.encounterSerial,defeated:[{name:s.enemy.name,maxHp:s.enemy.max}],allies:[]});
+ if(xp?.awarded)addLog("Combat victory · +"+xp.awarded+" XP");
+ s.money+=86;addLog(s.enemy.name+" defeated · 86 copper automatically pocketed");s.enemy=null;s.flags.defeated=true;s.id="afterbattle";render();return}
  const enemyHit=stunned?0:check(s.flags.evade?0.19:0.62);if(enemyHit){let d=s.enemy.damage;if(s.flags.evade)d=Math.ceil(d/2);s.hp=Math.max(0,s.hp-d);msg+=" Enemy strikes for "+d+" HP."}else{msg+=" Enemy attack misses.";s.flags.parry=check(.5)}
  if(s.flags.evade)s.flags.evade--;
  s.flags.combatmsg=msg;s.flags.lastCombat={enemy:previousEnemy.name,dealt:Math.max(0,previousEnemy.hp-s.enemy.hp),received:Math.max(0,previousHero-s.hp),before:previousEnemy.hp,after:s.enemy.hp,max:previousEnemy.max,heroBefore:previousHero,heroAfter:s.hp,defeated:false};if(s.hp===0)s.id="death";render()}
