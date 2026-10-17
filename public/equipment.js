@@ -12,6 +12,25 @@ const CATALOG={
  "Rare Bounty Relic":{slot:"trinket",rarity:"rare",classes:[],bonuses:{CON:1,ac:1},description:"Constitution +1, AC +1"},
  "SI:7 Supply Voucher":{slot:"utility",rarity:"common",classes:[],bonuses:{},description:"Supply token (not equipable)"}
 };
+// Established Snacky Lugnuts equipment, supplied by the player.
+// These are display-only canonical pieces, not new loot grants or invented numerical buffs.
+const SNACKY_LOADOUT=[
+ ["Head","Gnomish Goggles"],
+ ["Back","Parachute Cloak"],
+ ["Shoulders","Mantle of Thieves"],
+ ["Chest","Dusky Leather Armor"],
+ ["Wrists","Barbaric Bracers"],
+ ["Hands","Tiger Hunter Gloves"],
+ ["Waist","Highlander's Chain Girdle"],
+ ["Legs","Triprunner Dungarees"],
+ ["Feet","Feet of the Lynx"],
+ ["Neck","Ironspine’s Eye"],
+ ["Finger","Field Researcher's Ring"],
+ ["Main hand","Ruby-Adorned Blade"],
+ ["Off hand","Bloody Brass Knuckles"],
+ ["Sidearm","Toxic Revenger"],
+ ["Ranged","Golemsight Long Gun"]
+];
 const slots=["weapon","armor","trinket"];
 const state=()=>window.soaLivingCampaign?.getState?.();
 const holder=()=>state()?.quests;
@@ -41,8 +60,22 @@ function panel(){
  const q=holder();if(!q)return null;
  const section=document.createElement("details"),head=document.createElement("summary");section.open=sessionStorage.getItem("soa-equipment-panel-open")==="1";section.ontoggle=()=>sessionStorage.setItem("soa-equipment-panel-open",section.open?"1":"0");head.textContent="Equipment & Reward Inventory";section.append(head);
  const intro=document.createElement("p");intro.textContent="Equipped items modify your stats and combat; rewards remain in your saved inventory.";section.append(intro);
+ const isSnacky=window.soaCharacters?.profile?.()?.id==="snacky";
+ if(isSnacky){
+  const title=document.createElement("h3");title.textContent="Snacky's Current Equipment";section.append(title);
+  const hint=document.createElement("p");hint.textContent="Established character loadout · exact item statistics have not been verified. No invented bonuses are applied.";section.append(hint);
+  const grid=document.createElement("div");grid.style.cssText="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin:12px 0 20px";
+  for(const [slot,name] of SNACKY_LOADOUT){
+   const cell=document.createElement("div");cell.style.cssText="border:1px solid #ae9365;border-radius:8px;padding:9px;min-width:0";
+   const label=document.createElement("small");label.style.cssText="display:block;opacity:.75";label.textContent=slot;
+   const value=document.createElement("strong");value.style.cssText="display:block;overflow-wrap:anywhere";value.textContent=name;
+   cell.append(label,value);grid.append(cell);
+  }
+  section.append(grid);
+ }
+ const subtitle=document.createElement("h3");subtitle.textContent="Additional Quest Rewards";section.append(subtitle);
  const items=q.inventory||[],eq=equipment();
- if(!items.length){const p=document.createElement("p");p.textContent="No quest equipment collected yet.";section.append(p)}
+ if(!items.length){const p=document.createElement("p");p.textContent="No additional quest equipment collected yet.";section.append(p)}
  items.forEach((item,i)=>{const info=itemInfo(item),row=document.createElement("div");row.style.cssText="padding:8px 0;border-top:1px solid #ad946b";
  const title=document.createElement("strong");title.textContent=item.name+" · "+(info?.rarity||item.rarity||"unclassified");row.append(title);
  const p=document.createElement("p");p.textContent=info?.description||"Quest item; no equipment statistics";row.append(p);
