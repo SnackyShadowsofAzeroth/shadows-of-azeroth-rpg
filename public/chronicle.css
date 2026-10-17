@@ -1,0 +1,119 @@
+/* Shadows of Azeroth — Field Chronicle polish, responsive parchment-first UI.
+   Presentation-only. No gameplay, saved data, or dice outcomes are modified. */
+body.theme-alternative{
+  --soa-parchment-ink:#392719;
+  --soa-scroll-gold:#ad8148;
+  --soa-rule:#987a4a;
+}
+body.theme-alternative #campaign-box{overflow-wrap:anywhere}
+body.theme-alternative .soa-scene-kicker{
+  font:700 10px/1.5 system-ui,sans-serif;
+  letter-spacing:.20em;text-transform:uppercase;
+  color:#785532;margin:19px 0 9px;
+  display:flex;align-items:center;gap:10px;
+}
+body.theme-alternative .soa-scene-kicker::after{
+  content:"";height:1px;flex:1;
+  background:linear-gradient(to right,#a98a56a8,transparent);
+}
+body.theme-alternative #campaign-scene>h3{
+  color:#48280f;font:700 clamp(25px,6vw,34px)/1.14 Georgia,serif;
+  letter-spacing:.006em;margin:5px 0 8px;
+  text-shadow:0 1px 0 #f8e9c4;
+}
+body.theme-alternative #campaign-scene>h3 + .muted{
+  font:600 12px/1.55 system-ui,sans-serif;
+  letter-spacing:.025em;color:#715334;
+  margin-bottom:18px;
+}
+body.theme-alternative #campaign-scene>.soa-story-prose{
+  font:400 clamp(18px,4.1vw,21px)/1.82 Georgia,serif;
+  color:var(--soa-parchment-ink);
+  letter-spacing:.002em;overflow-wrap:break-word;
+  padding:0 1px;
+}
+body.theme-alternative .soa-field-notes{
+  margin:19px 0 24px;border:1px solid #957747;
+  border-radius:9px;background:linear-gradient(130deg,#f5e2b4c9,#dbc18a80);
+  box-shadow:inset 0 1px 0 #fff5d477;
+}
+body.theme-alternative .soa-field-notes>summary{
+  font:700 13px/1.5 system-ui,sans-serif;color:#684521;
+  cursor:pointer;padding:12px 14px;min-height:44px;
+}
+body.theme-alternative .soa-field-notes ul{
+  padding:0 18px 12px 33px;margin:0;
+  font:13px/1.65 system-ui,sans-serif;color:#4e3c25;
+}
+body.theme-alternative .soa-field-notes li{margin:7px 0}
+body.theme-alternative .soa-choices-heading{
+  border-top:2px solid #866640a6;
+  margin:23px 0 11px;padding:15px 2px 3px;
+  display:flex;justify-content:space-between;
+  gap:8px;flex-wrap:wrap;align-items:baseline;
+}
+body.theme-alternative .soa-choices-heading strong{
+  font:700 clamp(19px,4.8vw,23px)/1.3 Georgia,serif;
+  color:#4d3017;
+}
+body.theme-alternative .soa-choices-heading span{
+  font:600 11px/1.4 system-ui,sans-serif;color:#77583b;
+}
+body.theme-alternative #campaign-scene>button{
+  min-height:68px;margin:10px 0;padding:15px 16px;
+  border-radius:9px;line-height:1.42;
+  box-shadow:0 4px 9px #39271345,inset 0 1px 0 #f6e1bd28;
+}
+body.theme-alternative #campaign-scene>button strong{
+  font:700 clamp(14px,3.7vw,16px)/1.48 system-ui,sans-serif;
+}
+body.theme-alternative #campaign-scene>button small{
+  margin-top:7px!important;font:600 11px/1.4 system-ui,sans-serif!important;
+  color:#d5cfbe!important;letter-spacing:.01em;
+}
+body.theme-alternative #campaign-scene>.soa-resource-survey{
+  border-left:5px solid #5d9c73;
+}
+body.theme-alternative #campaign-scene>form{
+  border:1px solid #91774da6;
+  border-radius:11px;padding:14px;
+  margin:17px 0 10px;
+  background:linear-gradient(150deg,#f5e0b28c,#d5b9817a);
+  box-shadow:inset 0 1px 0 #fff3d8ab;
+}
+body.theme-alternative #campaign-scene>form label{
+  display:block;font:700 13px/1.6 system-ui,sans-serif;
+  margin:7px 0 5px;color:#4f351d;
+}
+body.theme-alternative #campaign-scene>form .ai-input{
+  max-width:100%;min-width:0;font:15px/1.5 system-ui,sans-serif;
+}
+body.theme-alternative #campaign-scene>form textarea{
+  min-height:98px;resize:vertical;
+}
+body.theme-alternative #campaign-scene>form button[type=submit]{
+  text-align:center;font-weight:700;min-height:48px;margin-bottom:0;
+}
+body.theme-alternative #campaign-scene>.soa-pending{
+  border-left:4px solid #a78049;border-radius:6px;
+  background:#f2dda9;color:#553b1f;
+  padding:11px 12px;font:13px/1.55 system-ui,sans-serif;
+}
+body.theme-alternative #campaign-status{
+  font:600 12px/1.6 system-ui,sans-serif;
+  padding:6px 0;overflow-wrap:anywhere;
+}
+body.theme-alternative .soa-quick-nav{
+  max-width:540px;
+}
+body.theme-alternative .soa-quick-nav button{
+  border-radius:9px;
+}
+@media(max-width:430px){
+  body.theme-alternative #campaign-scene>.soa-story-prose{line-height:1.73}
+  body.theme-alternative #campaign-scene>form{padding:11px}
+  body.theme-alternative #campaign-scene>button{padding:13px 14px}
+}
+@media(prefers-reduced-motion:reduce){
+  body.theme-alternative #campaign-scene>button{transition:none}
+}
