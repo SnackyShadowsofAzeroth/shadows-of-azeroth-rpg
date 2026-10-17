@@ -55,9 +55,9 @@ function confirm(c){
  if(m.kind==="act"){d.act++;d.chapter=1;d.actTitle=m.title;d.chapterTitle="Opening Moves"}
  else{d.chapter++;d.chapterTitle=m.title}
  d.startedAtTurn=Number(c.turn)||0;d.banner={act:d.act,chapter:d.chapter,title:m.title,reason:m.reason};
- d.pendingMilestone=null;save();render();
+ d.pendingMilestone=null;save();render();window.soaLivingCampaign?.refreshUI?.();
 }
-function dismiss(c){const d=attach(c);if(!d)return;d.pendingMilestone=null;save();render()}
+function dismiss(c){const d=attach(c);if(!d)return;d.pendingMilestone=null;save();render();window.soaLivingCampaign?.refreshUI?.()}
 function completeObjective(c,questId,objectiveId){
  const d=attach(c),q=d?.quests.find(x=>x.id===questId&&x.status==="active");
  if(!q)return;
@@ -147,6 +147,13 @@ function progress(c){
  const d=attach(c);return d?{act:d.act,actTitle:d.actTitle,chapter:d.chapter,chapterTitle:d.chapterTitle,scene:Number(c.turn)||0}:null;
 }
 window.soaChronicle={attach,context,receive,render,banner,progress};
+document.addEventListener("DOMContentLoaded",()=>{
+ if(get("soa-chronicle"))return;
+ const section=el("section",undefined,"panel soa-chronicle-panel");section.id="soa-chronicle";
+ const adventure=get("campaign-box"),header=document.querySelector("header");
+ if(adventure)adventure.after(section);else header?.after(section);
+ const saved=window.soaLivingCampaign?.getState?.();if(saved){attach(saved);render(saved)}
+});
 window.addEventListener("soa-chronicle-display",()=>render());
 window.soaChronicleSetSave=fn=>{if(typeof fn==="function")save=fn};
 })();
