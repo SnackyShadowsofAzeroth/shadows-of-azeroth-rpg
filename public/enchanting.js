@@ -15,7 +15,7 @@ const professions=()=>window.soaCharacters?.profile?.()?.professions||{};
 const owned=()=>Object.prototype.hasOwnProperty.call(professions(),"Enchanting");
 function eligibleSlots(c){
  const itemSlots=[];
- if(window.soaCharacters?.profile?.()?.id==="snacky")for(const [slot,name] of window.soaEquipment?.SNACKY_LOADOUT||[])itemSlots.push({key:"baseline:"+slot,slot,name});
+ if(window.soaCharacters?.profile?.()?.id==="snacky")for(const {slot,name} of window.soaEquipment?.canonicalSlots?.()||[])itemSlots.push({key:"baseline:"+slot,slot,name});
  const q=c.quests;
  for(const [slot,index] of Object.entries(q?.equipped||{})){
   const item=q.inventory?.[index];
@@ -26,7 +26,9 @@ function eligibleSlots(c){
 }
 function displaySlot(label){return {head:"Head",back:"Back",shoulders:"Shoulders",chest:"Chest",wrists:"Wrists",hands:"Hands",waist:"Waist",legs:"Legs",feet:"Feet",finger1:"Ring 1",finger2:"Ring 2",mainhand:"Main hand",offhand:"Off hand",sidearm:"Sidearm",ranged:"Ranged"}[label]||label}
 function bonuses(c){
- const state=getState(c),b={DEX:0,CON:0,ac:0,damage:0,attack:0};
+ const b={DEX:0,CON:0,ac:0,damage:0,attack:0};
+ if(!c)return b;
+ const state=getState(c);
  const permitted=new Map(eligibleSlots(c).map(x=>[x.key,x]));
  for(const [key,entry] of Object.entries(state.enchants)){
   const target=permitted.get(key),recipe=ENCHANTS.find(x=>x.id===entry.id);
