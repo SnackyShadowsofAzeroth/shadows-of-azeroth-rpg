@@ -50,7 +50,7 @@ function restore(id){
 }
 function baseState(profile){return {id:"junction",hp:100,en:100,money:0,time:0,alert:0,seen:[],flags:{},enemy:null,log:["A new journey begins for "+profile.name,"The first chapter awaits."]}}
 function newCampaign(profile){
- return {turn:0,scene:null,history:[],journal:[],lastError:"",lastAction:"Begin a completely new, character-specific adventure for "+profile.name+", an adventurer of the "+profile.faction+" — "+profile.race+" "+profile.className+". Start in "+(profile.faction==="Alliance"?"the Eastern Kingdoms":"Kalimdor")+" with an atmospheric personal mystery, a meaningful first encounter and 3–5 choices. Do not start at Hollow Raven or involve Snacky's mission.",lastResult:"New protagonist and prologue, no previous battles or rewards.",pending:null};
+ return {turn:0,scene:null,history:[],journal:[],lastError:"",lastAction:"Begin a completely new, character-specific adventure for "+profile.name+", an adventurer of the "+profile.faction+" — "+profile.race+" "+profile.className+". Start in "+(profile.faction==="Alliance"?"the Eastern Kingdoms":"Kalimdor")+" with an atmospheric personal mystery, a meaningful first encounter and six distinct story choices. Do not start at Hollow Raven or involve Snacky's mission.",lastResult:"New protagonist and prologue, no previous battles or rewards.",pending:null};
 }
 // Social bonuses are per-character, derived from established class/race backgrounds.
 // All figures are visible on the Character Record. Existing saves need no migration.
