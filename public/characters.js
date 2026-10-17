@@ -98,7 +98,8 @@ function socialSkills(){
  // Snacky's training as an SI:7 operative is reflected in his bluff score.
  const si7=active.id==="snacky"?1:0;
  const trained=window.soaProgression?.bonus;
- return {bluff:base.bluff+si7+(trained?.("bluff")||0),bribe:base.bribe+(trained?.("bribe")||0),romance:base.romance+(trained?.("romance")||0),threaten:base.threaten+(trained?.("threaten")||0)};
+ const mod=skill=>window.soaAbilities?.modifier?.(skill)||0;
+ return {bluff:base.bluff+si7+(trained?.("bluff")||0)+mod("bluff"),bribe:base.bribe+(trained?.("bribe")||0)+mod("bribe"),romance:base.romance+(trained?.("romance")||0)+mod("romance"),threaten:base.threaten+(trained?.("threaten")||0)+mod("threaten")};
 }
 function selectedProfile(){return {...active,level:window.soaProgression?.level?.()||10,professions:Object.fromEntries(Object.entries(active.professions||{}).map(([k,v])=>[k,v.skill||1]))}}
 function commitRoster(){return write(ROSTER_KEY,roster)}
