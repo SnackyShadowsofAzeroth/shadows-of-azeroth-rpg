@@ -273,6 +273,7 @@ function drawEnemyStatus(box){
   roster.append(item);
  }
  section.insertBefore(roster,section.children[1]||null);
+ const hostileHeading=document.createElement("h4");hostileHeading.className="soa-hostile-heading";hostileHeading.textContent="Hostile combatants";roster.after(hostileHeading);
  const allyTargets=document.createElement("div");allyTargets.className="soa-combat-targets soa-combat-ally-targets";
  const allyLabel=document.createElement("strong");allyLabel.textContent="Choose an ally to assist";allyTargets.append(allyLabel);
  for(const ally of combatParty().filter(x=>!x.player)){
