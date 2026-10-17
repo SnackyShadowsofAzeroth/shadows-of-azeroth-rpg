@@ -18,8 +18,9 @@ const records=[
 ["Golemsight Long Gun","ranged",0,{AGI:6},273029,"29–54 damage; speed 2.50"]
 ];
 const verified=Object.fromEntries(records.map(([name,slot,armor,stats,itemId,effect])=>[name,{name,slot,armor,stats,itemId,effect:effect||"",source:"https://www.wowhead.com/forever/item="+itemId,verified:true}]));
-// User's naming and the verified Forever item may differ.
-const tentative={"Field Researcher's Ring":{name:"Field Researcher's Ring",slot:"finger2",verified:false,possible:"Field Researcher's Loop",possibleSource:"https://www.wowhead.com/forever/item=281634",note:"No exact Forever item found under supplied name; possible Loop is +7 Agility, +7 Stamina. Not applied until confirmed."}};
-const byName=name=>verified[name]||tentative[name]||null;
+// Exact Forever ring identified by the player; Wowhead Forever item 281634.
+verified["Field Researcher's Loop"]={name:"Field Researcher's Loop",slot:"finger2",armor:0,stats:{AGI:7,STA:7},itemId:281634,effect:"",source:"https://www.wowhead.com/forever/item=281634",verified:true};
+const tentative={};
+const byName=name=>verified[name]||null;
 window.soaForeverItems={verified,tentative,byName,records};
 })();
