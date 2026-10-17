@@ -209,7 +209,7 @@ function drawEnemyStatus(box){
   const b=document.createElement("button");b.type="button";b.className="soa-target-button soa-ally-target-button";
   b.textContent=ally.name+(Number.isFinite(ally.hp)? " · "+ally.hp+"/"+ally.maxHp+" HP":" · HP unknown");
   b.setAttribute("aria-pressed",String(selectedAllyTarget===ally.name));b.disabled=busy||!!pending();
-  b.onclick=()=>{selectedAllyTarget=ally.name;customDraft="Assist "+ally.name+" while staying alert to nearby threats.";customType="combat";draw()};
+  b.onclick=()=>{selectedAllyTarget=ally.name;customDraft="Coordinate with "+ally.name+" to protect or assist them without assuming any healing or damage.";customType="investigate";draw()};
   allyTargets.append(b);
  }
  if(allyTargets.children.length>1)roster.after(allyTargets);
