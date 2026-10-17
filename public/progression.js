@@ -67,7 +67,6 @@ function award(id,amount,receipt,reason){
  data.history.push({actor:id,amount,reason:actor.lastGain.reason,level:actor.level,at:Date.now()});
  data.history=data.history.slice(-30);
  if(!persist())return {awarded:amount,levels:actor.level-previous,storageWarning:true};
- refresh();
  return {awarded:amount,levels:actor.level-previous,level:actor.level};
 }
 function check({receipt,name,success,difficulty,actorId="hero",practiceOnly=false}){
@@ -89,8 +88,8 @@ function check({receipt,name,success,difficulty,actorId="hero",practiceOnly=fals
  }else{
   result=award(actorId,amount,"check:"+actorId+":"+receipt,(success?"Passed ":"Attempted ")+(LABELS[name]||name)+" check");
  }
- // Persist receipts in award, even if actor reaches XP cap.
- refresh();return {...result,rankUp:value.rank>old,rank:value.rank,skill:name};
+ // Battle rewards refresh once after the full distribution rather than after every practice point.
+ if(!practiceOnly)refresh();return {...result,rankUp:value.rank>old,rank:value.rank,skill:name};
 }
 function battle({receipt,defeated,allies}){
  if(!receipt||data.receipts.includes("battle:"+receipt))return {awarded:0,party:[]};
