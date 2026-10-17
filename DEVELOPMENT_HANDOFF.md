@@ -66,3 +66,14 @@ public/characters.js updated on main (commit 5862c9b): gender field, basic gear 
 - Custom actions now use text-inferred skill context with appropriate STR/DEX/INT/WIS/CHA via existing soaAbilities.modifier where applicable, trained progression bonus, difficulty, alert and level. The preview uses the same actionOdds as the resolver. Dedicated social actions still use existing d20/CHA-based social checks.
 - Verified parse checks and deterministic action-odds tests: lockpicking 87% (Engineering), inspection 74% (Investigation), stealth 84%, climbing 83% in a representative level 10 test fixture. These are examples, NOT fixed chances.
 - Offline cache v19 and live server deployment need real-world validation.
+
+
+## Code review and consistency hardening (2026-10-16)
+Scope: inspected and syntax-checked main HTML, client campaign, companions, character roster, progression, abilities, combat-rules and service worker, plus Cloudflare campaign/story functions. GitHub source-level audit only; no production secrets or local iPhone saves accessed.
+Changes:
+- Custom actions now charge Energy based on the SKILL actually inferred from text (stealth 20, engineering 10, movement 0, etc.), not a mismatched selected UI category. Chance preview uses a single actionOdds calculation, matching resolution.
+- Combat d20 preview takes enemy AC from the same named archetype statBlock used in actual exchanges, fixing misleading odds shown for guards, skeletons, etc.
+- Shared-night XP is now limited to one award per companion in a twelve-scene block, with stable award receipts. This is a gameplay anti-farming mechanism pending a true calendar/rest system.
+- Offline cache v20 ensures assets refresh.
+Verification: all reviewed JS scripts parse; deterministic example odds/costs tested: lock 87% at 10 Energy, investigation 74% at 10, stealth 84% at 20, climb 83% at 0 (sample level 10 fixture only). Existing save schemas retained, no reset/migration forced.
+Outstanding priorities: complete automated integration tests for combat, save switching, full consent/overnight flow; true day clock; cloud browser tests of deployment and Gemini response; rate limiting/auth hardening for a publicly reachable AI endpoint; refactor oversized campaign.js into testable modules. Avoid broad refactors without backup and a test harness.
