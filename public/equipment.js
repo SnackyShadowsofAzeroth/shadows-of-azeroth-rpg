@@ -25,7 +25,7 @@ const SNACKY_LOADOUT=[
  ["Legs","Triprunner Dungarees"],
  ["Feet","Feet of the Lynx"],
  ["Ring 1","Ironspine’s Eye"],
- ["Finger","Field Researcher's Ring"],
+ ["Ring 2","Field Researcher's Ring"],
  ["Main hand","Ruby-Adorned Blade"],
  ["Off hand","Bloody Brass Knuckles"],
  ["Sidearm","Toxic Revenger"],
