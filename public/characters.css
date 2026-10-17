@@ -69,8 +69,5 @@ body.theme-alternative .soa-panel-topline>.soa-back-to-top{background:linear-gra
 body.theme-alternative .soa-social-stats{border-color:#967851}
 body.theme-alternative .soa-social-score{background:#efd6a76b;border-color:#967951;color:#492c17}
 
-/* Clear race-locked faction rules and Skyborne allegiance/class guidance. */
-.soa-faction-field,.soa-class-field{min-width:0}
-.soa-faction-note,.soa-class-note{display:block;color:#684b2c;font:11px/1.45 system-ui}
-.soa-class-note{margin-top:2px}
-.soa-faction-note{font-weight:650}
+/* Keep race and Skyborne allegiance guidance readable in the parchment creator. */
+.soa-allegiance-help{margin:0;color:#634b32;font:12px/1.5 system-ui}

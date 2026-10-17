@@ -1,34 +1,18 @@
 (()=>{"use strict";
 const ROSTER_KEY="soa-character-roster-v1", SLOT_PREFIX="soa-character-slot-v1-", ENTER_KEY="soa-character-entered";
 const SAVES=["soa-save-v1","soa-campaign-v1","soa-companions-v1","soa-reputation-v1","soa-campaign-enabled","soa-progression-v1"];
-const RACES={
- "Human":{faction:"Alliance",classes:["Warrior","Paladin","Hunter","Rogue","Priest","Mage","Warlock"]},
- "Dwarf":{faction:"Alliance",classes:["Warrior","Paladin","Hunter","Rogue","Priest","Shaman"]},
- "Night Elf":{faction:"Alliance",classes:["Warrior","Hunter","Rogue","Priest","Druid"]},
- "Gnome":{faction:"Alliance",classes:["Warrior","Rogue","Priest","Mage","Warlock"]},
- "Orc":{faction:"Horde",classes:["Warrior","Hunter","Rogue","Shaman","Mage","Warlock"]},
- "Undead":{faction:"Horde",classes:["Warrior","Paladin","Rogue","Priest","Mage","Warlock"]},
- "Tauren":{faction:"Horde",classes:["Warrior","Hunter","Shaman","Druid"]},
- "Troll":{faction:"Horde",classes:["Warrior","Hunter","Rogue","Priest","Shaman","Mage","Warlock"]},
- "Skyborne":{faction:"Choose",classes:["Warrior","Hunter","Rogue","Druid","Mage","Shaman"]}
-};
+const CHARACTER_RULES=window.soaCharacterRules,RACES=CHARACTER_RULES.races;
+const skybornePath=CHARACTER_RULES.pathForFaction;
+const factionDisplay=CHARACTER_RULES.displayFaction;
+const allowedClasses=CHARACTER_RULES.classesFor;
+const validCharacterChoice=CHARACTER_RULES.validSelection;
+const factionOptions=CHARACTER_RULES.factionOptions;
 const PROFS=["Alchemy","Blacksmithing","Enchanting","Engineering","Herbalism","Leatherworking","Mining","Skinning","Tailoring"];
 const SECONDARY=["Cooking","Fishing","First Aid"];
 const BASIC_GEAR={Warrior:["Worn Training Sword","Plain Shield","Simple Cloth Tunic"],Paladin:["Worn Training Mace","Plain Shield","Simple Cloth Tunic"],Hunter:["Worn Practice Bow","Small Quiver","Simple Cloth Tunic"],Rogue:["Worn Practice Dagger","Plain Cloth Tunic"],Priest:["Worn Wooden Staff","Plain Cloth Robe"],Shaman:["Worn Wooden Mace","Plain Cloth Tunic"],Mage:["Worn Wooden Staff","Plain Cloth Robe"],Warlock:["Worn Wooden Staff","Plain Cloth Robe"],Druid:["Worn Wooden Staff","Plain Cloth Tunic"]};
 const isSnackyEgg=p=>p?.name==="Snacky Lugnuts"&&p?.gender==="Male"&&p?.race==="Gnome"&&p?.className==="Rogue"&&Object.keys(p?.professions||{}).includes("Mining")&&Object.keys(p?.professions||{}).includes("Engineering");
 const START_ZONES={"Human":"Northshire Valley, Elwynn Forest","Dwarf":"Coldridge Valley, Dun Morogh","Gnome":"Coldridge Valley, Dun Morogh","Night Elf":"Shadowglen, Teldrassil","Orc":"Valley of Trials, Durotar","Troll":"Valley of Trials, Durotar","Undead":"Deathknell, Tirisfal Glades","Tauren":"Red Cloud Mesa, Mulgore","Skyborne":"Skyborne Enclave (original starting settlement)"};
 const startingZone=p=>START_ZONES[p.race]||"a settlement in "+(p.faction==="Horde"?"Kalimdor":"the Eastern Kingdoms");
-function allegianceLabel(profile){
- if(profile?.race!=="Skyborne")return profile?.faction||"";
- return profile.faction==="Horde"?"Windshaper Skyborne (Horde)":"High Order Skyborne (Alliance)";
-}
-function allowedBuild(profile){
- const race=RACES[profile?.race];if(!race)return false;
- const factions=race.faction==="Choose"?["Alliance","Horde"]:[race.faction];
- if(!factions.includes(profile.faction))return false;
- const classes=profile.race==="Skyborne"?race.classes.filter(c=>!(profile.faction==="Alliance"&&c==="Shaman")&&!(profile.faction==="Horde"&&c==="Mage")):race.classes;
- return classes.includes(profile.className);
-}
 let roster,active;
 const get=id=>document.getElementById(id);
 const make=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e};
@@ -124,7 +108,7 @@ function restore(id){
 function baseState(profile){return {equipment:[...(profile.startingEquipment||BASIC_GEAR[profile.className]||[])],id:"new-hero-start",hp:100,en:100,money:1500,time:0,alert:0,seen:[],flags:{},enemy:null,log:["A new journey begins for "+profile.name+" in "+startingZone(profile)+".","You have 15 silver and no companions."]}}
 function newCampaign(profile){
  const zone=startingZone(profile);
- return {turn:0,scene:null,history:[],journal:[],startingZone:zone,lastError:"",lastAction:"Begin the FIRST scene of a completely new adventure for "+profile.name+", a LEVEL 1 "+profile.race+" "+profile.className+" of the "+profile.faction+(profile.race==="Skyborne"?" ("+allegianceLabel(profile)+")":"")+". STARTING LOCATION: "+zone+". The character starts PHYSICALLY IN THIS STARTING ZONE, ALONE, with exactly 15 silver (1,500 copper), basic class starter equipment only, and no existing allies, companions, party, completed missions, or earned equipment beyond the starter kit. "+(profile.race==="Skyborne"&&profile.className==="Druid"?"Skyborne Druids have unique bird-inspired forms; preserve that racial identity in descriptions. ":"")+"Introduce a modest class-appropriate first task and six distinct action choices. No travel skips, established companions, Hollow Raven or Snacky's storyline. Do not grant XP, extra currency, equipment, specialization, or followers in the opening narration.",lastResult:"Level 1 newcomer in "+zone+". Starting funds: 15 silver. No previous battles, companions, or rewards.",pending:null};
+ return {turn:0,scene:null,history:[],journal:[],startingZone:zone,lastError:"",lastAction:"Begin the FIRST scene of a completely new adventure for "+profile.name+", a LEVEL 1 "+profile.race+" "+profile.className+" of the "+profile.faction+(profile.race==="Skyborne"?" ("+skybornePath(profile.faction)+")":"")+". STARTING LOCATION: "+zone+". The character starts PHYSICALLY IN THIS STARTING ZONE, ALONE, with exactly 15 silver (1,500 copper), basic class starter equipment only, and no existing allies, companions, party, completed missions, or earned equipment beyond the starter kit. "+(profile.race==="Skyborne"&&profile.className==="Druid"?"Skyborne Druids have unique bird-inspired forms; preserve that racial identity in descriptions. ":"")+"Introduce a modest class-appropriate first task and six distinct action choices. No travel skips, established companions, Hollow Raven or Snacky's storyline. Do not grant XP, extra currency, equipment, specialization, or followers in the opening narration.",lastResult:"Level 1 newcomer in "+zone+". Starting funds: 15 silver. No previous battles, companions, or rewards.",pending:null};
 }
 // Social bonuses are per-character, derived from established class/race backgrounds.
 // All figures are visible on the Character Record. Existing saves need no migration.
@@ -147,7 +131,7 @@ function socialSkills(){
  const mod=skill=>window.soaAbilities?.modifier?.(skill)||0;
  return {bluff:base.bluff+si7+hidden+(trained?.("bluff")||0)+mod("bluff"),bribe:base.bribe+(trained?.("bribe")||0)+mod("bribe"),romance:base.romance+(trained?.("romance")||0)+mod("romance"),threaten:base.threaten+(trained?.("threaten")||0)+mod("threaten")};
 }
-function selectedProfile(){return {...active,level:window.soaProgression?.level?.()||10,professions:Object.fromEntries(Object.entries(active.professions||{}).map(([k,v])=>[k,v.skill||1]))}}
+function selectedProfile(){return {...active,factionPath:active.race==="Skyborne"?skybornePath(active.faction):null,level:window.soaProgression?.level?.()||10,professions:Object.fromEntries(Object.entries(active.professions||{}).map(([k,v])=>[k,v.skill||1]))}}
 function commitRoster(){return write(ROSTER_KEY,roster)}
 function enter(id){
  if(!roster.characters.some(x=>x.id===id))return;
@@ -169,11 +153,11 @@ function enter(id){
  location.reload();
 }
 function create(profile){
- if(!allowedBuild(profile)){alert("That race, faction, and class combination is not available.");return}
+ if(!validCharacterChoice(profile)){alert("That faction and class combination is not available for the selected race.");return}
  if(!Array.isArray(profile.professionNames)||profile.professionNames.length>2||new Set(profile.professionNames).size!==profile.professionNames.length||profile.professionNames.some(n=>!PROFS.includes(n))){alert("Choose at most two distinct primary professions.");return}
  if(roster.characters.length>=16){alert("Character roster full (16).");return}
  const id="hero-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,7);
- const p={...profile,id,origin:"custom",startLevel:1,startingZone:startingZone(profile),startingEquipment:[...(BASIC_GEAR[profile.className]||[])],specialization:"Unchosen",professions:Object.fromEntries(profile.professionNames.map(n=>[n,{skill:1,events:0}])),secondary:Object.fromEntries(SECONDARY.map(n=>[n,{skill:1,events:0}])),professionEvents:[],professionLog:[]};
+ const p={...profile,factionPath:profile.race==="Skyborne"?skybornePath(profile.faction):null,id,origin:"custom",startLevel:1,startingZone:startingZone(profile),startingEquipment:[...(BASIC_GEAR[profile.className]||[])],specialization:"Unchosen",professions:Object.fromEntries(profile.professionNames.map(n=>[n,{skill:1,events:0}])),secondary:Object.fromEntries(SECONDARY.map(n=>[n,{skill:1,events:0}])),professionEvents:[],professionLog:[]};
  delete p.professionNames;
  const previous=active.id;
  if(!snapshot(previous)){alert("Unable to back up your current adventure. Character creation has been stopped to protect your save.");return}
@@ -198,7 +182,7 @@ function create(profile){
  try{sessionStorage.setItem(ENTER_KEY,"1")}catch(e){}
  location.reload();
 }
-function selectOptions(select,values){select.replaceChildren();for(const val of values){const op=make("option",val);op.value=val;select.append(op)}}
+function selectOptions(select,values){select.replaceChildren();for(const item of values){const option=typeof item==="string"?{value:item,label:item}:item;const op=make("option",option.label);op.value=option.value;op.disabled=option.disabled===true;select.append(op)}}
 // Non-destructive multi-character backup. Does not include AI access codes or API secrets.
 // The current live working save is snapshotted before the archive is generated.
 function exportRosterBackup(){
@@ -227,7 +211,7 @@ function drawMenu(){
  const list=make("div",undefined,"soa-character-list");
  for(const p of roster.characters){
   const item=make("div",undefined,"soa-character-item");
-  const description=make("div");description.append(make("strong",p.name),make("span",allegianceLabel(p)+" · "+p.race+" "+p.className+" · Level "+(p.id===active.id?(window.soaProgression?.level?.()||p.startLevel||10):(()=>{const slot=read(SLOT_PREFIX+p.id);try{return Number(JSON.parse(slot?.["soa-progression-v1"]||"null")?.actors?.hero?.level)||p.startLevel||10}catch{return p.startLevel||10}})())+" · "+Object.keys(p.professions||{}).join(" / ")));
+  const description=make("div");description.append(make("strong",p.name),make("span",factionDisplay(p)+" · "+p.race+" "+p.className+" · Level "+(p.id===active.id?(window.soaProgression?.level?.()||p.startLevel||10):(()=>{const slot=read(SLOT_PREFIX+p.id);try{return Number(JSON.parse(slot?.["soa-progression-v1"]||"null")?.actors?.hero?.level)||p.startLevel||10}catch{return p.startLevel||10}})())+" · "+Object.keys(p.professions||{}).join(" / ")));
   const button=make("button",p.id===active.id?"Play":"Switch & Play");button.type="button";button.onclick=()=>enter(p.id);
   item.append(description,button);list.append(item);
  }
@@ -239,30 +223,27 @@ function drawMenu(){
  const nameLabel=make("label","Character name");nameLabel.append(name);
  const race=make("select"),gender=make("select"),faction=make("select"),className=make("select"),prof1=make("select"),prof2=make("select");
  const labeled=(title,field)=>{const label=make("label",title);label.append(field);return label};
- const allegianceNote=make("small","","soa-faction-note"),classNote=make("small","","soa-class-note");
- const factionField=make("div",undefined,"soa-faction-field");factionField.append(labeled("Faction",faction),allegianceNote);
- const classField=make("div",undefined,"soa-class-field");classField.append(labeled("Class",className),classNote);
  selectOptions(race,Object.keys(RACES));race.value="Human";selectOptions(gender,["Male","Female"]);
+ const allegianceHint=make("p","","muted soa-allegiance-help");
  function update(){
-  const r=RACES[race.value];const oldFaction=faction.value;
-  selectOptions(faction,r.faction==="Choose"?["Alliance","Horde"]:[r.faction]);
-  if(Array.from(faction.options).some(x=>x.value===oldFaction))faction.value=oldFaction;
-  const valid=race.value==="Skyborne"?r.classes.filter(c=>!(faction.value==="Alliance"&&c==="Shaman")&&!(faction.value==="Horde"&&c==="Mage")):r.classes;
-  const lastClass=className.value;selectOptions(className,valid);if(valid.includes(lastClass))className.value=lastClass;
-  allegianceNote.textContent=race.value==="Skyborne"
-   ?(faction.value==="Alliance"?"Faction allegiance: High Order Skyborne · Alliance":"Faction allegiance: Windshaper Skyborne · Horde")
-   :"Faction locked by race: "+r.faction+".";
-  classNote.textContent=race.value==="Skyborne"
-   ?"Shared: Warrior, Hunter, Rogue, Druid (unique bird-inspired forms). High Order Skyborne may also choose Mage; Windshaper Skyborne may choose Shaman."
-   :"";
+  const r=RACES[race.value],oldFaction=faction.value,choices=factionOptions(race.value);
+  selectOptions(faction,choices);
+  const previousChoice=choices.find(option=>option.value===oldFaction&&!option.disabled);
+  faction.value=previousChoice?.value||(race.value==="Skyborne"?"Alliance":r.faction);
+  const valid=allowedClasses(race.value,faction.value),lastClass=className.value;
+  selectOptions(className,valid.map(value=>({value,label:value==="Druid"&&race.value==="Skyborne"?"Druid · bird-inspired forms":value})));
+  if(valid.includes(lastClass))className.value=lastClass;
+  allegianceHint.textContent=race.value==="Skyborne"
+   ?"Skyborne share Warrior, Hunter, Rogue, and Druid. Alliance High Order Skyborne may also be Mages; Horde Windshaper Skyborne may also be Shamans. Druid forms are bird-inspired."
+   :r.faction+" allegiance is required for "+race.value+"; the opposing faction is unavailable.";
  }
  race.onchange=update;faction.onchange=update;update();
  selectOptions(prof1,PROFS);selectOptions(prof2,PROFS);prof1.value="Mining";prof2.value="Engineering";
- form.append(nameLabel,labeled("Gender",gender),labeled("Race",race),factionField,classField,labeled("Primary profession I",prof1),labeled("Primary profession II",prof2));
+ form.append(nameLabel,labeled("Gender",gender),labeled("Race",race),labeled("Faction",faction),allegianceHint,labeled("Class",className),labeled("Primary profession I",prof1),labeled("Primary profession II",prof2));
  const hint=make("p","New heroes begin alone at level 1 with 15 silver in their starting zone. Independent saves and professions; generating the new story requires Gemini online.","muted");form.append(hint);
  const warning=make("p","","soa-menu-error");warning.setAttribute("aria-live","polite");form.append(warning);
  const submit=make("button","Create Character & Start Story");submit.type="submit";form.append(submit);
- form.onsubmit=e=>{e.preventDefault();const n=name.value.trim();if(n.length<2||n.length>36){warning.textContent="Enter a name between 2 and 36 characters.";return}if(prof1.value===prof2.value){warning.textContent="Choose two different primary professions.";return}if(roster.characters.some(x=>x.name.toLowerCase()===n.toLowerCase())){warning.textContent="That character name is already in your roster.";return}create({name:n,gender:gender.value,race:race.value,faction:faction.value,factionAllegiance:allegianceLabel({race:race.value,faction:faction.value}),className:className.value,professionNames:[prof1.value,prof2.value]})};
+ form.onsubmit=e=>{e.preventDefault();const n=name.value.trim();if(n.length<2||n.length>36){warning.textContent="Enter a name between 2 and 36 characters.";return}if(!validCharacterChoice({race:race.value,faction:faction.value,className:className.value})){warning.textContent="Choose a faction and class allowed for that race.";return}if(prof1.value===prof2.value){warning.textContent="Choose two different primary professions.";return}if(roster.characters.some(x=>x.name.toLowerCase()===n.toLowerCase())){warning.textContent="That character name is already in your roster.";return}create({name:n,gender:gender.value,race:race.value,faction:faction.value,className:className.value,professionNames:[prof1.value,prof2.value]})};
  expand.append(form);shell.append(expand);
  const backup=make("button","Download All Character Saves");backup.type="button";backup.className="soa-roster-backup";backup.onclick=exportRosterBackup;shell.append(backup);
  const backupHelp=make("p","Download a backup of every hero, story, reputation and relationship. Keep the file somewhere safe; in-app full-roster restore is not available yet.","soa-menu-help");shell.append(backupHelp);
@@ -271,7 +252,7 @@ function drawMenu(){
 }
 function profilePanel(){
  const head=document.querySelector("header");if(!head)return;
- const title=get("soa-player-name"),tag=get("soa-player-class");if(title)title.textContent=active.name;if(tag)tag.textContent=active.id==="snacky"?"SI:7 · Combat Swords":allegianceLabel(active)+" · "+active.race+" "+active.className;
+ const title=get("soa-player-name"),tag=get("soa-player-class");if(title)title.textContent=active.name;if(tag)tag.textContent=active.id==="snacky"?"SI:7 · Combat Swords":factionDisplay(active)+" · "+active.race+" "+active.className;
  if(typeof render==="function")render();
  const menu=make("button","☰ Characters");menu.id="soa-characters-button";menu.type="button";menu.onclick=drawMenu;head.append(menu);
  const nav=make("nav",undefined,"soa-quick-nav");nav.setAttribute("aria-label","Game sections");
@@ -304,7 +285,7 @@ function drawProfessions(){
  const abilityCard=window.soaAbilities?.card?.("hero");if(abilityCard)root.append(abilityCard);
  window.soaProgression?.refresh?.();
  window.soaPortraits?.refresh?.();
- const meta=make("p",active.faction+" · "+(active.specialization||"Unchosen"),"muted");root.append(meta);
+ const meta=make("p",factionDisplay(active)+" · "+(active.specialization||"Unchosen"),"muted");root.append(meta);
  const social=make("details");social.className="soa-social-stats";
  social.append(make("summary","Social skills · bluff, bribe, romance, threaten"));
  const scores=make("div",undefined,"soa-social-score-grid");
