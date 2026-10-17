@@ -314,3 +314,14 @@ Companions not actually present in the current scene are not automatically added
 ### Verification
 
 Source syntax checks passed. Tests simulated Strike lowering an enemy from 70 to 55 HP and an enemy retaliation lowering Bromli from 100 to 96 HP, while Snacky remained at 92 HP. A later Gemini response listing Bromli at 100 was correctly ignored in favor of the saved 96 HP. Additional tests covered enemy targeting, Kick, Evasion, Riposte preconditions, insufficient Energy, no extra rounds on invalid inputs, per-actor damage logs, numerical/unknown health bar rendering, and explicitly setting previously unknown companion HP without changing the player's stats or spending a turn. Offline cache **v31**. Live Cloudflare deployment and iPhone UI remain unverified.
+
+
+## Companion conversations in Adventure (v32)
+
+Personal interactions with Pippa, Bromli, and Lethariel now display as **in-story conversation cards directly below the active Living Campaign scene text**, before Field Notes and action choices. Selecting an interaction from the existing Reputation/Companions controls refreshes the Adventure scene and scrolls to the newly added dialogue. The old Relationship Journal visual listing and duplicate result block were removed from the Reputation view; relationship statistics, bond changes, romance stages, and private entry history remain stored in `soa-companions-v1`.
+
+**Variety:** Catch Up, Encourage, Ask Advice, and Show Interest now use several distinct character-appropriate responses with deterministic rotation and an immediate-repetition avoidance check. Contextual alternatives reflect underground passages or explosive hazards when relevant. Other romance/commitment actions still use the established trust thresholds, outcomes, and safety boundaries. No model API call or usage quota is required for these lightweight companion moments.
+
+**Scope:** An interaction records `source:"interaction"`, a `sceneTurn`, and text in the existing companion save. Only the **three most recent** companion interactions from the current scene display within its narrative, so they do not repeat forever across successive generated scenes. Older saves lack these presentation fields but their previous relationship progress and history remain intact. The recent-companion context sent to Gemini now deduplicates identical entries, reducing the chance of reinforcing previously repeated phrases.
+
+**Validation:** Verified distinct Bromli conversation lines over successive interactions, contextual underground dialogue, unchanged relationship-storage keys, removed duplicate Journal display, hook-up to main Adventure and source parsing. Offline shell cache **v32**. Cloudflare live deployment and on-device Safari testing remain unverified.
