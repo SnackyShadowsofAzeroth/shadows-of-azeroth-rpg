@@ -3,7 +3,7 @@ const KEY="soa-campaign-v1", MAX=24;
 let campaign=null,busy=false,enabled=false,customDraft="",customType="investigate",customSocialSkill="auto",statusMessage="";
 const get=id=>document.getElementById(id);
 function store(){try{localStorage.setItem(KEY,JSON.stringify(campaign))}catch(e){}}
-function make(){return {turn:0,scene:null,history:[],journal:[],lastError:"",lastAction:"Begin the next chapter from the secured central junction",lastResult:"No further events yet. The six-person expedition is intact; the zero-alarm objective is active.",pending:null}}
+function make(){return {turn:0,scene:null,history:[],journal:[],lastError:"",lastAction:"Begin the next chapter of Snacky’s continuing mission in Stormwind, addressing the explosives threat and preparing his SI:7 debrief.",lastResult:"Hollow Raven is complete; the Stormwind threat is unresolved. No new action has yet been taken.",pending:null}}
 function safe(text){return String(text||"").slice(0,2600)}
 function readableStory(text){return String(text||"").replace(/\bPipprained in her satchel\b/gi,"Pippa rummaged in her satchel").replace(/\bPipprained\b/gi,"Pippa")}
 
