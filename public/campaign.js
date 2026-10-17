@@ -203,6 +203,12 @@ function draw(){
   notes.append(list);box.append(notes);
  }
  drawEnemyStatus(box);
+ if(campaign?.chronicle?.pendingMilestone){
+  const notice=document.createElement("button");notice.type="button";notice.className="soa-chapter-review";
+  notice.textContent="✦ A chapter milestone is ready for your review · Open Journal";
+  notice.onclick=()=>get("soa-chronicle")?.scrollIntoView({behavior:window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches?"auto":"smooth",block:"start"});
+  box.append(notice);
+ }
  const choicesHeader=document.createElement("div");choicesHeader.className="soa-choices-heading";
  const title=document.createElement("strong");title.textContent="Choose your next move";
  const count=document.createElement("span");count.textContent=sc.choices.length+" paths + resources + custom";
