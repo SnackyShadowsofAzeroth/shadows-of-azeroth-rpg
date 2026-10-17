@@ -44,6 +44,21 @@ function claim(campaign,id,location,wallet){
  q.lastReward={title:contract.title,copper:contract.copper,items,receipt,atTurn:campaign.turn||0};
  return {copper:contract.copper,items,wallet:wallet+contract.copper,description:"The bounty clerk counts "+format(contract.copper)+" into your purse"+(items.length?" and issues "+items.join(", "):"")+". Verified payout."};
 }
+// User-confirmed completed Stormwind explosives operation: one 5g party award.
+// Currency is deposited once into the existing shared campaign wallet.
+const STORMWIND_MISSION="mission:stormwind-explosives-defused:v1";
+function grantStormwindMission(campaign,wallet){
+ const q=ensure(campaign);
+ if(q.claimed[STORMWIND_MISSION]||q.receipts.includes(STORMWIND_MISSION))return {alreadyPaid:true};
+ const amount=50000;
+ if(!Number.isSafeInteger(wallet)||wallet<0||wallet>Number.MAX_SAFE_INTEGER-amount)return {error:"Invalid wallet balance. Mission payment not applied."};
+ const reward={title:"Stormwind Explosives — Mission Completed",copper:amount,items:[],receipt:STORMWIND_MISSION,atTurn:campaign.turn||0};
+ q.claimed[STORMWIND_MISSION]={turn:campaign.turn||0,amount,items:[],partyTotal:true};
+ q.receipts.push(STORMWIND_MISSION);q.receipts=q.receipts.slice(-500);
+ q.lastReward=reward;
+ q.rewardHistory||=[];q.rewardHistory.push(reward);q.rewardHistory=q.rewardHistory.slice(-60);
+ return {wallet:wallet+amount,copper:amount,items:[],description:"SI:7 quartermaster: \"Five gold for your entire crew, Lugnuts. Stormwind owes you all a debt.\" Party mission reward: +5g 0s 0c."};
+}
 function panel(campaign,location,wallet,onChange){
  const q=ensure(campaign),board=boardAt(location),wrapper=document.createElement("details");
  wrapper.className="soa-bounty-board";const summary=document.createElement("summary");summary.textContent="Contracts & Bounties"+(board?" · "+board.place:"");wrapper.append(summary);
@@ -64,5 +79,5 @@ function panel(campaign,location,wallet,onChange){
  if(q.inventory.length){const bag=document.createElement("details");const head=document.createElement("summary");head.textContent="Reward inventory · "+q.inventory.length+" items";bag.append(head);for(const item of q.inventory){const p=document.createElement("p");p.textContent=item.name+" ("+item.rarity+") · "+item.source;bag.append(p)}wrapper.append(bag)}
  return wrapper;
 }
-window.soaQuests={boardAt,definition,ensure,accept,onDefeat,claim,panel,format};
+window.soaQuests={boardAt,definition,ensure,accept,onDefeat,claim,grantStormwindMission,panel,format};
 })();
