@@ -50,7 +50,7 @@ export async function onRequestPost({request,env}){
  const model=env.GEMINI_MODEL||"gemini-3.5-flash-lite";
  const ctl=new AbortController();const timeout=setTimeout(()=>ctl.abort(),23000);
  try{
- const r=await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+encodeURIComponent(model)+":generateContent",{method:"POST",headers:{"x-goog-api-key":env.GEMINI_API_KEY,"content-type":"application/json"},body:JSON.stringify({systemInstruction:{parts:[{text:instructions}]},contents:[{role:"user",parts:[{text:JSON.stringify(context)}]}],generationConfig:{responseMimeType:"application/json",temperature:0.85,maxOutputTokens:1900}}),signal:ctl.signal});
+ const r=await fetch("https://generativelanguage.googleapis.com/v1beta/models/"+encodeURIComponent(model)+":generateContent",{method:"POST",headers:{"x-goog-api-key":env.GEMINI_API_KEY,"content-type":"application/json"},body:JSON.stringify({systemInstruction:{parts:[{text:instructions}]},contents:[{role:"user",parts:[{text:JSON.stringify(context)}]}],generationConfig:{responseMimeType:"application/json",temperature:0.85,maxOutputTokens:2200}}),signal:ctl.signal});
  if(!r.ok){const e=await r.json().catch(()=>({}));return json({error:r.status===429?"Gemini quota reached; offline story remains available.":"Gemini response "+r.status,detail:clean(e?.error?.message,180)},502)}
  const payload=await r.json();const raw=(payload.candidates||[]).flatMap(c=>c.content?.parts||[]).map(p=>p.text||"").join("");
  let v;try{v=JSON.parse(raw)}catch{return json({error:"AI returned invalid structured story; please retry."},502)}
