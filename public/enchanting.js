@@ -20,7 +20,7 @@ function eligibleSlots(c){
  for(const [slot,index] of Object.entries(q?.equipped||{})){
   const item=q.inventory?.[index];
   if(!item)continue;
-  itemSlots.push({key:"reward:"+slot,slot,name:item.name});
+  itemSlots.push({key:"reward:"+slot+":"+index,slot,name:item.name});
  }
  return itemSlots;
 }
@@ -74,7 +74,7 @@ function disenchant(c,index){
  return {message:"Disenchanted "+item.name+" into "+amount+" Arcane Dust.",dust:amount};
 }
 function panel(c,location,wallet,commit){
- const el=document.createElement("details"),head=document.createElement("summary");head.textContent="Enchanting · Enchanter Services & Crafting";el.append(head);
+ const el=document.createElement("details"),head=document.createElement("summary");el.open=sessionStorage.getItem("soa-enchanting-panel-open")==="1";el.ontoggle=()=>sessionStorage.setItem("soa-enchanting-panel-open",el.open?"1":"0");head.textContent="Enchanting · Enchanter Services & Crafting";el.append(head);
  const st=getState(c),p=document.createElement("p");
  p.textContent="NPC services in major cities. Self-enchanting requires the Enchanting primary profession, trained skill and Arcane Dust. One enchant per item; new enchants replace the old effect.";el.append(p);
  const status=document.createElement("p");status.textContent="Enchanting profession: "+(owned()?"Trained · Skill "+st.skill:"Not trained")+" · Arcane Dust: "+(st.materials?.ArcaneDust||0);el.append(status);
