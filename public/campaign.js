@@ -201,15 +201,23 @@ function fightExchange(action){
  const actor=window.soaAbilities?.get?.("hero");
  const dex=actor?.modifiers?.DEX??2;
  const proficiency=actor?.proficiency??2;
- const targetAC=rules.enemyAC(target);
+ const block=rules.statBlock(target);
+ const targetAC=block.ac;
+ if(!campaign.initiativeFor||campaign.initiativeFor!==campaign.enemyLocation){
+  campaign.initiativeFor=campaign.enemyLocation;
+  campaign.initiativeRoll=rules.initiative(dex);
+  campaign.enemyInitiative=rules.initiative(block.initiative);
+ }
  const advantage=campaign.flags?.advantage?1:0;
  const playerAttack=ability==="riposte"||ability==="evasion"?null:rules.attack(proficiency+dex,targetAC,{advantage});
  const attackRoll=playerAttack?.die??null;
  const hit=ability==="riposte"?true:ability==="evasion"?false:playerAttack.hit;
  const hitTarget=targetAC;
  const damageModifier=dex;
- const rolled=ability==="strike"?rules.damage(10,10+damageModifier,!!playerAttack?.critical):ability==="kick"?rules.damage(6,4+damageModifier,!!playerAttack?.critical):ability==="riposte"?24+damageModifier:0;
- const dealt=hit?Math.min(target.hp,rolled):0;target.hp=Math.max(0,target.hp-dealt);
+ const arm=rules.weapon(actor,ability);
+ const rolled=ability==="riposte"?24+damageModifier:ability==="evasion"?0:rules.damage(arm.die,arm.flat,!!playerAttack?.critical);
+ const dealt=hit?Math.min(target.hp,rules.mitigate(rolled,arm.type,block)):0;
+ target.hp=Math.max(0,target.hp-dealt);
  const defeated=target.hp===0;
  const interrupted=ability==="kick"&&hit;
  const heroAC=actor?.armorClass||12;
@@ -218,9 +226,9 @@ function fightExchange(action){
  const defendingAlly=retaliationAttempt&&eligibleTargets.length&&Math.random()<.35?eligibleTargets[Math.floor(Math.random()*eligibleTargets.length)]:null;
  const defendingId=defendingAlly?({"Pippa Sparkwhistle":"pippa","Bromli Ironkeg":"bromli","Lethariel Moonguard":"lethariel"})[defendingAlly.name]:null;
  const defenderAC=defendingId?window.soaAbilities?.get?.(defendingId)?.armorClass||12:heroAC;
- const enemyAttack=retaliationAttempt?rules.attack(rules.enemyBonus(target),defenderAC,{advantage:ability==="evasion"?-1:0}):null;
+ const enemyAttack=retaliationAttempt?rules.attack(block.bonus,defenderAC,{advantage:ability==="evasion"?-1:0}):null;
  const retaliates=!!enemyAttack?.hit;
- const amount=retaliates?rules.damage(rules.enemyDie(target),2,enemyAttack.critical):0;
+ const amount=retaliates?rules.damage(block.die,2,enemyAttack.critical):0;
  const allyRecipient=defendingAlly;
  const receivedName=allyRecipient?.name||(window.soaCharacters?.profile?.()?.name||"Your hero");
  let taken=0,recipientBefore=allyRecipient?allyRecipient.hp:s.hp,recipientAfter=recipientBefore;
@@ -239,7 +247,7 @@ function fightExchange(action){
  campaign.parryReady=parry;
  s.en=Math.min(100,s.en-price+10);s.time++;
  campaign.combatRound=(Number(campaign.combatRound)||0)+1;
- const event={round:campaign.combatRound,ability,attackRoll,hitTarget,targetAC,attackTotal:playerAttack?.total??null,critical:!!playerAttack?.critical,enemyRoll:enemyAttack?.die??null,enemyTotal:enemyAttack?.total??null,defenderAC,target:target.name,dealt,taken,hit,defeated,enemyBefore:oldHP,enemyAfter:target.hp,enemyMax:target.maxHp,heroBefore:heroHP,heroAfter:s.hp,energyBefore:oldEnergy,energyAfter:s.en,recipient:receivedName,recipientBefore,recipientAfter,parry};
+ const event={round:campaign.combatRound,ability,attackRoll,hitTarget,targetAC,enemyType:block.type,damageType:arm.type,initiative:campaign.initiativeRoll,enemyInitiative:campaign.enemyInitiative,attackTotal:playerAttack?.total??null,critical:!!playerAttack?.critical,enemyRoll:enemyAttack?.die??null,enemyTotal:enemyAttack?.total??null,defenderAC,target:target.name,dealt,taken,hit,defeated,enemyBefore:oldHP,enemyAfter:target.hp,enemyMax:target.maxHp,heroBefore:heroHP,heroAfter:s.hp,energyBefore:oldEnergy,energyAfter:s.en,recipient:receivedName,recipientBefore,recipientAfter,parry};
  campaign.lastExchange=event;
  recordCombatDelta(target,dealt,taken,receivedName,recipientBefore,recipientAfter);
  if(defeated){
