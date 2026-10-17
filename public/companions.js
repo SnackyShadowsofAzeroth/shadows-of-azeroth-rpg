@@ -29,23 +29,45 @@ function load(){try{const v=JSON.parse(localStorage.getItem(KEY)||"null");if(v&&
 function save(){try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){}}
 function add(tag,text){const e=document.createElement(tag);e.textContent=text;return e}
 function locationAllows(id){if(id!=="lethariel")return true;const mode=localStorage.getItem("soa-campaign-enabled")==="1";if(!mode)return false;const scene=window.soaLivingCampaign?.getState?.()?.scene;return /checkpoint|tavern|regroup/i.test(String(scene?.location||""))}
-function encounter(id,kind){const level=data.rapport[id]||0;
- if(id==="pippa"){
-  if(kind==="flirt")return level>=3?"Pippa's smile lingers. “Careful, Snacky. You're becoming my favorite distraction.”":"Pippa arches a brow. “Is that a compliment, or are you trying to borrow my wrench again?”";
-  if(kind==="encourage")return "Pippa straightens her satchel. “Glad someone appreciates an elegant solution.”";
-  if(kind==="advice")return "Pippa recommends examining unfamiliar mechanisms before trusting stolen credentials. “We can be bold without being careless.”";
-  return "Pippa shares a quick observation about the team's improvised Whisper-Links, then returns her attention to the expedition.";
+function encounter(id,kind){
+ const level=data.rapport[id]||0,turn=rel(id).interactions||0;
+ const scene=window.soaLivingCampaign?.getState?.()?.scene||{};
+ const place=String(scene.location||"");
+ const subterranean=/canal|drain|tunnel|sewer|vault|corridor|underground/i.test(place);
+ const danger=/charge|powder|explosiv|sabot|trap|fuse/i.test(String(scene.title||"")+" "+String(scene.story||"").slice(0,450));
+ const pool={
+  pippa:{
+   talk:[
+    'Pippa readjusts her satchel. "Every mystery has a loose wire somewhere. The trick is spotting it before it sparks."',
+    'Pippa lowers her voice. "I used to think being clever meant knowing the answer. Now I think it means asking a better question."',
+    'She smiles over her goggles. "When this is over, Snacky, I want to build something that absolutely cannot explode."',
+    'Pippa gives a quiet laugh. "Someday we should write this adventure down. Nobody back home would believe half of it."'],
+   encourage:['Pippa steadies her hands. "Thank you. Even an engineer needs someone to believe in her now and then."','She straightens her goggles. "One problem at a time. I can manage that."','Pippa nods with fresh confidence. "Right. We have come too far to stop thinking clearly now."'],
+   advice:['Pippa warns, "Find the weakest connection before touching the mechanism. Someone may have planned for the obvious solution."','She sketches in the dust. "Follow the power. That is where the clever tricks hide."','Pippa says, "Secure our way back before we commit to the next room."'],
+   flirt:['Pippa arches a brow. "Was that a compliment, or are you distracting me from work? Because it is working."','A blush crosses Pippa’s cheeks. "You could give a girl some warning before saying things like that, Snacky."','Pippa squeezes your wrist. "Spending this much time with you has become rather inconvenient for my concentration."']},
+  bromli:{
+   talk:['Bromli adjusts his warhammer. "After this, first round is on me. Dwarven orders, lad."','Bromli strokes his beard. "Marched with folk twice your size. Few had half your nerve."','He chuckles softly. "My old captain called me the loudest scout he ever met. Still promoted me."','Bromli says, "Courage is showing up when your knees would rather go home."'],
+   encourage:['Bromli nods. "Aye, little brother. I needed that. I have your back."','He rolls his shoulders. "We make it home together, and I will tell the story twice as loud as it deserves."','Bromli pats his breastplate. "Still standing. That counts for something."'],
+   advice:['Bromli advises, "Keep an escape route. There is no shame in living to win the next fight."','He lowers his voice. "When a room is too quiet, check the corners."','Bromli says, "Never split the party without a plan to bring it together again."'],
+   flirt:['Bromli snorts. "Careful, lad. Keep that up and I will think you fancy me warhammer collection."','He grins. "Flattery? Buy me a decent ale and I might hear you out."']},
+  lethariel:{
+   talk:['Lethariel reflects, "Some journeys change us quietly. Only later do we notice what we have become."','She folds her hands. "I have learned much about courage from this company."','Lethariel smiles. "There are things worth protecting beyond the mission itself."'],
+   encourage:['Lethariel bows her head. "Your confidence in me is appreciated. I will conserve my strength for those who need it."','She touches your shoulder. "Kind words are never wasted in difficult places."'],
+   advice:['Lethariel counsels, "Do not spend your last strength on a danger that patience could avoid."','She replies, "Watch the frightened and wounded. They sometimes notice a danger first."','Lethariel says, "Patience is not surrender."'],
+   flirt:['Lethariel acknowledges your compliment kindly before redirecting the conversation toward the expedition.','The priestess inclines her head. "Your kindness is noticed, Snacky, but my heart follows its own path."']}
+ };
+ let lines=pool[id]?.[kind]||pool[id]?.talk||[PEOPLE[id].base];
+ if(kind==="talk"&&subterranean){
+  lines=[...lines,id==="bromli"?'Bromli whispers, "Remind me how much I dislike ceilings made of someone else’s masonry."':id==="pippa"?'Pippa studies the stone. "These tunnels were built to carry water, not secrets. Yet here we are."':'Lethariel listens to the dripping stone. "Even here, the world has a heartbeat."'];
  }
- if(id==="bromli"){
-  if(kind==="flirt")return "Bromli bursts into a muffled laugh. “Save yer charm for someone who isn't wearing plate armor, lad!”";
-  if(kind==="encourage")return "Bromli thumps his chest lightly. “Aye. I've got your back, little brother.”";
-  if(kind==="advice")return "Bromli suggests keeping a clear retreat route. “No shame in leaving a fight to win the next one.”";
-  return "Bromli tells a short tavern story, carefully keeping his voice below its usual booming volume.";
+ if(kind==="advice"&&danger){
+  lines=[...lines,id==="bromli"?'Bromli warns, "Keep the powder away from our people and an exit behind us."':id==="pippa"?'Pippa warns, "Never trust a silent fuse until you know where it ends."':'Lethariel replies, "Keep everyone clear until the danger is truly past."'];
  }
- if(kind==="flirt")return "Lethariel gives a measured smile and gently redirects the conversation toward the expedition.";
- if(kind==="encourage")return "Lethariel appreciates the thought and reminds Snacky to preserve the party's strength.";
- if(kind==="advice")return "Lethariel recommends restraint with scarce healing magic and caution around mnemonic machinery.";
- return "Lethariel acknowledges Snacky's concern and quietly reports that she is maintaining the rear guard.";
+ // Do not repeat the same line in recent conversations with this companion.
+ const recent=data.entries.filter(x=>x.person===PEOPLE[id].name).slice(-4).map(x=>x.text);
+ const start=(turn+Math.floor(turn/Math.max(1,lines.length)))%lines.length;
+ for(let k=0;k<lines.length;k++){const candidate=lines[(start+k)%lines.length];if(!recent.some(x=>x.includes(candidate)))return candidate}
+ return lines[start];
 }
 function interact(kind){
  if(!locationAllows(selected)){last="That companion is stationed elsewhere. Regroup before speaking in person.";draw();return}
