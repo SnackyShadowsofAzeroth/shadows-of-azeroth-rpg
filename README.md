@@ -297,3 +297,20 @@ The previous fixed **Hollow Raven · Chapter I** header has been removed. The Li
 **Navigation:** Adventure / Journal / Character / Reputation is now the four-link mobile header navigation. The permanent parchment visual style remains active. The original offline adventure has not been relabeled as a dynamic multi-act campaign; the new Chronicle is for Living Campaign state.
 
 **Verification:** New and existing character migration, chapter proposal/acceptance, save callback, retained story state, and archived chapter count were exercised in mock tests. All edited client/server scripts passed syntax checks. The offline shell cache is **v30**, including `chronicle.js` and `chapters.css`. Live iPhone/Cloudflare UI remains to be verified.
+
+
+## Party-wide Battle Overview and targeting (v31)
+
+The Live Campaign now displays a **Battle Overview** during an encounter with:
+- **Allied health:** the active hero and currently involved companions appear with labeled green current/max health bars. Values are read from the local game state, existing combatants, or confirmed actor records. When an ally's numerical HP has never been established, the UI displays a striped "HP unconfirmed" track and an optional **Confirm HP** editor rather than guessing.
+- **Enemy health:** visible hostiles have red numeric current/max bars, retained between exchanges. A defeated opponent is shown at **0 HP** for the closing combat result.
+- **Target selectors:** tapping a named enemy selects the intended target without spending a turn; the player then chooses a combat ability. If multiple enemies are present and no target has been selected or explicitly named, attacking is blocked before spending Energy. Selecting an ally drafts a non-healing support action; **Coordinate with selected ally** is a separate deliberate action.
+- **Combat abilities:** Rogues currently have Strike (35 Energy), Kick (25, interrupts retaliation when successful), Evasion (0, defensive exchange) and conditional Riposte (10, requires qualifying parry). Other classes receive a conservative basic Attack/Defend pair while full class trees remain future work. One button causes exactly **one combat exchange**. +10 passive Energy regeneration remains active.
+- **Damage history:** each exchange records who took how much damage and resulting HP, including companion recipients of enemy retaliation. The recent history can be expanded. The same pending action is not repeated if Gemini needs a retry. The local client is authoritative over mechanical HP; Gemini's role is narration, not additional damage or automatic heals.
+- **Offline adventure:** displays a live green Snacky HP bar alongside the existing enemy health bar and exchange summary without altering its original combat damage.
+
+Companions not actually present in the current scene are not automatically added to the battle roster. Health/targeting remains **per-character, per-save** in `soa-campaign-v1`. Existing saves without structured ally HP are supported. AI-proposed participant lists are advisory; the player can explicitly establish HP where a trusted value is known.
+
+### Verification
+
+Source syntax checks passed. Tests simulated Strike lowering an enemy from 70 to 55 HP and an enemy retaliation lowering Bromli from 100 to 96 HP, while Snacky remained at 92 HP. A later Gemini response listing Bromli at 100 was correctly ignored in favor of the saved 96 HP. Additional tests covered enemy targeting, Kick, Evasion, Riposte preconditions, insufficient Energy, no extra rounds on invalid inputs, per-actor damage logs, numerical/unknown health bar rendering, and explicitly setting previously unknown companion HP without changing the player's stats or spending a turn. Offline cache **v31**. Live Cloudflare deployment and iPhone UI remain unverified.
