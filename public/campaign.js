@@ -127,6 +127,9 @@ function updateLivingEnemies(scene){
   const maxHp=Math.min(500,item.maxHp);
   next.push(existing||{name,maxHp,hp:Math.max(1,Math.min(maxHp,Math.round(Number(item.hp)||maxHp)))});
  }
+ // If Gemini omits surviving enemies right after a strike, keep their locally tracked HP.
+ // Deliberate movement or noncombat disengagement can clear the previous encounter.
+ if(!next.length&&previous.length&&campaign.pending?.combat)next.push(...previous);
  campaign.enemies=next;campaign.enemyLocation=location;
 }
 function drawEnemyStatus(box){
@@ -240,7 +243,7 @@ async function choose(choice){
  const resolution=result(choice);
  if(!resolution){if(!socialSkill(choice))status("Not enough Energy for that action.");return}
  campaign.lastAction=safe(choice.text);campaign.lastResult=resolution;
- campaign.pending={action:campaign.lastAction,resolution,startedAt:Date.now(),dialogue:detected,survey:choice.survey===true};
+ campaign.pending={action:campaign.lastAction,resolution,startedAt:Date.now(),dialogue:detected,survey:choice.survey===true,combat:choice.type==="combat"};
  campaign.history.push("At "+safe(campaign.scene?.location||"unknown location")+": Player: "+campaign.lastAction+" | "+resolution);
  campaign.history=campaign.history.slice(-MAX);store();refreshDisplay();
  // Release the iPhone keyboard and return to the story while Gemini works.
