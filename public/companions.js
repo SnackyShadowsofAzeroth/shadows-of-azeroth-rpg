@@ -75,7 +75,20 @@ function recordMemory(id,kind,message){
  const summary=memories[kind]||"Personal moment";
  r.memories.push({kind,text:summary,at:new Date().toISOString()});r.memories=r.memories.slice(-15);
 }
+function canSpendNightTogether(id){
+ const r=rel(id),adventure=window.soaLivingCampaign?.getState?.();
+ const place=String(adventure?.scene?.location||"");
+ const period=Math.floor(Math.max(0,Number(adventure?.turn)||0)/12);
+ return window.soaCharacters?.profile?.()?.id==="snacky" &&
+  locationAllows(id) &&
+  ["dating","committed","engaged","married"].includes(r.romance) &&
+  r.trust>=65&&r.affection>=70&&r.respect>=35&&r.grievances===0 &&
+  /tavern|inn|safehouse|home|quarters|lodging|camp|rest area|sanctuary/i.test(place) &&
+  !adventure?.enemies?.some(e=>e.hp>0) &&
+  !(Number.isInteger(r.lastNightDay)&&period<=r.lastNightDay);
+}
 function overnightRest(){
+ if(!canSpendNightTogether(selected)){last="A shared overnight stay is not currently available.";draw();return}
  const id=selected,r=rel(id),profile=window.soaCharacters?.profile?.();
  if(profile?.id!=="snacky"){last="This established companion route belongs to Snacky's adventure.";draw();return}
  if(!locationAllows(id)){last="You must be together before arranging an overnight stay.";draw();return}
@@ -213,7 +226,9 @@ function draw(){
  const sheet=window.soaAbilities?.card?.(selected);if(sheet)companionGroup.append(sheet);
  const indicators=add("div","");indicators.className="soa-relation-metrics";for(const [name,label] of [["trust","Trust"],["affection","Affection"],["respect","Respect"]]){const unit=add("div","");unit.className="soa-relation-cell";const title=add("div",label+" · "+r[name]);title.className="soa-relation-label";const rail=add("div","");rail.className="soa-relation-rail";const fill=add("div","");fill.className="soa-relation-fill "+name;fill.style.width=((r[name]+100)/2)+"%";rail.append(fill);unit.append(title,rail);indicators.append(unit)}companionGroup.append(indicators);
  if(!locationAllows(selected)){const msg=add("p",p.base);msg.className="muted";companionGroup.append(msg)}
- const nights=add("button","Spend the night together · restful morning XP");nights.type="button";nights.className="soa-social-action";nights.onclick=overnightRest;companionGroup.append(nights);
+ if(canSpendNightTogether(selected)){
+  const nights=add("button","Spend the night together · restful morning XP");nights.type="button";nights.className="soa-social-action";nights.onclick=overnightRest;companionGroup.append(nights);
+ }
  const categories=[
   {label:"Everyday interactions",ids:["talk","encourage","advice","flirt","bond"],expanded:true},
   {label:"Romance & commitments",ids:["confess","commit","propose","wedding"],expanded:romanceExpanded,key:"romance"},
