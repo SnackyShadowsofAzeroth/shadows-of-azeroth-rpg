@@ -1,6 +1,6 @@
 (()=>{"use strict";
 const ROSTER_KEY="soa-character-roster-v1", SLOT_PREFIX="soa-character-slot-v1-", ENTER_KEY="soa-character-entered";
-const SAVES=["soa-save-v1","soa-campaign-v1","soa-companions-v1","soa-reputation-v1","soa-campaign-enabled"];
+const SAVES=["soa-save-v1","soa-campaign-v1","soa-companions-v1","soa-reputation-v1","soa-campaign-enabled","soa-progression-v1"];
 const RACES={
  "Human":{faction:"Alliance",classes:["Warrior","Paladin","Hunter","Rogue","Priest","Mage","Warlock"]},
  "Dwarf":{faction:"Alliance",classes:["Warrior","Paladin","Hunter","Rogue","Priest","Shaman"]},
@@ -69,7 +69,8 @@ function socialSkills(){
  const base=SOCIAL_BASE[active.className]||SOCIAL_BASE.Rogue;
  // Snacky's training as an SI:7 operative is reflected in his bluff score.
  const si7=active.id==="snacky"?1:0;
- return {bluff:base.bluff+si7,bribe:base.bribe,romance:base.romance,threaten:base.threaten};
+ const trained=window.soaProgression?.bonus;
+ return {bluff:base.bluff+si7+(trained?.("bluff")||0),bribe:base.bribe+(trained?.("bribe")||0),romance:base.romance+(trained?.("romance")||0),threaten:base.threaten+(trained?.("threaten")||0)};
 }
 function selectedProfile(){return {...active,professions:Object.fromEntries(Object.entries(active.professions||{}).map(([k,v])=>[k,v.skill||1]))}}
 function commitRoster(){write(ROSTER_KEY,roster)}
@@ -87,7 +88,7 @@ function create(profile){
  if(!snapshot(active.id)){alert("Unable to back up your current adventure. Character creation has been stopped to protect your save.");return}
  roster.characters.push(p);roster.active=id;active=p;commitRoster();
  write("soa-save-v1",baseState(p));write("soa-campaign-v1",newCampaign(p));
- localStorage.removeItem("soa-companions-v1");localStorage.removeItem("soa-reputation-v1");localStorage.setItem("soa-campaign-enabled","1");
+ localStorage.removeItem("soa-companions-v1");localStorage.removeItem("soa-reputation-v1");localStorage.removeItem("soa-progression-v1");localStorage.setItem("soa-campaign-enabled","1");
  snapshot(id);
  try{sessionStorage.setItem(ENTER_KEY,"1")}catch(e){}
  location.reload();
@@ -121,7 +122,7 @@ function drawMenu(){
  const list=make("div",undefined,"soa-character-list");
  for(const p of roster.characters){
   const item=make("div",undefined,"soa-character-item");
-  const description=make("div");description.append(make("strong",p.name),make("span",p.faction+" · "+p.race+" "+p.className+" · "+Object.keys(p.professions||{}).join(" / ")));
+  const description=make("div");description.append(make("strong",p.name),make("span",p.faction+" · "+p.race+" "+p.className+" · Level "+(p.id===active.id?(window.soaProgression?.level?.()||10):10)+"+ · "+Object.keys(p.professions||{}).join(" / ")));
   const button=make("button",p.id===active.id?"Play":"Switch & Play");button.type="button";button.onclick=()=>enter(p.id);
   item.append(description,button);list.append(item);
  }
@@ -172,6 +173,7 @@ function profilePanel(){
 function drawProfessions(){
  const root=get("soa-profession-panel");if(!root)return;root.replaceChildren();
  root.append(make("div","CHARACTER RECORD","soa-roster-kicker"),make("h2",active.name+" · "+active.race+" "+active.className));
+ window.soaProgression?.refresh?.();
  window.soaPortraits?.refresh?.();
  const meta=make("p",active.faction+" · "+(active.specialization||"Unchosen"),"muted");root.append(meta);
  const social=make("details");social.className="soa-social-stats";
