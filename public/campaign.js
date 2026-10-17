@@ -80,7 +80,7 @@ function actionOdds(action){
  const trained=window.soaProgression?.bonus?.(relevant)||0;
  const level=window.soaProgression?.level?.()||1;
  const difficulty=action.difficulty==="easy"?12:action.difficulty==="hard"?-22:0;
- const target=Math.max(10,Math.min(95,Math.round(base+modifier*5+trained*2+Math.max(0,level-1)*.2+difficulty-(s.alert||0)*5)));
+ const target=Math.max(10,Math.min(95,Math.round(base+modifier*3+trained*2+Math.max(0,level-1)*.2+difficulty-(s.alert||0)*5)));
  return {cost:costs[relevant]??costs[t]??0,target,skill:relevant,modifier,trained};
 }
 function combatAccuracy(action){
