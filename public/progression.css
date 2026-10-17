@@ -1,0 +1,18 @@
+/* Persistent character progression in definitive parchment theme. */
+body.theme-alternative .soa-progression-card{margin:14px 0 18px;padding:15px;border:1px solid #ab8856;border-radius:11px;background:linear-gradient(135deg,#f4e1b7,#dcc18b);box-shadow:inset 0 1px 0 #fff7de}
+body.theme-alternative .soa-level-heading{display:flex;justify-content:space-between;gap:10px;align-items:baseline;font:700 13px/1.45 system-ui;color:#503720;flex-wrap:wrap}
+body.theme-alternative .soa-level-heading strong{font:700 19px/1.3 Georgia,serif}
+body.theme-alternative .soa-level-heading span{font-variant-numeric:tabular-nums}
+body.theme-alternative .soa-xp-track{height:12px;margin:10px 0;overflow:hidden;border-radius:20px;background:#73584070;box-shadow:inset 0 1px 3px #51371b70}
+body.theme-alternative .soa-xp-fill{height:100%;background:linear-gradient(90deg,#8f66ad,#ca9bdf);border-radius:20px;transition:width .3s}
+body.theme-alternative .soa-skill-list,body.theme-alternative .soa-xp-history{border-top:1px solid #a1886180;margin-top:9px;padding-top:6px}
+body.theme-alternative .soa-skill-list summary,body.theme-alternative .soa-xp-history summary{cursor:pointer;min-height:40px;padding:9px 0;font:700 12px/1.4 system-ui;color:#644525}
+body.theme-alternative .soa-skill-line{display:flex;justify-content:space-between;gap:10px;border-bottom:1px solid #bba07776;padding:9px 0;font:12px/1.5 system-ui;color:#563b25}
+body.theme-alternative .soa-skill-line span:last-child{font-variant-numeric:tabular-nums;text-align:right}
+body.theme-alternative .soa-xp-history p{font:12px/1.5 system-ui;margin:7px 0;color:#573d27}
+body.theme-alternative .soa-companion-level{background:#e9d2a4a3;border:1px solid #b09267;padding:10px;margin:11px 0;border-radius:9px;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:4px 9px;font:700 12px/1.5 system-ui;color:#543820}
+body.theme-alternative .soa-companion-level .soa-xp-track{flex-basis:100%;margin:5px 0 2px}
+body.theme-alternative .soa-companion-level span{font-variant-numeric:tabular-nums}
+body.theme-alternative .soa-level-toast{margin:12px 0;padding:11px 14px;border-left:4px solid #a57ac0;background:#efe0be;border-radius:5px;font:700 13px/1.6 system-ui;color:#674071}
+@media(prefers-reduced-motion:reduce){body.theme-alternative .soa-xp-fill{transition:none}}
+@media(max-width:410px){body.theme-alternative .soa-skill-line{flex-direction:column;gap:2px}body.theme-alternative .soa-skill-line span:last-child{text-align:left}}
