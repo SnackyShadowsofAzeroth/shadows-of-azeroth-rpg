@@ -83,8 +83,8 @@ function disenchant(c,index){
  st.history.push({item:item.name,disenchanted:true,dust:amount});st.history=st.history.slice(-100);
  return {message:"Disenchanted "+item.name+" into "+amount+" Arcane Dust.",dust:amount};
 }
-function atEnchanter(location){return /\\b(?:enchanter(?:'s)? (?:shop|workshop|stall|counter)|enchanting (?:shop|workshop|atelier)|arcane enchant(?:er|ing) shop)\\b/i.test(String(location||""))}
-function atTrainer(location){return /\\b(?:enchanting trainer|enchanter trainer|enchanting academy)\\b/i.test(String(location||""))}
+function atEnchanter(location){return /\b(?:enchanter(?:'s)? (?:shop|workshop|stall|counter)|enchanting (?:shop|workshop|atelier)|arcane enchant(?:er|ing) shop)\b/i.test(String(location||""))}
+function atTrainer(location){return /\b(?:enchanting trainer|enchanter trainer|enchanting academy)\b/i.test(String(location||""))}
 function panel(c,location,wallet,commit){
  if(!atEnchanter(location)&&!atTrainer(location))return null;
  const el=document.createElement("details"),head=document.createElement("summary");el.open=sessionStorage.getItem("soa-enchanting-panel-open")==="1";el.ontoggle=()=>sessionStorage.setItem("soa-enchanting-panel-open",el.open?"1":"0");head.textContent="Enchanting · Enchanter Services & Crafting";el.append(head);
