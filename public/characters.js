@@ -223,20 +223,26 @@ function profilePanel(){
  const nav=make("nav",undefined,"soa-quick-nav");nav.setAttribute("aria-label","Game sections");
  for(const [label,targetId] of [["Adventure","campaign-box"],["Journal","soa-chronicle"],["Character","soa-profession-panel"],["Reputation",active.origin==="custom"?"soa-standalone-reputation":"companion-panel"]]){
   const jump=make("button",label);jump.type="button";jump.className="soa-quick-link";
-  jump.onclick=()=>{const dest=get(targetId);if(dest){dest.scrollIntoView({behavior:"smooth",block:"start"})}};
+  jump.onclick=()=>{const dest=get(targetId);if(dest){const disclosure=dest.matches("details")?dest:dest.querySelector(":scope > details.soa-panel-disclosure");if(disclosure)disclosure.open=true;dest.scrollIntoView({behavior:"smooth",block:"start"})}};
   nav.append(jump);
  }
- head.append(nav);
+ // Keep the section links within <main> so the mobile bar can stay available
+ // while the player scrolls through a long scene or character record.
  const pane=make("section");pane.className="panel soa-profession-panel";pane.id="soa-profession-panel";
- head.after(pane);drawProfessions();window.soaPortraits?.refresh?.();
+ head.after(pane);head.after(nav);drawProfessions();window.soaPortraits?.refresh?.();
 }
 function drawProfessions(){
  const root=get("soa-profession-panel");if(!root)return;root.replaceChildren();
- root.append(make("div","CHARACTER RECORD","soa-roster-kicker"),make("h2",active.name+" · "+active.race+" "+active.className));
- const abilityCard=window.soaAbilities?.card?.("hero");if(abilityCard)root.append(abilityCard);
+ const disclosure=make("details",undefined,"soa-panel-disclosure soa-character-disclosure");
+ disclosure.open=localStorage.getItem("soa-character-panel-open")==="1";
+ disclosure.ontoggle=()=>localStorage.setItem("soa-character-panel-open",disclosure.open?"1":"0");
+ disclosure.append(make("summary","Character record · "+active.name));
+ const content=make("div",undefined,"soa-panel-disclosure-content");disclosure.append(content);root.append(disclosure);
+ content.append(make("div","CHARACTER RECORD","soa-roster-kicker"),make("h2",active.name+" · "+active.race+" "+active.className));
+ const abilityCard=window.soaAbilities?.card?.("hero");if(abilityCard)content.append(abilityCard);
  window.soaProgression?.refresh?.();
  window.soaPortraits?.refresh?.();
- const meta=make("p",active.faction+" · "+(active.specialization||"Unchosen"),"muted");root.append(meta);
+ const meta=make("p",active.faction+" · "+(active.specialization||"Unchosen"),"muted");content.append(meta);
  const social=make("details");social.className="soa-social-stats";
  social.append(make("summary","Social skills · bluff, bribe, romance, threaten"));
  const scores=make("div",undefined,"soa-social-score-grid");
@@ -246,17 +252,17 @@ function drawProfessions(){
   scores.append(score);
  }
  social.append(scores,make("p","Living Campaign social actions use d20 + skill versus a difficulty check. Bribery requires an explicitly offered amount; affection still requires mutual consent.","muted"));
- root.append(social);
- root.append(make("h3","Professions"));
+ content.append(social);
+ content.append(make("h3","Professions"));
  for(const [name,progress] of Object.entries(active.professions||{})){
   const row=make("div",undefined,"soa-profession-row");row.append(make("strong",name),make("span","Skill "+progress.skill+"/300"));
-  const action=make("button","Practice via Story");action.type="button";action.onclick=()=>prefill(name);row.append(action);root.append(row);
+  const action=make("button","Practice via Story");action.type="button";action.onclick=()=>prefill(name);row.append(action);content.append(row);
  }
  const secondary=make("details");const sum=make("summary","Secondary skills");secondary.append(sum);
  for(const [name,skill] of Object.entries(active.secondary||{})){
   const r=make("div",undefined,"soa-profession-row");r.append(make("span",name+" · "+skill.skill+"/300"));const b=make("button","Practice");b.onclick=()=>prefill(name);r.append(b);secondary.append(r)
- }root.append(secondary);
- const recents=active.professionLog||[];if(recents.length)root.append(make("p",recents.slice(-2).join(" · "),"muted"));
+ }content.append(secondary);
+ const recents=active.professionLog||[];if(recents.length)content.append(make("p",recents.slice(-2).join(" · "),"muted"));
 }
 function prefill(prof){
  const action=get("campaign-custom-action"),type=get("campaign-custom-type");

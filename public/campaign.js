@@ -552,7 +552,18 @@ function result(action){
 function interfaceUI(){
  if(get("campaign-box"))return;
  const el=document.createElement("section");el.className="panel";el.id="campaign-box";
- el.innerHTML='<h2>Living Campaign <span class="tag">Gemini · Online</span></h2><label class="ai-toggle"><input type="checkbox" id="campaign-mode"> Enable living campaign</label><button id="campaign-start">Start / Resume AI campaign</button><button id="campaign-offline" class="sub">Return to offline adventure</button><div id="campaign-status" class="muted" aria-live="polite"></div><div id="campaign-scene"></div>';
+ const disclosure=document.createElement("details");disclosure.className="soa-panel-disclosure soa-campaign-disclosure";
+ disclosure.open=localStorage.getItem("soa-campaign-panel-open")==="1";
+ disclosure.ontoggle=()=>localStorage.setItem("soa-campaign-panel-open",disclosure.open?"1":"0");
+ const summary=document.createElement("summary");summary.innerHTML='Living Campaign <span class="tag">Gemini · Online</span>';
+ const content=document.createElement("div");content.className="soa-panel-disclosure-content";
+ const toggleLabel=document.createElement("label");toggleLabel.className="ai-toggle";toggleLabel.htmlFor="campaign-mode";
+ const toggle=document.createElement("input");toggle.type="checkbox";toggle.id="campaign-mode";toggleLabel.append(toggle,document.createTextNode(" Enable living campaign"));
+ const start=document.createElement("button");start.id="campaign-start";start.textContent="Start / Resume AI campaign";
+ const offline=document.createElement("button");offline.id="campaign-offline";offline.className="sub";offline.textContent="Return to offline adventure";
+ const campaignStatus=document.createElement("div");campaignStatus.id="campaign-status";campaignStatus.className="muted";campaignStatus.setAttribute("aria-live","polite");
+ const scene=document.createElement("div");scene.id="campaign-scene";
+ content.append(toggleLabel,start,offline,campaignStatus,scene);disclosure.append(summary,content);el.append(disclosure);
  document.querySelector("header").after(el);
  get("campaign-mode").onchange=e=>{enabled=e.target.checked;localStorage.setItem("soa-campaign-enabled",enabled?"1":"0");if(enabled){if(!campaign)campaign=make();store();draw();if(navigator.onLine&&(!campaign.scene||pending()))advance(campaign.lastAction,campaign.lastResult,true)}else{document.body.classList.remove("soa-living-mode");get("campaign-scene").replaceChildren();showOriginal(true)}};
  get("campaign-start").onclick=()=>{if(!campaign)campaign=make();enabled=true;get("campaign-mode").checked=true;localStorage.setItem("soa-campaign-enabled","1");draw();if(!accessCode()){focusAccess();return}if(pending()||!campaign.scene)advance(campaign.lastAction,campaign.lastResult,true);else{status("Saved scene ready. Choose an action below.");refreshDisplay()}};
