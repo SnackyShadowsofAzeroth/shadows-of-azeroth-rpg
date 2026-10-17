@@ -1,6 +1,9 @@
 (()=>{"use strict";
 // Save-slot-scoped progression. No Gemini response may modify XP or levels.
-const KEY="soa-progression-v1",START_LEVEL=10,MAX_LEVEL=60,MAX_RANK=15;
+const KEY="soa-progression-v1",ESTABLISHED_LEVEL=10,FRESH_LEVEL=1,MAX_LEVEL=60,MAX_RANK=15;
+const currentProfile=(()=>{try{const r=JSON.parse(localStorage.getItem("soa-character-roster-v1")||"null");return r?.characters?.find(x=>x.id===r.active)||null}catch{return null}})();
+const isNewHero=currentProfile?.origin==="custom"&&currentProfile.startLevel===1;
+const START_LEVEL=isNewHero?FRESH_LEVEL:ESTABLISHED_LEVEL;
 const SKILLS=["bluff","bribe","romance","threaten","stealth","engineering","investigate","social","combat"];
 const HERO="hero",PARTY=["pippa","bromli","lethariel"];
 const knownNames={"Pippa Sparkwhistle":"pippa","Bromli Ironkeg":"bromli","Lethariel Moonguard":"lethariel"};
@@ -9,13 +12,13 @@ const clamp=(n,lo,hi)=>Math.max(lo,Math.min(hi,Number.isFinite(Number(n))?Math.t
 const xpNeeded=level=>level>=MAX_LEVEL?0:140+22*level+2*level*level;
 const skillNeeded=rank=>rank>=MAX_RANK?0:4+2*rank;
 const blank=()=>({level:START_LEVEL,xp:0,totalXp:0,skills:{},lastGain:null});
-const fresh=()=>({version:1,actors:{hero:blank(),pippa:blank(),bromli:blank(),lethariel:blank()},receipts:[],history:[]});
+const fresh=()=>({version:1,actors:isNewHero?{hero:blank()}:{hero:blank(),pippa:blank(),bromli:blank(),lethariel:blank()},receipts:[],history:[]});
 const read=()=>{try{return JSON.parse(localStorage.getItem(KEY)||"null")}catch{return null}};
 let data=read();
 if(!data||typeof data!=="object"||!data.actors)data=fresh();
-for(const id of [HERO,...PARTY]){
+for(const id of [HERO,...(isNewHero?[]:PARTY)]){
  const actor=data.actors[id]&&typeof data.actors[id]==="object"?data.actors[id]:blank();
- actor.level=clamp(actor.level,START_LEVEL,MAX_LEVEL);
+ actor.level=clamp(actor.level,FRESH_LEVEL,MAX_LEVEL);
  actor.xp=actor.level===MAX_LEVEL?0:clamp(actor.xp,0,xpNeeded(actor.level)-1);
  actor.totalXp=clamp(actor.totalXp,0,Number.MAX_SAFE_INTEGER);
  if(!actor.skills||typeof actor.skills!=="object")actor.skills={};
@@ -31,14 +34,18 @@ function identity(id){return [HERO,...PARTY].includes(id)||(typeof id==="string"
 function register(name){
  if(typeof name!=="string"||!name.trim())return null;
  const cleanName=name.trim().slice(0,60);
- if(knownNames[cleanName])return knownNames[cleanName];
+ if(knownNames[cleanName]){
+  const id=knownNames[cleanName];
+  if(!data.actors[id])data.actors[id]=blank();
+  persist();return id;
+ }
  const slug=cleanName.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,50);
  if(!slug)return null;
  const id="party:"+slug;
  if(!data.actors[id])data.actors[id]=blank();data.labels[id]=cleanName;
  persist();return id;
 }
-function score(id=HERO){return data.actors[identity(id)||HERO]}
+function score(id=HERO){return data.actors[identity(id)||HERO]||data.actors[HERO]}
 function level(id=HERO){return score(id).level}
 function skill(id,name){
  if(!SKILLS.includes(name))return {rank:0,practice:0,attempts:0,successes:0};
