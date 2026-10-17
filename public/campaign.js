@@ -82,7 +82,7 @@ function actionOdds(action){
  if(t==="rest"){cost=0;chance=.94}
  const trained=window.soaProgression?.bonus?.(t==="investigate"?"investigate":t==="engineering"?"engineering":t==="stealth"?"stealth":t==="combat"?"combat":t==="social"?"social":"")||0;
  const level=window.soaProgression?.level?.()||10;
- chance+=(window.soaAbilities?.percent?.(t==="move"?"stealth":t==="rest"?"investigate":t)||0);
+ chance+=(window.soaAbilities?.percent?.(t)||0);
  chance=Math.max(.25,Math.min(.97,chance+(action.difficulty==="easy"?.09:action.difficulty==="hard"?-.2:0)+Math.max(0,level-10)*.0015+trained*.008));
  return {cost,target:Math.round(chance*100)};
 }
@@ -101,9 +101,10 @@ function dicePreview(action){
  if(action.type==="combat"&&livingEnemies().length){
   const ability=resolvedCombatAbility(action);
   if(ability==="evasion")return {primary:"🎲 No attack roll",secondary:"Defensive exchange · 0 Energy"};
-  if(ability==="riposte")return {primary:"🎲 Automatic hit after parry",secondary:"24 HP on a valid Riposte · 10 Energy"};
+  if(ability==="riposte")return {primary:"🎲 Automatic hit after parry",secondary:(24+Math.max(-2,Math.min(4,window.soaAbilities?.modifier?.("combat")||0)))+" HP on a valid Riposte · 10 Energy"};
   const chance=Math.round(combatAccuracy(action)*100);
-  return {primary:"🎲 d100 · hit on 1–"+chance,secondary:ability==="kick"?"1d7 + 5 damage · 25 Energy":"1d11 + 13 damage · 35 Energy"};
+  const mod=Math.max(-2,Math.min(4,window.soaAbilities?.modifier?.("combat")||0));
+ return {primary:"🎲 d100 · hit on 1–"+chance,secondary:ability==="kick"?"1d7 + "+(5+mod)+" damage · 25 Energy":"1d11 + "+(13+mod)+" damage · 35 Energy"};
  }
  const skill=socialSkill(action);
  if(skill){
@@ -197,10 +198,13 @@ function fightExchange(action){
  const accuracy=combatAccuracy(action);
  const attackRoll=ability==="riposte"||ability==="evasion"?null:1+Math.floor(Math.random()*100);
  const hit=ability==="riposte"?true:ability==="evasion"?false:attackRoll<=Math.round(accuracy*100);
- const rolled=ability==="strike"?14+Math.floor(Math.random()*11):ability==="kick"?6+Math.floor(Math.random()*7):ability==="riposte"?24:0;
+ const damageModifier=Math.max(-2,Math.min(4,window.soaAbilities?.modifier?.("combat")||0));
+ const rolled=ability==="strike"?Math.max(1,14+Math.floor(Math.random()*11)+damageModifier):ability==="kick"?Math.max(1,6+Math.floor(Math.random()*7)+damageModifier):ability==="riposte"?24+damageModifier:0;
  const dealt=hit?Math.min(target.hp,rolled):0;target.hp=Math.max(0,target.hp-dealt);
  const defeated=target.hp===0;
- const retaliates=!defeated&&ability!=="evasion"&&!(ability==="kick"&&hit)&&Math.random()<.46;
+ const heroAC=window.soaAbilities?.get?.("hero")?.armorClass||12;
+ const retaliationChance=Math.max(.20,Math.min(.65,.46-(heroAC-12)*.018));
+ const retaliates=!defeated&&ability!=="evasion"&&!(ability==="kick"&&hit)&&Math.random()<retaliationChance;
  const eligible=retaliates?combatParty().filter(e=>!e.player&&Number.isInteger(e.hp)&&e.hp>0&&e.maxHp>0):[];
  const allyRecipient=eligible.length&&Math.random()<.35?eligible[Math.floor(Math.random()*eligible.length)]:null;
  const amount=retaliates?4+Math.floor(Math.random()*8):0;
