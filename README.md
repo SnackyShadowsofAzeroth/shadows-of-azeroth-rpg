@@ -397,3 +397,22 @@ The first AI scene is constrained to that actual location, independently of the 
 The new leveling logic permits levels **1–60** and preserves existing saves at level 10+; character creation and inactive roster displays respect the new `startLevel` flag. `soa-progression-v1` remains slot-isolated and backed up with the hero's other files.
 
 **Verification:** All modified scripts passed syntax parsing. Simulated loading showed established Snacky at level 10 with original allies; existing custom heroes at level 10; new heroes at level 1 with **only the hero progression record**; and a returning level-3 new hero resuming at level 3 without resets. Tests checked all race starting-zone mappings, 1,500-copper balance, correct solo opening scene, and independent campaign creation. Static shell cache updated to **v37**. Live Cloudflare deployment and iPhone rendering still require verification.
+
+
+## Multi-pass stability and iPhone polish review (v38)
+
+This release intentionally avoids rebalancing existing combat, changing plot canon or migrating user story history. The codebase was reviewed across character slots, progression, battle logic, companion UI, quest journal, portraits, UI styles, API story handling and offline caching.
+
+### Improvements
+
+- **Lower UI overhead:** Living Campaign refresh no longer redraws the companion panel twice; XP distribution refreshes character/companion progression once per completed encounter rather than after each participant's XP/practice. Journal rendering has been moved out of the every-button-redraw path into actual scene updates, so selecting a target or a combat action won't rebuild the journal unnecessarily.
+- **Less browser-storage churn:** Re-registering a known party member doesn't rewrite the entire progression save unless a new actor actually needs to be created.
+- **Safer save-slot restoration:** Restore verifies that at least one recognized save payload exists, snapshots all current keys, applies only changed keys, and rolls back if any storage operation fails. Changing the active character never reloads after a failed restore/roster commit.
+- **Safer character creation:** All new-character save keys, the initial 1,500-copper starter state and the independent slot are written before the roster selection changes. If any stage fails, the previous character's save is recovered and the new roster entry is not retained. Existing established characters remain level 10+; new characters still start level 1 in their own zone.
+- **Solo continuity:** Newly created adventurers do not inherit the three main-story companion interaction profiles unless one of those named characters is genuinely present as an established participant. Their reputation/faction screen is still available.
+- **Mobile usability:** Section navigation respects the iOS safe-area offset, buttons/inputs have a visible keyboard focus indicator, and touch devices avoid costly fixed-background repaints. The parchment palette and layouts are otherwise preserved.
+- **Offline cache:** service worker version **v38** includes all existing assets. API requests remain uncached and network-only.
+
+### Regression review
+
+All relevant JavaScript modules and the inline game engine parsed successfully. Simulated tests exercised character switching, interrupted storage writes with successful rollback, creating a new level-one character, failure during new-character initialization and roster write, independent save-slot values, progression rank/XP gains, one-time 135 XP victory grants with correct 95 XP per participating ally, repeated party registrations without extra writes, the level cap, and solo newcomer companion visibility. The ongoing campaign/story generation API logic was left intact. Live deployment and real iPhone Safari behavior are **not independently verified**.
