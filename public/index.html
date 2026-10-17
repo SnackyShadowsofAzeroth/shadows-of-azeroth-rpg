@@ -153,7 +153,19 @@ async function aiCall(test=false){
  if(!test&&!document.querySelector("#ai-enabled").checked){aiStatus("Enable AI narration first.",true);return}
  aiBusy=true;document.querySelector("#ai-spinner").style.display="block";document.querySelector("#ai-test").disabled=true;document.querySelector("#ai-generate").disabled=true;aiStatus("");
  try{
-   if(test){const r=await fetch("./api/story",{cache:"no-store"});if(!r.ok)throw Error("Cloudflare endpoint returned "+r.status);const j=await r.json();aiStatus(j.status||"Endpoint reachable");return}
+   if(test){
+    const r=await fetch("./api/story",{cache:"no-store"});
+    if(!r.ok)throw Error("Cloudflare endpoint returned "+r.status);
+    const j=await r.json();
+    aiStatus((j.status||"Endpoint reachable")+" Opening Adventure.");
+    // Return to the same Adventure section as the header's Adventure navigation.
+    const adventure=document.getElementById("campaign-box")||document.getElementById("scene");
+    if(adventure?.scrollIntoView){
+      const reduced=window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches===true;
+      adventure.scrollIntoView({behavior:reduced?"auto":"smooth",block:"start"});
+    }
+    return;
+   }
    const scene=node();
    const state={hp:s.hp,energy:s.en,money:fmtMoney(s.money),location:scene.title,alert:s.alert,notes:s.log.slice(0,10)};
    const r=await fetch("./api/story",{method:"POST",headers:{"Content-Type":"application/json","X-Story-Access":code},body:JSON.stringify({scene:scene.text,action:document.querySelector("#ai-prompt").value,state}),cache:"no-store"});
