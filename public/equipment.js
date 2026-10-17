@@ -31,6 +31,28 @@ const SNACKY_LOADOUT=[
  ["Sidearm","Toxic Revenger"],
  ["Ranged","Golemsight Long Gun"]
 ];
+const SLOT_KEY={"Head":"head","Back":"back","Shoulders":"shoulders","Chest":"chest","Wrists":"wrists","Hands":"hands","Waist":"waist","Legs":"legs","Feet":"feet","Neck":"neck","Finger":"finger2","Main hand":"mainhand","Off hand":"offhand","Sidearm":"sidearm","Ranged":"ranged"};
+function canonicalSlots(){return SNACKY_LOADOUT.map(([slot,name])=>({slot:SLOT_KEY[slot]||slot.toLowerCase(),name,display:slot}));}
+function baselineModifiers(){
+ const z={DEX:0,STR:0,CON:0,WIS:0,ac:0,damage:0,attack:0};
+ if(window.soaCharacters?.profile?.()?.id!=="snacky")return z;
+ const sum={AGI:0,STR:0,STA:0,SPI:0,AP:0,armor:0};
+ for(const x of canonicalSlots()){
+  const record=window.soaForeverItems?.byName?.(x.name);
+  if(!record?.verified||x.slot==="waist")continue; // contested highlander item compatibility
+  for(const k of ["AGI","STR","STA","SPI","AP"])sum[k]+=record.stats?.[k]||0;
+  sum.armor+=record.armor||0;
+ }
+ // WoW stat units are NOT directly transferable to D&D abilities.
+ // Conservative game-specific compression prevents 100+ AGI on level-10 heroes.
+ z.DEX=Math.min(3,Math.floor(sum.AGI/25));
+ z.STR=Math.min(1,Math.floor(sum.STR/18));
+ z.CON=Math.min(2,Math.floor(sum.STA/20));
+ z.WIS=Math.min(1,Math.floor(sum.SPI/15));
+ z.ac=Math.min(1,Math.floor(sum.armor/350));
+ z.damage=Math.min(1,Math.floor(sum.AP/20));
+ return z;
+}
 const slots=["weapon","armor","trinket"];
 const state=()=>window.soaLivingCampaign?.getState?.();
 const holder=()=>state()?.quests;
@@ -54,6 +76,9 @@ function modifiers(){
  const q=holder(),eq=equipment(),bonuses={STR:0,DEX:0,CON:0,INT:0,WIS:0,CHA:0,ac:0,attack:0,damage:0};
  const seen=new Set();
  for(const slot of slots){const idx=eq[slot],item=q?.inventory?.[idx],info=itemInfo(item);if(!Number.isInteger(idx)||seen.has(idx)||!info||info.slot!==slot||!valid(item,window.soaCharacters?.profile?.()))continue;seen.add(idx);for(const [k,v] of Object.entries(info.bonuses)){bonuses[k]+=v}}
+ const base=baselineModifiers();
+ const enchanting=window.soaEnchanting?.bonuses?.(state())||{};
+ for(const k of Object.keys(bonuses))bonuses[k]+=(base[k]||0)+(enchanting[k]||0);
  return bonuses;
 }
 function panel(){
@@ -63,13 +88,17 @@ function panel(){
  const isSnacky=window.soaCharacters?.profile?.()?.id==="snacky";
  if(isSnacky){
   const title=document.createElement("h3");title.textContent="Snacky's Current Equipment";section.append(title);
-  const hint=document.createElement("p");hint.textContent="Established character loadout · exact item statistics have not been verified. No invented bonuses are applied.";section.append(hint);
+  const hint=document.createElement("p");hint.textContent="Forever item tooltip values shown where verified. Combat uses capped RPG conversions, not raw WoW stat totals. Unresolved ring and Highlander class eligibility are excluded from bonuses.";section.append(hint);
   const grid=document.createElement("div");grid.style.cssText="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin:12px 0 20px";
   for(const [slot,name] of SNACKY_LOADOUT){
    const cell=document.createElement("div");cell.style.cssText="border:1px solid #ae9365;border-radius:8px;padding:9px;min-width:0";
    const label=document.createElement("small");label.style.cssText="display:block;opacity:.75";label.textContent=slot;
    const value=document.createElement("strong");value.style.cssText="display:block;overflow-wrap:anywhere";value.textContent=name;
-   cell.append(label,value);grid.append(cell);
+   const item=window.soaForeverItems?.byName?.(name);
+   const info=document.createElement("small");info.style.cssText="display:block;opacity:.85";
+   if(item?.verified){const stats=Object.entries(item.stats||{}).map(([k,v])=>"+"+v+" "+k).join(" · ");info.textContent=(item.armor?item.armor+" armor · ":"")+stats+(item.effect?" · "+item.effect:"");}
+   else info.textContent=item?.note||"Stats not verified";
+   cell.append(label,value,info);grid.append(cell);
   }
   section.append(grid);
  }
@@ -83,5 +112,5 @@ function panel(){
  section.append(row)});
  return section;
 }
-window.soaEquipment={CATALOG,itemInfo,equip,unequip,equipment,modifiers,panel};
+window.soaEquipment={CATALOG,SNACKY_LOADOUT,canonicalSlots,baselineModifiers,itemInfo,equip,unequip,equipment,modifiers,panel};
 })();
