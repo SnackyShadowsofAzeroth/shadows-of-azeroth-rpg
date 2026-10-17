@@ -56,3 +56,13 @@ public/characters.js updated on main (commit 5862c9b): gender field, basic gear 
 - Gemini campaign function now prioritizes focused conversations, interprets positive affection and established romance consistently, and avoids reflexively redirecting player-led personal conversations to quests. Consent and stage changes remain governed by game mechanics.
 - Client forwards sanitized recent per-companion relationship moments, trust/affection/respect, grievance and romantic status (no credentials). Existing saved relationship data is unchanged and available for narration.
 - Static cache v18; source parse checks passed. Live Cloudflare/Gemini response and current player relationship values have not been independently verified.
+
+
+## Relationship depth, overnight rest, and custom skill odds (2026-10-16)
+- Existing relationship records retain trust/affection/respect, romance stages, grievances, and dialogue history. Added bounded 15-entry per-companion milestone memories, cumulative overnight counter and lastNightDay marker; migration defaults protect earlier saves.
+- In the companion panel, "Spend the night together" requires Snacky's established partner, an actual dating-or-higher status, trust >=65, affection >=70, respect >=35, no grievance, safe inn/tavern/home/camp type setting, and no active hostiles. Its depiction is consensual, fade-to-black, and followed by morning narration. No explicit depiction. It does NOT automatically award new romance stages.
+- Morning shared-rest XP is 25 normally or 35 for especially strong bonds, granted via the existing progression receipt system (idempotent), limited once per companion per matching location/scene turn. Overnight rest is a simplified milestone; full clock/day progression is not yet integrated.
+- Gemini now receives recent per-companion milestone memories, nights count and romance status, so personalities can refer back to earned history.
+- Custom actions now use text-inferred skill context with appropriate STR/DEX/INT/WIS/CHA via existing soaAbilities.modifier where applicable, trained progression bonus, difficulty, alert and level. The preview uses the same actionOdds as the resolver. Dedicated social actions still use existing d20/CHA-based social checks.
+- Verified parse checks and deterministic action-odds tests: lockpicking 87% (Engineering), inspection 74% (Investigation), stealth 84%, climbing 83% in a representative level 10 test fixture. These are examples, NOT fixed chances.
+- Offline cache v19 and live server deployment need real-world validation.
