@@ -48,7 +48,12 @@ function snapshot(id){
  }catch{return false}
 }
 function restore(id){
- const data=read(SLOT_PREFIX+id);if(!data)return false;
+ const data=read(SLOT_PREFIX+id);
+ // Never restore a corrupt slot that contains none of the actual save payloads.
+ if(!data||typeof data!=="object"||!SAVES.some(key=>typeof data[key]==="string")){
+  alert("This character slot is missing its save data. The current character has not been changed.");
+  return false;
+ }
  const previous={};
  try{
   for(const key of SAVES)previous[key]=localStorage.getItem(key);
