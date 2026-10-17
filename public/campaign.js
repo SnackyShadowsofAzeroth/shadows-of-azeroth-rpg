@@ -60,7 +60,7 @@ function bribeCopper(text){
 }
 function socialTarget(action,skill){
  const bonuses=window.soaCharacters?.getSocialSkills?.()||{bluff:5,bribe:3,romance:3,threaten:2};
- const bonus=Number(bonuses[skill])||0;
+ const bonus=(Number(bonuses[skill])||0)+(window.soaAbilities?.modifier?.(skill)||0);
  const baseDC=action.difficulty==="easy"?10:action.difficulty==="hard"?18:14;
  let modifier=0;
  if(skill==="romance"){
@@ -82,12 +82,13 @@ function actionOdds(action){
  if(t==="rest"){cost=0;chance=.94}
  const trained=window.soaProgression?.bonus?.(t==="investigate"?"investigate":t==="engineering"?"engineering":t==="stealth"?"stealth":t==="combat"?"combat":t==="social"?"social":"")||0;
  const level=window.soaProgression?.level?.()||10;
+ chance+=(window.soaAbilities?.percent?.(t==="move"?"stealth":t==="rest"?"investigate":t)||0);
  chance=Math.max(.25,Math.min(.97,chance+(action.difficulty==="easy"?.09:action.difficulty==="hard"?-.2:0)+Math.max(0,level-10)*.0015+trained*.008));
  return {cost,target:Math.round(chance*100)};
 }
 function combatAccuracy(action){
  const rank=window.soaProgression?.bonus?.("combat")||0,level=window.soaProgression?.level?.()||10;
- return Math.max(.25,Math.min(.90,.74-s.alert*.04+(action.difficulty==="easy"?.08:action.difficulty==="hard"?-.13:0)+rank*.008+Math.max(0,level-10)*.0015));
+ return Math.max(.25,Math.min(.90,.74+(window.soaAbilities?.percent?.("combat")||0)-s.alert*.04+(action.difficulty==="easy"?.08:action.difficulty==="hard"?-.13:0)+rank*.008+Math.max(0,level-10)*.0015));
 }
 function resolvedCombatAbility(action){
  const description=String(action.text||"");
@@ -210,7 +211,7 @@ function fightExchange(action){
    const record=campaign.combatAllies.find(a=>a.name===allyRecipient.name);
    taken=Math.min(record.hp,amount);
    record.hp=Math.max(0,record.hp-taken);recipientAfter=record.hp;
-   campaign.partyHealth||={};campaign.partyHealth[record.name]={hp:record.hp,maxHp:record.maxHp};
+   campaign.partyHealth||={};campaign.partyHealth[record.name]={hp:record.hp,maxHp:record.maxHp,derived:campaign.partyHealth?.[record.name]?.derived===true};
   }else{
    taken=Math.min(Math.max(0,s.hp-1),amount);
    s.hp=Math.max(1,s.hp-taken);recipientAfter=s.hp;
@@ -263,7 +264,36 @@ function updateLivingEnemies(scene){
  }
  campaign.enemies=next;campaign.enemyLocation=location;
 }
+function hydrateKnownAllyHP(){
+ if(!campaign)return;
+ const roster=Array.isArray(campaign.combatAllies)?campaign.combatAllies:[];
+ const names={"Pippa Sparkwhistle":"pippa","Bromli Ironkeg":"bromli","Lethariel Moonguard":"lethariel"};
+ campaign.partyHealth||={};
+ for(const ally of roster){
+  const id=names[ally?.name];if(!id)continue;
+  const expected=window.soaAbilities?.get?.(id)?.maxHp;
+  if(!Number.isInteger(expected)||expected<1)continue;
+  const old=campaign.partyHealth[ally.name];
+  // The original saved HP, including wounds, always outranks an estimate.
+  if(old&&Number.isInteger(old.hp)&&Number.isInteger(old.maxHp)&&!old.derived){
+   ally.hp=old.hp;ally.maxHp=old.maxHp;continue;
+  }
+  if(Number.isInteger(ally.hp)&&Number.isInteger(ally.maxHp)&&!old?.derived){
+   campaign.partyHealth[ally.name]={hp:ally.hp,maxHp:ally.maxHp};
+   continue;
+  }
+  if(old?.derived&&Number.isInteger(old.hp)&&Number.isInteger(old.maxHp)){
+   // Level increase enlarges maximum HP without curing existing wounds.
+   const delta=expected-old.maxHp;
+   ally.maxHp=expected;ally.hp=Math.max(0,Math.min(expected,old.hp+Math.max(0,delta)));
+  }else{
+   ally.hp=expected;ally.maxHp=expected;
+  }
+  campaign.partyHealth[ally.name]={hp:ally.hp,maxHp:ally.maxHp,derived:true};
+ }
+}
 function combatParty(){
+ hydrateKnownAllyHP();
  const list=Array.isArray(campaign?.combatAllies)?campaign.combatAllies:[];
  const isSn=window.soaCharacters?.profile?.()?.id==="snacky";
  return [{name:window.soaCharacters?.profile?.()?.name||"Your hero",hp:s.hp,maxHp:100,player:true},...list.filter(e=>e&&typeof e.name==="string").slice(0,6).filter(e=>!isSn||!/^Snacky Lugnuts$/i.test(e.name)).map(e=>({...e,player:false}))];
@@ -290,10 +320,11 @@ function reconcileCombatAllies(scene){
    :{name,hp,maxHp:max,role:String(e.role||"Ally").slice(0,32)};
   incoming.push(member);
   if(Number.isInteger(member.hp)&&Number.isInteger(member.maxHp)&&member.maxHp>0)
-   campaign.partyHealth[name]={hp:member.hp,maxHp:member.maxHp};
+   campaign.partyHealth[name]={hp:member.hp,maxHp:member.maxHp,derived:stored?.derived===true};
  }
  if(!incoming.length&&campaign.pending?.combat&&existing.length)return;
  campaign.combatAllies=incoming;campaign.allyLocation=String(scene.location||"");
+ hydrateKnownAllyHP();
 }
 function recordCombatDelta(enemy,dealt,taken,recipient,recipientBefore,recipientAfter){
  const log=Array.isArray(campaign.combatLog)?campaign.combatLog:[];
@@ -367,7 +398,7 @@ function drawEnemyStatus(box){
     if(!Number.isInteger(hp)||!Number.isInteger(max)||max<1||max>500||hp<0||hp>max){error.textContent="Enter known values: 0 ≤ current HP ≤ maximum HP ≤ 500.";return}
     const found=campaign.combatAllies?.find(x=>x.name===ally.name);
     if(!found||busy||pending())return;
-    found.hp=hp;found.maxHp=max;campaign.partyHealth||={};campaign.partyHealth[found.name]={hp,maxHp:max};store();draw();
+    found.hp=hp;found.maxHp=max;campaign.partyHealth||={};campaign.partyHealth[found.name]={hp,maxHp:max,derived:false};store();draw();
    };setup.append(form);item.append(setup);
   }
   roster.append(item);
