@@ -89,7 +89,10 @@ function livingEnemies(){return Array.isArray(campaign?.enemies)?campaign.enemie
 function fightExchange(action){
  const targets=livingEnemies();
  if(!targets.length)return null;
- const ability=["strike","kick","evasion","riposte"].includes(action.ability)?action.ability:"strike";
+ const description=String(action.text||"");
+ const rogue=window.soaCharacters?.profile?.()?.className==="Rogue";
+ const inferred=rogue&&/\b(?:riposte)\b/i.test(description)?"riposte":rogue&&/\b(?:evasion|evade)\b/i.test(description)?"evasion":rogue&&/\bkick\b/i.test(description)?"kick":"strike";
+ const ability=["strike","kick","evasion","riposte"].includes(action.ability)?action.ability:inferred;
  const price={strike:35,kick:25,evasion:0,riposte:10}[ability];
  if(ability==="riposte"&&!campaign.parryReady){status("Riposte requires a parry in the previous exchange. No action spent.");return null}
  if(s.en<price){status("Not enough Energy for "+ability+" ("+price+" required). No action spent.");return null}
@@ -192,8 +195,9 @@ function recordCombatDelta(enemy,dealt,taken,recipient,recipientBefore,recipient
  campaign.combatLog=log.slice(-12);
 }
 function drawEnemyStatus(box){
- const enemies=livingEnemies(),exchange=campaign?.lastExchange;
- if(!enemies.length&&!exchange&&!(campaign?.combatAllies||[]).length&&!campaign?.scene?.choices?.some(x=>x.type==="combat"))return;
+ const enemies=livingEnemies(),activeContext=enemies.length||(campaign?.combatAllies||[]).length||campaign?.scene?.choices?.some(x=>x.type==="combat");
+ const exchange=activeContext?campaign?.lastExchange:null;
+ if(!activeContext)return;
  const section=document.createElement("section");section.className="soa-enemy-status";
  const heading=document.createElement("h4");heading.textContent="Battle Overview";section.append(heading);
  if(!enemies.length){const hint=document.createElement("p");hint.className="soa-combat-hint";hint.textContent="No enemy HP has been confirmed for this scene yet. The story will reveal enemy health when combatants are identified.";section.append(hint)}
