@@ -45,7 +45,7 @@ function receive(c,scene){
  const title=clean(candidate.title,90),reason=clean(candidate.reason,220);
  if(!title||!reason)return;
  d.pendingMilestone={id:"milestone-"+String(c.turn||0)+"-"+title.toLowerCase(),title,reason,kind:candidate.kind==="act"?"act":"chapter",sceneTitle:clean(scene.title,90)};
- save();
+ save();render(c);
 }
 function confirm(c){
  const d=attach(c);if(!d?.pendingMilestone)return;
