@@ -148,3 +148,9 @@ Added three region-bound, engine-authored missions with immutable reward terms a
 - Added explicit NPC enchanting skill lessons at 25 / 50 / 75 / 125, with fixed costs and confirmed payment, so self-enchanting is not stranded at skill 1. Enchanting craft and trainer skill sync to roster character professions; retraining requires explicit irreversible confirmation. No professions are replaced automatically.
 - Fixed canonical slot keys for baseline gear and per-inventory-item enchant keys. Repeated enchant rejected, untrained crafting blocked, insufficient funds blocked, materials consumed, action recorded, valid source bonuses applied. UI remembers expansion state.
 - Isolated tests passed: 15 equipped baseline slots; +90 silver vendor Striking on Ruby-Adorned Blade; duplicate rejected; 1g apprentice training to 25; +3 Arcane Dust disenchant of spare reward; self-applied Warding to Parachute Cloak costs 17 silver and 2 dust and increases AC; Enchanting rank increases to 27. These represent in-game RPG pricing, not Wowhead recipes. Cache v36, live deployment unverified.
+
+
+## Profession limit and ring correction (2026-10-16)
+- User confirms Field Researcher's Loop, not Ring. Source WoW Forever item 281634: +7 Agility and +7 Stamina, ring slot. Corrected catalog and Snacky's baseline display; benefits enter the existing capped conversion model.
+- World of Warcraft's established limit is TWO primary professions simultaneously; secondary professions are separate. Enforced no more than two distinct primary professions on character creation. Retraining swaps one of two currently held professions, never adds a third. Mining + Engineering remain unchanged for Snacky unless player explicitly confirms a switch. Reference: Blizzard WoW Classic Primer for New Players.
+- Offline cache v37. No save data intentionally reset; production iPhone verification pending.
