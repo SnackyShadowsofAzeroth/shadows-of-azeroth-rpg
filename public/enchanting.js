@@ -41,7 +41,7 @@ function apply(c,{key,recipeId,method,location,wallet}){
  const st=getState(c),target=eligibleSlots(c).find(x=>x.key===key),recipe=ENCHANTS.find(x=>x.id===recipeId);
  if(!target||!recipe||!recipe.slots.includes(target.slot))return {error:"Invalid item or enchant slot."};
  if(!["vendor","self"].includes(method))return {error:"Select an enchanting method."};
- if(method==="vendor"&&!VENDOR.test(String(location)))return {error:"Visit an enchanter in a major city."};
+ if(method==="vendor"&&!atEnchanter(location))return {error:"Visit an enchanter in a major city."};
  if(method==="self"&&!owned())return {error:"Enchanting must be one of your trained primary professions."};
  if(method==="self"&&(st.skill||1)<recipe.skill)return {error:"Enchanting skill too low for this recipe."};
  const cost=method==="vendor"?recipe.copper:Math.ceil(recipe.copper*.2);
@@ -62,7 +62,7 @@ function apply(c,{key,recipeId,method,location,wallet}){
 const TRAINING=[{skill:25,copper:10000},{skill:50,copper:20000},{skill:75,copper:35000},{skill:125,copper:70000}];
 function train(c,level,location,wallet){
  if(!owned())return {error:"Enchanting must be your primary profession."};
- if(!VENDOR.test(String(location||"")))return {error:"Visit a trainer in a major city."};
+ if(!atTrainer(location))return {error:"Visit an enchanting trainer."};
  const tier=TRAINING.find(x=>x.skill===level),st=getState(c);
  if(!tier||(st.skill||1)>=level)return {error:"That training rank is unavailable."};
  if(!safeInt(wallet)||wallet<tier.copper)return {error:"Insufficient money to train Enchanting."};
@@ -83,13 +83,16 @@ function disenchant(c,index){
  st.history.push({item:item.name,disenchanted:true,dust:amount});st.history=st.history.slice(-100);
  return {message:"Disenchanted "+item.name+" into "+amount+" Arcane Dust.",dust:amount};
 }
+function atEnchanter(location){return /\\b(?:enchanter(?:'s)? (?:shop|workshop|stall|counter)|enchanting (?:shop|workshop|atelier)|arcane enchant(?:er|ing) shop)\\b/i.test(String(location||""))}
+function atTrainer(location){return /\\b(?:enchanting trainer|enchanter trainer|enchanting academy)\\b/i.test(String(location||""))}
 function panel(c,location,wallet,commit){
+ if(!atEnchanter(location)&&!atTrainer(location))return null;
  const el=document.createElement("details"),head=document.createElement("summary");el.open=sessionStorage.getItem("soa-enchanting-panel-open")==="1";el.ontoggle=()=>sessionStorage.setItem("soa-enchanting-panel-open",el.open?"1":"0");head.textContent="Enchanting · Enchanter Services & Crafting";el.append(head);
  const st=getState(c),p=document.createElement("p");
  p.textContent="NPC services in major cities. Self-enchanting requires the Enchanting primary profession, trained skill and Arcane Dust. One enchant per item; new enchants replace the old effect.";el.append(p);
  const status=document.createElement("p");status.textContent="Enchanting profession: "+(owned()?"Trained · Skill "+st.skill:"Not trained")+" · Arcane Dust: "+(st.materials?.ArcaneDust||0);el.append(status);
  if(!owned()){const note=document.createElement("p");note.textContent="To pursue Enchanting yourself, choose it as a primary profession through character creation or the profession system. Snacky's current Mining and Engineering are retained; no profession is replaced automatically.";el.append(note);
-  if(VENDOR.test(String(location))){
+  if(atTrainer(location)){
    const profs=Object.keys(professions()).filter(x=>x!=="Enchanting");
    for(const former of profs){const button=document.createElement("button");button.type="button";button.textContent="Unlearn "+former+" and train Enchanting";
     button.onclick=()=>{
@@ -101,10 +104,11 @@ function panel(c,location,wallet,commit){
    }
   }
  }
- if(owned()&&VENDOR.test(String(location))){
+ if(owned()&&atTrainer(location)){
   const next=TRAINING.find(x=>x.skill>(st.skill||1));
   if(next){const trainButton=document.createElement("button");trainButton.type="button";trainButton.textContent="Train Enchanting skill "+next.skill+" · "+format(next.copper);trainButton.onclick=()=>{if(!window.confirm("Pay "+format(next.copper)+" for professional enchanting instruction?"))return;const result=train(c,next.skill,location,wallet());if(result.error){window.alert(result.error);return}commit(result);window.soaLivingCampaign?.refreshUI?.()};el.append(trainButton)}
  }
+ if(!atEnchanter(location))return el;
  const targets=eligibleSlots(c);
  if(!targets.length){const note=document.createElement("p");note.textContent="No equipped items available.";el.append(note);return el}
  for(const target of targets){
@@ -137,5 +141,5 @@ function panel(c,location,wallet,commit){
  for(const x of st.history.slice(-15).reverse()){const line=document.createElement("p");line.textContent=x.disenchanted?"Disenchanted "+x.item+" · +"+x.dust+" dust":x.item+" · "+x.recipe+" · "+format(x.cost);history.append(line)}el.append(history);
  return el;
 }
-window.soaEnchanting={ENCHANTS,TRAINING,VENDOR,getState,train,apply,disenchant,bonuses,panel,eligibleSlots};
+window.soaEnchanting={ENCHANTS,TRAINING,VENDOR,atEnchanter,atTrainer,getState,train,apply,disenchant,bonuses,panel,eligibleSlots};
 })();
