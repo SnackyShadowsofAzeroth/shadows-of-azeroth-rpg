@@ -116,7 +116,7 @@ function fightExchange(action){
 function updateLivingEnemies(scene){
  if(!Array.isArray(scene?.enemies))return;
  const location=String(scene.location||"");
- const previous=campaign.enemyLocation===location?livingEnemies():[];
+ const previous=(campaign.enemyLocation===location||campaign.pending?.combat)?livingEnemies():[];
  const defeated=campaign.defeatedEnemies||[];
  const next=[];
  for(const item of scene.enemies.slice(0,4)){
