@@ -1,0 +1,36 @@
+/* Campaign Chronicle — permanent parchment quest journal, save-bound. */
+body.theme-alternative .soa-chronicle-panel{scroll-margin-top:18px}
+body.theme-alternative .soa-chronicle-kicker{font:700 10px/1.4 system-ui;letter-spacing:.17em;color:#83603b;text-transform:uppercase;margin-bottom:8px}
+body.theme-alternative .soa-chronicle-panel h2{font:700 clamp(23px,6vw,29px)/1.25 Georgia,serif;color:#57331b;margin:3px 0 10px}
+body.theme-alternative .soa-current-chapter{font:600 13px/1.6 system-ui;color:#694726;margin:8px 0 18px}
+body.theme-alternative .soa-journal-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:10px 0 16px}
+body.theme-alternative .soa-journal-tabs button{min-height:44px;text-align:center;margin:0;padding:8px 5px;font:700 12px system-ui;background:linear-gradient(#70583a,#423024);color:#fff0cc;border:1px solid #94764c;border-radius:8px}
+body.theme-alternative .soa-journal-tabs button[aria-pressed="true"]{background:linear-gradient(#a47743,#6c4a2b);border-color:#efd6a0;box-shadow:0 0 0 1px #967341}
+body.theme-alternative .soa-journal-body{min-height:75px}
+body.theme-alternative .soa-quest-entry{border:1px solid #a68d61;border-radius:10px;padding:12px;margin:10px 0;background:#f3dfb39e;color:#48321d}
+body.theme-alternative .soa-quest-entry h4{margin:0 0 10px;font:700 16px Georgia,serif;color:#56341e}
+body.theme-alternative .soa-quest-objective{display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid #b3986d;padding:10px 0;font:13px/1.5 system-ui}
+body.theme-alternative .soa-quest-objective button{width:auto;min-height:35px;padding:6px 9px;margin:0;flex-shrink:0;font:600 11px system-ui}
+body.theme-alternative .soa-archive-entry{margin:12px 0;padding:12px;background:#e5d0a9ab;border-left:4px solid #997142;border-radius:6px;font:13px/1.65 system-ui;color:#503720}
+body.theme-alternative .soa-archive-entry strong{font:700 14px/1.5 Georgia,serif}
+body.theme-alternative .soa-archive-entry p{margin:5px 0}
+body.theme-alternative .soa-journal-record{border-bottom:1px solid #96744975;margin:0;padding:10px 2px;color:#503a24;font:13px/1.6 system-ui}
+body.theme-alternative .soa-chapter-proposal{padding:15px;margin:17px 0;border:2px solid #a77e4c;border-radius:10px;background:#eed49be6;color:#53351d}
+body.theme-alternative .soa-chapter-proposal strong{font:700 17px Georgia,serif}
+body.theme-alternative .soa-chapter-proposal p{font:13px/1.65 system-ui}
+body.theme-alternative .soa-milestone-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+body.theme-alternative .soa-milestone-actions button{margin:0;min-height:44px;font:700 12px system-ui}
+body.theme-alternative .soa-add-quest{border-top:1px solid #a58a61;margin-top:17px;padding-top:13px}
+body.theme-alternative .soa-add-quest summary{font:700 13px/1.5 system-ui;cursor:pointer;min-height:44px;padding:10px 0}
+body.theme-alternative .soa-add-quest form{display:grid;gap:10px}
+body.theme-alternative .soa-add-quest input{padding:10px;min-width:0;color:#50331c;background:#f8e7bf;border:1px solid #977749;border-radius:7px;font:14px system-ui}
+body.theme-alternative .soa-add-quest button{margin:0}
+body.theme-alternative .soa-chapter-banner{margin:12px 0 26px;background:radial-gradient(ellipse at 50% 0,#6a523b,#231f1a);border:3px ridge #d3ab64;border-radius:12px;color:#f0ddb7;text-align:center;padding:24px 17px;box-shadow:0 10px 23px #25190f5c}
+body.theme-alternative .soa-chapter-banner .soa-chapter-eyebrow{font:700 10px system-ui;letter-spacing:.21em;color:#e1b977}
+body.theme-alternative .soa-chapter-banner h3{font:700 27px/1.3 Georgia,serif;color:#f4dda7;margin:13px 0 6px}
+body.theme-alternative .soa-chapter-banner h4{font:700 19px/1.4 Georgia,serif;color:#edcf99;margin:0}
+body.theme-alternative .soa-chapter-banner p{font:14px/1.7 Georgia,serif;color:#eee0c9;margin:13px 0}
+body.theme-alternative .soa-chapter-banner button{background:#6a4d2f;border:1px solid #bea273;color:#fff0cc;margin:9px auto 0;max-width:240px}
+body.theme-alternative .soa-quick-nav{grid-template-columns:repeat(4,minmax(0,1fr))}
+body.theme-alternative .soa-quick-nav button.soa-quick-link{font-size:11px;padding:9px 3px}
+@media(max-width:380px){body.theme-alternative .soa-quest-objective{align-items:flex-start;flex-direction:column}body.theme-alternative .soa-quest-objective button{align-self:flex-end}body.theme-alternative .soa-journal-tabs button{font-size:11px}}
