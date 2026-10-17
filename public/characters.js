@@ -125,6 +125,7 @@ function enter(id){
  location.reload();
 }
 function create(profile){
+ if(!Array.isArray(profile.professionNames)||profile.professionNames.length>2||new Set(profile.professionNames).size!==profile.professionNames.length||profile.professionNames.some(n=>!PROFS.includes(n))){alert("Choose at most two distinct primary professions.");return}
  if(roster.characters.length>=16){alert("Character roster full (16).");return}
  const id="hero-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,7);
  const p={...profile,id,origin:"custom",startLevel:1,startingZone:startingZone(profile),startingEquipment:[...(BASIC_GEAR[profile.className]||[])],specialization:"Unchosen",professions:Object.fromEntries(profile.professionNames.map(n=>[n,{skill:1,events:0}])),secondary:Object.fromEntries(SECONDARY.map(n=>[n,{skill:1,events:0}])),professionEvents:[],professionLog:[]};
@@ -322,6 +323,7 @@ function updateCraftSkill(name,level){
  drawProfessions();return true;
 }
 function retrainPrimaryProfession(dropName,newName){
+ if(Object.keys(active?.professions||{}).length!==2)return {error:"Retraining requires two occupied primary profession slots."};
  if(!PROFS.includes(newName)||!active?.professions||!Object.hasOwn(active.professions,dropName))return {error:"Choose a currently trained primary profession."};
  if(Object.hasOwn(active.professions,newName))return {error:"Already trained in that profession."};
  if(Object.keys(active.professions).length>2)return {error:"Invalid profession roster."};
