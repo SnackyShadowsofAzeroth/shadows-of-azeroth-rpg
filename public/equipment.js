@@ -81,27 +81,45 @@ function modifiers(){
  for(const k of Object.keys(bonuses))bonuses[k]+=(base[k]||0)+(enchanting[k]||0);
  return bonuses;
 }
+function renderStatus(){
+ const mount=document.getElementById("soa-equipped-slot");if(!mount)return;
+ const profile=window.soaCharacters?.profile?.();
+ const isSnacky=profile?.id==="snacky";
+ const gathered=[];
+ if(isSnacky)for(const [label,name] of SNACKY_LOADOUT)gathered.push({label,name,source:"baseline"});
+ const q=holder(),eq=q?.equipped||{};
+ for(const [slot,index] of Object.entries(eq)){
+  const item=q?.inventory?.[index];if(!item)continue;
+  gathered.push({label:slot==="weapon"?"Equipped weapon":slot==="armor"?"Equipped armor":slot==="trinket"?"Equipped trinket":slot,name:item.name,source:"reward"});
+ }
+ const wasOpen=sessionStorage.getItem("soa-character-gear-open")==="1";
+ const details=document.createElement("details");details.className="soa-character-gear";details.open=wasOpen;
+ details.addEventListener("toggle",()=>sessionStorage.setItem("soa-character-gear-open",details.open?"1":"0"));
+ const summary=document.createElement("summary");summary.textContent="Equipped Gear · "+gathered.length+" items";details.append(summary);
+ const grid=document.createElement("div");grid.className="soa-character-gear-grid";
+ if(!gathered.length){const none=document.createElement("p");none.textContent="No tracked equipped items yet.";grid.append(none)}
+ for(const {label,name} of gathered){
+  const row=document.createElement("div");row.className="soa-character-gear-item";
+  const tag=document.createElement("small");tag.textContent=label;
+  const value=document.createElement("strong");value.textContent=name;
+  row.append(tag,value);
+  const tooltip=window.soaForeverItems?.byName?.(name);
+  if(tooltip?.verified){
+   const stats=Object.entries(tooltip.stats||{}).map(([k,v])=>"+"+v+" "+k).join(" · ");
+   if(stats||tooltip.armor){const secondary=document.createElement("small");secondary.className="soa-character-gear-stats";secondary.textContent=(tooltip.armor?tooltip.armor+" Armor":"")+(tooltip.armor&&stats?" · ":"")+stats;row.append(secondary)}
+  }
+  const ench=window.soaEnchanting?.getState&&q?window.soaEnchanting.getState(window.soaLivingCampaign?.getState?.()):null;
+  const slot=canonicalSlots().find(x=>x.name===name)?.slot;
+  const active=slot?ench?.enchants?.["baseline:"+slot]:null;
+  if(active?.item===name){const badge=document.createElement("small");badge.className="soa-character-gear-enchant";badge.textContent="Enchanted · "+(window.soaEnchanting.ENCHANTS.find(x=>x.id===active.id)?.name||active.id);row.append(badge)}
+  grid.append(row);
+ }
+ details.append(grid);mount.replaceChildren(details);
+}
 function panel(){
  const q=holder();if(!q)return null;
- const section=document.createElement("details"),head=document.createElement("summary");section.open=sessionStorage.getItem("soa-equipment-panel-open")==="1";section.ontoggle=()=>sessionStorage.setItem("soa-equipment-panel-open",section.open?"1":"0");head.textContent="Equipment & Reward Inventory";section.append(head);
- const intro=document.createElement("p");intro.textContent="Equipped items modify your stats and combat; rewards remain in your saved inventory.";section.append(intro);
- const isSnacky=window.soaCharacters?.profile?.()?.id==="snacky";
- if(isSnacky){
-  const title=document.createElement("h3");title.textContent="Snacky's Current Equipment";section.append(title);
-  const hint=document.createElement("p");hint.textContent="Forever item tooltip values shown where verified. Combat uses capped RPG conversions, not raw WoW stat totals. Only verified Forever item attributes are converted to capped RPG bonuses.";section.append(hint);
-  const grid=document.createElement("div");grid.style.cssText="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin:12px 0 20px";
-  for(const [slot,name] of SNACKY_LOADOUT){
-   const cell=document.createElement("div");cell.style.cssText="border:1px solid #ae9365;border-radius:8px;padding:9px;min-width:0";
-   const label=document.createElement("small");label.style.cssText="display:block;opacity:.75";label.textContent=slot;
-   const value=document.createElement("strong");value.style.cssText="display:block;overflow-wrap:anywhere";value.textContent=name;
-   const item=window.soaForeverItems?.byName?.(name);
-   const info=document.createElement("small");info.style.cssText="display:block;opacity:.85";
-   if(item?.verified){const stats=Object.entries(item.stats||{}).map(([k,v])=>"+"+v+" "+k).join(" · ");info.textContent=(item.armor?item.armor+" armor · ":"")+stats+(item.effect?" · "+item.effect:"");}
-   else info.textContent=item?.note||"Stats not verified";
-   cell.append(label,value,info);grid.append(cell);
-  }
-  section.append(grid);
- }
+ const section=document.createElement("details"),head=document.createElement("summary");section.open=sessionStorage.getItem("soa-equipment-panel-open")==="1";section.ontoggle=()=>sessionStorage.setItem("soa-equipment-panel-open",section.open?"1":"0");head.textContent="Inventory & Quest Rewards";section.append(head);
+ const intro=document.createElement("p");intro.textContent="Spare quest rewards and newly acquired equipment. Currently equipped gear is shown in the character panel.";section.append(intro);
  const subtitle=document.createElement("h3");subtitle.textContent="Additional Quest Rewards";section.append(subtitle);
  const items=q.inventory||[],eq=equipment();
  if(!items.length){const p=document.createElement("p");p.textContent="No additional quest equipment collected yet.";section.append(p)}
@@ -112,5 +130,5 @@ function panel(){
  section.append(row)});
  return section;
 }
-window.soaEquipment={CATALOG,SNACKY_LOADOUT,canonicalSlots,baselineModifiers,itemInfo,equip,unequip,equipment,modifiers,panel};
+window.soaEquipment={CATALOG,SNACKY_LOADOUT,canonicalSlots,baselineModifiers,renderStatus,itemInfo,equip,unequip,equipment,modifiers,panel};
 })();
