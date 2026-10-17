@@ -118,6 +118,7 @@ function fightExchange(action){
    const record=campaign.combatAllies.find(a=>a.name===allyRecipient.name);
    taken=Math.min(record.hp,amount);
    record.hp=Math.max(0,record.hp-taken);recipientAfter=record.hp;
+   campaign.partyHealth||={};campaign.partyHealth[record.name]={hp:record.hp,maxHp:record.maxHp};
   }else{
    taken=Math.min(Math.max(0,s.hp-1),amount);
    s.hp=Math.max(1,s.hp-taken);recipientAfter=s.hp;
@@ -170,21 +171,29 @@ function combatParty(){
 function reconcileCombatAllies(scene){
  if(!Array.isArray(scene?.allies))return;
  const existing=Array.isArray(campaign.combatAllies)?campaign.combatAllies:[];
- const currentLocation=String(scene.location||"");
- const knownSameScene=campaign.allyLocation===currentLocation;
+ campaign.partyHealth||={};
+ for(const member of existing)if(member&&member.name&&Number.isInteger(member.hp)&&Number.isInteger(member.maxHp)&&member.maxHp>0&&!campaign.partyHealth[member.name]){
+  campaign.partyHealth[member.name]={hp:member.hp,maxHp:member.maxHp};
+ }
  const incoming=[];
  for(const e of scene.allies.slice(0,6)){
   if(!e||typeof e.name!=="string"||!e.name.trim())continue;
   const name=e.name.trim().slice(0,60);
-  if(name===(window.soaCharacters?.profile?.()?.name||"Snacky Lugnuts")||incoming.some(v=>v.name===name))continue;
-  const previous=(knownSameScene||campaign.pending?.combat)?existing.find(x=>x.name===name):null;
+  if(name===(window.soaCharacters?.profile?.()?.name||"Snacky Lugnuts")||incoming.some(x=>x.name===name))continue;
+  const stored=campaign.partyHealth[name],previous=existing.find(x=>x.name===name);
   const max=Number.isInteger(e.maxHp)&&e.maxHp>0?Math.min(500,e.maxHp):null;
   const hp=Number.isInteger(e.hp)&&e.hp>=0&&max!==null?Math.min(max,e.hp):null;
-  // Only accept an actual HP number from a confirmed prior record or new scene.
-  incoming.push(previous&&previous.hp!==null?{...previous,name}:{name,maxHp:max,hp,role:String(e.role||"Ally").slice(0,32)});
+  const member=stored&&Number.isInteger(stored.hp)&&Number.isInteger(stored.maxHp)&&stored.maxHp>0
+   ?{name,hp:stored.hp,maxHp:stored.maxHp,role:String(e.role||previous?.role||"Ally").slice(0,32)}
+   :previous&&Number.isInteger(previous.hp)&&Number.isInteger(previous.maxHp)
+   ?{...previous,name}
+   :{name,hp,maxHp:max,role:String(e.role||"Ally").slice(0,32)};
+  incoming.push(member);
+  if(Number.isInteger(member.hp)&&Number.isInteger(member.maxHp)&&member.maxHp>0)
+   campaign.partyHealth[name]={hp:member.hp,maxHp:member.maxHp};
  }
  if(!incoming.length&&campaign.pending?.combat&&existing.length)return;
- campaign.combatAllies=incoming;campaign.allyLocation=currentLocation;
+ campaign.combatAllies=incoming;campaign.allyLocation=String(scene.location||"");
 }
 function recordCombatDelta(enemy,dealt,taken,recipient,recipientBefore,recipientAfter){
  const log=Array.isArray(campaign.combatLog)?campaign.combatLog:[];
@@ -243,12 +252,13 @@ function drawEnemyStatus(box){
   if(Number.isFinite(ally.hp)&&Number.isFinite(ally.maxHp)&&ally.maxHp>0){
    const bar=document.createElement("div");bar.className="soa-combat-ally-rail";bar.setAttribute("role","progressbar");bar.setAttribute("aria-label",ally.name+" health");bar.setAttribute("aria-valuemin","0");bar.setAttribute("aria-valuemax",String(ally.maxHp));bar.setAttribute("aria-valuenow",String(ally.hp));
    const fill=document.createElement("div");fill.className="soa-combat-ally-fill";fill.style.width=Math.max(0,Math.min(100,ally.hp/ally.maxHp*100))+"%";bar.append(fill);item.append(bar);
-  }if(!ally.player&&(!Number.isFinite(ally.hp)||!Number.isFinite(ally.maxHp))){
+  }if(!ally.player){
    const setup=document.createElement("details");setup.className="soa-hp-setup";
-   const caption=document.createElement("summary");caption.textContent="Confirm "+ally.name+"'s HP";setup.append(caption);
+   const caption=document.createElement("summary");caption.textContent=(Number.isFinite(ally.hp)?"Review / correct ":"Confirm ")+ally.name+"'s HP";setup.append(caption);
    const form=document.createElement("form");const current=document.createElement("input"),maximum=document.createElement("input");
    current.type=maximum.type="number";current.min="0";maximum.min="1";current.max=maximum.max="500";
    current.required=maximum.required=true;current.placeholder="Current HP";maximum.placeholder="Maximum HP";
+   if(Number.isInteger(ally.hp))current.value=String(ally.hp);if(Number.isInteger(ally.maxHp))maximum.value=String(ally.maxHp);
    current.setAttribute("aria-label",ally.name+" current HP");maximum.setAttribute("aria-label",ally.name+" maximum HP");
    const apply=document.createElement("button");apply.type="submit";apply.textContent="Record known HP";apply.disabled=busy||!!pending();
    const error=document.createElement("span");error.className="soa-combat-hint";
@@ -257,7 +267,7 @@ function drawEnemyStatus(box){
     if(!Number.isInteger(hp)||!Number.isInteger(max)||max<1||max>500||hp<0||hp>max){error.textContent="Enter known values: 0 ≤ current HP ≤ maximum HP ≤ 500.";return}
     const found=campaign.combatAllies?.find(x=>x.name===ally.name);
     if(!found||busy||pending())return;
-    found.hp=hp;found.maxHp=max;store();draw();
+    found.hp=hp;found.maxHp=max;campaign.partyHealth||={};campaign.partyHealth[found.name]={hp,maxHp:max};store();draw();
    };setup.append(form);item.append(setup);
   }
   roster.append(item);
