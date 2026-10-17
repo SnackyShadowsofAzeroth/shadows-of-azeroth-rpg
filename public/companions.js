@@ -87,7 +87,11 @@ function interact(kind){
  if(!message)return;
  if(valid){adjust(r,change);r.interactions++;data.rapport[selected]=clamp(r.trust/9,0,5)}
  last=message;const label=ACTIONS.find(x=>x.id===kind)?.label||kind;
- data.entries.push({person,text:label+": "+message,at:new Date().toISOString()});data.entries=data.entries.slice(-40);save();draw();
+ const moment={person,text:label+": "+message,dialogue:message,kind,at:new Date().toISOString(),source:"interaction"};
+ data.entries.push(moment);data.entries=data.entries.slice(-40);save();draw();
+ window.soaLivingCampaign?.refreshUI?.();
+ const adventure=document.getElementById("soa-companion-dialogue");
+ if(adventure&&adventure.scrollIntoView)adventure.scrollIntoView({behavior:window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches?"auto":"smooth",block:"center"});
 }
 function applyStoryConsequence(id,kind){
  if(!PEOPLE[id])return false;
@@ -179,18 +183,12 @@ function draw(){
   }
   wrapper.append(grid);companionGroup.append(wrapper);
  }
- if(last){const output=add("blockquote",last);output.className="soa-social-result";output.setAttribute("aria-live","polite");companionGroup.append(output)}
- const details=document.createElement("details");details.className="soa-journal";
- const summary=add("summary","Relationship journal ("+data.entries.length+")");details.append(summary);
- const entries=add("div","");entries.className="soa-journal-entries";
- if(!data.entries.length)entries.append(add("p","Your first companion moment awaits."));
- for(const entry of data.entries.slice(-8).reverse()){const e=add("p",entry.person+" — "+entry.text);entries.append(e)}
- details.append(entries);companionGroup.append(details);
+ // Companion conversations appear within Adventure narration instead of here.
  window.soaReputation?.renderInto?.(factionGroup);
 }
 load();
 const el=document.createElement("section");el.className="panel soa-companion-panel";el.id="companion-panel";
 const campaign=$("campaign-box");if(campaign)campaign.after(el);else document.querySelector("header")?.after(el);
 draw();
-window.soaCompanions={getRecent:()=>data.entries.slice(-4).map(x=>x.person+": "+x.text.slice(0,150)),getRapport:()=>({...data.rapport}),getRelationships:()=>Object.fromEntries(Object.keys(PEOPLE).map(id=>{const r=rel(id);return [id,{trust:r.trust,affection:r.affection,respect:r.respect,status:status(r),romance:r.romance,grievances:r.grievances}]})),applyStoryConsequence,applyDialogueOutcome,refresh:draw};
+window.soaCompanions={getRecent:()=>data.entries.slice(-4).map(x=>x.person+": "+x.text.slice(0,150)),getAdventureMoments:()=>data.entries.filter(x=>x.source==="interaction"&&typeof x.dialogue==="string").slice(-4),getRapport:()=>({...data.rapport}),getRelationships:()=>Object.fromEntries(Object.keys(PEOPLE).map(id=>{const r=rel(id);return [id,{trust:r.trust,affection:r.affection,respect:r.respect,status:status(r),romance:r.romance,grievances:r.grievances}]})),applyStoryConsequence,applyDialogueOutcome,refresh:draw};
 })();
