@@ -74,7 +74,7 @@ function socialTarget(action,skill){
 function actionOdds(action){
  const t=action.type, text=String(action.text||"").toLowerCase();
  const costs={stealth:20,engineering:10,social:0,combat:35,investigate:10,move:0,rest:0};
- const relevant=/\\b(?:pick|lock|tinker|wire|mechanism|repair|device|engineer|disable trap)\\b/.test(text)?"engineering":/\\b(?:hide|sneak|stealth|shadow|slip past|ambush|conceal|pickpocket)\\b/.test(text)?"stealth":/\\b(?:search|inspect|investigate|examine|study|track|deduce|analyze|observe)\\b/.test(text)?"investigate":/\\b(?:climb|leap|jump|sprint|run|swim|dodge|balance)\\b/.test(text)?"move":/\\b(?:persuade|convince|negotiate|discuss|appeal|talk)\\b/.test(text)?"social":/\\b(?:rest|sleep|recover)\\b/.test(text)?"rest":t;
+ const relevant=/\b(?:pick|lock|tinker|wire|mechanism|repair|device|engineer|disable trap)\b/.test(text)?"engineering":/\b(?:hide|sneak|stealth|shadow|slip past|ambush|conceal|pickpocket)\b/.test(text)?"stealth":/\b(?:search|inspect|investigate|examine|study|track|deduce|analyze|observe)\b/.test(text)?"investigate":/\b(?:climb|leap|jump|sprint|run|swim|dodge|balance)\b/.test(text)?"move":/\b(?:persuade|convince|negotiate|discuss|appeal|talk)\b/.test(text)?"social":/\b(?:rest|sleep|recover)\b/.test(text)?"rest":t;
  const base={stealth:68,engineering:64,social:65,combat:55,investigate:70,move:76,rest:83}[relevant]??65;
  const modifier=window.soaAbilities?.modifier?.(relevant)||0;
  const trained=window.soaProgression?.bonus?.(relevant)||0;
