@@ -200,7 +200,7 @@ function drawEnemyStatus(box){
  if(!activeContext)return;
  const section=document.createElement("section");section.className="soa-enemy-status";
  const heading=document.createElement("h4");heading.textContent="Battle Overview";section.append(heading);
- if(!enemies.length){const hint=document.createElement("p");hint.className="soa-combat-hint";hint.textContent="No enemy HP has been confirmed for this scene yet. The story will reveal enemy health when combatants are identified.";section.append(hint)}
+ if(!enemies.length){const hint=document.createElement("p");hint.className="soa-combat-hint";hint.textContent=exchange?.defeated?"The last opponent has been defeated.":"No enemy HP has been confirmed for this scene yet. The story will reveal enemy health when combatants are identified.";section.append(hint)}
  for(const enemy of enemies){
   const item=document.createElement("div");item.className="soa-foe";
   const header=document.createElement("div");header.className="soa-foe-heading";
@@ -210,6 +210,17 @@ function drawEnemyStatus(box){
   const rail=document.createElement("div");rail.className="soa-foe-track";rail.setAttribute("role","progressbar");
   rail.setAttribute("aria-label",enemy.name+" health");rail.setAttribute("aria-valuemin","0");rail.setAttribute("aria-valuemax",String(enemy.maxHp));rail.setAttribute("aria-valuenow",String(enemy.hp));
   const fill=document.createElement("div");fill.className="soa-foe-fill";fill.style.width=Math.max(0,Math.min(100,enemy.hp/enemy.maxHp*100))+"%";rail.append(fill);item.append(header,rail);section.append(item);
+ }
+ if(exchange?.defeated&&!enemies.some(e=>e.name===exchange.target)){
+  const fallen=document.createElement("div");fallen.className="soa-foe soa-foe-defeated";
+  const title=document.createElement("div");title.className="soa-foe-heading";
+  const name=document.createElement("strong");name.textContent=exchange.target;
+  const hp=document.createElement("span");hp.textContent="0 / "+exchange.enemyMax+" HP";
+  title.append(name,hp);
+  const track=document.createElement("div");track.className="soa-foe-track";track.setAttribute("role","progressbar");
+  track.setAttribute("aria-label",exchange.target+" health");track.setAttribute("aria-valuemin","0");track.setAttribute("aria-valuemax",String(exchange.enemyMax));track.setAttribute("aria-valuenow","0");
+  const fill=document.createElement("div");fill.className="soa-foe-fill";fill.style.width="0%";track.append(fill);
+  fallen.append(title,track);section.append(fallen);
  }
  if(exchange){
   const summary=document.createElement("div");summary.className="soa-exchange";
