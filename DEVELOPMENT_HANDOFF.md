@@ -43,3 +43,9 @@ public/characters.js updated on main (commit 5862c9b): gender field, basic gear 
 - d20 initiative is rolled and recorded for hero and current foe when starting an encounter. Current order is informational; full ordered turns/multi-enemy initiative queue remain future work.
 - Existing companion assistance menu remains; full class-specific party actions still need deeper development. Cache v16.
 - Verified JavaScript parsing and representative archetype, resistance, natural 1 / natural 20 rules. Live Cloudflare and iPhone verification pending.
+
+
+## Companion combat update (2026-10-16)
+- Added one-exchange ally combat choices to the living campaign: Bromli shield protection (enemy disadvantage), Pippa engineering snare (d20 vs enemy AC; suppresses a counterattack), Lethariel targeted healing (1d8+5, only to wounded combatants). Each action advances one round and regenerates +10 Energy, with cooldowns tracked in campaign save.
+- Hero-vs-enemy initiative comparison now affects whether an opponent may strike even if defeated/interrupted during the exchange; **this is an initiative-order approximation, not yet a full actor-by-actor sorted queue**. Do not describe it as a full D&D initiative scheduler.
+- New support controls require living combat allies; original offline campaign, save schema, and prior combat options remain. Offline cache bumped to v17. Cloudflare/iPhone end-to-end tests pending.
