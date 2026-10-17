@@ -244,3 +244,9 @@ body.theme-alternative textarea:focus-visible {
   outline:3px solid #ca9851;
   outline-offset:3px;
 }
+
+
+/* Prevent fixed-background repaints during long, touch-scrolled iPhone scenes. */
+@media (hover:none) and (pointer:coarse){
+  body.theme-alternative{background-attachment:scroll}
+}
