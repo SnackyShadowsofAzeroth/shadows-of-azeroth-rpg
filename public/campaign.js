@@ -10,7 +10,7 @@ function readableStory(text){return String(text||"").replace(/\bPipprained in he
 function status(message){statusMessage=message;const el=get("campaign-status");if(el)el.textContent=message}
 function accessCode(){return get("ai-code")?.value.trim()||""}
 function focusAccess(){status("Enter your private AI access code in the AI Story Director panel to continue.");const f=get("ai-code");if(f){f.scrollIntoView({behavior:"smooth",block:"center"});f.focus()}}
-function refreshDisplay(){render();draw();window.soaCharacters?.refreshProfessions?.();window.soaProgression?.refresh?.()}
+function refreshDisplay(){render();draw();window.soaCharacters?.refreshProfessions?.()}
 function pending(){return campaign?.pending&&typeof campaign.pending.action==="string"?campaign.pending:null}
 function originOfCampaign(){
  const hero=window.soaCharacters?.profile?.();
