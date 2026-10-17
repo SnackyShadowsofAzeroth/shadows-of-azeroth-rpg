@@ -30,6 +30,7 @@ function attach(c){
  d.chapterTitle=clean(d.chapterTitle)||"An Unnamed Chapter";
  if(!Array.isArray(d.archives))d.archives=[];
  if(!Array.isArray(d.quests))d.quests=[];
+ if(!Array.isArray(d.entries))d.entries=[];
  current=c;
  return d;
 }
@@ -66,10 +67,31 @@ function completeObjective(c,questId,objectiveId){
  o.done=true;if(q.objectives.every(x=>x.done))q.status="completed";
  save();render();
 }
-function createQuest(c,title,objective){
- const d=attach(c);title=clean(title,85);objective=clean(objective,120);
- if(!d||!title||!objective||d.quests.length>=40)return;
- d.quests.push(makeQuest("player-"+Date.now().toString(36),title,[objective]));save();render();
+function journalPanel(c,d){
+ const panel=el("div",undefined,"soa-personal-journal");
+ const form=el("form",undefined,"soa-journal-compose");
+ const label=el("label","Write a journal entry");
+ const input=el("textarea");input.maxLength=2000;input.rows=4;input.placeholder="Record a thought, clue, or moment from your adventure…";input.setAttribute("aria-label","Journal entry");label.append(input);
+ const add=el("button","Add to Journal");add.type="submit";form.append(label,add);
+ form.onsubmit=e=>{e.preventDefault();const text=clean(input.value,2000);if(!text)return;d.entries.push({id:"entry-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,7),text,createdAt:new Date().toISOString(),updatedAt:null});d.entries=d.entries.slice(-100);save();render(c)};
+ panel.append(form,el("h3","Saved entries · "+d.entries.length,"soa-journal-list-heading"));
+ if(!d.entries.length)panel.append(el("p","Your journal is empty. Add a note above to keep track of clues, plans, or memorable moments.","muted"));
+ for(const entry of d.entries.slice().reverse()){
+  const card=el("article",undefined,"soa-personal-entry");
+  const content=el("p",entry.text,"soa-journal-record");card.append(content);
+  const actions=el("div",undefined,"soa-entry-actions");
+  const edit=el("button","Edit");edit.type="button";edit.setAttribute("aria-label","Edit journal entry");
+  const remove=el("button","Remove");remove.type="button";remove.setAttribute("aria-label","Remove journal entry");
+  edit.onclick=()=>{
+   const editor=el("form",undefined,"soa-journal-edit");const field=el("textarea");field.value=entry.text;field.maxLength=2000;field.rows=4;field.setAttribute("aria-label","Edit journal entry");
+   const saveButton=el("button","Save changes");saveButton.type="submit";const cancel=el("button","Cancel");cancel.type="button";cancel.onclick=()=>render(c);
+   editor.append(field,saveButton,cancel);editor.onsubmit=e=>{e.preventDefault();const text=clean(field.value,2000);if(!text){field.focus();return}entry.text=text;entry.updatedAt=new Date().toISOString();save();render(c)};
+   card.replaceChildren(editor);field.focus();
+  };
+  remove.onclick=()=>{if(!window.confirm("Remove this journal entry?"))return;d.entries=d.entries.filter(item=>item.id!==entry.id);save();render(c)};
+  actions.append(edit,remove);card.append(actions);panel.append(card);
+ }
+ return panel;
 }
 function questPanel(d){
  const area=el("div",undefined,"soa-quest-list");
@@ -92,27 +114,16 @@ function questPanel(d){
  area.append(past);
  return area;
 }
-function archivePanel(d){
- const body=el("div",undefined,"soa-archive-list");
- const entries=d.archives.slice().reverse();
- if(!entries.length)body.append(el("p","Future completed chapters will appear here.","muted"));
- for(const a of entries){
-  const item=el("article",undefined,"soa-archive-entry");
-  item.append(el("strong","Act "+roman(a.act)+" · Chapter "+roman(a.chapter)+" — "+a.chapterTitle));
-  item.append(el("p",a.summary||a.actTitle));body.append(item);
- }
- return body;
-}
 function render(c=current){
  const d=attach(c),root=get("soa-chronicle");if(!d||!root)return;
  root.replaceChildren();
  root.append(el("div","QUEST JOURNAL · "+(window.soaCharacters?.profile?.()?.name||"Adventurer"),"soa-chronicle-kicker"));
  root.append(el("h2","The Campaign Chronicle"));
  root.append(el("p","Act "+roman(d.act)+" — "+d.actTitle+" · Chapter "+roman(d.chapter)+": "+d.chapterTitle,"soa-current-chapter"));
- const tabs=el("div",undefined,"soa-journal-tabs");const quest=el("button","Quests"),archive=el("button","Chapter Archive"),notes=el("button","Discoveries");
+ const tabs=el("div",undefined,"soa-journal-tabs");const quest=el("button","Quests"),archive=el("button","Journal"),notes=el("button","Discoveries");
  const body=el("div",undefined,"soa-journal-body");
  let selected=root.dataset.view||"quests";
- function view(name){selected=name;root.dataset.view=name;body.replaceChildren();if(name==="quests")body.append(questPanel(d));else if(name==="archive")body.append(archivePanel(d));else{const journals=Array.isArray(c?.journal)?c.journal:[];for(const note of journals.slice(-30).reverse())body.append(el("p",note,"soa-journal-record"));if(!journals.length)body.append(el("p","No discoveries recorded yet.","muted"))}
+ function view(name){selected=name;root.dataset.view=name;body.replaceChildren();if(name==="quests")body.append(questPanel(d));else if(name==="archive")body.append(journalPanel(c,d));else{const journals=Array.isArray(c?.journal)?c.journal:[];for(const note of journals.slice(-30).reverse())body.append(el("p",note,"soa-journal-record"));if(!journals.length)body.append(el("p","No discoveries recorded yet.","muted"))}
   for(const [b,n] of [[quest,"quests"],[archive,"archive"],[notes,"notes"]])b.setAttribute("aria-pressed",String(name===n))}
  for(const [b,n] of [[quest,"quests"],[archive,"archive"],[notes,"notes"]]){b.type="button";b.onclick=()=>view(n);tabs.append(b)}
  root.append(tabs,body);view(selected);
@@ -125,12 +136,6 @@ function render(c=current){
   const decline=el("button","Not yet");decline.type="button";decline.onclick=()=>dismiss(c);
   actions.append(accept,decline);offer.append(actions);root.append(offer);
  }
- const add=el("details",undefined,"soa-add-quest");add.append(el("summary","Record another quest or lead"));
- const form=el("form");const title=el("input"),objective=el("input");
- title.placeholder="Quest title";title.maxLength=85;title.required=true;objective.placeholder="Current objective";objective.maxLength=120;objective.required=true;
- title.setAttribute("aria-label","Quest title");objective.setAttribute("aria-label","Quest objective");
- const saveBtn=el("button","Add to journal");saveBtn.type="submit";form.append(title,objective,saveBtn);
- form.onsubmit=e=>{e.preventDefault();createQuest(c,title.value,objective.value)};add.append(form);root.append(add);
 }
 function banner(c){
  const d=attach(c);if(!d?.banner)return null;
