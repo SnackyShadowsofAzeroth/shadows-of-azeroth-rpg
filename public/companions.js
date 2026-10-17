@@ -87,7 +87,7 @@ function interact(kind){
  if(!message)return;
  if(valid){adjust(r,change);r.interactions++;data.rapport[selected]=clamp(r.trust/9,0,5)}
  last=message;const label=ACTIONS.find(x=>x.id===kind)?.label||kind;
- const moment={person,text:label+": "+message,dialogue:message,kind,at:new Date().toISOString(),source:"interaction"};
+ const moment={person,text:label+": "+message,dialogue:message,kind,at:new Date().toISOString(),source:"interaction",sceneTurn:window.soaLivingCampaign?.getState?.()?.turn??null};
  data.entries.push(moment);data.entries=data.entries.slice(-40);save();draw();
  window.soaLivingCampaign?.refreshUI?.();
  const adventure=document.getElementById("soa-companion-dialogue");
@@ -190,5 +190,5 @@ load();
 const el=document.createElement("section");el.className="panel soa-companion-panel";el.id="companion-panel";
 const campaign=$("campaign-box");if(campaign)campaign.after(el);else document.querySelector("header")?.after(el);
 draw();
-window.soaCompanions={getRecent:()=>data.entries.slice(-4).map(x=>x.person+": "+x.text.slice(0,150)),getAdventureMoments:()=>data.entries.filter(x=>x.source==="interaction"&&typeof x.dialogue==="string").slice(-4),getRapport:()=>({...data.rapport}),getRelationships:()=>Object.fromEntries(Object.keys(PEOPLE).map(id=>{const r=rel(id);return [id,{trust:r.trust,affection:r.affection,respect:r.respect,status:status(r),romance:r.romance,grievances:r.grievances}]})),applyStoryConsequence,applyDialogueOutcome,refresh:draw};
+window.soaCompanions={getRecent:()=>data.entries.slice(-4).map(x=>x.person+": "+x.text.slice(0,150)),getAdventureMoments:()=>{const turn=window.soaLivingCampaign?.getState?.()?.turn;return data.entries.filter(x=>x.source==="interaction"&&typeof x.dialogue==="string"&&x.sceneTurn===turn).slice(-3)},getRapport:()=>({...data.rapport}),getRelationships:()=>Object.fromEntries(Object.keys(PEOPLE).map(id=>{const r=rel(id);return [id,{trust:r.trust,affection:r.affection,respect:r.respect,status:status(r),romance:r.romance,grievances:r.grievances}]})),applyStoryConsequence,applyDialogueOutcome,refresh:draw};
 })();
