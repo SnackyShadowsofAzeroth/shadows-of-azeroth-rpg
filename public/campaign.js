@@ -160,7 +160,7 @@ function draw(){
  help.id="campaign-custom-help";help.className="muted";help.textContent="Bluff, Bribe, Romance and Threaten use d20 + skill against difficulty DC. Bribes require an explicit amount (e.g. offer 50 silver); coins are paid only when accepted. A successful romance check never overrides consent. Other custom actions use their selected type.";;;input.setAttribute("aria-describedby",help.id);
  submit.type="submit";submit.textContent="Take custom action";submit.disabled=busy||!!pending()||!navigator.onLine||!customDraft.trim();
  form.onsubmit=e=>{e.preventDefault();const text=input.value.trim();if(!text||busy||pending())return;choose({text,type:type.value,difficulty:"medium",custom:true,socialSkill:skillSelect.value==="auto"?undefined:skillSelect.value})};form.append(label,input,typeLabel,type,skillLabel,skillSelect,help,submit);box.append(form);
- const foot=document.createElement("p");foot.className="muted";foot.textContent="Scene "+campaign.turn+" · "+(navigator.onLine?"Online":"Offline saved scene")+" · "+campaign.journal.slice(-2).join(" · ");box.append(foot)
+ const foot=document.createElement("p");foot.className="muted";foot.className="muted soa-scene-footer";foot.textContent="Scene "+campaign.turn+" · Saved on this device · "+(navigator.onLine?"Online":"Offline reading");box.append(foot)
 }
 async function choose(choice){
  if(busy||pending())return;
