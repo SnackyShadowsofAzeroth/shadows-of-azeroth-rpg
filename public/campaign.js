@@ -195,19 +195,31 @@ function fightExchange(action){
  const encounter=startProgressionEncounter();
  for(const id of partyExperienceIds())if(!encounter.party.includes(id))encounter.party.push(id);
  const target=enemy||targets[0],oldHP=target.hp,heroHP=s.hp,oldEnergy=s.en;
- const accuracy=combatAccuracy(action);
- const attackRoll=ability==="riposte"||ability==="evasion"?null:1+Math.floor(Math.random()*100);
- const hit=ability==="riposte"?true:ability==="evasion"?false:attackRoll<=Math.round(accuracy*100);
- const damageModifier=Math.max(-2,Math.min(4,window.soaAbilities?.modifier?.("combat")||0));
- const rolled=ability==="strike"?Math.max(1,14+Math.floor(Math.random()*11)+damageModifier):ability==="kick"?Math.max(1,6+Math.floor(Math.random()*7)+damageModifier):ability==="riposte"?24+damageModifier:0;
+ const rules=window.soaCombatRules;
+ const actor=window.soaAbilities?.get?.("hero");
+ const dex=actor?.modifiers?.DEX??2;
+ const proficiency=actor?.proficiency??2;
+ const targetAC=rules.enemyAC(target);
+ const advantage=campaign.flags?.advantage?1:0;
+ const playerAttack=ability==="riposte"||ability==="evasion"?null:rules.attack(proficiency+dex,targetAC,{advantage});
+ const attackRoll=playerAttack?.die??null;
+ const hit=ability==="riposte"?true:ability==="evasion"?false:playerAttack.hit;
+ const hitTarget=targetAC;
+ const damageModifier=dex;
+ const rolled=ability==="strike"?rules.damage(10,10+damageModifier,!!playerAttack?.critical):ability==="kick"?rules.damage(6,4+damageModifier,!!playerAttack?.critical):ability==="riposte"?24+damageModifier:0;
  const dealt=hit?Math.min(target.hp,rolled):0;target.hp=Math.max(0,target.hp-dealt);
  const defeated=target.hp===0;
- const heroAC=window.soaAbilities?.get?.("hero")?.armorClass||12;
- const retaliationChance=Math.max(.20,Math.min(.65,.46-(heroAC-12)*.018));
- const retaliates=!defeated&&ability!=="evasion"&&!(ability==="kick"&&hit)&&Math.random()<retaliationChance;
- const eligible=retaliates?combatParty().filter(e=>!e.player&&Number.isInteger(e.hp)&&e.hp>0&&e.maxHp>0):[];
- const allyRecipient=eligible.length&&Math.random()<.35?eligible[Math.floor(Math.random()*eligible.length)]:null;
- const amount=retaliates?4+Math.floor(Math.random()*8):0;
+ const interrupted=ability==="kick"&&hit;
+ const heroAC=actor?.armorClass||12;
+ const retaliationAttempt=!defeated&&!interrupted;
+ const eligibleTargets=combatParty().filter(e=>!e.player&&Number.isInteger(e.hp)&&e.hp>0&&e.maxHp>0);
+ const defendingAlly=retaliationAttempt&&eligibleTargets.length&&Math.random()<.35?eligibleTargets[Math.floor(Math.random()*eligibleTargets.length)]:null;
+ const defendingId=defendingAlly?({"Pippa Sparkwhistle":"pippa","Bromli Ironkeg":"bromli","Lethariel Moonguard":"lethariel"})[defendingAlly.name]:null;
+ const defenderAC=defendingId?window.soaAbilities?.get?.(defendingId)?.armorClass||12:heroAC;
+ const enemyAttack=retaliationAttempt?rules.attack(rules.enemyBonus(target),defenderAC,{advantage:ability==="evasion"?-1:0}):null;
+ const retaliates=!!enemyAttack?.hit;
+ const amount=retaliates?rules.damage(rules.enemyDie(target),2,enemyAttack.critical):0;
+ const allyRecipient=defendingAlly;
  const receivedName=allyRecipient?.name||(window.soaCharacters?.profile?.()?.name||"Your hero");
  let taken=0,recipientBefore=allyRecipient?allyRecipient.hp:s.hp,recipientAfter=recipientBefore;
  if(retaliates){
@@ -221,11 +233,11 @@ function fightExchange(action){
    s.hp=Math.max(1,s.hp-taken);recipientAfter=s.hp;
   }
  }
- const parry=!retaliates&&!defeated&&ability!=="evasion"&&Math.random()<.25;
+ const parry=!!enemyAttack&&!enemyAttack.hit&&!defeated&&ability!=="evasion"&&enemyAttack.total<defenderAC&&enemyAttack.die>1&&defendingAlly===null&&Math.random()<.5;
  campaign.parryReady=parry;
  s.en=Math.min(100,s.en-price+10);s.time++;
  campaign.combatRound=(Number(campaign.combatRound)||0)+1;
- const event={round:campaign.combatRound,ability,attackRoll,hitTarget:Math.round(accuracy*100),target:target.name,dealt,taken,hit,defeated,enemyBefore:oldHP,enemyAfter:target.hp,enemyMax:target.maxHp,heroBefore:heroHP,heroAfter:s.hp,energyBefore:oldEnergy,energyAfter:s.en,recipient:receivedName,recipientBefore,recipientAfter,parry};
+ const event={round:campaign.combatRound,ability,attackRoll,hitTarget,targetAC,attackTotal:playerAttack?.total??null,critical:!!playerAttack?.critical,enemyRoll:enemyAttack?.die??null,enemyTotal:enemyAttack?.total??null,defenderAC,target:target.name,dealt,taken,hit,defeated,enemyBefore:oldHP,enemyAfter:target.hp,enemyMax:target.maxHp,heroBefore:heroHP,heroAfter:s.hp,energyBefore:oldEnergy,energyAfter:s.en,recipient:receivedName,recipientBefore,recipientAfter,parry};
  campaign.lastExchange=event;
  recordCombatDelta(target,dealt,taken,receivedName,recipientBefore,recipientAfter);
  if(defeated){
@@ -237,7 +249,7 @@ function fightExchange(action){
   campaign.defeatedEnemies=campaign.defeatedEnemies.slice(-80);
  }
  const report=(ability==="evasion"?"Defensive evasion; no attack roll.":hit?"Used "+ability+" on "+target.name+" for "+dealt+" HP.":"Used "+ability+" on "+target.name+" but missed.")+
-  (attackRoll!==null?" d100 hit roll "+attackRoll+" vs "+event.hitTarget+".":"")+
+  (attackRoll!==null?" d20 attack "+attackRoll+" + "+(proficiency+dex)+" vs AC "+targetAC+".":"")+
   " Enemy "+target.name+" HP "+oldHP+"/"+target.maxHp+" → "+target.hp+"/"+target.maxHp+". "+
   (retaliates?target.name+" retaliates against "+receivedName+" for "+taken+" HP ("+recipientBefore+" → "+recipientAfter+").":"No damage received.")+
   " Player HP "+heroHP+" → "+s.hp+"; Energy "+oldEnergy+" → "+s.en+"."+
