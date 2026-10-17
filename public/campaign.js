@@ -102,9 +102,11 @@ function dicePreview(action){
   const ability=resolvedCombatAbility(action);
   if(ability==="evasion")return {primary:"🎲 No attack roll",secondary:"Defensive exchange · 0 Energy"};
   if(ability==="riposte")return {primary:"🎲 Automatic hit after parry",secondary:(24+Math.max(-2,Math.min(4,window.soaAbilities?.modifier?.("combat")||0)))+" HP on a valid Riposte · 10 Energy"};
-  const chance=Math.round(combatAccuracy(action)*100);
-  const mod=Math.max(-2,Math.min(4,window.soaAbilities?.modifier?.("combat")||0));
- return {primary:"🎲 d100 · hit on 1–"+chance,secondary:ability==="kick"?"1d7 + "+(5+mod)+" damage · 25 Energy":"1d11 + "+(13+mod)+" damage · 35 Energy"};
+  const attacker=window.soaAbilities?.get?.("hero");
+  const bonus=(attacker?.proficiency||2)+(attacker?.modifiers?.DEX||0);
+  const targets=livingEnemies(),selected=targets.find(e=>e.name===selectedCombatTarget)||targets[0];
+  const ac=window.soaCombatRules?.enemyAC(selected)||12;
+  return {primary:"🎲 d20 + "+bonus+" vs AC "+ac+" · natural 20 critical",secondary:ability==="kick"?"1d6 + "+(4+(attacker?.modifiers?.DEX||0))+" damage · 25 Energy · interrupt on hit":"1d10 + "+(10+(attacker?.modifiers?.DEX||0))+" damage · 35 Energy"};
  }
  const skill=socialSkill(action);
  if(skill){
