@@ -1,736 +1,36 @@
-(()=>{"use strict";
-const KEY="soa-campaign-v1", MAX=24;
-let campaign=null,busy=false,enabled=false,customDraft="",customType="investigate",customSocialSkill="auto",statusMessage="",selectedCombatTarget=null,selectedAllyTarget=null;
-const get=id=>document.getElementById(id);
-function store(){try{localStorage.setItem(KEY,JSON.stringify(campaign))}catch(e){}}
-function make(){return {turn:0,scene:null,history:[],journal:[],lastError:"",lastAction:"Begin the next chapter of Snackyâ€™s continuing mission in Stormwind, addressing the explosives threat and preparing his SI:7 debrief.",lastResult:"Hollow Raven is complete; the Stormwind threat is unresolved. No new action has yet been taken.",pending:null}}
-function safe(text){return String(text||"").slice(0,2600)}
-function readableStory(text){return String(text||"").replace(/\bPipprained in her satchel\b/gi,"Pippa rummaged in her satchel").replace(/\bPipprained\b/gi,"Pippa")}
-
-function status(message){statusMessage=message;const el=get("campaign-status");if(el)el.textContent=message}
-function accessCode(){return get("ai-code")?.value.trim()||""}
-function focusAccess(){status("Enter your private AI access code in the AI Story Director panel to continue.");const f=get("ai-code");if(f){f.scrollIntoView({behavior:"smooth",block:"center"});f.focus()}}
-function refreshDisplay(){render();draw();window.soaCharacters?.refreshProfessions?.()}
-function pending(){return campaign?.pending&&typeof campaign.pending.action==="string"?campaign.pending:null}
-function originOfCampaign(){
- const hero=window.soaCharacters?.profile?.();
- if(hero&&hero.id!=="snacky")return "Separate personal adventure for "+String(hero.name||"this hero").slice(0,36)+"; starts at level "+hero.level+" ALONE with no allies in "+String(hero.startingZone||"their race starting zone")+" with 15 silver, and must not merge with Snacky's Hollow Raven story.";
- return "CANONICAL PLAYER DECISION: Snacky Lugnuts completed and solved the Hollow Raven investigation; treat that mission as CLOSED and do not reopen it as an unfinished quest. Hollow Raven involved missing SI:7 intelligence, the Memory Anchor, Subject Seven, Thorne, Valecroft and Protocol Mirrorfall; retain those as historical debrief evidence only. CURRENT OBJECTIVES: return to Stormwind, investigate and defuse the explosives threat, then debrief SI:7 on the completed Hollow Raven operation and current threat. Travel must be shown or grounded in the saved scene; never teleport the party merely because these are objectives. COMPANION PROFILES: Pippa Sparkwhistle is a Gnome Subtlety Rogue who also practices engineering; Bromli Ironkeg is a Dwarf Protection Paladin and frontline defender, not a Warrior; Lethariel Moonguard is a Night Elf Restoration Priest and healer. Preserve the companion identities and abilities in every new scene. SI:7 headquarters access is restricted to actual SI:7 operatives: Snacky may enter, but Pippa, Bromli and Lethariel Moonguard must remain outside unless separately proven to be members. CHARACTER DYNAMICS: Pippa Sparkwhistle is infatuated with Snacky, but has her own agency and boundaries; Lethariel has romantic feelings toward Bromli. Express this through subtle dialogue and behavior, not forced relationships or automatic numeric changes. Preserve all established scenes, inventory, consequences and player choices.";
-}
-
-function returnToAdventure(mode="scene"){
- const destination=mode==="status"?get("campaign-status"):get("campaign-scene")?.querySelector("h3")||get("campaign-status");
- if(!destination?.scrollIntoView)return;
- const reduced=window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches===true;
- destination.scrollIntoView({behavior:reduced?"instant":"smooth",block:"start"});
-}
-// Conservative explicit-target parsing: never infer a relationship event from ordinary movement.
-function dialogueFromCustom(action){
- if(!action?.custom)return null;
- const text=String(action.text||"").slice(0,300);
- const mentions=[["pippa",/\b(?:pippa|sparkwhistle)\b/i],["bromli",/\b(?:bromli|ironkeg)\b/i],["lethariel",/\b(?:lethariel|moonguard)\b/i]].filter(([id,re])=>re.test(text));
- if(mentions.length!==1)return null;
- // Explicit dialogue intent required; references to a companion in another activity don't count.
- if(!/\b(?:talk\w*|speak\w*|say|tell|chat\w*|convers\w*|compliment\w*|flirt\w*|jok\w*|thank\w*|prais\w*|apologiz\w*|confess\w*|insult\w*|mock\w*|argu\w*|betray\w*|lie\b|reassur\w*|encourag\w*|comfort\w*|support\w*)\b/i.test(text))return null;
- const tone=/\b(?:betray|sell out|turn against)\b/i.test(text)?"betray":
- /\b(?:insult|mock|humiliat\w*|threaten)\b/i.test(text)?"insult":
- /\b(?:apologiz\w*|sorry|forgive me)\b/i.test(text)?"apologize":
- /\b(?:flirt\w*|romance|attract\w*|kiss\w*|beautiful|handsome|adorable|crush)\b/i.test(text)?"flirt":
- /\b(?:argue|disagree|challenge)\b/i.test(text)?"disagree":
- /\b(?:support|comfort|reassure|encourage|protect)\b/i.test(text)?"support":
- /\b(?:truth|honest|confess)\b/i.test(text)?"honest":
- /\b(?:thank\w*|prais\w*|compliment\w*|jok\w*|friendly|friend|kind)\b/i.test(text)?"friendly":"neutral";
- return {target:mentions[0][0],tone};
-}
-// Targeted social checks use d20 and a character's learned background.
-function socialSkill(action){
- if(action?.socialSkill&&["bluff","bribe","romance","threaten"].includes(action.socialSkill))return action.socialSkill;
- const text=String(action?.text||"");
- if(/\b(?:brib\w*|pay off|buy (?:off|their silence)|offer\s+\d+\s*(?:gold|silver|copper|g\b|s\b|c\b))\b/i.test(text))return "bribe";
- if(/\b(?:threaten\w*|intimidat\w*|menac\w*|coerc\w*|frighten\w*|scare\w*)\b/i.test(text))return "threaten";
- if(/\b(?:flirt\w*|romanc\w*|seduc\w*|woo\b|court\w*|charm\w*|kiss\w*|confess feelings|show (?:romantic )?interest)\b/i.test(text))return "romance";
- if(/\b(?:bluff\w*|deceiv\w*|lie\b|pretend\w*|impersonat\w*|mislead\w*|con\b|fabricat\w*|false identity|fake credential)\b/i.test(text))return "bluff";
- return null;
-}
-function bribeCopper(text){
- const amounts=[...String(text||"").matchAll(/(\d{1,7})\s*(gold|silver|copper|g\b|s\b|c\b)/gi)];
- if(!amounts.length)return null;
- const factors={gold:10000,g:10000,silver:100,s:100,copper:1,c:1};
- return amounts.reduce((sum,m)=>sum+Number(m[1])*factors[m[2].toLowerCase()],0);
-}
-function socialTarget(action,skill){
- const bonuses=window.soaCharacters?.getSocialSkills?.()||{bluff:5,bribe:3,romance:3,threaten:2};
- const bonus=Number(bonuses[skill])||0;
- const baseDC=action.difficulty==="easy"?10:action.difficulty==="hard"?18:14;
- let modifier=0;
- if(skill==="romance"){
-  const text=String(action.text||"").toLowerCase();
-  const who=text.includes("pippa")?"pippa":text.includes("bromli")?"bromli":text.includes("lethariel")?"lethariel":null;
-  const relationship=who?window.soaCompanions?.getRelationships?.()?.[who]:null;
-  if(relationship&&relationship.trust<0)modifier=4;
- }
- return {bonus,dc:baseDC+modifier};
-}
-function actionOdds(action){
- const t=action.type, text=String(action.text||"").toLowerCase();
- const costs={stealth:20,engineering:10,social:0,combat:35,investigate:10,move:0,rest:0};
- const relevant=/\b(?:pick|lock|tinker|wire|mechanism|repair|device|engineer|disable trap)\b/.test(text)?"engineering":/\b(?:hide|sneak|stealth|shadow|slip past|ambush|conceal|pickpocket)\b/.test(text)?"stealth":/\b(?:search|inspect|investigate|examine|study|track|deduce|analyze|observe)\b/.test(text)?"investigate":/\b(?:climb|leap|jump|sprint|run|swim|dodge|balance)\b/.test(text)?"move":/\b(?:persuade|convince|negotiate|discuss|appeal|talk)\b/.test(text)?"social":/\b(?:rest|sleep|recover)\b/.test(text)?"rest":t;
- const base={stealth:68,engineering:64,social:65,combat:55,investigate:70,move:76,rest:83}[relevant]??65;
- const modifier=window.soaAbilities?.modifier?.(relevant)||0;
- const trained=window.soaProgression?.bonus?.(relevant)||0;
- const level=window.soaProgression?.level?.()||1;
- const difficulty=action.difficulty==="easy"?12:action.difficulty==="hard"?-22:0;
- const target=Math.max(10,Math.min(95,Math.round(base+modifier*5+trained*2+Math.max(0,level-1)*.2+difficulty-(s.alert||0)*5)));
- return {cost:costs[relevant]??costs[t]??0,target,skill:relevant,modifier,trained};
-}
-function combatAccuracy(action){
- const rank=window.soaProgression?.bonus?.("combat")||0,level=window.soaProgression?.level?.()||10;
- return Math.max(.25,Math.min(.90,.74+(window.soaAbilities?.percent?.("combat")||0)-s.alert*.04+(action.difficulty==="easy"?.08:action.difficulty==="hard"?-.13:0)+rank*.008+Math.max(0,level-10)*.0015));
-}
-function resolvedCombatAbility(action){
- const description=String(action.text||"");
- const rogue=window.soaCharacters?.profile?.()?.className==="Rogue";
- const inferred=rogue&&/\briposte\b/i.test(description)?"riposte":rogue&&/\b(?:evasion|evade)\b/i.test(description)?"evasion":rogue&&/\bkick\b/i.test(description)?"kick":"strike";
- return ["strike","kick","evasion","riposte"].includes(action.ability)?action.ability:inferred;
-}
-function dicePreview(action){
- // Combat takes priority over social keyword detection, matching the resolver.
- if(action.type==="combat"&&livingEnemies().length){
-  const ability=resolvedCombatAbility(action);
-  if(ability==="evasion")return {primary:"ðŸŽ² No attack roll",secondary:"Defensive exchange Â· 0 Energy"};
-  if(ability==="riposte")return {primary:"ðŸŽ² Automatic hit after parry",secondary:(24+Math.max(-2,Math.min(4,window.soaAbilities?.modifier?.("combat")||0)))+" HP on a valid Riposte Â· 10 Energy"};
-  const attacker=window.soaAbilities?.get?.("hero");
-  const bonus=(attacker?.proficiency||2)+(attacker?.modifiers?.DEX||0);
-  const targets=livingEnemies(),selected=targets.find(e=>e.name===selectedCombatTarget)||targets[0];
-  const ac=window.soaCombatRules?.statBlock?.(selected)?.ac||12;
-  return {primary:"ðŸŽ² d20 + "+bonus+" vs AC "+ac+" Â· natural 20 critical",secondary:ability==="kick"?"1d6 + "+(4+(attacker?.modifiers?.DEX||0))+" damage Â· 25 Energy Â· interrupt on hit":"1d10 + "+(10+(attacker?.modifiers?.DEX||0))+" damage Â· 35 Energy"};
- }
- const skill=socialSkill(action);
- if(skill){
-  const {bonus,dc}=socialTarget(action,skill);
-  return {primary:"ðŸŽ² d20 "+(bonus>=0?"+ "+bonus:"âˆ’ "+Math.abs(bonus))+" vs DC "+dc,secondary:"CHA-based "+skill+" check Â· Natural 1 fails, 20 succeeds"};
- }
- const odds=actionOdds(action);
- const {cost,target}=odds;return {primary:"ðŸŽ² "+odds.skill+" Â· d100 â‰¤ "+target+" ("+target+"%)",secondary:cost+" Energy Â· ability modifier "+(odds.modifier>=0?"+":"")+odds.modifier+" Â· training +"+odds.trained};
-}
-
-function socialCheck(action,skill){
- const amounts=skill==="bribe"?bribeCopper(action.text):null;
- if(skill==="bribe"&&(!Number.isSafeInteger(amounts)||amounts<=0)){status("Specify an explicit bribe amount, such as 'offer 50 silver to the guard'. No action was spent.");return null}
- if(skill==="bribe"&&s.money<amounts){status("Not enough money for the proposed bribe. No action was spent.");return null}
- const {bonus,dc}=socialTarget(action,skill);
- const roll=1+Math.floor(Math.random()*20),total=roll+bonus,ok=roll!==1&&(roll===20||total>=dc);
- let effect="";
- if(skill==="bluff")effect=ok?"The deception is provisionally believed.":"The target detects inconsistencies or remains unconvinced.";
- if(skill==="threaten")effect=ok?"The target yields to pressure for now.":"The target refuses to be intimidated.";
- if(skill==="romance")effect=ok?"The approach is welcomed as a conversation, without guaranteeing romantic reciprocation or consent.":"The approach is not reciprocated or the moment is unsuitable; respect the boundary.";
- if(skill==="bribe"){
-  if(ok){s.money-=amounts;effect="The offered "+fmtMoney(amounts)+" is accepted and paid; the target cooperates within reason."}
-  else effect="The offer is refused. No money changes hands.";
- }
- s.time++;s.en=Math.min(100,s.en+10);
- return (ok?"Success":"Complication")+": "+skill[0].toUpperCase()+skill.slice(1)+" check: d20 "+roll+" + "+bonus+" = "+total+" vs DC "+dc+". "+effect+" Result is authoritative. Do not fabricate further costs, relationship stages, or compelled consent.";
-}
-function livingEnemies(){return Array.isArray(campaign?.enemies)?campaign.enemies.filter(e=>e&&e.hp>0&&e.maxHp>0):[]}
-function partyExperienceIds(){
- const names=Array.isArray(campaign?.combatAllies)?campaign.combatAllies.map(a=>a?.name).filter(Boolean):[];
- return [...new Set(names.map(name=>window.soaProgression?.register?.(name)).filter(Boolean))];
-}
-function startProgressionEncounter(){
- if(campaign.xpEncounter&&campaign.xpEncounter.active)return campaign.xpEncounter;
- campaign.encounterSerial=(Number(campaign.encounterSerial)||0)+1;
- const reference="encounter-"+campaign.encounterSerial;
- campaign.xpEncounter={id:reference,active:true,defeated:[],party:partyExperienceIds(),pendingVictory:false};
- return campaign.xpEncounter;
-}
-function concludeProgressionEncounter(){
- const encounter=campaign.xpEncounter;
- if(!encounter?.active||!encounter.pendingVictory||livingEnemies().length||!encounter.defeated.length)return null;
- const result=window.soaProgression?.battle?.({receipt:encounter.id,defeated:encounter.defeated,allies:encounter.party})||null;
- encounter.active=false;encounter.pendingVictory=false;encounter.completed=true;
- if(result?.awarded){
-  const extra=result.party?.reduce((sum,p)=>sum+(p.awarded||0),0)||0;
-  campaign.lastProgression="Victory Â· +"+result.awarded+" XP to your hero"+(extra?" Â· companions shared "+extra+" XP":"")+(result.levels?" Â· LEVEL UP!":"");
- }
- return result;
-}
-function resolvedSkillName(choice){
- if(choice.type==="combat")return "combat";
- const social=socialSkill(choice);
- if(social)return social;
- const t=String(choice.type||"");
- return ["stealth","engineering","investigate","social","combat"].includes(t)?t:null;
-}
-function meaningfulSocialPractice(choice,skill){
- if(!["social","romance","bluff","bribe","threaten"].includes(skill))return true;
- const text=String(choice?.text||"").toLowerCase();
- // Relationship conversations are their own reward, not character-XP farms.
- const consequential=/\b(?:persuad\w*|convinc\w*|negotiat\w*|bargain\w*|interrogat\w*|secure (?:a |the )?(?:release|agreement|permission|access)|request (?:clearance|authorization)|win (?:support|approval)|broker\w*|resolve (?:the |a )?(?:dispute|conflict)|sway\w*|obtain (?:information|intel|evidence)|brib\w*|intimidat\w*|threaten\w*|deceiv\w*|impersonat\w*)\b/i;
- const casual=/\b(?:chat\w*|catch up|small talk|flirt\w*|compliment\w*|jok\w*|banter|kiss\w*|hold hands|ask (?:how|about|advice)|say hello|thank\w*|encourag\w*|share feelings)\b/i;
- if(consequential.test(text))return true;
- if(casual.test(text)||skill==="romance")return false;
- // Unspecified generic 'talk' and 'social' checks do not earn farming XP.
- return skill!=="social";
-}
-function recordActionPractice(choice,resolution,receipt){
- const skill=resolvedSkillName(choice);
- if(!skill)return;
- const success=/^Success:/i.test(String(resolution||""));
- const meaningful=meaningfulSocialPractice(choice,skill);
- const earned=window.soaProgression?.check?.({receipt,name:skill,success,difficulty:choice.difficulty||"medium",meaningful});
- if(earned?.awarded){
-  campaign.lastProgression=(success?"Successful":"Attempted")+" "+skill+" check Â· +"+earned.awarded+" XP"+(earned.rankUp?" Â· "+skill+" skill rank increased!":"")+(earned.levels?" Â· LEVEL UP!":"");
- }
- // Participating companions gain skill practice only for an explicitly shared named task.
- const text=String(choice.text||"").toLowerCase();
- const scene=String(campaign.scene?.story||"").toLowerCase();
- const possible=[["pippa","pippa"],["bromli","bromli"],["lethariel","lethariel"]];
- for(const [name,id] of possible){
-  if(!text.includes(name)||!scene.includes(name))continue;
-  const allowed=id==="pippa"?(skill==="engineering"||skill==="stealth"||skill==="investigate"):id==="bromli"?(skill==="combat"||skill==="investigate"):id==="lethariel"?(skill==="social"||skill==="investigate"):false;
-  if(allowed&&meaningful)window.soaProgression?.check?.({receipt:"companion:"+receipt,name:skill,success,difficulty:choice.difficulty||"medium",actorId:id});
- }
-}
-function companionExchange(action){
- const rules=window.soaCombatRules, id=action.ability;
- const types={bromli_guard:{name:"Bromli Ironkeg",cooldown:2},pippa_snare:{name:"Pippa Sparkwhistle",cooldown:3},lethariel_heal:{name:"Lethariel Moonguard",cooldown:3}};
- const spec=types[id];if(!spec)return null;
- const ally=campaign.combatAllies?.find(a=>a.name===spec.name&&a.hp>0);
- if(!ally){status(spec.name+" is not available to assist.");return null}
- campaign.supportCooldowns||={};
- const round=Number(campaign.combatRound)||0;
- if((campaign.supportCooldowns[id]||0)>round){status("Ability cooling down; no turn spent.");return null}
- const foes=livingEnemies();if(!foes.length)return null;
- const previous=s.en;
- let description="";
- if(id==="bromli_guard"){campaign.guardUntil=round+2;description="Bromli raises his shield: enemy attacks suffer disadvantage for this exchange and the next."}
- if(id==="pippa_snare"){
-  const target=foes.find(e=>e.name===selectedCombatTarget)||foes[0],block=rules.statBlock(target);
-  const roll=rules.attack(5,block.ac);
-  if(roll.hit){campaign.snaredEnemy=target.name;campaign.snareUntil=round+2;description="Pippa's snare catches "+target.name+" (d20 "+roll.die+" total "+roll.total+" vs AC "+block.ac+"). The foe loses its next attack."}
-  else description="Pippa's snare misses "+target.name+" (d20 "+roll.die+" total "+roll.total+" vs AC "+block.ac+").";
- }
- if(id==="lethariel_heal"){
-  const recipient=combatParty().filter(a=>Number.isFinite(a.hp)&&a.hp<a.maxHp).sort((a,b)=>(a.hp/a.maxHp)-(b.hp/b.maxHp))[0];
-  if(!recipient){status("No wounded ally needs healing; no turn spent.");return null}
-  const value=rules.roll(8)+5;
-  if(recipient.player){const before=s.hp;s.hp=Math.min(recipient.maxHp,s.hp+value);description="Lethariel heals "+recipient.name+" for "+(s.hp-before)+" HP."}
-  else{const allyRecord=campaign.combatAllies.find(a=>a.name===recipient.name),before=allyRecord.hp;allyRecord.hp=Math.min(allyRecord.maxHp,allyRecord.hp+value);campaign.partyHealth||={};campaign.partyHealth[allyRecord.name]={hp:allyRecord.hp,maxHp:allyRecord.maxHp,derived:true};description="Lethariel heals "+recipient.name+" for "+(allyRecord.hp-before)+" HP."}
- }
- campaign.supportCooldowns[id]=round+spec.cooldown+1;
- campaign.combatRound=round+1;
- s.time++;s.en=Math.min(100,s.en+10);
- const enemy=foes.find(e=>e.hp>0);
- let retaliation="";
- if(enemy){
-  const block=rules.statBlock(enemy),hero=window.soaAbilities?.get?.("hero"),heroAC=hero?.armorClass||12;
-  const caught=campaign.snaredEnemy===enemy.name&&campaign.snareUntil>=campaign.combatRound;
-  if(caught){retaliation=enemy.name+" is snared and cannot attack.";campaign.snareUntil=0}
-  else{
-   const roll=rules.attack(block.bonus,heroAC,{advantage:campaign.guardUntil>=campaign.combatRound?-1:0});
-   if(roll.hit){const wound=rules.damage(block.die,2,roll.critical),before=s.hp;s.hp=Math.max(1,s.hp-wound);retaliation=enemy.name+" attacks: d20 "+roll.die+" total "+roll.total+" vs AC "+heroAC+", dealing "+(before-s.hp)+" damage."}
-   else retaliation=enemy.name+" misses: d20 "+roll.die+" total "+roll.total+" vs AC "+heroAC+".";
-  }
- }
- campaign.parryReady=false;
- campaign.lastSupport={round:campaign.combatRound,actor:spec.name,description,retaliation};
- return "Success: Round "+campaign.combatRound+". "+description+" "+retaliation+" Energy "+previous+" â†’ "+s.en+". Exactly one exchange resolved.";
-}
-function fightExchange(action){
- if(["bromli_guard","pippa_snare","lethariel_heal"].includes(action.ability))return companionExchange(action);
- const targets=livingEnemies();
- if(!targets.length)return null;
- const ability=resolvedCombatAbility(action);
- const price={strike:35,kick:25,evasion:0,riposte:10}[ability];
- if(ability==="riposte"&&!campaign.parryReady){status("Riposte requires a parry in the previous exchange. No action spent.");return null}
- if(s.en<price){status("Not enough Energy for "+ability+" ("+price+" required). No action spent.");return null}
- const requested=String(action.text||"").toLowerCase();
- const matches=targets.filter(e=>requested.includes(e.name.toLowerCase()));
- const selected=targets.find(e=>e.name===selectedCombatTarget);
- const enemy=matches.length===1?matches[0]:matches.length>1?null:selected||(targets.length===1?targets[0]:null);
- if(!enemy&&ability!=="evasion"){status("Select a specific enemy target before attacking. No action spent.");return null}
- const encounter=startProgressionEncounter();
- for(const id of partyExperienceIds())if(!encounter.party.includes(id))encounter.party.push(id);
- const target=enemy||targets[0],oldHP=target.hp,heroHP=s.hp,oldEnergy=s.en;
- const rules=window.soaCombatRules;
- const actor=window.soaAbilities?.get?.("hero");
- const dex=actor?.modifiers?.DEX??2;
- const proficiency=actor?.proficiency??2;
- const block=rules.statBlock(target);
- const targetAC=block.ac;
- if(!campaign.initiativeFor||campaign.initiativeFor!==campaign.enemyLocation){
-  campaign.initiativeFor=campaign.enemyLocation;
-  campaign.initiativeRoll=rules.initiative(dex);
-  campaign.enemyInitiative=rules.initiative(block.initiative);
- }
- const advantage=campaign.flags?.advantage?1:0;
- const gearBonus=window.soaEquipment?.modifiers?.()||{};
- const playerAttack=ability==="riposte"||ability==="evasion"?null:rules.attack(proficiency+dex+(gearBonus.attack||0),targetAC,{advantage});
- const attackRoll=playerAttack?.die??null;
- const hit=ability==="riposte"?true:ability==="evasion"?false:playerAttack.hit;
- const hitTarget=targetAC;
- const damageModifier=dex;
- const arm=rules.weapon(actor,ability);
- const rolled=ability==="riposte"?24+damageModifier+(gearBonus.damage||0):ability==="evasion"?0:rules.damage(arm.die,arm.flat+(gearBonus.damage||0),!!playerAttack?.critical);
- const dealt=hit?Math.min(target.hp,rules.mitigate(rolled,arm.type,block)):0;
- target.hp=Math.max(0,target.hp-dealt);
- const defeated=target.hp===0;
- const interrupted=ability==="kick"&&hit;
- const heroAC=actor?.armorClass||12;
- const enemyActsFirst=(campaign.enemyInitiative||0)>(campaign.initiativeRoll||0);
- const retaliationAttempt=enemyActsFirst||(!defeated&&!interrupted);
- const eligibleTargets=combatParty().filter(e=>!e.player&&Number.isInteger(e.hp)&&e.hp>0&&e.maxHp>0);
- const defendingAlly=retaliationAttempt&&eligibleTargets.length&&Math.random()<.35?eligibleTargets[Math.floor(Math.random()*eligibleTargets.length)]:null;
- const defendingId=defendingAlly?({"Pippa Sparkwhistle":"pippa","Bromli Ironkeg":"bromli","Lethariel Moonguard":"lethariel"})[defendingAlly.name]:null;
- const defenderAC=defendingId?window.soaAbilities?.get?.(defendingId)?.armorClass||12:heroAC;
- const enemyAttack=retaliationAttempt?rules.attack(block.bonus,defenderAC,{advantage:ability==="evasion"||campaign.guardUntil>=(Number(campaign.combatRound)||0)+1?-1:0}):null;
- const caught=campaign.snaredEnemy===target.name&&campaign.snareUntil>=(Number(campaign.combatRound)||0)+1;
- const retaliates=!caught&&!!enemyAttack?.hit;
- if(caught)campaign.snareUntil=0;
- const amount=retaliates?rules.damage(block.die,2,enemyAttack.critical):0;
- const allyRecipient=defendingAlly;
- const receivedName=allyRecipient?.name||(window.soaCharacters?.profile?.()?.name||"Your hero");
- let taken=0,recipientBefore=allyRecipient?allyRecipient.hp:s.hp,recipientAfter=recipientBefore;
- if(retaliates){
-  if(allyRecipient){
-   const record=campaign.combatAllies.find(a=>a.name===allyRecipient.name);
-   taken=Math.min(record.hp,amount);
-   record.hp=Math.max(0,record.hp-taken);recipientAfter=record.hp;
-   campaign.partyHealth||={};campaign.partyHealth[record.name]={hp:record.hp,maxHp:record.maxHp,derived:campaign.partyHealth?.[record.name]?.derived===true};
-  }else{
-   taken=Math.min(Math.max(0,s.hp-1),amount);
-   s.hp=Math.max(1,s.hp-taken);recipientAfter=s.hp;
-  }
- }
- const parry=!!enemyAttack&&!enemyAttack.hit&&!defeated&&ability!=="evasion"&&enemyAttack.total<defenderAC&&enemyAttack.die>1&&defendingAlly===null&&Math.random()<.5;
- campaign.parryReady=parry;
- s.en=Math.min(100,s.en-price+10);s.time++;
- campaign.combatRound=(Number(campaign.combatRound)||0)+1;
- const event={round:campaign.combatRound,ability,attackRoll,hitTarget,targetAC,enemyType:block.type,damageType:arm.type,initiative:campaign.initiativeRoll,enemyInitiative:campaign.enemyInitiative,attackTotal:playerAttack?.total??null,critical:!!playerAttack?.critical,enemyRoll:enemyAttack?.die??null,enemyTotal:enemyAttack?.total??null,defenderAC,target:target.name,dealt,taken,hit,defeated,enemyBefore:oldHP,enemyAfter:target.hp,enemyMax:target.maxHp,heroBefore:heroHP,heroAfter:s.hp,energyBefore:oldEnergy,energyAfter:s.en,recipient:receivedName,recipientBefore,recipientAfter,parry};
- campaign.lastExchange=event;
- recordCombatDelta(target,dealt,taken,receivedName,recipientBefore,recipientAfter);
- if(defeated){
-  window.soaQuests?.onDefeat?.(campaign,target.name);
-  if(!encounter.defeated.some(x=>x.name===target.name))encounter.defeated.push({name:target.name,maxHp:target.maxHp});
-  if(!livingEnemies().length)encounter.pendingVictory=true;
-  if(selectedCombatTarget===target.name)selectedCombatTarget=null;
-  campaign.defeatedEnemies||=[];
-  campaign.defeatedEnemies.push(String(campaign.enemyLocation||campaign.scene?.location||"")+"|"+target.name.toLowerCase());
-  campaign.defeatedEnemies=campaign.defeatedEnemies.slice(-80);
- }
- const report=(ability==="evasion"?"Defensive evasion; no attack roll.":hit?"Used "+ability+" on "+target.name+" for "+dealt+" HP.":"Used "+ability+" on "+target.name+" but missed.")+
-  (attackRoll!==null?" d20 attack "+attackRoll+" + "+(proficiency+dex)+" vs AC "+targetAC+".":"")+
-  " Enemy "+target.name+" HP "+oldHP+"/"+target.maxHp+" â†’ "+target.hp+"/"+target.maxHp+". "+
-  (retaliates?target.name+" retaliates against "+receivedName+" for "+taken+" HP ("+recipientBefore+" â†’ "+recipientAfter+").":"No damage received.")+
-  " Player HP "+heroHP+" â†’ "+s.hp+"; Energy "+oldEnergy+" â†’ "+s.en+"."+
-  (defeated?" Opponent defeated.":"")+" Exactly ONE consequential combat exchange resolved. No automatic loot, extra turns, or unconfirmed healing.";
- return (hit||ability==="evasion"?"Success":"Complication")+": Combat exchange "+campaign.combatRound+": "+report;
-}
-function updateLivingEnemies(scene){
- if(!Array.isArray(scene?.enemies))return;
- const location=String(scene.location||"");
- const previous=(campaign.enemyLocation===location||campaign.pending?.combat)?livingEnemies():[];
- const defeated=campaign.defeatedEnemies||[];
- const next=[];
- for(const item of scene.enemies.slice(0,4)){
-  if(!item||typeof item.name!=="string"||!Number.isInteger(item.maxHp)||item.maxHp<1)continue;
-  const name=item.name.trim().slice(0,60),id=location+"|"+name.toLowerCase();
-  if(!name||defeated.includes(id)||next.some(x=>x.name.toLowerCase()===name.toLowerCase()))continue;
-  const existing=previous.find(x=>x.name.toLowerCase()===name.toLowerCase());
-  const maxHp=Math.min(500,item.maxHp);
-  next.push(existing||{name,maxHp,hp:Math.max(1,Math.min(maxHp,Math.round(Number(item.hp)||maxHp)))});
- }
- // If Gemini omits surviving enemies right after a strike, keep their locally tracked HP.
- // Deliberate movement or noncombat disengagement can clear the previous encounter.
- if(!next.length&&previous.length&&campaign.pending?.combat)next.push(...previous);
- // Disengaging from a fight without defeating every tracked foe ends that encounter
- // without a victory payment. A later fight starts a new receipt and reward pool.
- if(!next.length&&!campaign.pending?.combat&&campaign.xpEncounter?.active&&!campaign.xpEncounter.pendingVictory){
-  campaign.xpEncounter.active=false;campaign.xpEncounter.abandoned=true;
- }
- campaign.enemies=next;campaign.enemyLocation=location;
-}
-function hydrateKnownAllyHP(){
- if(!campaign)return;
- const roster=Array.isArray(campaign.combatAllies)?campaign.combatAllies:[];
- const names={"Pippa Sparkwhistle":"pippa","Bromli Ironkeg":"bromli","Lethariel Moonguard":"lethariel"};
- campaign.partyHealth||={};
- for(const ally of roster){
-  const id=names[ally?.name];if(!id)continue;
-  const expected=window.soaAbilities?.get?.(id)?.maxHp;
-  if(!Number.isInteger(expected)||expected<1)continue;
-  const old=campaign.partyHealth[ally.name];
-  // Derive maximum HP from class hit die, CON and level. Preserve existing wounds
-  // as missing HP; legacy manual entries may establish wounds but not max HP.
-  const priorMax=Number.isInteger(old?.maxHp)&&old.maxHp>0?old.maxHp:Number.isInteger(ally.maxHp)&&ally.maxHp>0?ally.maxHp:expected;
-  const priorCurrent=Number.isInteger(old?.hp)?old.hp:Number.isInteger(ally.hp)?ally.hp:priorMax;
-  const missing=Math.max(0,priorMax-Math.max(0,Math.min(priorMax,priorCurrent)));
-  ally.maxHp=expected;
-  ally.hp=Math.max(0,expected-missing);
-  campaign.partyHealth[ally.name]={hp:ally.hp,maxHp:expected,derived:true};
-
- }
-}
-function combatParty(){
- hydrateKnownAllyHP();
- const list=Array.isArray(campaign?.combatAllies)?campaign.combatAllies:[];
- const isSn=window.soaCharacters?.profile?.()?.id==="snacky";
- return [{name:window.soaCharacters?.profile?.()?.name||"Your hero",hp:s.hp,maxHp:100,player:true},...list.filter(e=>e&&typeof e.name==="string").slice(0,6).filter(e=>!isSn||!/^Snacky Lugnuts$/i.test(e.name)).map(e=>({...e,player:false}))];
-}
-function reconcileCombatAllies(scene){
- if(!Array.isArray(scene?.allies))return;
- const existing=Array.isArray(campaign.combatAllies)?campaign.combatAllies:[];
- campaign.partyHealth||={};
- for(const member of existing)if(member&&member.name&&Number.isInteger(member.hp)&&Number.isInteger(member.maxHp)&&member.maxHp>0&&!campaign.partyHealth[member.name]){
-  campaign.partyHealth[member.name]={hp:member.hp,maxHp:member.maxHp};
- }
- const incoming=[];
- for(const e of scene.allies.slice(0,6)){
-  if(!e||typeof e.name!=="string"||!e.name.trim())continue;
-  const name=e.name.trim().slice(0,60);
-  if(name===(window.soaCharacters?.profile?.()?.name||"Snacky Lugnuts")||incoming.some(x=>x.name===name))continue;
-  const stored=campaign.partyHealth[name],previous=existing.find(x=>x.name===name);
-  const max=Number.isInteger(e.maxHp)&&e.maxHp>0?Math.min(500,e.maxHp):null;
-  const hp=Number.isInteger(e.hp)&&e.hp>=0&&max!==null?Math.min(max,e.hp):null;
-  const member=stored&&Number.isInteger(stored.hp)&&Number.isInteger(stored.maxHp)&&stored.maxHp>0
-   ?{name,hp:stored.hp,maxHp:stored.maxHp,role:String(e.role||previous?.role||"Ally").slice(0,32)}
-   :previous&&Number.isInteger(previous.hp)&&Number.isInteger(previous.maxHp)
-   ?{...previous,name}
-   :{name,hp,maxHp:max,role:String(e.role||"Ally").slice(0,32)};
-  incoming.push(member);
-  if(Number.isInteger(member.hp)&&Number.isInteger(member.maxHp)&&member.maxHp>0)
-   campaign.partyHealth[name]={hp:member.hp,maxHp:member.maxHp,derived:stored?.derived===true};
- }
- if(!incoming.length&&campaign.pending?.combat&&existing.length)return;
- campaign.combatAllies=incoming;campaign.allyLocation=String(scene.location||"");
- hydrateKnownAllyHP();
-}
-function recordCombatDelta(enemy,dealt,taken,recipient,recipientBefore,recipientAfter){
- const log=Array.isArray(campaign.combatLog)?campaign.combatLog:[];
- log.push({round:campaign.combatRound,events:[
-  {name:enemy.name,side:"enemy",delta:-dealt,after:enemy.hp,maxHp:enemy.maxHp},
-  {name:recipient,side:"ally",delta:-taken,before:recipientBefore,after:recipientAfter,maxHp:recipient===(window.soaCharacters?.profile?.()?.name||"Your hero")?100:campaign.combatAllies?.find(a=>a.name===recipient)?.maxHp||null}
- ]});
- campaign.combatLog=log.slice(-12);
-}
-function drawEnemyStatus(box){
- const enemies=livingEnemies(),activeContext=enemies.length||(campaign?.combatAllies||[]).length||campaign?.scene?.choices?.some(x=>x.type==="combat");
- const exchange=activeContext?campaign?.lastExchange:null;
- if(!activeContext)return;
- const section=document.createElement("section");section.className="soa-enemy-status";
- const heading=document.createElement("h4");heading.textContent="Battle Overview";section.append(heading);
- if(!enemies.length){const hint=document.createElement("p");hint.className="soa-combat-hint";hint.textContent=exchange?.defeated?"The last opponent has been defeated.":"No enemy HP has been confirmed for this scene yet. The story will reveal enemy health when combatants are identified.";section.append(hint)}
- for(const enemy of enemies){
-  const item=document.createElement("div");item.className="soa-foe";
-  const header=document.createElement("div");header.className="soa-foe-heading";
-  const name=document.createElement("strong");name.textContent=enemy.name;
-  const hp=document.createElement("span");hp.textContent=enemy.hp+" / "+enemy.maxHp+" HP";
-  header.append(name,hp);
-  const rail=document.createElement("div");rail.className="soa-foe-track";rail.setAttribute("role","progressbar");
-  rail.setAttribute("aria-label",enemy.name+" health");rail.setAttribute("aria-valuemin","0");rail.setAttribute("aria-valuemax",String(enemy.maxHp));rail.setAttribute("aria-valuenow",String(enemy.hp));
-  const fill=document.createElement("div");fill.className="soa-foe-fill";fill.style.width=Math.max(0,Math.min(100,enemy.hp/enemy.maxHp*100))+"%";rail.append(fill);item.append(header,rail);section.append(item);
- }
- if(exchange?.defeated&&!enemies.some(e=>e.name===exchange.target)){
-  const fallen=document.createElement("div");fallen.className="soa-foe soa-foe-defeated";
-  const title=document.createElement("div");title.className="soa-foe-heading";
-  const name=document.createElement("strong");name.textContent=exchange.target;
-  const hp=document.createElement("span");hp.textContent="0 / "+exchange.enemyMax+" HP";
-  title.append(name,hp);
-  const track=document.createElement("div");track.className="soa-foe-track";track.setAttribute("role","progressbar");
-  track.setAttribute("aria-label",exchange.target+" health");track.setAttribute("aria-valuemin","0");track.setAttribute("aria-valuemax",String(exchange.enemyMax));track.setAttribute("aria-valuenow","0");
-  const fill=document.createElement("div");fill.className="soa-foe-fill";fill.style.width="0%";track.append(fill);
-  fallen.append(title,track);section.append(fallen);
- }
- if(exchange){
-  const summary=document.createElement("div");summary.className="soa-exchange";
-  const title=document.createElement("strong");title.textContent="Last exchange Â· Round "+exchange.round;
-  const dealt=document.createElement("p");dealt.textContent=exchange.hit?"Damage dealt: "+exchange.dealt+" HP to "+exchange.target+" ("+exchange.enemyBefore+" â†’ "+exchange.enemyAfter+"/"+exchange.enemyMax+").":"Missed "+exchange.target+" Â· 0 damage.";
-  const taken=document.createElement("p");taken.textContent="Damage received by "+(exchange.recipient||"your hero")+": "+exchange.taken+" HP Â· "+(exchange.recipientBefore??exchange.heroBefore)+" â†’ "+(exchange.recipientAfter??exchange.heroAfter)+" HP.";
-  summary.append(title,dealt,taken);if(Number.isInteger(exchange.attackRoll)){const roll=document.createElement("p");roll.textContent="Your attack: d20 "+exchange.attackRoll+" + modifier = "+exchange.attackTotal+" vs AC "+exchange.targetAC+(exchange.critical?" Â· CRITICAL HIT":"");summary.append(roll)}if(Number.isInteger(exchange.initiative)){const init=document.createElement("p");init.textContent="Initiative: Hero "+exchange.initiative+" Â· Foe "+exchange.enemyInitiative+" Â· "+exchange.enemyType+" Â· "+exchange.damageType+" damage";summary.append(init)}if(Number.isInteger(exchange.enemyRoll)){const defense=document.createElement("p");defense.textContent="Enemy attack: d20 "+exchange.enemyRoll+" = "+exchange.enemyTotal+" vs defender AC "+exchange.defenderAC;summary.append(defense)}if(exchange.defeated){const note=document.createElement("p");note.textContent=exchange.target+" defeated; no loot collected automatically.";summary.append(note)}section.append(summary);
- }
- const roster=document.createElement("section");roster.className="soa-combat-roster";
- const caption=document.createElement("h4");caption.textContent="Allied combatants";roster.append(caption);
- for(const ally of combatParty()){
-  const item=document.createElement("div");item.className="soa-combat-person";
-  const heading=document.createElement("div");heading.className="soa-combat-person-heading";
-  const name=document.createElement("strong");name.textContent=ally.name;
-  const hp=document.createElement("span");hp.textContent=Number.isFinite(ally.hp)&&Number.isFinite(ally.maxHp)?ally.hp+" / "+ally.maxHp+" HP":"HP unconfirmed";
-  heading.append(name,hp);item.append(heading);
-  if(!Number.isFinite(ally.hp)||!Number.isFinite(ally.maxHp)){
-   const unknown=document.createElement("div");unknown.className="soa-combat-ally-rail soa-hp-unknown";unknown.setAttribute("aria-label",ally.name+" health unconfirmed");item.append(unknown);
-  }
-  if(Number.isFinite(ally.hp)&&Number.isFinite(ally.maxHp)&&ally.maxHp>0){
-   const bar=document.createElement("div");bar.className="soa-combat-ally-rail";bar.setAttribute("role","progressbar");bar.setAttribute("aria-label",ally.name+" health");bar.setAttribute("aria-valuemin","0");bar.setAttribute("aria-valuemax",String(ally.maxHp));bar.setAttribute("aria-valuenow",String(ally.hp));
-   const fill=document.createElement("div");fill.className="soa-combat-ally-fill";fill.style.width=Math.max(0,Math.min(100,ally.hp/ally.maxHp*100))+"%";bar.append(fill);item.append(bar);
-  }
-  const statId=ally.player?"hero":({"Pippa Sparkwhistle":"pippa","Bromli Ironkeg":"bromli","Lethariel Moonguard":"lethariel"})[ally.name];
-  const ac=statId?window.soaAbilities?.get?.(statId)?.armorClass:null;
-  const info=document.createElement("div");info.className="soa-combat-hint";
-  info.textContent=Number.isFinite(ac)?"Armor Class "+ac+" Â· HP calculated from class, Constitution, and level":"Armor Class unknown Â· HP tracked by the combat engine";
-  item.append(info);
-
-  roster.append(item);
- }
- section.insertBefore(roster,section.children[1]||null);
- const hostileHeading=document.createElement("h4");hostileHeading.className="soa-hostile-heading";hostileHeading.textContent="Hostile combatants";roster.after(hostileHeading);
- const allyTargets=document.createElement("div");allyTargets.className="soa-combat-targets soa-combat-ally-targets";
- const allyLabel=document.createElement("strong");allyLabel.textContent="Choose an ally to assist";allyTargets.append(allyLabel);
- for(const ally of combatParty().filter(x=>!x.player)){
-  const b=document.createElement("button");b.type="button";b.className="soa-target-button soa-ally-target-button";
-  b.textContent=ally.name+(Number.isFinite(ally.hp)? " Â· "+ally.hp+"/"+ally.maxHp+" HP":" Â· HP unknown");
-  b.setAttribute("aria-pressed",String(selectedAllyTarget===ally.name));b.disabled=busy||!!pending();
-  b.onclick=()=>{selectedAllyTarget=ally.name;customDraft="Coordinate with "+ally.name+" to protect or assist them without assuming any healing or damage.";customType="investigate";customSocialSkill="auto";draw()};
-  allyTargets.append(b);
- }
- if(allyTargets.children.length>1){
-  const info=document.createElement("p");info.className="soa-combat-hint";info.textContent="Selecting an ally drafts a support action. It never heals or spends a turn by itself; health changes require a confirmed action.";roster.append(info);
-  const assist=document.createElement("button");assist.type="button";assist.className="soa-assist-button";
-  assist.textContent="Coordinate with selected ally Â· 1 action";
-  assist.disabled=busy||!!pending()||!combatParty().some(a=>!a.player&&a.name===selectedAllyTarget);
-  assist.onclick=()=>{const target=combatParty().find(a=>!a.player&&a.name===selectedAllyTarget);if(!target)return;
-   choose({text:"Coordinate defensively with "+target.name+" to assist their next move without inventing healing, supplies, damage or extra turns.",type:"investigate",difficulty:"medium"});
-  };
-  allyTargets.append(assist);roster.after(allyTargets);
- }
- if(enemies.length){
-  const support=document.createElement("section");support.className="soa-combat-abilities";
-  const heading=document.createElement("strong");heading.textContent="Companion combat actions Â· one exchange each";support.append(heading);
-  const options=[["bromli_guard","Bromli Â· Shield Wall (disadvantage)","Bromli Ironkeg"],["pippa_snare","Pippa Â· Engineering Snare","Pippa Sparkwhistle"],["lethariel_heal","Lethariel Â· Healing Prayer","Lethariel Moonguard"]];
-  for(const [ability,title,name] of options){
-   const member=combatParty().find(a=>a.name===name&&a.hp>0);
-   if(!member)continue;
-   const btn=document.createElement("button");btn.type="button";btn.className="soa-ability-button";
-   const left=Math.max(0,(campaign.supportCooldowns?.[ability]||0)-(campaign.combatRound||0));
-   btn.textContent=title+(left?" Â· cooldown "+left+" rounds":" Â· Ready");
-   btn.disabled=busy||!!pending()||left>0;
-   btn.onclick=()=>choose({text:title+" supports the party",type:"combat",difficulty:"medium",ability});
-   support.append(btn);
-  }
-  section.append(support);
-  if(campaign.lastSupport){const note=document.createElement("p");note.className="soa-combat-hint";note.textContent="Support round "+campaign.lastSupport.round+": "+campaign.lastSupport.description+" "+campaign.lastSupport.retaliation;section.append(note)}
- }
- const picker=document.createElement("div");picker.className="soa-combat-targets";const label=document.createElement("strong");label.textContent="Choose an enemy target";picker.append(label);
- for(const foe of enemies){
-  const button=document.createElement("button");button.type="button";button.className="soa-target-button";button.textContent=foe.name+" Â· "+foe.hp+"/"+foe.maxHp+" HP";button.setAttribute("aria-pressed",String(selectedCombatTarget===foe.name));
-  button.disabled=busy||!!pending();button.onclick=()=>{selectedCombatTarget=foe.name;draw()};
-  picker.append(button);
- }
- if(enemies.length)section.append(picker);
- const skills=document.createElement("div");skills.className="soa-combat-abilities";
- const abilitiesLabel=document.createElement("strong");abilitiesLabel.textContent="Combat abilities";skills.append(abilitiesLabel);
- const rogue=window.soaCharacters?.profile?.()?.className==="Rogue";
- const available=rogue?[["strike","Strike",35],["kick","Kick Â· interrupt",25],["evasion","Evasion",0],["riposte","Riposte Â· after parry",10]]:[["strike","Attack",35],["evasion","Defend",0]];
- for(const [id,label,cost] of available){
-  const button=document.createElement("button");button.type="button";button.className="soa-ability-button";
-  button.textContent=label+" Â· "+cost+" Energy";
-  button.disabled=busy||!!pending()||s.en<cost||(id==="riposte"&&!campaign.parryReady)||(id!=="evasion"&&!enemies.some(e=>e.name===selectedCombatTarget)&&enemies.length>1);
-  button.onclick=()=>{const target=enemies.find(e=>e.name===selectedCombatTarget)||enemies[0];if(!target)return;
-   choose({text:(window.soaCharacters?.profile?.()?.name||"Hero")+" uses "+label+" against "+target.name,type:"combat",difficulty:"medium",ability:id});
-  };
-  skills.append(button);
- }
- if(enemies.length)section.append(skills);
- if(Array.isArray(campaign.combatLog)&&campaign.combatLog.length){
-  const history=document.createElement("details");history.className="soa-battle-history";const head=document.createElement("summary");head.textContent="Damage log Â· "+campaign.combatLog.length+" exchanges";history.append(head);
-  for(const entry of campaign.combatLog.slice(-5).reverse()){const line=document.createElement("p");line.textContent="Round "+entry.round+": "+entry.events.map(e=>e.name+" "+(e.delta<0?e.delta+" HP":"no damage")+" ("+e.after+"/"+e.maxHp+")").join(" Â· ");history.append(line)}section.append(history);
- }
- box.append(section);
-}
-function result(action){
- if(action.type==="combat"&&livingEnemies().length)return fightExchange(action);
- const skill=socialSkill(action);if(skill)return socialCheck(action,skill);
- const t=action.type,{cost,target}=actionOdds(action);let damage=0;
- if(s.en<cost)return null;
- const rolled=1+Math.floor(Math.random()*100),ok=rolled<=target;
- s.en=Math.min(100,s.en-cost+10);s.time++; if(!ok&&["stealth","engineering","combat"].includes(t)){s.alert=Math.min(3,s.alert+1);damage=t==="combat"?8:t==="stealth"?3:0;s.hp=Math.max(1,s.hp-damage)}
- if(ok&&t==="rest")s.hp=Math.min(100,s.hp+4);
- // Defeating an opponent does not itself loot them: currency changes require explicit search/loot actions.
- const msg=ok?"Success":"Complication";
- let effect=t==="combat"?(ok?"The immediate opponent is overcome in a single abstract skirmish.":"The opponent remains a threat; Snacky takes "+damage+" damage."):t==="stealth"?(ok?"Snacky remains concealed.":"A noise attracts nearby attention."):t==="engineering"?(ok?"Pippa's mechanism works as intended.":"The apparatus sparks and raises suspicion."):t==="social"?(ok?"The approach is received favorably.":"The target refuses to cooperate."):t==="rest"?(ok?"The party regains composure.":"The party cannot safely rest."):ok?"The action achieves its immediate intent.":"The action encounters resistance.";
- return msg+": d100 roll "+rolled+" vs target "+target+" ("+(ok?"success":"failure")+"). "+effect+" Result is authoritative; do not invent additional mechanical effects.";
-}
-function interfaceUI(){
- if(get("campaign-box"))return;
- const el=document.createElement("section");el.className="panel";el.id="campaign-box";
- const disclosure=document.createElement("details");disclosure.className="soa-panel-disclosure soa-campaign-disclosure";
- disclosure.open=localStorage.getItem("soa-campaign-panel-open")==="1";
- disclosure.ontoggle=()=>localStorage.setItem("soa-campaign-panel-open",disclosure.open?"1":"0");
- const summary=document.createElement("summary");summary.innerHTML='Living Campaign <span class="tag">Gemini Â· Online</span>';
- const content=document.createElement("div");content.className="soa-panel-disclosure-content";
- const toggleLabel=document.createElement("label");toggleLabel.className="ai-toggle";toggleLabel.htmlFor="campaign-mode";
- const toggle=document.createElement("input");toggle.type="checkbox";toggle.id="campaign-mode";toggleLabel.append(toggle,document.createTextNode(" Enable living campaign"));
- const start=document.createElement("button");start.id="campaign-start";start.textContent="Start / Resume AI campaign";
- const offline=document.createElement("button");offline.id="campaign-offline";offline.className="sub";offline.textContent="Return to offline adventure";
- const campaignStatus=document.createElement("div");campaignStatus.id="campaign-status";campaignStatus.className="muted";campaignStatus.setAttribute("aria-live","polite");
- const scene=document.createElement("div");scene.id="campaign-scene";
- content.append(toggleLabel,start,offline,campaignStatus,scene);disclosure.append(summary,content);el.append(disclosure);
- document.querySelector("header").after(el);
- get("campaign-mode").onchange=e=>{enabled=e.target.checked;localStorage.setItem("soa-campaign-enabled",enabled?"1":"0");if(enabled){if(!campaign)campaign=make();store();draw();if(navigator.onLine&&(!campaign.scene||pending()))advance(campaign.lastAction,campaign.lastResult,true)}else{document.body.classList.remove("soa-living-mode");get("campaign-scene").replaceChildren();showOriginal(true)}};
- get("campaign-start").onclick=()=>{if(!campaign)campaign=make();enabled=true;get("campaign-mode").checked=true;localStorage.setItem("soa-campaign-enabled","1");draw();if(!accessCode()){focusAccess();return}if(pending()||!campaign.scene)advance(campaign.lastAction,campaign.lastResult,true);else{status("Saved scene ready. Choose an action below.");refreshDisplay()}};
- get("campaign-offline").onclick=()=>{enabled=false;document.body.classList.remove("soa-living-mode");get("campaign-mode").checked=false;localStorage.setItem("soa-campaign-enabled","0");showOriginal(true);get("campaign-status").textContent="Offline scripted adventure enabled."};
-}
-function showOriginal(show){if(window.soaCharacters?.isNewCharacter?.())show=false;for(const el of document.querySelectorAll("main > section.panel")){if(el.id==="campaign-box")continue;const isStory=!!el.querySelector("#choices");if(isStory)el.style.display=show?"":"none"}}
-function reconcileAuthorizedMissionReward(){
- if(!campaign||window.soaCharacters?.profile?.()?.id!=="snacky")return;
- const q=window.soaQuests?.ensure?.(campaign);
- if(!q||q.claimed?.["mission:stormwind-explosives-defused:v1"])return;
- // Approved by player specifically for the completed defusal. Not inferred from Gemini prose.
- const result=window.soaQuests?.grantStormwindMission?.(campaign,s.money);
- if(Number.isSafeInteger(result?.wallet)){
-  s.money=result.wallet;
-  campaign.lastPayment=result.description;
-  campaign.history.push(result.description);
-  campaign.history=campaign.history.slice(-MAX);
-  store();save();
- }
-}
-function draw(){
- if(!enabled||!campaign)return;document.body.classList.add("soa-living-mode");showOriginal(false);
- const box=get("campaign-scene");box.replaceChildren();
- if(!campaign.scene){status(statusMessage||"Ready to generate the next scene.");return}
- const sc=campaign.scene,head=document.createElement("h3"),where=document.createElement("div"),text=document.createElement("p");
- reconcileAuthorizedMissionReward();
- const questPanel=window.soaQuests?.panel?.(campaign,sc.location,()=>s.money,(result)=>{if(result?.error){status(result.error);return}if(Number.isSafeInteger(result?.wallet)){s.money=result.wallet;save()}store();render();draw();status(result?.description||result?.message||"Contract updated.");}) || null;
- const transition=window.soaChronicle?.banner?.(campaign);if(transition)box.append(transition);
- const kicker=document.createElement("div");kicker.className="soa-scene-kicker";const position=window.soaChronicle?.progress?.(campaign);kicker.textContent=position?"ACT "+position.actRoman+" Â· CHAPTER "+position.chapterRoman+" Â· SCENE "+position.scene:"FIELD CHRONICLE Â· SCENE "+campaign.turn;box.append(kicker);head.textContent=sc.title||"The Hollow Raven";where.className="muted";where.textContent=sc.location||"Raven Hill";text.className="soa-story-prose";text.style.whiteSpace="pre-line";text.textContent=readableStory(sc.story);box.append(head,where,text);
- const paid=campaign.quests?.claimed?.["mission:stormwind-explosives-defused:v1"];
- if(paid){const receipt=document.createElement("p");receipt.className="soa-level-toast";receipt.textContent="MISSION PAID Â· Stormwind explosives defused Â· Total party reward: +5g 00s 00c Â· Credited to shared wallet once.";box.append(receipt)}
- if(questPanel)box.append(questPanel);
- const missions=window.soaQuests?.missionPanel?.(campaign,sc.location,()=>s.money,(result)=>{if(result?.error){status(result.error);return}if(Number.isSafeInteger(result?.wallet)){s.money=result.wallet;save()}store();render();draw();status(result?.description||result?.message||"Mission updated.");});if(missions)box.append(missions);
- window.soaEquipment?.renderStatus?.();
- const gear=window.soaEquipment?.panel?.();if(gear){const wrap=document.createElement("div");wrap.id="soa-equipment-shortcut";wrap.append(gear);box.prepend(wrap)}
- const enchanting=window.soaEnchanting?.panel?.(campaign,sc.location,()=>s.money,(result)=>{if(Number.isSafeInteger(result?.wallet)){s.money=result.wallet;save()}store();render();draw();status(result?.message||"Enchanting updated.")});if(enchanting)box.append(enchanting);
- if(/\\b(?:coins?|silver|gold|copper|retainer|payment|payout|reward|stipend|wages)\\b/i.test(sc.story||"")&&/\\b(?:hands? (?:over|you)|slides? (?:an? |the )?(?:iron-bound )?(?:lockbox|coins?)|paid|pays|receiv(?:e|ed)|collect(?:ed)?|claim(?:ed)?|authorized|rewarded)\\b/i.test(sc.story||"")&&!campaign.lastPayment){
-  const notice=document.createElement("p");notice.className="soa-level-toast";
-  notice.textContent="Payment mentioned in narration Â· Amount not verified Â· No currency credited by the game engine.";
-  box.append(notice);
- }
- if(campaign.lastProgression){const gained=document.createElement("p");gained.className="soa-level-toast";gained.textContent=campaign.lastProgression;box.append(gained)}
- const moments=window.soaCompanions?.getAdventureMoments?.()||[];
- if(moments.length){
-  const dialogue=document.createElement("section");dialogue.className="soa-companion-dialogue";dialogue.id="soa-companion-dialogue";
-  dialogue.setAttribute("aria-label","Companion conversations");
-  const label=document.createElement("div");label.className="soa-companion-dialogue-heading";label.textContent="COMPANION CONVERSATIONS";
-  dialogue.append(label);
-  for(const moment of moments){
-   const entry=document.createElement("blockquote");entry.className="soa-companion-quote";
-   const who=document.createElement("strong");who.textContent=moment.person;
-   const words=document.createElement("p");words.textContent=moment.dialogue;
-   entry.append(who,words);dialogue.append(entry);
-  }
-  box.append(dialogue);
- }
- if(pending()){const note=document.createElement("p");note.className="soa-pending";note.textContent="Your last decision is saved. The next story scene has not arrived. Retry safely without repeating the action.";box.append(note);const retry=document.createElement("button");retry.className="med";retry.textContent="Retry generating next scene";retry.disabled=busy;retry.onclick=()=>{returnToAdventure("status");advance(campaign.lastAction,campaign.lastResult,true)};box.append(retry)}
- if(campaign.journal.length){
-  const notes=document.createElement("details");notes.className="soa-field-notes";
-  const summary=document.createElement("summary");summary.textContent="Field notes Â· "+campaign.journal.length+" discoveries";notes.append(summary);
-  const list=document.createElement("ul");
-  for(const fact of campaign.journal.slice(-8).reverse()){const item=document.createElement("li");item.textContent=fact;list.append(item)}
-  notes.append(list);box.append(notes);
- }
- drawEnemyStatus(box);
- if(campaign?.chronicle?.pendingMilestone){
-  const notice=document.createElement("button");notice.type="button";notice.className="soa-chapter-review";
-  notice.textContent="âœ¦ A chapter milestone is ready for your review Â· Open Journal";
-  notice.onclick=()=>get("soa-chronicle")?.scrollIntoView({behavior:window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches?"auto":"smooth",block:"start"});
-  box.append(notice);
- }
- const choicesHeader=document.createElement("div");choicesHeader.className="soa-choices-heading";
- const title=document.createElement("strong");title.textContent="Choose your next move";
- const count=document.createElement("span");count.textContent=sc.choices.length+" paths + resources + custom";
- choicesHeader.append(title,count);box.append(choicesHeader);
- for(const [index,choice] of sc.choices.entries()){const b=document.createElement("button");b.className=choice.difficulty==="easy"?"low":choice.difficulty==="hard"?"high":"med";const headline=document.createElement("strong"),detail=document.createElement("small");headline.textContent=String.fromCharCode(65+index)+") "+choice.text;headline.style.display="block";const preview=dicePreview(choice);
- detail.textContent=(choice.difficulty||"medium")+" difficulty Â· "+(socialSkill(choice)||choice.type||"investigate");
- const rollLine=document.createElement("span");rollLine.className="soa-roll-preview";rollLine.textContent=preview.primary;
- const rollHint=document.createElement("span");rollHint.className="soa-roll-hint";rollHint.textContent=preview.secondary;detail.style.cssText="display:block;margin-top:5px;color:#bccbd6;font:12px system-ui;text-transform:capitalize";b.append(headline,detail,rollLine,rollHint);b.disabled=busy||!!pending();b.onclick=()=>choose(choice);box.append(b)}
- const surveyIndex=sc.choices.length;
- const survey=document.createElement("button");
- survey.type="button";survey.className="low soa-resource-survey";
- const surveyTitle=document.createElement("strong"),surveyHint=document.createElement("small");
- surveyTitle.textContent=String.fromCharCode(65+surveyIndex)+") Survey surrounding resources";
- surveyTitle.style.display="block";
- surveyHint.textContent="Look for ore, herbs, water and other natural materials Â· Investigate";
- surveyHint.style.cssText="display:block;margin-top:5px;color:#d6dfd2;font:12px system-ui";
- const surveyRoll=document.createElement("span");surveyRoll.className="soa-roll-preview";surveyRoll.textContent=dicePreview({type:"investigate",difficulty:"medium"}).primary;
- survey.append(surveyTitle,surveyHint,surveyRoll);
- survey.disabled=busy||!!pending()||!navigator.onLine;
- survey.onclick=()=>choose({text:"Survey the immediate surroundings for accessible natural resources suitable for this character's professions. Search carefully for visible ore veins, herbs, fishable water, recoverable hides and other plausible materials; note what is actually present. Do not harvest, mine, gather or award materials yet. If none are accessible, report that clearly.",type:"investigate",difficulty:"medium",survey:true});
- box.append(survey);
- const form=document.createElement("form"),label=document.createElement("label"),input=document.createElement("textarea"),typeLabel=document.createElement("label"),type=document.createElement("select"),skillLabel=document.createElement("label"),skillSelect=document.createElement("select"),submit=document.createElement("button"),help=document.createElement("p");
- label.htmlFor="campaign-custom-action";label.textContent=String.fromCharCode(65+Math.min(sc.choices.length+1,25))+") Custom action â€” choose your own approach";
- input.id="campaign-custom-action";input.className="ai-input";input.maxLength=300;input.required=true;input.rows=3;input.placeholder="e.g. Ask Pippa to build a distraction while I slip past the guards";input.value=customDraft;input.disabled=busy||!!pending();
- input.oninput=()=>{customDraft=input.value;submit.disabled=busy||!!pending()||!navigator.onLine||!customDraft.trim()};
- typeLabel.htmlFor="campaign-custom-type";typeLabel.textContent="Action type";type.id="campaign-custom-type";type.className="ai-input";type.disabled=busy||!!pending();
- for(const [value,name] of [["investigate","Investigate"],["stealth","Stealth"],["engineering","Engineering"],["social","Social"],["combat","Combat"],["move","Move"],["rest","Rest"]]){const option=document.createElement("option");option.value=value;option.textContent=name;type.append(option)}
- type.value=customType;type.onchange=()=>{customType=type.value};
- skillLabel.htmlFor="campaign-social-skill";skillLabel.textContent="Social check (optional)";
- skillSelect.id="campaign-social-skill";skillSelect.className="ai-input";skillSelect.disabled=busy||!!pending();
- for(const [value,label] of [["auto","Auto-detect"],["bluff","Bluff Â· Deception"],["bribe","Bribe Â· Negotiation"],["romance","Romance Â· Charm"],["threaten","Threaten Â· Intimidation"]]){const opt=document.createElement("option");opt.value=value;opt.textContent=label;skillSelect.append(opt)}
- skillSelect.value=customSocialSkill;skillSelect.onchange=()=>{customSocialSkill=skillSelect.value};
- const customRoll=document.createElement("p");customRoll.className="soa-custom-roll-preview";customRoll.setAttribute("aria-live","polite");
- function updateCustomRoll(){const action={text:input.value,type:type.value,difficulty:"medium",socialSkill:skillSelect.value==="auto"?undefined:skillSelect.value};
- const preview=dicePreview(action);customRoll.textContent=preview.primary+" Â· "+preview.secondary}
- input.addEventListener("input",updateCustomRoll);type.addEventListener("change",updateCustomRoll);skillSelect.addEventListener("change",updateCustomRoll);
- updateCustomRoll();
- help.id="campaign-custom-help";help.className="muted";help.textContent="Bluff, Bribe, Romance and Threaten use d20 + skill against difficulty DC. Bribes require an explicit amount (e.g. offer 50 silver); coins are paid only when accepted. A successful romance check never overrides consent. Other custom actions use their selected type.";;;input.setAttribute("aria-describedby",help.id);
- submit.type="submit";submit.textContent="Take custom action";submit.disabled=busy||!!pending()||!navigator.onLine||!customDraft.trim();
- form.onsubmit=e=>{e.preventDefault();const text=input.value.trim();if(!text||busy||pending())return;choose({text,type:type.value,difficulty:"medium",custom:true,socialSkill:skillSelect.value==="auto"?undefined:skillSelect.value})};form.append(label,input,typeLabel,type,skillLabel,skillSelect,customRoll,help,submit);box.append(form);
- const foot=document.createElement("p");foot.className="muted";foot.className="muted soa-scene-footer";foot.textContent="Scene "+campaign.turn+" Â· Saved on this device Â· "+(navigator.onLine?"Online":"Offline reading");box.append(foot)
-}
-async function choose(choice){
- if(busy||pending())return;
- if(!navigator.onLine){status("Offline: your saved scene is available. Reconnect to generate another.");return}
- if(!accessCode()){focusAccess();return}
- const detected=dialogueFromCustom(choice);if((detected||socialSkill(choice))&&choice.custom&&choice.type==="investigate")choice={...choice,type:"social"};
- const resolution=result(choice);
- if(!resolution){if(!socialSkill(choice)&&choice.type!=="combat")status("Not enough Energy for that action.");return}
- campaign.lastProgression="";
- campaign.actionSerial=(Number(campaign.actionSerial)||0)+1;
- const actionReceipt="turn-"+campaign.turn+"-action-"+campaign.actionSerial;
- recordActionPractice(choice,resolution,actionReceipt);
- campaign.lastAction=safe(choice.text);campaign.lastResult=resolution;
- campaign.pending={action:campaign.lastAction,resolution,startedAt:Date.now(),dialogue:detected,survey:choice.survey===true,combat:choice.type==="combat",actionReceipt};
- campaign.history.push("At "+safe(campaign.scene?.location||"unknown location")+": Player: "+campaign.lastAction+" | "+resolution);
- campaign.history=campaign.history.slice(-MAX);store();refreshDisplay();
- // Release the iPhone keyboard and return to the story while Gemini works.
- if(choice.custom&&document.activeElement?.blur)document.activeElement.blur();
- returnToAdventure("status");
- await advance(campaign.lastAction,resolution,false);
-}
-async function advance(action,resolution,retry){
- if(busy)return;if(!navigator.onLine){get("campaign-status").textContent="Offline: saved scene available; new scenes require internet.";draw();return}
- const code=accessCode();
- if(!code){focusAccess();draw();return}
- busy=true;status("Gemini is writing the next sceneâ€¦");draw();
- try{
- const response=await fetch("./api/campaign",{method:"POST",headers:{"content-type":"application/json","x-story-access":code},body:JSON.stringify({context:{location:campaign.scene?.location||(window.soaCharacters?.isNewCharacter?.()?(window.soaCharacters?.profile?.()?.startingZone||"New adventurer starting zone"):"Hollow Raven laboratory"),previousTitle:campaign.scene?.title||"",previousScene:campaign.scene?.story||"",campaignOrigin:originOfCampaign(),startingZone:window.soaCharacters?.profile?.()?.startingZone||null,recentDiscoveries:campaign.journal.slice(-12),action,resolution,hp:s.hp,energy:s.en,gold:fmtMoney(s.money),alarm:s.alert,turn:campaign.turn,history:campaign.history.slice(-20),flags:Object.keys(s.flags||{}),companionMoments:window.soaCompanions?.getRecent?.()||[],companionProfiles:window.soaCompanions?.getProfiles?.()||{},relationships:window.soaCompanions?.getRelationships?.()||{},conversationContext:window.soaCompanions?.getConversationContext?.()||{},character:window.soaCharacters?.profile?.()||null,abilityScores:window.soaAbilities?.get?.("hero")?.stats||null,reputation:window.soaReputation?.getStandings?.()||{},reputationDevelopments:window.soaReputation?.getDevelopments?.()||[],enemies:livingEnemies().map(e=>({name:e.name,hp:e.hp,maxHp:e.maxHp})),allies:combatParty().map(e=>({name:e.name,hp:e.hp,maxHp:e.maxHp})),questRewards:{last:campaign.quests?.lastReward||null,activeMissions:Object.entries(campaign.quests?.missions||{}).filter(([,v])=>v.state!=="claimed").map(([id,v])=>({id,state:v.state}))},combatLog:(campaign.combatLog||[]).slice(-3),lastExchange:campaign.lastExchange||null,chronicle:window.soaChronicle?.context?.(campaign)||null,resourceSurvey:campaign.pending?.survey===true}})});
- const data=await response.json().catch(()=>({error:"Invalid server response"}));if(!response.ok)throw Error(data.error||"Request failed");
- if(!Array.isArray(data.choices)||!data.story)throw Error("Incomplete generated scene");
- const completedDialogue=campaign.pending?.dialogue?{...campaign.pending.dialogue,id:"campaign-dialogue-"+campaign.pending.startedAt+"-"+campaign.turn,success:/^Success:/i.test(campaign.pending.resolution)}:null;
- const completedProfession=campaign.pending&&!campaign.pending.survey?{action:campaign.pending.action,resolution:campaign.pending.resolution,id:"profession-"+campaign.pending.startedAt+"-"+campaign.turn}:null;
- const completedFaction=campaign.pending?{action:campaign.pending.action,resolution:campaign.pending.resolution,id:"faction-"+campaign.pending.startedAt+"-"+campaign.turn}:null;
- updateLivingEnemies(data);reconcileCombatAllies(data);
- if(campaign.xpEncounter?.active){
-  for(const id of partyExperienceIds())if(!campaign.xpEncounter.party.includes(id))campaign.xpEncounter.party.push(id);
-  if(campaign.xpEncounter.defeated.length&&!livingEnemies().length)campaign.xpEncounter.pendingVictory=true;
-  if(campaign.xpEncounter.pendingVictory)concludeProgressionEncounter();
- }
- campaign.scene=data;campaign.turn++;window.soaChronicle?.receive?.(campaign,data);campaign.pending=null;customDraft="";customSocialSkill="auto";campaign.history.push("Scene: "+safe(data.title)+" @ "+safe(data.location)+" â€” "+safe(data.story).slice(0,380));campaign.history=campaign.history.slice(-MAX);if(data.journal)campaign.journal.push(safe(data.journal).slice(0,200));campaign.journal=campaign.journal.slice(-100);window.soaChronicle?.render?.(campaign);campaign.lastError="";if(completedDialogue)window.soaCompanions?.applyDialogueOutcome?.(completedDialogue);if(completedProfession)window.soaCharacters?.applyProfession?.(completedProfession.action,completedProfession.resolution,completedProfession.id);if(completedFaction)window.soaReputation?.fromAction?.(completedFaction);store();status("Scene generated and saved. Choose your next action.");
- }catch(e){campaign.lastError=e.message;store();status("AI unavailable: "+e.message+". Your last action is preserved. Tap Retry generating next scene; it will not spend Energy twice.")}finally{busy=false;refreshDisplay();returnToAdventure(campaign?.lastError?"status":"scene")}
-}
-function migrateCompanionDisplayNames(){
- if(!campaign)return;
- const canonical=name=>name==="Lethariel"?"Lethariel Moonguard":name;
- if(Array.isArray(campaign.combatAllies))for(const ally of campaign.combatAllies)if(ally&&typeof ally.name==="string")ally.name=canonical(ally.name);
- if(campaign.partyHealth&&typeof campaign.partyHealth==="object"&&campaign.partyHealth.Lethariel){
-  if(!campaign.partyHealth["Lethariel Moonguard"])campaign.partyHealth["Lethariel Moonguard"]=campaign.partyHealth.Lethariel;
-  delete campaign.partyHealth.Lethariel;
- }
- if(campaign.lastExchange?.recipient==="Lethariel")campaign.lastExchange.recipient="Lethariel Moonguard";
- if(Array.isArray(campaign.combatLog))for(const row of campaign.combatLog)if(Array.isArray(row?.events))for(const event of row.events)if(event?.name==="Lethariel")event.name="Lethariel Moonguard";
-}
-try{campaign=JSON.parse(localStorage.getItem(KEY)||"null")}catch(e){campaign=null}
-migrateCompanionDisplayNames();
-enabled=localStorage.getItem("soa-campaign-enabled")==="1";if(campaign){window.soaChronicle?.attach?.(campaign);store()}window.soaChronicleSetSave?.(store);interfaceUI();get("campaign-mode").checked=enabled;
-if(enabled){if(!campaign)campaign=make();draw();if(!campaign.scene&&navigator.onLine)advance(campaign.lastAction,campaign.lastResult,true)}
-window.soaLivingCampaign={getState:()=>campaign,enabled:()=>enabled,persist:store,refreshUI:()=>{draw();window.soaCharacters?.refreshProfessions?.()}};})();
+YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éíÛnöé:-jZ.¶›­–)Þ³R‚‚“Óç²'W6R7G&–7B#°Ð¦6öç7B´U“Ò'6öÖ6×–vâ×c"ÂÔƒÓ#C°Ð¦ÆWB6×–vãÖçVÆÂÆ'W7“ÖfÇ6RÆVæ&ÆVCÖfÇ6RÆ7W7FöÔG&gCÒ""Æ7W7FöÕG—SÒ&–çfW7F–vFR"Æ7W7FöÕ6ö6–Å6¶–ÆÃÒ&WFò"Ç7FGW4ÖW76vSÒ""Ç6VÆV7FVD6öÖ&EF&vWCÖçVÆÂÇ6VÆV7FVDÆÇ•F&vWCÖçVÆÃ°Ð¦6öç7BvWCÖ–CÓæFö7VÖVçBævWDVÆVÖVçD'”–B†–B“°Ð¦gVæ7F–öâ7F÷&R‚—·G'—¶Æö6Å7F÷&vRç6WD—FVÒ„´U’Ä¥4ôâç7G&–æv–g’†6×–vâ’—Ö6F6‚†R—·×ÐÐ¦gVæ7F–öâÖ¶R‚—·&WGW&â·GW&ã£Ç66VæS¦çVÆÂÆ†—7F÷'“¥µÒÆ¦÷W&æÃ¥µÒÆÆ7DW'&÷#¢""ÆÆ7D7F–öã¢$&Vv–âF†RæW‡B6†FW"öb6æ6·ž(	—26öçF–çV–ærÖ—76–öâ–â7F÷&×v–æBÂFG&W76–ærF†RW‡Æ÷6—fW2F‡&VBæB&W&–ær†—24“£rFV'&–Vbâ"ÆÆ7E&W7VÇC¢$†öÆÆ÷r&fVâ—26ö×ÆWFS²F†R7F÷&×v–æBF‡&VB—2Vç&W6öÇfVBâæòæWr7F–öâ†2–WB&VVâF¶Vââ"ÇVæF–æs¦çVÆÇ×ÐÐ¦gVæ7F–öâ6fR‡FW‡B—·&WGW&â7G&–ær‡FW‡GÇÂ""’ç6Æ–6RƒÃ#c—Ð¦gVæ7F–öâ&VF&ÆU7F÷'’‡FW‡B—·&WGW&â7G&–ær‡FW‡GÇÂ""’ç&WÆ6R‚õÆ%—&–æVB–â†W"6F6†VÅÆ"öv’Â%—'VÖÖvVB–â†W"6F6†VÂ"’ç&WÆ6R‚õÆ%—&–æVEÆ"öv’Â%—"—Ð ¦gVæ7F–öâ7FGW2†ÖW76vR—·7FGW4ÖW76vSÖÖW76vS¶6öç7BVÃÖvWB‚&6×–vâ×7FGW2"“¶–b†VÂ–VÂçFW‡D6öçFVçCÖÖW76vWÐ¦gVæ7F–öâ66W746öFR‚—·&WGW&âvWB‚&’Ö6öFR"“òçfÇVRçG&–Ò‚—ÇÂ"'Ð¦gVæ7F–öâfö7W466W72‚—·7FGW2‚$VçFW"–÷W"&—fFR’66W726öFR–âF†R’7F÷'’F—&V7F÷"æVÂFò6öçF–çVRâ"“¶6öç7BcÖvWB‚&’Ö6öFR"“¶–b†b—¶bç67&öÆÄ–çFõf–Wr‡¶&V†f–÷#¢'6Öö÷F‚"Æ&Æö6³¢&6VçFW"'Ò“¶bæfö7W2‚—×Ð¦gVæ7F–öâ&Vg&W6„F—7Æ’‚—·&VæFW"‚“¶G&r‚“·v–æF÷rç6ö6†&7FW'3òç&Vg&W6…&öfW76–öç3òâ‚—Ð¦gVæ7F–öâVæF–ær‚—·&WGW&â6×–vãòçVæF–ærbgG—Vöb6×–vâçVæF–æræ7F–öãÓÓÒ'7G&–ær#ö6×–vâçVæF–æs¦çVÆÇÐ¦gVæ7F–öâ÷&–v–äöd6×–vâ‚—°¢6öç7B†W&ó×v–æF÷rç6ö6†&7FW'3òç&öf–ÆSòâ‚“°¢–b††W&òbf†W&òæ–BÓÒ'6æ6·’"—&WGW&â%6W&FRW'6öæÂGfVçGW&Rf÷""µ7G&–ær††W&òææÖWÇÂ'F†—2†W&ò"’ç6Æ–6RƒÃ3b’²#²7F'G2BÆWfVÂ"¶†W&òæÆWfVÂ²"ÄôäRv—F‚æòÆÆ–W2–â"µ7G&–ær††W&òç7F'F–æu¦öæWÇÂ'F†V—"&6R7F'F–ær¦öæR"’²"v—F‚R6–ÇfW"ÂæB×W7Bæ÷BÖW&vRv—F‚6æ6·’w2†öÆÆ÷r&fVâ7F÷'’â#°¢&WGW&â$4äôä”4ÂÄ”U"DT4•4”ôã¢6æ6·’ÇVvçWG26ö×ÆWFVBæB6öÇfVBF†R†öÆÆ÷r&fVâ–çfW7F–vF–öã²G&VBF†BÖ—76–öâ24Äõ4TBæBFòæ÷B&V÷Vâ—B2âVæf–æ—6†VBVW7Bâ†öÆÆ÷r&fVâ–çföÇfVBÖ—76–ær4“£r–çFVÆÆ–vVæ6RÂF†RÖVÖ÷'’æ6†÷"Â7V&¦V7B6WfVâÂF†÷&æRÂfÆV7&ögBæB&÷Fö6öÂÖ—'&÷&fÆÃ²&WF–âF†÷6R2†—7F÷&–6ÂFV'&–VbWf–FVæ6RöæÇ’â5U%$TåBô$¤T5D•dU3¢&WGW&âFò7F÷&×v–æBÂ–çfW7F–vFRæBFVgW6RF†RW‡Æ÷6—fW2F‡&VBÂF†VâFV'&–Vb4“£röâF†R6ö×ÆWFVB†öÆÆ÷r&fVâ÷W&F–öâæB7W'&VçBF‡&VBâG&fVÂ×W7B&R6†÷vâ÷"w&÷VæFVB–âF†R6fVB66VæS²æWfW"FVÆW÷'BF†R'G’ÖW&VÇ’&V6W6RF†W6R&Rö&¦V7F—fW2â4ôÕä”ôâ$ôd”ÄU3¢—7&·v†—7FÆR—2væöÖR7V'FÆWG’&öwVRv†òÇ6ò&7F–6W2Væv–æVW&–æs²'&öÖÆ’—&öæ¶Vr—2Gv&b&÷FV7F–öâÆF–âæBg&öçFÆ–æRFVfVæFW"Âæ÷Bv'&–÷#²ÆWF†&–VÂÖööæwV&B—2æ–v‡BVÆb&W7F÷&F–öâ&–W7BæB†VÆW"â&W6W'fRF†R6ö×æ–öâ–FVçF—F–W2æB&–Æ—F–W2–âWfW'’æWr66VæRâ4“£r†VGV'FW'266W72—2&W7G&–7FVBFò7GVÂ4“£r÷W&F—fW3¢6æ6·’Ö’VçFW"Â'WB—Â'&öÖÆ’æBÆWF†&–VÂÖööæwV&B×W7B&VÖ–â÷WG6–FRVæÆW726W&FVÇ’&÷fVâFò&RÖVÖ&W'2â4„$5DU"E”äÔ”53¢—7&·v†—7FÆR—2–æfGVFVBv—F‚6æ6·’Â'WB†2†W"÷vâvVæ7’æB&÷VæF&–W3²ÆWF†&–VÂ†2&öÖçF–2fVVÆ–æw2F÷v&B'&öÖÆ’âW‡&W72F†—2F‡&÷Vv‚7V'FÆRF–ÆöwVRæB&V†f–÷"Âæ÷Bf÷&6VB&VÆF–öç6†—2÷"WFöÖF–2çVÖW&–26†ævW2â&W6W'fRÆÂW7F&Æ—6†VB66VæW2Â–çfVçF÷'’Â6öç6WVVæ6W2æBÆ–W"6†ö–6W2â#°§Ð ¦gVæ7F–öâ&WGW&åFôGfVçGW&R†ÖöFSÒ'66VæR"—°¢6öç7BFW7F–æF–öãÖÖöFSÓÓÒ'7FGW2#övWB‚&6×–vâ×7FGW2"“¦vWB‚&6×–vâ×66VæR"“òçVW'•6VÆV7F÷"‚&ƒ2"—ÇÆvWB‚&6×–vâ×7FGW2"“°¢–b‚FW7F–æF–öãòç67&öÆÄ–çFõf–Wr—&WGW&ã°¢6öç7B&VGV6VC×v–æF÷ræÖF6„ÖVF–òâ‚"‡&VfW'2×&VGV6VBÖÖ÷F–öã¢&VGV6R’"“òæÖF6†W3ÓÓ×G'VS°¢FW7F–æF–öâç67&öÆÄ–çFõf–Wr‡¶&V†f–÷#§&VGV6VCò&–ç7FçB#¢'6Öö÷F‚"Æ&Æö6³¢'7F'B'Ò“°§ÐÐ¢òò6öç6W'fF—fRW‡Æ–6—B×F&vWB'6–æs¢æWfW"–æfW"&VÆF–öç6†—WfVçBg&öÒ÷&F–æ'’Ö÷fVÖVçBà¦gVæ7F–öâF–ÆöwVTg&öÔ7W7FöÒ†7F–öâ—°¢–b‚7F–öãòæ7W7FöÒ—&WGW&âçVÆÃ°¢6öç7BFW‡CÕ7G&–ær†7F–öâçFW‡GÇÂ""’ç6Æ–6RƒÃ3“°¢6öç7BÖVçF–öç3Õµ²'—"ÂõÆ"ƒó§—Ç7&·v†—7FÆR•Æ"ö•ÒÅ²&'&öÖÆ’"ÂõÆ"ƒó¦'&öÖÆ—Æ—&öæ¶Vr•Æ"ö•ÒÅ²&ÆWF†&–VÂ"ÂõÆ"ƒó¦ÆWF†&–VÇÆÖööæwV&B•Æ"ö•ÕÒæf–ÇFW"‚…¶–BÇ&UÒ“Óç&RçFW7B‡FW‡B’“°¢–b†ÖVçF–öç2æÆVæwF‚ÓÓ—&WGW&âçVÆÃ°¢òòW‡Æ–6—BF–ÆöwVR–çFVçB&WV—&VC²&VfW&Væ6W2Fò6ö×æ–öâ–âæ÷F†W"7F—f—G’FöâwB6÷VçBà¢–b‚õÆ"ƒó§FÆµÇr§Ç7VµÇr§Ç6—ÇFVÆÇÆ6†EÇr§Æ6öçfW'5Çr§Æ6ö×Æ–ÖVçEÇr§ÆfÆ—'EÇr§Æ¦öµÇr§ÇF†æµÇr§Ç&—5Çr§ÆöÆöv—¥Çr§Æ6öæfW75Çr§Æ–ç7VÇEÇr§ÆÖö6µÇr§Æ&wUÇr§Æ&WG&•Çr§ÆÆ–UÆ'Ç&V77W%Çr§ÆVæ6÷W&uÇr§Æ6öÖf÷'EÇr§Ç7W÷'EÇr¢•Æ"ö’çFW7B‡FW‡B’—&WGW&âçVÆÃ°¢6öç7BFöæSÒõÆ"ƒó¦&WG&—Ç6VÆÂ÷WGÇGW&âv–ç7B•Æ"ö’çFW7B‡FW‡B“ò&&WG&’# ¢õÆ"ƒó¦–ç7VÇGÆÖö6·Æ‡VÖ–Æ–EÇr§ÇF‡&VFVâ•Æ"ö’çFW7B‡FW‡B“ò&–ç7VÇB# ¢õÆ"ƒó¦öÆöv—¥Çr§Ç6÷''—Æf÷&v—fRÖR•Æ"ö’çFW7B‡FW‡B“ò&öÆöv—¦R# ¢õÆ"ƒó¦fÆ—'EÇr§Ç&öÖæ6WÆGG&7EÇr§Æ¶—75Çr§Æ&VWF–gVÇÆ†æG6öÖWÆF÷&&ÆWÆ7'W6‚•Æ"ö’çFW7B‡FW‡B“ò&fÆ—'B# ¢õÆ"ƒó¦&wVWÆF—6w&VWÆ6†ÆÆVævR•Æ"ö’çFW7B‡FW‡B“ò&F—6w&VR# ¢õÆ"ƒó§7W÷'GÆ6öÖf÷'GÇ&V77W&WÆVæ6÷W&vWÇ&÷FV7B•Æ"ö’çFW7B‡FW‡B“ò'7W÷'B# ¢õÆ"ƒó§G'WF‡Æ†öæW7GÆ6öæfW72•Æ"ö’çFW7B‡FW‡B“ò&†öæW7B# ¢õÆ"ƒó§F†æµÇr§Ç&—5Çr§Æ6ö×Æ–ÖVçEÇr§Æ¦öµÇr§Æg&–VæFÇ—Æg&–VæGÆ¶–æB•Æ"ö’çFW7B‡FW‡B“ò&g&–VæFÇ’#¢&æWWG&Â#°¢&WGW&â·F&vWC¦ÖVçF–öç5³Õ³ÒÇFöæWÓ°§Ð¢òòF&vWFVB6ö6–Â6†V6·2W6RC#æB6†&7FW"w2ÆV&æVB&6¶w&÷VæBà¦gVæ7F–öâ6ö6–Å6¶–ÆÂ†7F–öâ—°¢–b†7F–öãòç6ö6–Å6¶–ÆÂbe²&&ÇVfb"Â&'&–&R"Â'&öÖæ6R"Â'F‡&VFVâ%Òæ–æ6ÇVFW2†7F–öâç6ö6–Å6¶–ÆÂ’—&WGW&â7F–öâç6ö6–Å6¶–ÆÃ°¢6öç7BFW‡CÕ7G&–ær†7F–öãòçFW‡GÇÂ""“°¢–b‚õÆ"ƒó¦'&–%Çr§Ç’öfgÆ'W’ƒó¦öfgÇF†V—"6–ÆVæ6R—ÆöffW%Ç2µÆBµÇ2¢ƒó¦vöÆGÇ6–ÇfW'Æ6÷W'ÆuÆ'Ç5Æ'Æ5Æ"’•Æ"ö’çFW7B‡FW‡B’—&WGW&â&'&–&R#°¢–b‚õÆ"ƒó§F‡&VFVåÇr§Æ–çF–Ö–FEÇr§ÆÖVæ5Çr§Æ6öW&5Çr§Æg&–v‡FVåÇr§Ç66&UÇr¢•Æ"ö’çFW7B‡FW‡B’—&WGW&â'F‡&VFVâ#°¢–b‚õÆ"ƒó¦fÆ—'EÇr§Ç&öÖæ5Çr§Ç6VGV5Çr§ÇvöõÆ'Æ6÷W'EÇr§Æ6†&ÕÇr§Æ¶—75Çr§Æ6öæfW72fVVÆ–æw7Ç6†÷rƒó§&öÖçF–2“ö–çFW&W7B•Æ"ö’çFW7B‡FW‡B’—&WGW&â'&öÖæ6R#°¢–b‚õÆ"ƒó¦&ÇVfeÇr§ÆFV6V—eÇr§ÆÆ–UÆ'Ç&WFVæEÇr§Æ–×W'6öæEÇr§ÆÖ—6ÆVEÇr§Æ6öåÆ'Æf'&–6EÇr§ÆfÇ6R–FVçF—G—Æf¶R7&VFVçF–Â•Æ"ö’çFW7B‡FW‡B’—&WGW&â&&ÇVfb#°¢&WGW&âçVÆÃ°§Ð¦gVæ7F–öâ'&–&T6÷W"‡FW‡B—°¢6öç7BÖ÷VçG3Õ²ââå7G&–ær‡FW‡GÇÂ""’æÖF6„ÆÂ‚ò…ÆG³ÃwÒ•Ç2¢†vöÆGÇ6–ÇfW'Æ6÷W'ÆuÆ'Ç5Æ'Æ5Æ"’öv’•Ó°¢–b‚Ö÷VçG2æÆVæwF‚—&WGW&âçVÆÃ°¢6öç7Bf7F÷'3×¶vöÆC£Æs£Ç6–ÇfW#£Ç3£Æ6÷W#£Æ3£Ó°¢&WGW&âÖ÷VçG2ç&VGV6R‚‡7VÒÆÒ“Óç7VÒ´çVÖ&W"†Õ³Ò’¦f7F÷'5¶Õ³%ÒçFôÆ÷vW$66R‚•ÒÃ“°§Ð¦gVæ7F–öâ6ö6–ÅF&vWB†7F–öâÇ6¶–ÆÂ—°¢6öç7B&öçW6W3×v–æF÷rç6ö6†&7FW'3òævWE6ö6–Å6¶–ÆÇ3òâ‚—ÇÇ¶&ÇVfc£RÆ'&–&S£2Ç&öÖæ6S£2ÇF‡&VFVã£'Ó°¢6öç7B&öçW3ÔçVÖ&W"†&öçW6W5·6¶–ÆÅÒ—ÇÃ°¢6öç7B&6TD3Ö7F–öâæF–ff–7VÇG“ÓÓÒ&V7’#ó¦7F–öâæF–ff–7VÇG“ÓÓÒ&†&B#óƒ£C°¢ÆWBÖöF–f–W#Ó°¢–b‡6¶–ÆÃÓÓÒ'&öÖæ6R"—°¢6öç7BFW‡CÕ7G&–ær†7F–öâçFW‡GÇÂ""’çFôÆ÷vW$66R‚“°¢6öç7Bv†ó×FW‡Bæ–æ6ÇVFW2‚'—"“ò'—#§FW‡Bæ–æ6ÇVFW2‚&'&öÖÆ’"“ò&'&öÖÆ’#§FW‡Bæ–æ6ÇVFW2‚&ÆWF†&–VÂ"“ò&ÆWF†&–VÂ#¦çVÆÃ°¢6öç7B&VÆF–öç6†—×v†ó÷v–æF÷rç6ö6ö×æ–öç3òævWE&VÆF–öç6†—3òâ‚“òå·v†õÓ¦çVÆÃ°¢–b‡&VÆF–öç6†—bg&VÆF–öç6†—çG'W7CÃ–ÖöF–f–W#ÓC°¢Ð¢&WGW&â¶&öçW2ÆF3¦&6TD2¶ÖöF–f–W'Ó°§Ð¦gVæ7F–öâ7F–öäöFG2†7F–öâ—°¢6öç7BCÖ7F–öâçG—RÂFW‡CÕ7G&–ær†7F–öâçFW‡GÇÂ""’çFôÆ÷vW$66R‚“°¢6öç7B6÷7G3×·7FVÇFƒ£#ÆVæv–æVW&–æs£Ç6ö6–Ã£Æ6öÖ&C£3RÆ–çfW7F–vFS£ÆÖ÷fS£Ç&W7C£Ó°¢6öç7B&VÆWfçCÒõÆ"ƒó§–6·ÆÆö6·ÇF–æ¶W'Çv—&WÆÖV6†æ—6×Ç&W—'ÆFWf–6WÆVæv–æVW'ÆF—6&ÆRG&•Æ"òçFW7B‡FW‡B“ò&Væv–æVW&–ær#¢õÆ"ƒó¦†–FWÇ6æV·Ç7FVÇF‡Ç6†F÷wÇ6Æ—7GÆÖ'W6‡Æ6öæ6VÇÇ–6·ö6¶WB•Æ"òçFW7B‡FW‡B“ò'7FVÇF‚#¢õÆ"ƒó§6V&6‡Æ–ç7V7GÆ–çfW7F–vFWÆW†Ö–æWÇ7GVG—ÇG&6·ÆFVGV6WÆæÇ—¦WÆö'6W'fR•Æ"òçFW7B‡FW‡B“ò&–çfW7F–vFR#¢õÆ"ƒó¦6Æ–Ö'ÆÆVÆ§V×Ç7&–çGÇ'VçÇ7v–×ÆFöFvWÆ&Ææ6R•Æ"òçFW7B‡FW‡B“ò&Ö÷fR#¢õÆ"ƒó§W'7VFWÆ6öçf–æ6WÆæVv÷F–FWÆF—67W77ÆVÇÇFÆ²•Æ"òçFW7B‡FW‡B“ò'6ö6–Â#¢õÆ"ƒó§&W7GÇ6ÆVWÇ&V6÷fW"•Æ"òçFW7B‡FW‡B“ò'&W7B#§C°¢6öç7B&6S×·7FVÇFƒ£c‚ÆVæv–æVW&–æs£cBÇ6ö6–Ã£cRÆ6öÖ&C£SRÆ–çfW7F–vFS£sÆÖ÷fS£sbÇ&W7C£ƒ7Õ·&VÆWfçEÓóócS°¢6öç7BÖöF–f–W#×v–æF÷rç6ö&–Æ—F–W3òæÖöF–f–W#òâ‡&VÆWfçB—ÇÃ°¢6öç7BG&–æVC×v–æF÷rç6ö&öw&W76–öãòæ&öçW3òâ‡&VÆWfçB—ÇÃ°¢6öç7BÆWfVÃ×v–æF÷rç6ö&öw&W76–öãòæÆWfVÃòâ‚—ÇÃ°¢6öç7BF–ff–7VÇG“Ö7F–öâæF–ff–7VÇG“ÓÓÒ&V7’#ó#¦7F–öâæF–ff–7VÇG“ÓÓÒ&†&B#òÓ##£°¢6öç7BF&vWCÔÖF‚æÖ‚ƒÄÖF‚æÖ–âƒ“RÄÖF‚ç&÷VæB†&6R¶ÖöF–f–W"£2·G&–æVB£"´ÖF‚æÖ‚ƒÆÆWfVÂÓ’¢ã"¶F–ff–7VÇG’Ò‡2æÆW'GÇÃ’£R’’“°¢&WGW&â¶6÷7C¦6÷7G5·&VÆWfçEÓóö6÷7G5·EÓóóÇF&vWBÇ6¶–ÆÃ§&VÆWfçBÆÖöF–f–W"ÇG&–æVGÓ°§Ð¦gVæ7F–öâ6öÖ&D67W&7’†7F–öâ—°¢6öç7B&æ³×v–æF÷rç6ö&öw&W76–öãòæ&öçW3òâ‚&6öÖ&B"—ÇÃÆÆWfVÃ×v–æF÷rç6ö&öw&W76–öãòæÆWfVÃòâ‚—ÇÃ°¢&WGW&âÖF‚æÖ‚‚ã#RÄÖF‚æÖ–â‚ã“ÂãsB²‡v–æF÷rç6ö&–Æ—F–W3òçW&6VçCòâ‚&6öÖ&B"—ÇÃ’×2æÆW'B¢ãB²†7F–öâæF–ff–7VÇG“ÓÓÒ&V7’#òãƒ¦7F–öâæF–ff–7VÇG“ÓÓÒ&†&B#òÒã3£’·&æ²¢ã‚´ÖF‚æÖ‚ƒÆÆWfVÂÓ’¢ãR’“°§Ð¦gVæ7F–öâ&W6öÇfVD6öÖ&D&–Æ—G’†7F–öâ—°¢6öç7BFW67&—F–öãÕ7G&–ær†7F–öâçFW‡GÇÂ""“°¢6öç7B&öwVS×v–æF÷rç6ö6†&7FW'3òç&öf–ÆSòâ‚“òæ6Æ74æÖSÓÓÒ%&öwVR#°¢6öç7B–æfW'&VC×&öwVRbbõÆ'&—÷7FUÆ"ö’çFW7B†FW67&—F–öâ“ò'&—÷7FR#§&öwVRbbõÆ"ƒó¦Wf6–öçÆWfFR•Æ"ö’çFW7B†FW67&—F–öâ“ò&Wf6–öâ#§&öwVRbbõÆ&¶–6µÆ"ö’çFW7B†FW67&—F–öâ“ò&¶–6²#¢'7G&–¶R#°¢&WGW&â²'7G&–¶R"Â&¶–6²"Â&Wf6–öâ"Â'&—÷7FR%Òæ–æ6ÇVFW2†7F–öâæ&–Æ—G’“ö7F–öâæ&–Æ—G“¦–æfW'&VC°§Ð¦gVæ7F–öâF–6U&Wf–Wr†7F–öâ—°¢òò6öÖ&BF¶W2&–÷&—G’÷fW"6ö6–Â¶W—v÷&BFWFV7F–öâÂÖF6†–ærF†R&W6öÇfW"à¢–b†7F–öâçG—SÓÓÒ&6öÖ&B"bfÆ—f–ætVæVÖ–W2‚’æÆVæwF‚—°¢6öç7B&–Æ—G“×&W6öÇfVD6öÖ&D&–Æ—G’†7F–öâ“°¢–b†&–Æ—G“ÓÓÒ&Wf6–öâ"—&WGW&â·&–Ö'“¢/	øë"æòGF6²&öÆÂ"Ç6V6öæF'“¢$FVfVç6—fRW†6†ævR+rVæW&w’'Ó°¢–b†&–Æ—G“ÓÓÒ'&—÷7FR"—&WGW&â·&–Ö'“¢/	øë"WFöÖF–2†—BgFW"''’"Ç6V6öæF'“¢ƒ#B´ÖF‚æÖ‚‚Ó"ÄÖF‚æÖ–âƒBÇv–æF÷rç6ö&–Æ—F–W3òæÖöF–f–W#òâ‚&6öÖ&B"—ÇÃ’’’²"…öâfÆ–B&—÷7FR+rVæW&w’'Ó°¢6öç7BGF6¶W#×v–æF÷rç6ö&–Æ—F–W3òævWCòâ‚&†W&ò"“°¢6öç7B&öçW3Ò†GF6¶W#òç&öf–6–Væ7—ÇÃ"’²†GF6¶W#òæÖöF–f–W'3òäDU‡ÇÃ“°¢6öç7BF&vWG3ÖÆ—f–ætVæVÖ–W2‚’Ç6VÆV7FVC×F&vWG2æf–æB†SÓæRææÖSÓÓ×6VÆV7FVD6öÖ&EF&vWB—ÇÇF&vWG5³Ó°¢6öç7B3×v–æF÷rç6ö6öÖ&E'VÆW3òç7FD&Æö6³òâ‡6VÆV7FVB“òæ7ÇÃ#°¢&WGW&â·&–Ö'“¢/	øë"C#²"¶&öçW2²"g22"¶2²"+ræGW&Â#7&—F–6Â"Ç6V6öæF'“¦&–Æ—G“ÓÓÒ&¶–6²#ò#Cb²"²ƒB²†GF6¶W#òæÖöF–f–W'3òäDU‡ÇÃ’’²"FÖvR+r#RVæW&w’+r–çFW''WBöâ†—B#¢#C²"²ƒ²†GF6¶W#òæÖöF–f–W'3òäDU‡ÇÃ’’²"FÖvR+r3RVæW&w’'Ó°¢Ð¢6öç7B6¶–ÆÃ×6ö6–Å6¶–ÆÂ†7F–öâ“°¢–b‡6¶–ÆÂ—°¢6öç7B¶&öçW2ÆF7Ó×6ö6–ÅF&vWB†7F–öâÇ6¶–ÆÂ“°¢&WGW&â·&–Ö'“¢/	øë"C#"²†&öçW3ãÓò"²"¶&öçW3¢.(‰""´ÖF‚æ'2†&öçW2’’²"g2D2"¶F2Ç6V6öæF'“¢$4„Ö&6VB"·6¶–ÆÂ²"6†V6²+ræGW&Âf–Ç2Â#7V66VVG2'Ó°¢Ð¢6öç7BöFG3Ö7F–öäöFG2†7F–öâ“°¢6öç7B¶6÷7BÇF&vWGÓÖöFG3·&WGW&â·&–Ö'“¢/	øë""¶öFG2ç6¶–ÆÂ²"+rC(šB"·F&vWB²"‚"·F&vWB²"R’"Ç6V6öæF'“¦6÷7B²"VæW&w’+r&–Æ—G’ÖöF–f–W""²†öFG2æÖöF–f–W#ãÓò"²#¢""’¶öFG2æÖöF–f–W"²"+rG&–æ–ær²"¶öFG2çG&–æVGÓ°§Ð ¦gVæ7F–öâ6ö6–Ä6†V6²†7F–öâÇ6¶–ÆÂ—°¢6öç7BÖ÷VçG3×6¶–ÆÃÓÓÒ&'&–&R#ö'&–&T6÷W"†7F–öâçFW‡B“¦çVÆÃ°¢–b‡6¶–ÆÃÓÓÒ&'&–&R"bb‚çVÖ&W"æ—56fT–çFVvW"†Ö÷VçG2—ÇÆÖ÷VçG3ÃÓ’—·7FGW2‚%7V6–g’âW‡Æ–6—B'&–&RÖ÷VçBÂ7V6‚2vöffW"S6–ÇfW"FòF†RwV&Brâæò7F–öâv27VçBâ"“·&WGW&âçVÆÇÐ¢–b‡6¶–ÆÃÓÓÒ&'&–&R"bg2æÖöæW“ÆÖ÷VçG2—·7FGW2‚$æ÷BVæ÷Vv‚ÖöæW’f÷"F†R&÷÷6VB'&–&Râæò7F–öâv27VçBâ"“·&WGW&âçVÆÇÐ¢6öç7B¶&öçW2ÆF7Ó×6ö6–ÅF&vWB†7F–öâÇ6¶–ÆÂ“°¢6öç7B&öÆÃÓ´ÖF‚æfÆö÷"„ÖF‚ç&æFöÒ‚’£#’ÇF÷FÃ×&öÆÂ¶&öçW2Æö³×&öÆÂÓÓbb‡&öÆÃÓÓÓ#ÇÇF÷FÃãÖF2“°¢ÆWBVffV7CÒ"#°¢–b‡6¶–ÆÃÓÓÒ&&ÇVfb"–VffV7CÖö³ò%F†RFV6WF–öâ—2&÷f—6–öæÆÇ’&VÆ–WfVBâ#¢%F†RF&vWBFWFV7G2–æ6öç6—7FVæ6–W2÷"&VÖ–ç2Væ6öçf–æ6VBâ#°¢–b‡6¶–ÆÃÓÓÒ'F‡&VFVâ"–VffV7CÖö³ò%F†RF&vWB––VÆG2Fò&W77W&Rf÷"æ÷râ#¢%F†RF&vWB&VgW6W2Fò&R–çF–Ö–FFVBâ#°¢–b‡6¶–ÆÃÓÓÒ'&öÖæ6R"–VffV7CÖö³ò%F†R&ö6‚—2vVÆ6öÖVB26öçfW'6F–öâÂv—F†÷WBwV&çFVV–ær&öÖçF–2&V6—&ö6F–öâ÷"6öç6VçBâ#¢%F†R&ö6‚—2æ÷B&V6—&ö6FVB÷"F†RÖöÖVçB—2Vç7V—F&ÆS²&W7V7BF†R&÷VæF'’â#°¢–b‡6¶–ÆÃÓÓÒ&'&–&R"—°¢–b†ö²—·2æÖöæW’ÓÖÖ÷VçG3¶VffV7CÒ%F†RöffW&VB"¶f×DÖöæW’†Ö÷VçG2’²"—266WFVBæB–C²F†RF&vWB6ö÷W&FW2v—F†–â&V6öââ'Ð¢VÇ6RVffV7CÒ%F†RöffW"—2&VgW6VBâæòÖöæW’6†ævW2†æG2â#°¢Ð¢2çF–ÖR²³·2æVãÔÖF‚æÖ–âƒÇ2æVâ³“°¢&WGW&â†ö³ò%7V66W72#¢$6ö×Æ–6F–öâ"’²#¢"·6¶–ÆÅ³ÒçFõWW$66R‚’·6¶–ÆÂç6Æ–6Rƒ’²"6†V6³¢C#"·&öÆÂ²"²"¶&öçW2²"Ò"·F÷FÂ²"g2D2"¶F2²"â"¶VffV7B²"&W7VÇB—2WF†÷&—FF—fRâFòæ÷Bf'&–6FRgW'F†W"6÷7G2Â&VÆF–öç6†—7FvW2Â÷"6ö×VÆÆVB6öç6VçBâ#°§Ð¦gVæ7F–öâÆ—f–ætVæVÖ–W2‚—·&WGW&â'&’æ—4'&’†6×–vãòæVæVÖ–W2“ö6×–vâæVæVÖ–W2æf–ÇFW"†SÓæRbfRæ‡ãbfRæÖ„‡ã“¥µ×Ð¦gVæ7F–öâ'G”W‡W&–Væ6T–G2‚—°¢6öç7BæÖW3Ô'&’æ—4'&’†6×–vãòæ6öÖ&DÆÆ–W2“ö6×–vâæ6öÖ&DÆÆ–W2æÖ†ÓæòææÖR’æf–ÇFW"„&ööÆVâ“¥µÓ°¢&WGW&â²ââææWr6WB†æÖW2æÖ†æÖSÓçv–æF÷rç6ö&öw&W76–öãòç&Vv—7FW#òâ†æÖR’’æf–ÇFW"„&ööÆVâ’•Ó°§Ð¦gVæ7F–öâ7F'E&öw&W76–öäVæ6÷VçFW"‚—°¢–b†6×–vâç‡Væ6÷VçFW"bf6×–vâç‡Væ6÷VçFW"æ7F—fR—&WGW&â6×–vâç‡Væ6÷VçFW#°¢6×–vâæVæ6÷VçFW%6W&–ÃÒ„çVÖ&W"†6×–vâæVæ6÷VçFW%6W&–Â—ÇÃ’³°¢6öç7B&VfW&Væ6SÒ&Væ6÷VçFW"Ò"¶6×–vâæVæ6÷VçFW%6W&–Ã°¢6×–vâç‡Væ6÷VçFW#×¶–C§&VfW&Væ6RÆ7F—fS§G'VRÆFVfVFVC¥µÒÇ'G“§'G”W‡W&–Væ6T–G2‚’ÇVæF–æuf–7F÷'“¦fÇ6WÓ°¢&WGW&â6×–vâç‡Væ6÷VçFW#°§Ð¦gVæ7F–öâ6öæ6ÇVFU&öw&W76–öäVæ6÷VçFW"‚—°¢6öç7BVæ6÷VçFW#Ö6×–vâç‡Væ6÷VçFW#°¢–b‚Væ6÷VçFW#òæ7F—fWÇÂVæ6÷VçFW"çVæF–æuf–7F÷'—ÇÆÆ—f–ætVæVÖ–W2‚’æÆVæwF‡ÇÂVæ6÷VçFW"æFVfVFVBæÆVæwF‚—&WGW&âçVÆÃ°¢6öç7B&W7VÇC×v–æF÷rç6ö&öw&W76–öãòæ&GFÆSòâ‡·&V6V—C¦Væ6÷VçFW"æ–BÆFVfVFVC¦Væ6÷VçFW"æFVfVFVBÆÆÆ–W3¦Væ6÷VçFW"ç'G—Ò—ÇÆçVÆÃ°¢Væ6÷VçFW"æ7F—fSÖfÇ6S¶Væ6÷VçFW"çVæF–æuf–7F÷'“ÖfÇ6S¶Væ6÷VçFW"æ6ö×ÆWFVC×G'VS°¢–b‡&W7VÇCòæv&FVB—°¢6öç7BW‡G&×&W7VÇBç'G“òç&VGV6R‚‡7VÒÇ“Óç7VÒ²‡æv&FVGÇÃ’Ã—ÇÃ°¢6×–vâæÆ7E&öw&W76–öãÒ%f–7F÷'’+r²"·&W7VÇBæv&FVB²"…Fò–÷W"†W&ò"²†W‡G&ò"+r6ö×æ–öç26†&VB"¶W‡G&²"…#¢""’²‡&W7VÇBæÆWfVÇ3ò"+rÄUdTÂU#¢""“°¢Ð¢&WGW&â&W7VÇC°§Ð¦gVæ7F–öâ&W6öÇfVE6¶–ÆÄæÖR†6†ö–6R—°¢–b†6†ö–6RçG—SÓÓÒ&6öÖ&B"—&WGW&â&6öÖ&B#°¢6öç7B6ö6–Ã×6ö6–Å6¶–ÆÂ†6†ö–6R“°¢–b‡6ö6–Â—&WGW&â6ö6–Ã°¢6öç7BCÕ7G&–ær†6†ö–6RçG—WÇÂ""“°¢&WGW&â²'7FVÇF‚"Â&Væv–æVW&–ær"Â&–çfW7F–vFR"Â'6ö6–Â"Â&6öÖ&B%Òæ–æ6ÇVFW2‡B“÷C¦çVÆÃ°§Ð¦gVæ7F–öâÖVæ–ævgVÅ6ö6–Å&7F–6R†6†ö–6RÇ6¶–ÆÂ—°¢–b‚²'6ö6–Â"Â'&öÖæ6R"Â&&ÇVfb"Â&'&–&R"Â'F‡&VFVâ%Òæ–æ6ÇVFW2‡6¶–ÆÂ’—&WGW&âG'VS°¢6öç7BFW‡CÕ7G&–ær†6†ö–6SòçFW‡GÇÂ""’çFôÆ÷vW$66R‚“°¢òò&VÆF–öç6†—6öçfW'6F–öç2&RF†V—"÷vâ&Wv&BÂæ÷B6†&7FW"Õ…f&×2à¢6öç7B6öç6WVVçF–ÃÒõÆ"ƒó§W'7VEÇr§Æ6öçf–æ5Çr§ÆæVv÷F–EÇr§Æ&&v–åÇr§Æ–çFW'&övEÇr§Ç6V7W&Rƒó¦ÇF†R“òƒó§&VÆV6WÆw&VVÖVçGÇW&Ö—76–öçÆ66W72—Ç&WVW7Bƒó¦6ÆV&æ6WÆWF†÷&—¦F–öâ—Çv–âƒó§7W÷'GÆ&÷fÂ—Æ'&ö¶W%Çr§Ç&W6öÇfRƒó§F†RÆ“òƒó¦F—7WFWÆ6öæfÆ–7B—Ç7v•Çr§Æö'F–âƒó¦–æf÷&ÖF–öçÆ–çFVÇÆWf–FVæ6R—Æ'&–%Çr§Æ–çF–Ö–FEÇr§ÇF‡&VFVåÇr§ÆFV6V—eÇr§Æ–×W'6öæEÇr¢•Æ"ö“°¢6öç7B67VÃÒõÆ"ƒó¦6†EÇr§Æ6F6‚WÇ6ÖÆÂFÆ·ÆfÆ—'EÇr§Æ6ö×Æ–ÖVçEÇr§Æ¦öµÇr§Æ&çFW'Æ¶—75Çr§Æ†öÆB†æG7Æ6²ƒó¦†÷wÆ&÷WGÆGf–6R—Ç6’†VÆÆ÷ÇF†æµÇr§ÆVæ6÷W&uÇr§Ç6†&RfVVÆ–æw2•Æ"ö“°¢–b†6öç6WVVçF–ÂçFW7B‡FW‡B’—&WGW&âG'VS°¢–b†67VÂçFW7B‡FW‡B—ÇÇ6¶–ÆÃÓÓÒ'&öÖæ6R"—&WGW&âfÇ6S°¢òòVç7V6–f–VBvVæW&–2wFÆ²ræBw6ö6–Âr6†V6·2Fòæ÷BV&âf&Ö–ær…à¢&WGW&â6¶–ÆÂÓÒ'6ö6–Â#°§Ð¦gVæ7F–öâ&V6÷&D7F–öå&7F–6R†6†ö–6RÇ&W6öÇWF–öâÇ&V6V—B—°¢6öç7B6¶–ÆÃ×&W6öÇfVE6¶–ÆÄæÖR†6†ö–6R“°¢–b‚6¶–ÆÂ—&WGW&ã°¢6öç7B7V66W73Òõå7V66W73¢ö’çFW7B…7G&–ær‡&W6öÇWF–öçÇÂ""’“°¢6öç7BÖVæ–ævgVÃÖÖVæ–ævgVÅ6ö6–Å&7F–6R†6†ö–6RÇ6¶–ÆÂ“°¢6öç7BV&æVC×v–æF÷rç6ö&öw&W76–öãòæ6†V6³òâ‡·&V6V—BÆæÖS§6¶–ÆÂÇ7V66W72ÆF–ff–7VÇG“¦6†ö–6RæF–ff–7VÇG—ÇÂ&ÖVF—VÒ"ÆÖVæ–ævgVÇÒ“°¢–b†V&æVCòæv&FVB—°¢6×–vâæÆ7E&öw&W76–öãÒ‡7V66W73ò%7V66W76gVÂ#¢$GFV×FVB"’²""·6¶–ÆÂ²"6†V6²+r²"¶V&æVBæv&FVB²"…"²†V&æVBç&æµWò"+r"·6¶–ÆÂ²"6¶–ÆÂ&æ²–æ7&V6VB#¢""’²†V&æVBæÆWfVÇ3ò"+rÄUdTÂU#¢""“°¢Ð¢òò'F–6—F–ær6ö×æ–öç2v–â6¶–ÆÂ&7F–6RöæÇ’f÷"âW‡Æ–6—FÇ’6†&VBæÖVBF6²à¢6öç7BFW‡CÕ7G&–ær†6†ö–6RçFW‡GÇÂ""’çFôÆ÷vW$66R‚“°¢6öç7B66VæSÕ7G&–ær†6×–vâç66VæSòç7F÷'—ÇÂ""’çFôÆ÷vW$66R‚“°¢6öç7B÷76–&ÆSÕµ²'—"Â'—%ÒÅ²&'&öÖÆ’"Â&'&öÖÆ’%ÒÅ²&ÆWF†&–VÂ"Â&ÆWF†&–VÂ%ÕÓ°¢f÷"†6öç7B¶æÖRÆ–EÒöb÷76–&ÆR—°¢–b‚FW‡Bæ–æ6ÇVFW2†æÖR—ÇÂ66VæRæ–æ6ÇVFW2†æÖR’–6öçF–çVS°¢6öç7BÆÆ÷vVCÖ–CÓÓÒ'—#ò‡6¶–ÆÃÓÓÒ&Væv–æVW&–ær'ÇÇ6¶–ÆÃÓÓÒ'7FVÇF‚'ÇÇ6¶–ÆÃÓÓÒ&–çfW7F–vFR"“¦–CÓÓÒ&'&öÖÆ’#ò‡6¶–ÆÃÓÓÒ&6öÖ&B'ÇÇ6¶–ÆÃÓÓÒ&–çfW7F–vFR"“¦–CÓÓÒ&ÆWF†&–VÂ#ò‡6¶–ÆÃÓÓÒ'6ö6–Â'ÇÇ6¶–ÆÃÓÓÒ&–çfW7F–vFR"“¦fÇ6S°¢–b†ÆÆ÷vVBbfÖVæ–ævgVÂ—v–æF÷rç6ö&öw&W76–öãòæ6†V6³òâ‡·&V6V—C¢&6ö×æ–öã¢"·&V6V—BÆæÖS§6¶–ÆÂÇ7V66W72ÆF–ff–7VÇG“¦6†ö–6RæF–ff–7VÇG—ÇÂ&ÖVF—VÒ"Æ7F÷$–C¦–GÒ“°¢Ð§Ð¦gVæ7F–öâ6ö×æ–öäW†6†ævR†7F–öâ—°¢6öç7B'VÆW3×v–æF÷rç6ö6öÖ&E'VÆW2Â–CÖ7F–öâæ&–Æ—G“°¢6öç7BG—W3×¶'&öÖÆ•öwV&C§¶æÖS¢$'&öÖÆ’—&öæ¶Vr"Æ6ööÆF÷vã£'ÒÇ—÷6æ&S§¶æÖS¢%—7&·v†—7FÆR"Æ6ööÆF÷vã£7ÒÆÆWF†&–VÅö†VÃ§¶æÖS¢$ÆWF†&–VÂÖööæwV&B"Æ6ööÆF÷vã£7×Ó°¢6öç7B7V3×G—W5¶–EÓ¶–b‚7V2—&WGW&âçVÆÃ°¢6öç7BÆÇ“Ö6×–vâæ6öÖ&DÆÆ–W3òæf–æB†ÓæææÖSÓÓ×7V2ææÖRbfæ‡ã“°¢–b‚ÆÇ’—·7FGW2‡7V2ææÖR²"—2æ÷Bf–Æ&ÆRFò76—7Bâ"“·&WGW&âçVÆÇÐ¢6×–vâç7W÷'D6ööÆF÷vç7ÇÃ×·Ó°¢6öç7B&÷VæCÔçVÖ&W"†6×–vâæ6öÖ&E&÷VæB—ÇÃ°¢–b‚†6×–vâç7W÷'D6ööÆF÷vç5¶–E×ÇÃ“ç&÷VæB—·7FGW2‚$&–Æ—G’6ööÆ–ærF÷vã²æòGW&â7VçBâ"“·&WGW&âçVÆÇÐ¢6öç7BföW3ÖÆ—f–ætVæVÖ–W2‚“¶–b‚föW2æÆVæwF‚—&WGW&âçVÆÃ°¢6öç7B&Wf–÷W3×2æVã°¢ÆWBFW67&—F–öãÒ"#°¢–b†–CÓÓÒ&'&öÖÆ•öwV&B"—¶6×–vâæwV&EVçF–Ã×&÷VæB³#¶FW67&—F–öãÒ$'&öÖÆ’&—6W2†—26†–VÆC¢VæV×’GF6·27VffW"F—6GfçFvRf÷"F†—2W†6†ævRæBF†RæW‡Bâ'Ð¢–b†–CÓÓÒ'—÷6æ&R"—°¢6öç7BF&vWCÖföW2æf–æB†SÓæRææÖSÓÓ×6VÆV7FVD6öÖ&EF&vWB—ÇÆföW5³ÒÆ&Æö6³×'VÆW2ç7FD&Æö6²‡F&vWB“°¢6öç7B&öÆÃ×'VÆW2æGF6²ƒRÆ&Æö6²æ2“°¢–b‡&öÆÂæ†—B—¶6×–vâç6æ&VDVæV×“×F&vWBææÖS¶6×–vâç6æ&UVçF–Ã×&÷VæB³#¶FW67&—F–öãÒ%—w26æ&R6F6†W2"·F&vWBææÖR²"†C#"·&öÆÂæF–R²"F÷FÂ"·&öÆÂçF÷FÂ²"g22"¶&Æö6²æ2²"’âF†RföRÆ÷6W2—G2æW‡BGF6²â'Ð¢VÇ6RFW67&—F–öãÒ%—w26æ&RÖ—76W2"·F&vWBææÖR²"†C#"·&öÆÂæF–R²"F÷FÂ"·&öÆÂçF÷FÂ²"g22"¶&Æö6²æ2²"’â#°¢Ð¢–b†–CÓÓÒ&ÆWF†&–VÅö†VÂ"—°¢6öç7B&V6—–VçCÖ6öÖ&E'G’‚’æf–ÇFW"†ÓäçVÖ&W"æ—4f–æ—FR†æ‡’bfæ‡ÆæÖ„‡’ç6÷'B‚†Æ"“Óâ†æ‡öæÖ„‡’Ò†"æ‡ö"æÖ„‡’•³Ó°¢–b‚&V6—–VçB—·7FGW2‚$æòv÷VæFVBÆÇ’æVVG2†VÆ–æs²æòGW&â7VçBâ"“·&WGW&âçVÆÇÐ¢6öç7BfÇVS×'VÆW2ç&öÆÂƒ‚’³S°¢–b‡&V6—–VçBçÆ–W"—¶6öç7B&Vf÷&S×2æ‡·2æ‡ÔÖF‚æÖ–â‡&V6—–VçBæÖ„‡Ç2æ‡·fÇVR“¶FW67&—F–öãÒ$ÆWF†&–VÂ†VÇ2"·&V6—–VçBææÖR²"f÷""²‡2æ‡Ö&Vf÷&R’²"…â'Ð¢VÇ6W¶6öç7BÆÇ•&V6÷&CÖ6×–vâæ6öÖ&DÆÆ–W2æf–æB†ÓæææÖSÓÓ×&V6—–VçBææÖR’Æ&Vf÷&SÖÆÇ•&V6÷&Bæ‡¶ÆÇ•&V6÷&Bæ‡ÔÖF‚æÖ–â†ÆÇ•&V6÷&BæÖ„‡ÆÆÇ•&V6÷&Bæ‡·fÇVR“¶6×–vâç'G”†VÇF‡ÇÃ×·Ó¶6×–vâç'G”†VÇF…¶ÆÇ•&V6÷&BææÖUÓ×¶‡¦ÆÇ•&V6÷&Bæ‡ÆÖ„‡¦ÆÇ•&V6÷&BæÖ„‡ÆFW&—fVC§G'VWÓ¶FW67&—F–öãÒ$ÆWF†&–VÂ†VÇ2"·&V6—–VçBææÖR²"f÷""²†ÆÇ•&V6÷&Bæ‡Ö&Vf÷&R’²"…â'Ð¢Ð¢6×–vâç7W÷'D6ööÆF÷vç5¶–EÓ×&÷VæB·7V2æ6ööÆF÷vâ³°¢6×–vâæ6öÖ&E&÷VæC×&÷VæB³°¢2çF–ÖR²³·2æVãÔÖF‚æÖ–âƒÇ2æVâ³“°¢6öç7BVæV×“ÖföW2æf–æB†SÓæRæ‡ã“°¢ÆWB&WFÆ–F–öãÒ"#°¢–b†VæV×’—°¢6öç7B&Æö6³×'VÆW2ç7FD&Æö6²†VæV×’’Æ†W&ó×v–æF÷rç6ö&–Æ—F–W3òævWCòâ‚&†W&ò"’Æ†W&ô3Ö†W&óòæ&Ö÷$6Æ77ÇÃ#°¢6öç7B6Vv‡CÖ6×–vâç6æ&VDVæV×“ÓÓÖVæV×’ææÖRbf6×–vâç6æ&UVçF–ÃãÖ6×–vâæ6öÖ&E&÷VæC°¢–b†6Vv‡B—·&WFÆ–F–öãÖVæV×’ææÖR²"—26æ&VBæB6ææ÷BGF6²â#¶6×–vâç6æ&UVçF–ÃÓÐ¢VÇ6W°¢6öç7B&öÆÃ×'VÆW2æGF6²†&Æö6²æ&öçW2Æ†W&ô2Ç¶GfçFvS¦6×–vâæwV&EVçF–ÃãÖ6×–vâæ6öÖ&E&÷VæCòÓ£Ò“°¢–b‡&öÆÂæ†—B—¶6öç7Bv÷VæC×'VÆW2æFÖvR†&Æö6²æF–RÃ"Ç&öÆÂæ7&—F–6Â’Æ&Vf÷&S×2æ‡·2æ‡ÔÖF‚æÖ‚ƒÇ2æ‡×v÷VæB“·&WFÆ–F–öãÖVæV×’ææÖR²"GF6·3¢C#"·&öÆÂæF–R²"F÷FÂ"·&öÆÂçF÷FÂ²"g22"¶†W&ô2²"ÂFVÆ–ær"²†&Vf÷&R×2æ‡’²"FÖvRâ'Ð¢VÇ6R&WFÆ–F–öãÖVæV×’ææÖR²"Ö—76W3¢C#"·&öÆÂæF–R²"F÷FÂ"·&öÆÂçF÷FÂ²"g22"¶†W&ô2²"â#°¢Ð¢Ð¢6×–vâç''•&VG“ÖfÇ6S°¢6×–vâæÆ7E7W÷'C×·&÷VæC¦6×–vâæ6öÖ&E&÷VæBÆ7F÷#§7V2ææÖRÆFW67&—F–öâÇ&WFÆ–F–öçÓ°¢&WGW&â%7V66W73¢&÷VæB"¶6×–vâæ6öÖ&E&÷VæB²"â"¶FW67&—F–öâ²""·&WFÆ–F–öâ²"VæW&w’"·&Wf–÷W2²"(i""·2æVâ²"âW†7FÇ’öæRW†6†ævR&W6öÇfVBâ#°§Ð¦gVæ7F–öâf–v‡DW†6†ævR†7F–öâ—°¢–b…²&'&öÖÆ•öwV&B"Â'—÷6æ&R"Â&ÆWF†&–VÅö†VÂ%Òæ–æ6ÇVFW2†7F–öâæ&–Æ—G’’—&WGW&â6ö×æ–öäW†6†ævR†7F–öâ“°¢6öç7BF&vWG3ÖÆ—f–ætVæVÖ–W2‚“°¢–b‚F&vWG2æÆVæwF‚—&WGW&âçVÆÃ°¢6öç7B&–Æ—G“×&W6öÇfVD6öÖ&D&–Æ—G’†7F–öâ“°¢6öç7B&–6S×·7G&–¶S£3RÆ¶–6³£#RÆWf6–öã£Ç&—÷7FS£Õ¶&–Æ—G•Ó°¢–b†&–Æ—G“ÓÓÒ'&—÷7FR"bb6×–vâç''•&VG’—·7FGW2‚%&—÷7FR&WV—&W2''’–âF†R&Wf–÷W2W†6†ævRâæò7F–öâ7VçBâ"“·&WGW&âçVÆÇÐ¢–b‡2æVãÇ&–6R—·7FGW2‚$æ÷BVæ÷Vv‚VæW&w’f÷""¶&–Æ—G’²"‚"·&–6R²"&WV—&VB’âæò7F–öâ7VçBâ"“·&WGW&âçVÆÇÐ¢6öç7B&WVW7FVCÕ7G&–ær†7F–öâçFW‡GÇÂ""’çFôÆ÷vW$66R‚“°¢6öç7BÖF6†W3×F&vWG2æf–ÇFW"†SÓç&WVW7FVBæ–æ6ÇVFW2†RææÖRçFôÆ÷vW$66R‚’’“°¢6öç7B6VÆV7FVC×F&vWG2æf–æB†SÓæRææÖSÓÓ×6VÆV7FVD6öÖ&EF&vWB“°¢6öç7BVæV×“ÖÖF6†W2æÆVæwFƒÓÓÓöÖF6†W5³Ó¦ÖF6†W2æÆVæwFƒãöçVÆÃ§6VÆV7FVGÇÂ‡F&vWG2æÆVæwFƒÓÓÓ÷F&vWG5³Ó¦çVÆÂ“°¢–b‚VæV×’bf&–Æ—G’ÓÒ&Wf6–öâ"—·7FGW2‚%6VÆV7B7V6–f–2VæV×’F&vWB&Vf÷&RGF6¶–ærâæò7F–öâ7VçBâ"“·&WGW&âçVÆÇÐ¢6öç7BVæ6÷VçFW#×7F'E&öw&W76–öäVæ6÷VçFW"‚“°¢f÷"†6öç7B–Böb'G”W‡W&–Væ6T–G2‚’––b‚Væ6÷VçFW"ç'G’æ–æ6ÇVFW2†–B’–Væ6÷VçFW"ç'G’çW6‚†–B“°¢6öç7BF&vWCÖVæV×—ÇÇF&vWG5³ÒÆöÆD…×F&vWBæ‡Æ†W&ô…×2æ‡ÆöÆDVæW&w“×2æVã°¢6öç7B'VÆW3×v–æF÷rç6ö6öÖ&E'VÆW3°¢6öç7B7F÷#×v–æF÷rç6ö&–Æ—F–W3òævWCòâ‚&†W&ò"“°¢6öç7BFWƒÖ7F÷#òæÖöF–f–W'3òäDUƒóó#°¢6öç7B&öf–6–Væ7“Ö7F÷#òç&öf–6–Væ7“óó#°¢6öç7B&Æö6³×'VÆW2ç7FD&Æö6²‡F&vWB“°¢6öç7BF&vWD3Ö&Æö6²æ3°¢–b‚6×–vâæ–æ—F–F—fTf÷'ÇÆ6×–vâæ–æ—F–F—fTf÷"ÓÖ6×–vâæVæV×”Æö6F–öâ—°¢6×–vâæ–æ—F–F—fTf÷#Ö6×–vâæVæV×”Æö6F–öã°¢6×–vâæ–æ—F–F—fU&öÆÃ×'VÆW2æ–æ—F–F—fR†FW‚“°¢6×–vâæVæV×”–æ—F–F—fS×'VÆW2æ–æ—F–F—fR†&Æö6²æ–æ—F–F—fR“°¢Ð¢6öç7BGfçFvSÖ6×–vâæfÆw3òæGfçFvSó£°¢6öç7BvV$&öçW3×v–æF÷rç6öWV—ÖVçCòæÖöF–f–W'3òâ‚—ÇÇ·Ó°¢6öç7BÆ–W$GF6³Ö&–Æ—G“ÓÓÒ'&—÷7FR'ÇÆ&–Æ—G“ÓÓÒ&Wf6–öâ#öçVÆÃ§'VÆW2æGF6²‡&öf–6–Væ7’¶FW‚²†vV$&öçW2æGF6·ÇÃ’ÇF&vWD2Ç¶GfçFvWÒ“°¢6öç7BGF6µ&öÆÃ×Æ–W$GF6³òæF–SóöçVÆÃ°¢6öç7B†—CÖ&–Æ—G“ÓÓÒ'&—÷7FR#÷G'VS¦&–Æ—G“ÓÓÒ&Wf6–öâ#öfÇ6S§Æ–W$GF6²æ†—C°¢6öç7B†—EF&vWC×F&vWD3°¢6öç7BFÖvTÖöF–f–W#ÖFWƒ°¢6öç7B&Ó×'VÆW2çvVöâ†7F÷"Æ&–Æ—G’“°¢6öç7B&öÆÆVCÖ&–Æ—G“ÓÓÒ'&—÷7FR#ó#B¶FÖvTÖöF–f–W"²†vV$&öçW2æFÖvWÇÃ“¦&–Æ—G“ÓÓÒ&Wf6–öâ#ó§'VÆW2æFÖvR†&ÒæF–RÆ&ÒæfÆB²†vV$&öçW2æFÖvWÇÃ’ÂÆ–W$GF6³òæ7&—F–6Â“°¢6öç7BFVÇCÖ†—CôÖF‚æÖ–â‡F&vWBæ‡Ç'VÆW2æÖ—F–vFR‡&öÆÆVBÆ&ÒçG—RÆ&Æö6²’“£°¢F&vWBæ‡ÔÖF‚æÖ‚ƒÇF&vWBæ‡ÖFVÇB“°¢6öç7BFVfVFVC×F&vWBæ‡ÓÓÓ°¢6öç7B–çFW''WFVCÖ&–Æ—G“ÓÓÒ&¶–6²"bf†—C°¢6öç7B†W&ô3Ö7F÷#òæ&Ö÷$6Æ77ÇÃ#°¢6öç7BVæV×”7G4f—'7CÒ†6×–vâæVæV×”–æ—F–F—fWÇÃ“â†6×–vâæ–æ—F–F—fU&öÆÇÇÃ“°¢6öç7B&WFÆ–F–öäGFV×CÖVæV×”7G4f—'7GÇÂ‚FVfVFVBbb–çFW''WFVB“°¢6öç7BVÆ–v–&ÆUF&vWG3Ö6öÖ&E'G’‚’æf–ÇFW"†SÓâRçÆ–W"bdçVÖ&W"æ—4–çFVvW"†Ræ‡’bfRæ‡ãbfRæÖ„‡ã“°¢6öç7BFVfVæF–ætÆÇ“×&WFÆ–F–öäGFV×BbfVÆ–v–&ÆUF&vWG2æÆVæwF‚bdÖF‚ç&æFöÒ‚“Âã3SöVÆ–v–&ÆUF&vWG5´ÖF‚æfÆö÷"„ÖF‚ç&æFöÒ‚’¦VÆ–v–&ÆUF&vWG2æÆVæwF‚•Ó¦çVÆÃ°¢6öç7BFVfVæF–æt–CÖFVfVæF–ætÆÇ“ò‡²%—7&·v†—7FÆR#¢'—"Â$'&öÖÆ’—&öæ¶Vr#¢&'&öÖÆ’"Â$ÆWF†&–VÂÖööæwV&B#¢&ÆWF†&–VÂ'Ò•¶FVfVæF–ætÆÇ’ææÖUÓ¦çVÆÃ°¢6öç7BFVfVæFW$3ÖFVfVæF–æt–C÷v–æF÷rç6ö&–Æ—F–W3òævWCòâ†FVfVæF–æt–B“òæ&Ö÷$6Æ77ÇÃ#¦†W&ô3°¢6öç7BVæV×”GF6³×&WFÆ–F–öäGFV×C÷'VÆW2æGF6²†&Æö6²æ&öçW2ÆFVfVæFW$2Ç¶GfçFvS¦&–Æ—G“ÓÓÒ&Wf6–öâ'ÇÆ6×–vâæwV&EVçF–ÃãÒ„çVÖ&W"†6×–vâæ6öÖ&E&÷VæB—ÇÃ’³òÓ£Ò“¦çVÆÃ°¢6öç7B6Vv‡CÖ6×–vâç6æ&VDVæV×“ÓÓ×F&vWBææÖRbf6×–vâç6æ&UVçF–ÃãÒ„çVÖ&W"†6×–vâæ6öÖ&E&÷VæB—ÇÃ’³°¢6öç7B&WFÆ–FW3Ò6Vv‡BbbVæV×”GF6³òæ†—C°¢–b†6Vv‡B–6×–vâç6æ&UVçF–ÃÓ°¢6öç7BÖ÷VçC×&WFÆ–FW3÷'VÆW2æFÖvR†&Æö6²æF–RÃ"ÆVæV×”GF6²æ7&—F–6Â“£°¢6öç7BÆÇ•&V6—–VçCÖFVfVæF–ætÆÇ“°¢6öç7B&V6V—fVDæÖSÖÆÇ•&V6—–VçCòææÖWÇÂ‡v–æF÷rç6ö6†&7FW'3òç&öf–ÆSòâ‚“òææÖWÇÂ%–÷W"†W&ò"“°¢ÆWBF¶VãÓÇ&V6—–VçD&Vf÷&SÖÆÇ•&V6—–VçCöÆÇ•&V6—–VçBæ‡§2æ‡Ç&V6—–VçDgFW#×&V6—–VçD&Vf÷&S°¢–b‡&WFÆ–FW2—°¢–b†ÆÇ•&V6—–VçB—°¢6öç7B&V6÷&CÖ6×–vâæ6öÖ&DÆÆ–W2æf–æB†ÓæææÖSÓÓÖÆÇ•&V6—–VçBææÖR“°¢F¶VãÔÖF‚æÖ–â‡&V6÷&Bæ‡ÆÖ÷VçB“°¢&V6÷&Bæ‡ÔÖF‚æÖ‚ƒÇ&V6÷&Bæ‡×F¶Vâ“·&V6—–VçDgFW#×&V6÷&Bæ‡°¢6×–vâç'G”†VÇF‡ÇÃ×·Ó¶6×–vâç'G”†VÇF…·&V6÷&BææÖUÓ×¶‡§&V6÷&Bæ‡ÆÖ„‡§&V6÷&BæÖ„‡ÆFW&—fVC¦6×–vâç'G”†VÇFƒòå·&V6÷&BææÖUÓòæFW&—fVCÓÓ×G'VWÓ°¢ÖVÇ6W°¢F¶VãÔÖF‚æÖ–â„ÖF‚æÖ‚ƒÇ2æ‡Ó’ÆÖ÷VçB“°¢2æ‡ÔÖF‚æÖ‚ƒÇ2æ‡×F¶Vâ“·&V6—–VçDgFW#×2æ‡°¢Ð¢Ð¢6öç7B''“ÒVæV×”GF6²bbVæV×”GF6²æ†—BbbFVfVFVBbf&–Æ—G’ÓÒ&Wf6–öâ"bfVæV×”GF6²çF÷FÃÆFVfVæFW$2bfVæV×”GF6²æF–SãbfFVfVæF–ætÆÇ“ÓÓÖçVÆÂbdÖF‚ç&æFöÒ‚“ÂãS°¢6×–vâç''•&VG“×''“°¢2æVãÔÖF‚æÖ–âƒÇ2æVâ×&–6R³“·2çF–ÖR²³°¢6×–vâæ6öÖ&E&÷VæCÒ„çVÖ&W"†6×–vâæ6öÖ&E&÷VæB—ÇÃ’³°¢6öç7BWfVçC×·&÷VæC¦6×–vâæ6öÖ&E&÷VæBÆ&–Æ—G’ÆGF6µ&öÆÂÆ†—EF&vWBÇF&vWD2ÆVæV×•G—S¦&Æö6²çG—RÆFÖvUG—S¦&ÒçG—RÆ–æ—F–F—fS¦6×–vâæ–æ—F–F—fU&öÆÂÆVæV×”–æ—F–F—fS¦6×–vâæVæV×”–æ—F–F—fRÆGF6µF÷FÃ§Æ–W$GF6³òçF÷FÃóöçVÆÂÆ7&—F–6Ã¢Æ–W$GF6³òæ7&—F–6ÂÆVæV×•&öÆÃ¦VæV×”GF6³òæF–SóöçVÆÂÆVæV×•F÷FÃ¦VæV×”GF6³òçF÷FÃóöçVÆÂÆFVfVæFW$2ÇF&vWC§F&vWBææÖRÆFVÇBÇF¶VâÆ†—BÆFVfVFVBÆVæV×”&Vf÷&S¦öÆD…ÆVæV×”gFW#§F&vWBæ‡ÆVæV×”Öƒ§F&vWBæÖ„‡Æ†W&ô&Vf÷&S¦†W&ô…Æ†W&ôgFW#§2æ‡ÆVæW&w”&Vf÷&S¦öÆDVæW&w’ÆVæW&w”gFW#§2æVâÇ&V6—–VçC§&V6V—fVDæÖRÇ&V6—–VçD&Vf÷&RÇ&V6—–VçDgFW"Ç''—Ó°¢6×–vâæÆ7DW†6†ævSÖWfVçC°¢&V6÷&D6öÖ&DFVÇF‡F&vWBÆFVÇBÇF¶VâÇ&V6V—fVDæÖRÇ&V6—–VçD&Vf÷&RÇ&V6—–VçDgFW"“°¢–b†FVfVFVB—°¢v–æF÷rç6öVW7G3òæöäFVfVCòâ†6×–vâÇF&vWBææÖR“°¢–b‚Væ6÷VçFW"æFVfVFVBç6öÖR‡ƒÓç‚ææÖSÓÓ×F&vWBææÖR’–Væ6÷VçFW"æFVfVFVBçW6‚‡¶æÖS§F&vWBææÖRÆÖ„‡§F&vWBæÖ„‡Ò“°¢–b‚Æ—f–ætVæVÖ–W2‚’æÆVæwF‚–Væ6÷VçFW"çVæF–æuf–7F÷'“×G'VS°¢–b‡6VÆV7FVD6öÖ&EF&vWCÓÓ×F&vWBææÖR—6VÆV7FVD6öÖ&EF&vWCÖçVÆÃ°¢6×–vâæFVfVFVDVæVÖ–W7ÇÃÕµÓ°¢6×–vâæFVfVFVDVæVÖ–W2çW6‚…7G&–ær†6×–vâæVæV×”Æö6F–öçÇÆ6×–vâç66VæSòæÆö6F–öçÇÂ""’²'Â"·F&vWBææÖRçFôÆ÷vW$66R‚’“°¢6×–vâæFVfVFVDVæVÖ–W3Ö6×–vâæFVfVFVDVæVÖ–W2ç6Æ–6R‚Óƒ“°¢Ð¢6öç7B&W÷'CÒ†&–Æ—G“ÓÓÒ&Wf6–öâ#ò$FVfVç6—fRWf6–öã²æòGF6²&öÆÂâ#¦†—Cò%W6VB"¶&–Æ—G’²"öâ"·F&vWBææÖR²"f÷""¶FVÇB²"…â#¢%W6VB"¶&–Æ—G’²"öâ"·F&vWBææÖR²"'WBÖ—76VBâ"’°¢†GF6µ&öÆÂÓÖçVÆÃò"C#GF6²"¶GF6µ&öÆÂ²"²"²‡&öf–6–Væ7’¶FW‚’²"g22"·F&vWD2²"â#¢""’°¢"VæV×’"·F&vWBææÖR²"…"¶öÆD…²"ò"·F&vWBæÖ„‡²"(i""·F&vWBæ‡²"ò"·F&vWBæÖ„‡²"â"°¢‡&WFÆ–FW3÷F&vWBææÖR²"&WFÆ–FW2v–ç7B"·&V6V—fVDæÖR²"f÷""·F¶Vâ²"…‚"·&V6—–VçD&Vf÷&R²"(i""·&V6—–VçDgFW"²"’â#¢$æòFÖvR&V6V—fVBâ"’°¢"Æ–W"…"¶†W&ô…²"(i""·2æ‡²#²VæW&w’"¶öÆDVæW&w’²"(i""·2æVâ²"â"°¢†FVfVFVCò"÷öæVçBFVfVFVBâ#¢""’²"W†7FÇ’ôäR6öç6WVVçF–Â6öÖ&BW†6†ævR&W6öÇfVBâæòWFöÖF–2Æö÷BÂW‡G&GW&ç2Â÷"Væ6öæf—&ÖVB†VÆ–ærâ#°¢&WGW&â††—GÇÆ&–Æ—G“ÓÓÒ&Wf6–öâ#ò%7V66W72#¢$6ö×Æ–6F–öâ"’²#¢6öÖ&BW†6†ævR"¶6×–vâæ6öÖ&E&÷VæB²#¢"·&W÷'C°§Ð¦gVæ7F–öâWFFTÆ—f–ætVæVÖ–W2‡66VæR—°¢–b‚'&’æ—4'&’‡66VæSòæVæVÖ–W2’—&WGW&ã°¢6öç7BÆö6F–öãÕ7G&–ær‡66VæRæÆö6F–öçÇÂ""“°¢6öç7B&Wf–÷W3Ò†6×–vâæVæV×”Æö6F–öãÓÓÖÆö6F–öçÇÆ6×–vâçVæF–æsòæ6öÖ&B“öÆ—f–ætVæVÖ–W2‚“¥µÓ°¢6öç7BFVfVFVCÖ6×–vâæFVfVFVDVæVÖ–W7ÇÅµÓ°¢6öç7BæW‡CÕµÓ°¢f÷"†6öç7B—FVÒöb66VæRæVæVÖ–W2ç6Æ–6RƒÃB’—°¢–b‚—FV×ÇÇG—Vöb—FVÒææÖRÓÒ'7G&–ær'ÇÂçVÖ&W"æ—4–çFVvW"†—FVÒæÖ„‡—ÇÆ—FVÒæÖ„‡Ã–6öçF–çVS°¢6öç7BæÖSÖ—FVÒææÖRçG&–Ò‚’ç6Æ–6RƒÃc’Æ–CÖÆö6F–öâ²'Â"¶æÖRçFôÆ÷vW$66R‚“°¢–b‚æÖWÇÆFVfVFVBæ–æ6ÇVFW2†–B—ÇÆæW‡Bç6öÖR‡ƒÓç‚ææÖRçFôÆ÷vW$66R‚“ÓÓÖæÖRçFôÆ÷vW$66R‚’’–6öçF–çVS°¢6öç7BW†—7F–æs×&Wf–÷W2æf–æB‡ƒÓç‚ææÖRçFôÆ÷vW$66R‚“ÓÓÖæÖRçFôÆ÷vW$66R‚’“°¢6öç7BÖ„‡ÔÖF‚æÖ–âƒSÆ—FVÒæÖ„‡“°¢æW‡BçW6‚†W†—7F–æwÇÇ¶æÖRÆÖ„‡Æ‡¤ÖF‚æÖ‚ƒÄÖF‚æÖ–â†Ö„‡ÄÖF‚ç&÷VæB„çVÖ&W"†—FVÒæ‡—ÇÆÖ„‡’’—Ò“°¢Ð¢òò–bvVÖ–æ’öÖ—G27W'f—f–ærVæVÖ–W2&–v‡BgFW"7G&–¶RÂ¶VWF†V—"Æö6ÆÇ’G&6¶VB…à¢òòFVÆ–&W&FRÖ÷fVÖVçB÷"æöæ6öÖ&BF—6VævvVÖVçB6â6ÆV"F†R&Wf–÷W2Væ6÷VçFW"à¢–b‚æW‡BæÆVæwF‚bg&Wf–÷W2æÆVæwF‚bf6×–vâçVæF–æsòæ6öÖ&B–æW‡BçW6‚‚ââç&Wf–÷W2“°¢òòF—6Vævv–ærg&öÒf–v‡Bv—F†÷WBFVfVF–ærWfW'’G&6¶VBföRVæG2F†BVæ6÷VçFW ¢òòv—F†÷WBf–7F÷'’–ÖVçBâÆFW"f–v‡B7F'G2æWr&V6V—BæB&Wv&BööÂà¢–b‚æW‡BæÆVæwF‚bb6×–vâçVæF–æsòæ6öÖ&Bbf6×–vâç‡Væ6÷VçFW#òæ7F—fRbb6×–vâç‡Væ6÷VçFW"çVæF–æuf–7F÷'’—°¢6×–vâç‡Væ6÷VçFW"æ7F—fSÖfÇ6S¶6×–vâç‡Væ6÷VçFW"æ&æFöæVC×G'VS°¢Ð¢6×–vâæVæVÖ–W3ÖæW‡C¶6×–vâæVæV×”Æö6F–öãÖÆö6F–öã°§Ð¦gVæ7F–öâ‡–G&FT¶æ÷väÆÇ”…‚—°¢–b‚6×–vâ—&WGW&ã°¢6öç7B&÷7FW#Ô'&’æ—4'&’†6×–vâæ6öÖ&DÆÆ–W2“ö6×–vâæ6öÖ&DÆÆ–W3¥µÓ°¢6öç7BæÖW3×²%—7&·v†—7FÆR#¢'—"Â$'&öÖÆ’—&öæ¶Vr#¢&'&öÖÆ’"Â$ÆWF†&–VÂÖööæwV&B#¢&ÆWF†&–VÂ'Ó°¢6×–vâç'G”†VÇF‡ÇÃ×·Ó°¢f÷"†6öç7BÆÇ’öb&÷7FW"—°¢6öç7B–CÖæÖW5¶ÆÇ“òææÖUÓ¶–b‚–B–6öçF–çVS°¢6öç7BW‡V7FVC×v–æF÷rç6ö&–Æ—F–W3òævWCòâ†–B“òæÖ„‡°¢–b‚çVÖ&W"æ—4–çFVvW"†W‡V7FVB—ÇÆW‡V7FVCÃ–6öçF–çVS°¢6öç7BöÆCÖ6×–vâç'G”†VÇF…¶ÆÇ’ææÖUÓ°¢òòFW&—fRÖ†–×VÒ…g&öÒ6Æ72†—BF–RÂ4ôâæBÆWfVÂâ&W6W'fRW†—7F–ærv÷VæG0¢òò2Ö—76–ær…²ÆVv7’ÖçVÂVçG&–W2Ö’W7F&Æ—6‚v÷VæG2'WBæ÷BÖ‚…à¢6öç7B&–÷$ÖƒÔçVÖ&W"æ—4–çFVvW"†öÆCòæÖ„‡’bföÆBæÖ„‡ãööÆBæÖ„‡¤çVÖ&W"æ—4–çFVvW"†ÆÇ’æÖ„‡’bfÆÇ’æÖ„‡ãöÆÇ’æÖ„‡¦W‡V7FVC°¢6öç7B&–÷$7W'&VçCÔçVÖ&W"æ—4–çFVvW"†öÆCòæ‡“ööÆBæ‡¤çVÖ&W"æ—4–çFVvW"†ÆÇ’æ‡“öÆÇ’æ‡§&–÷$Öƒ°¢6öç7BÖ—76–æsÔÖF‚æÖ‚ƒÇ&–÷$Ö‚ÔÖF‚æÖ‚ƒÄÖF‚æÖ–â‡&–÷$Ö‚Ç&–÷$7W'&VçB’’“°¢ÆÇ’æÖ„‡ÖW‡V7FVC°¢ÆÇ’æ‡ÔÖF‚æÖ‚ƒÆW‡V7FVBÖÖ—76–ær“°¢6×–vâç'G”†VÇF…¶ÆÇ’ææÖUÓ×¶‡¦ÆÇ’æ‡ÆÖ„‡¦W‡V7FVBÆFW&—fVC§G'VWÓ° ¢Ð§Ð¦gVæ7F–öâ6öÖ&E'G’‚—°¢‡–G&FT¶æ÷väÆÇ”…‚“°¢6öç7BÆ—7CÔ'&’æ—4'&’†6×–vãòæ6öÖ&DÆÆ–W2“ö6×–vâæ6öÖ&DÆÆ–W3¥µÓ°¢6öç7B—56ã×v–æF÷rç6ö6†&7FW'3òç&öf–ÆSòâ‚“òæ–CÓÓÒ'6æ6·’#°¢&WGW&â·¶æÖS§v–æF÷rç6ö6†&7FW'3òç&öf–ÆSòâ‚“òææÖWÇÂ%–÷W"†W&ò"Æ‡§2æ‡ÆÖ„‡£ÇÆ–W#§G'VWÒÂââæÆ—7Bæf–ÇFW"†SÓæRbgG—VöbRææÖSÓÓÒ'7G&–ær"’ç6Æ–6RƒÃb’æf–ÇFW"†SÓâ—56çÇÂõå6æ6·’ÇVvçWG2Bö’çFW7B†RææÖR’’æÖ†SÓâ‡²ââæRÇÆ–W#¦fÇ6WÒ’•Ó°§Ð¦gVæ7F–öâ&V6öæ6–ÆT6öÖ&DÆÆ–W2‡66VæR—°¢–b‚'&’æ—4'&’‡66VæSòæÆÆ–W2’—&WGW&ã°¢6öç7BW†—7F–æsÔ'&’æ—4'&’†6×–vâæ6öÖ&DÆÆ–W2“ö6×–vâæ6öÖ&DÆÆ–W3¥µÓ°¢6×–vâç'G”†VÇF‡ÇÃ×·Ó°¢f÷"†6öç7BÖVÖ&W"öbW†—7F–ær––b†ÖVÖ&W"bfÖVÖ&W"ææÖRbdçVÖ&W"æ—4–çFVvW"†ÖVÖ&W"æ‡’bdçVÖ&W"æ—4–çFVvW"†ÖVÖ&W"æÖ„‡’bfÖVÖ&W"æÖ„‡ãbb6×–vâç'G”†VÇF…¶ÖVÖ&W"ææÖUÒ—°¢6×–vâç'G”†VÇF…¶ÖVÖ&W"ææÖUÓ×¶‡¦ÖVÖ&W"æ‡ÆÖ„‡¦ÖVÖ&W"æÖ„‡Ó°¢Ð¢6öç7B–æ6öÖ–æsÕµÓ°¢f÷"†6öç7BRöb66VæRæÆÆ–W2ç6Æ–6RƒÃb’—°¢–b‚WÇÇG—VöbRææÖRÓÒ'7G&–ær'ÇÂRææÖRçG&–Ò‚’–6öçF–çVS°¢6öç7BæÖSÖRææÖRçG&–Ò‚’ç6Æ–6RƒÃc“°¢–b†æÖSÓÓÒ‡v–æF÷rç6ö6†&7FW'3òç&öm»Û«h‘éì¶»§q«^u½¹ÍÐ…±±åQ…É•ÑÌõ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰‘¥Øˆ¤í…±±åQ…É•ÑÌ¹±…ÍÍ9…µ”ô‰Í½„µ½µ‰…ÐµÑ…É•ÑÌÍ½„µ½µ‰…Ðµ…±±äµÑ…É•ÑÌˆì(½¹ÍÐ…±±å1…‰•°õ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰ÍÑÉ½¹œˆ¤í…±±å1…‰•°¹Ñ•áÑ½¹Ñ•¹Ðô‰¡½½Í”…¸…±±äÑ¼…ÍÍ¥ÍÐˆí…±±åQ…É•ÑÌ¹…ÁÁ•¹¡…±±å1…‰•°¤ì(™½È¡½¹ÍÐ…±±ä½˜½µ‰…ÑA…ÉÑä ¤¹™¥±Ñ•È¡àôø…à¹Á±…å•È¤¥ì(€½¹ÍÐˆõ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰‰ÕÑÑ½¸ˆ¤íˆ¹ÑåÁ”ô‰‰ÕÑÑ½¸ˆíˆ¹±…ÍÍ9…µ”ô‰Í½„µÑ…É•Ðµ‰ÕÑÑ½¸Í½„µ…±±äµÑ…É•Ðµ‰ÕÑÑ½¸ˆì(€ˆ¹Ñ•áÑ½¹Ñ•¹Ðõ…±±ä¹¹…µ”¬¡9Õµ‰•È¹¥Í¥¹¥Ñ”¡…±±ä¹¡À¤ü€ˆƒ
+Ü€ˆ­…±±ä¹¡À¬ˆ¼ˆ­…±±ä¹µ…á!À¬ˆ!@ˆèˆƒ
+Ü!@Õ¹­¹½Ý¸ˆ¤ì(€ˆ¹Í•ÑÑÑÉ¥‰ÕÑ” ‰…É¥„µÁÉ•ÍÍ•ˆ±MÑÉ¥¹œ¡Í•±•Ñ•‘±±åQ…É•Ðôôõ…±±ä¹¹…µ”¤¤íˆ¹‘¥Í…‰±•õ‰ÕÍåñð„…Á•¹‘¥¹œ ¤ì(€ˆ¹½¹±¥¬ô ¤ôùíÍ•±•Ñ•‘±±åQ…É•Ðõ…±±ä¹¹…µ”íÕÍÑ½µÉ…™Ðô‰½½É‘¥¹…Ñ”Ý¥Ñ €ˆ­…±±ä¹¹…µ”¬ˆÑ¼ÁÉ½Ñ•Ð½È…ÍÍ¥ÍÐÑ¡•´Ý¥Ñ¡½ÕÐ…ÍÍÕµ¥¹œ…¹ä¡•…±¥¹œ½È‘…µ…”¸ˆíÕÍÑ½µQåÁ”ô‰¥¹Ù•ÍÑ¥…Ñ”ˆíÕÍÑ½µM½¥…±M­¥±°ô‰…ÕÑ¼ˆí‘É…Ü ¥ôì(€…±±åQ…É•ÑÌ¹…ÁÁ•¹¡ˆ¤ì(ô(¥˜¡…±±åQ…É•ÑÌ¹¡¥±‘É•¸¹±•¹Ñ øÄ¥ì(€½¹ÍÐ¥¹™¼õ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰Àˆ¤í¥¹™¼¹±…ÍÍ9…µ”ô‰Í½„µ½µ‰…Ðµ¡¥¹Ðˆí¥¹™¼¹Ñ•áÑ½¹Ñ•¹Ðô‰M•±•Ñ¥¹œ…¸…±±ä‘É…™ÑÌ„ÍÕÁÁ½ÉÐ…Ñ¥½¸¸%Ð¹•Ù•È¡•…±Ì½ÈÍÁ•¹‘Ì„ÑÕÉ¸‰ä¥ÑÍ•±˜ì¡•…±Ñ ¡…¹•ÌÉ•ÅÕ¥É”„½¹™¥Éµ•…Ñ¥½¸¸ˆíÉ½ÍÑ•È¹…ÁÁ•¹¡¥¹™¼¤ì(€½¹ÍÐ…ÍÍ¥ÍÐõ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰‰ÕÑÑ½¸ˆ¤í…ÍÍ¥ÍÐ¹ÑåÁ”ô‰‰ÕÑÑ½¸ˆí…ÍÍ¥ÍÐ¹±…ÍÍ9…µ”ô‰Í½„µ…ÍÍ¥ÍÐµ‰ÕÑÑ½¸ˆì(€…ÍÍ¥ÍÐ¹Ñ•áÑ½¹Ñ•¹Ðô‰½½É‘¥¹…Ñ”Ý¥Ñ Í•±•Ñ•…±±äƒ
+Ü€Ä…Ñ¥½¸ˆì(€…ÍÍ¥ÍÐ¹‘¥Í…‰±•õ‰ÕÍåñð„…Á•¹‘¥¹œ ¥ñð…½µ‰…ÑA…ÉÑä ¤¹Í½µ”¡„ôø…„¹Á±…å•È˜™„¹¹…µ”ôôõÍ•±•Ñ•‘±±åQ…É•Ð¤ì(€…ÍÍ¥ÍÐ¹½¹±¥¬ô ¤ôùí½¹ÍÐÑ…É•Ðõ½µ‰…ÑA…ÉÑä ¤¹™¥¹¡„ôø…„¹Á±…å•È˜™„¹¹…µ”ôôõÍ•±•Ñ•‘±±åQ…É•Ð¤í¥˜ …Ñ…É•Ð¥É•ÑÕÉ¸ì(€€¡½½Í”¡íÑ•áÐè‰½½É‘¥¹…Ñ”‘•™•¹Í¥Ù•±äÝ¥Ñ €ˆ­Ñ…É•Ð¹¹…µ”¬ˆÑ¼…ÍÍ¥ÍÐÑ¡•¥È¹•áÐµ½Ù”Ý¥Ñ¡½ÕÐ¥¹Ù•¹Ñ¥¹œ¡•…±¥¹œ°ÍÕÁÁ±¥•Ì°‘…µ…”½È•áÑÉ„ÑÕÉ¹Ì¸ˆ±ÑåÁ”è‰¥¹Ù•ÍÑ¥…Ñ”ˆ±‘¥™™¥Õ±Ñäè‰µ•‘¥Õ´‰ô¤ì(€ôì(€…±±åQ…É•ÑÌ¹…ÁÁ•¹¡…ÍÍ¥ÍÐ¤íÉ½ÍÑ•È¹…™Ñ•È¡…±±åQ…É•ÑÌ¤ì(ô(¥˜¡•¹•µ¥•Ì¹±•¹Ñ ¥ì(€½¹ÍÐÍÕÁÁ½ÉÐõ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰Í•Ñ¥½¸ˆ¤íÍÕÁÁ½ÉÐ¹±…ÍÍ9…µ”ô‰Í½„µ½µ‰…Ðµ…‰¥±¥Ñ¥•Ìˆì(€½¹ÍÐ¡•…‘¥¹œõ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰ÍÑÉ½¹œˆ¤í¡•…‘¥¹œ¹Ñ•áÑ½¹Ñ•¹Ðô‰½µÁ…¹¥½¸½µ‰…Ð…Ñ¥½¹Ìƒ
+Ü½¹”•á¡…¹”•… ˆíÍÕÁÁ½ÉÐ¹…ÁÁ•¹¡¡•…‘¥¹œ¤ì(€½¹ÍÐ½ÁÑ¥½¹Ìõml‰‰É½µ±¥}Õ…Éˆ°‰	É½µ±¤ƒ
+ÜM¡¥•±]…±°€¡‘¥Í…‘Ù…¹Ñ…”¤ˆ°‰	É½µ±¤%É½¹­•œ‰t±l‰Á¥ÁÁ…}Í¹…É”ˆ°‰A¥ÁÁ„ƒ
+Ü¹¥¹••É¥¹œM¹…É”ˆ°‰A¥ÁÁ„MÁ…É­Ý¡¥ÍÑ±”‰t±l‰±•Ñ¡…É¥•±}¡•…°ˆ°‰1•Ñ¡…É¥•°ƒ
+Ü!•…±¥¹œAÉ…å•Èˆ°‰1•Ñ¡…É¥•°5½½¹Õ…É‰utì(€™½È¡½¹ÍÐm…‰¥±¥Ñä±Ñ¥Ñ±”±¹…µ•t½˜½ÁÑ¥½¹Ì¥ì(€€½¹ÍÐµ•µ‰•Èõ½µ‰…ÑA…ÉÑä ¤¹™¥¹¡„ôù„¹¹…µ”ôôõ¹…µ”˜™„¹¡ÀøÀ¤ì(€€¥˜ …µ•µ‰•È¥½¹Ñ¥¹Õ”ì(€€½¹ÍÐ‰Ñ¸õ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰‰ÕÑÑ½¸ˆ¤í‰Ñ¸¹ÑåÁ”ô‰‰ÕÑÑ½¸ˆí‰Ñ¸¹±…ÍÍ9…µ”ô‰Í½„µ…‰¥±¥Ñäµ‰ÕÑÑ½¸ˆì(€€½¹ÍÐ±•™Ðõ5…Ñ ¹µ…à À°¡…µÁ…¥¸¹ÍÕÁÁ½ÉÑ½½±‘½Ý¹Ìü¹m…‰¥±¥ÑåuñðÀ¤´¡…µÁ…¥¸¹½µ‰…ÑI½Õ¹‘ñðÀ¤¤ì(€€‰Ñ¸¹Ñ•áÑ½¹Ñ•¹ÐõÑ¥Ñ±”¬¡±•™Ðüˆƒ
+Ü½½±‘½Ý¸€ˆ­±•™Ð¬ˆÉ½Õ¹‘Ìˆèˆƒ
+ÜI•…‘äˆ¤ì(€€‰Ñ¸¹‘¥Í…‰±•õ‰ÕÍåñð„…Á•¹‘¥¹œ ¥ññ±•™ÐøÀì(€€‰Ñ¸¹½¹±¥¬ô ¤ôù¡½½Í”¡íÑ•áÐéÑ¥Ñ±”¬ˆÍÕÁÁ½ÉÑÌÑ¡”Á…ÉÑäˆ±ÑåÁ”è‰½µ‰…Ðˆ±‘¥™™¥Õ±Ñäè‰µ•‘¥Õ´ˆ±…‰¥±¥Ñåô¤ì(€€ÍÕÁÁ½ÉÐ¹…ÁÁ•¹¡‰Ñ¸¤ì(€ô(€Í•Ñ¥½¸¹…ÁÁ•¹¡ÍÕÁÁ½ÉÐ¤ì(€¥˜¡…µÁ…¥¸¹±…ÍÑMÕÁÁ½ÉÐ¥í½¹ÍÐ¹½Ñ”õ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰Àˆ¤í¹½Ñ”¹±…ÍÍ9…µ”ô‰Í½„µ½µ‰…Ðµ¡¥¹Ðˆí¹½Ñ”¹Ñ•áÑ½¹Ñ•¹Ðô‰MÕÁÁ½ÉÐÉ½Õ¹€ˆ­…µÁ…¥¸¹±…ÍÑMÕÁÁ½ÉÐ¹É½Õ¹¬ˆè€ˆ­…µÁ…¥¸¹±…ÍÑMÕÁÁ½ÉÐ¹‘•ÍÉ¥ÁÑ¥½¸¬ˆ€ˆ­…µÁ…¥¸¹±…ÍÑMÕÁÁ½ÉÐ¹É•Ñ…±¥…Ñ¥½¸íÍ•Ñ¥½¸¹…ÁÁ•¹¡¹½Ñ”¥ô(ô(½¹ÍÐÁ¥­•Èõ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰‘¥Øˆ¤íÁ¥­•È¹±…ÍÍ9…µ”ô‰Í½„µ½µ‰…ÐµÑ…É•ÑÌˆí½¹ÍÐ±…‰•°õ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰ÍÑÉ½¹œˆ¤í±…‰•°¹Ñ•áÑ½¹Ñ•¹Ðô‰¡½½Í”…¸•¹•µäÑ…É•ÐˆíÁ¥­•È¹…ÁÁ•¹¡±…‰•°¤ì(™½È¡½¹ÍÐ™½”½˜•¹•µ¥•Ì¥ì(€½¹ÍÐ‰ÕÑÑ½¸õ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰‰ÕÑÑ½¸ˆ¤í‰ÕÑÑ½¸¹ÑåÁ”ô‰‰ÕÑÑ½¸ˆí‰ÕÑÑ½¸¹±…ÍÍ9…µ”ô‰Í½„µÑ…É•Ðµ‰ÕÑÑ½¸ˆí‰ÕÑÑ½¸¹Ñ•áÑ½¹Ñ•¹Ðõ™½”¹¹…µ”¬ˆƒ
+Ü€ˆ­™½”¹¡À¬ˆ¼ˆ­™½”¹µ…á!À¬ˆ!@ˆí‰ÕÑÑ½¸¹Í•ÑÑÑÉ¥‰ÕÑ” ‰…É¥„µÁÉ•ÍÍ•ˆ±MÑÉ¥¹œ¡Í•±•Ñ•‘½µ‰…ÑQ…É•Ðôôõ™½”¹¹…µ”¤¤ì(€‰ÕÑÑ½¸¹‘¥Í…‰±•õ‰ÕÍåñð„…Á•¹‘¥¹œ ¤í‰ÕÑÑ½¸¹½¹±¥¬ô ¤ôùíÍ•±•Ñ•‘½µ‰…ÑQ…É•Ðõ™½”¹¹…µ”í‘É…Ü ¥ôì(€Á¥­•È¹…ÁÁ•¹¡‰ÕÑÑ½¸¤ì(ô(¥˜¡•¹•µ¥•Ì¹±•¹Ñ ¥Í•Ñ¥½¸¹…ÁÁ•¹¡Á¥­•È¤ì(½¹ÍÐÍ­¥±±Ìõ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰‘¥Øˆ¤íÍ­¥±±Ì¹±…ÍÍ9…µ”ô‰Í½„µ½µ‰…Ðµ…‰¥±¥Ñ¥•Ìˆì(½¹ÍÐ…‰¥±¥Ñ¥•Í1…‰•°õ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰ÍÑÉ½¹œˆ¤í…‰¥±¥Ñ¥•Í1…‰•°¹Ñ•áÑ½¹Ñ•¹Ðô‰½µ‰…Ð…‰¥±¥Ñ¥•ÌˆíÍ­¥±±Ì¹…ÁÁ•¹¡…‰¥±¥Ñ¥•Í1…‰•°¤ì(½¹ÍÐÉ½Õ”õÝ¥¹‘½Ü¹Í½…¡…É…Ñ•ÉÌü¹ÁÉ½™¥±”ü¸ ¤ü¹±…ÍÍ9…µ”ôôô‰I½Õ”ˆì(½¹ÍÐ…Ù…¥±…‰±”õÉ½Õ”ýml‰ÍÑÉ¥­”ˆ°‰MÑÉ¥­”ˆ°ÌÕt±l‰­¥¬ˆ°‰-¥¬ƒ
+Ü¥¹Ñ•ÉÉÕÁÐˆ°ÈÕt±l‰•Ù…Í¥½¸ˆ°‰Ù…Í¥½¸ˆ°Át±l‰É¥Á½ÍÑ”ˆ°‰I¥Á½ÍÑ”ƒ
+Ü…™Ñ•ÈÁ…ÉÉäˆ°ÄÁutéml‰ÍÑÉ¥­”ˆ°‰ÑÑ…¬ˆ°ÌÕt±l‰•Ù…Í¥½¸ˆ°‰•™•¹ˆ°Áutì(™½È¡½¹ÍÐm¥±±…‰•°±½ÍÑt½˜…Ù…¥±…‰±”¥ì(€½¹ÍÐ‰ÕÑÑ½¸õ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰‰ÕÑÑ½¸ˆ¤í‰ÕÑÑ½¸¹ÑåÁ”ô‰‰ÕÑÑ½¸ˆí‰ÕÑÑ½¸¹±…ÍÍ9…µ”ô‰Í½„µ…‰¥±¥Ñäµ‰ÕÑÑ½¸ˆì(€‰ÕÑÑ½¸¹Ñ•áÑ½¹Ñ•¹Ðõ±…‰•°¬ˆƒ
+Ü€ˆ­½ÍÐ¬ˆ¹•Éäˆì(€‰ÕÑÑ½¸¹‘¥Í…‰±•õ‰ÕÍåñð„…Á•¹‘¥¹œ ¥ññÌ¹•¸ñ½ÍÑñð¡¥ôôô‰É¥Á½ÍÑ”ˆ˜˜……µÁ…¥¸¹Á…ÉÉåI•…‘ä¥ñð¡¥„ôô‰•Ù…Í¥½¸ˆ˜˜…•¹•µ¥•Ì¹Í½µ”¡”ôù”¹¹…µ”ôôõÍ•±•Ñ•‘½µ‰…ÑQ…É•Ð¤˜™•¹•µ¥•Ì¹±•¹Ñ øÄ¤ì(€‰ÕÑÑ½¸¹½¹±¥¬ô ¤ôùí½¹ÍÐÑ…É•Ðõ•¹•µ¥•Ì¹™¥¹¡”ôù”¹¹…µ”ôôõÍ•±•Ñ•‘½µ‰…ÑQ…É•Ð¥ññ•¹•µ¥•ÍlÁtí¥˜ …Ñ…É•Ð¥É•ÑÕÉ¸ì(€€¡½½Í”¡íÑ•áÐè¡Ý¥¹‘½Ü¹Í½…¡…É…Ñ•ÉÌü¹ÁÉ½™¥±”ü¸ ¤ü¹¹…µ•ñð‰!•É¼ˆ¤¬ˆÕÍ•Ì€ˆ­±…‰•°¬ˆ……¥¹ÍÐ€ˆ­Ñ…É•Ð¹¹…µ”±ÑåÁ”è‰½µ‰…Ðˆ±‘¥™™¥Õ±Ñäè‰µ•‘¥Õ´ˆ±…‰¥±¥Ñäé¥‘ô¤ì(€ôì(€Í­¥±±Ì¹…ÁÁ•¹¡‰ÕÑÑ½¸¤ì(ô(¥˜¡•¹•µ¥•Ì¹±•¹Ñ ¥Í•Ñ¥½¸¹…ÁÁ•¹¡Í­¥±±Ì¤ì(¥˜¡ÉÉ…ä¹¥ÍÉÉ…ä¡…µÁ…¥¸¹½µ‰…Ñ1½œ¤˜™…µÁ…¥¸¹½µ‰…Ñ1½œ¹±•¹Ñ ¥ì(€½¹ÍÐ¡¥ÍÑ½Éäõ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰‘•Ñ…¥±Ìˆ¤í¡¥ÍÑ½Éä¹±…ÍÍ9…µ”ô‰Í½„µ‰…ÑÑ±”µ¡¥ÍÑ½Éäˆí½¹ÍÐ¡•…õ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰ÍÕµµ…Éäˆ¤í¡•…¹Ñ•áÑ½¹Ñ•¹Ðô‰…µ…”±½œƒ
+Ü€ˆ­…µÁ…¥¸¹½µ‰…Ñ1½œ¹±•¹Ñ ¬ˆ•á¡…¹•Ìˆí¡¥ÍÑ½Éä¹…ÁÁ•¹¡¡•…¤ì(€™½È¡½¹ÍÐ•¹ÑÉä½˜…µÁ…¥¸¹½µ‰…Ñ1½œ¹Í±¥” ´Ô¤¹É•Ù•ÉÍ” ¤¥í½¹ÍÐ±¥¹”õ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰Àˆ¤í±¥¹”¹Ñ•áÑ½¹Ñ•¹Ðô‰I½Õ¹€ˆ­•¹ÑÉä¹É½Õ¹¬ˆè€ˆ­•¹ÑÉä¹•Ù•¹ÑÌ¹µ…À¡”ôù”¹¹…µ”¬ˆ€ˆ¬¡”¹‘•±Ñ„ðÀý”¹‘•±Ñ„¬ˆ!@ˆè‰¹¼‘…µ…”ˆ¤¬ˆ€ ˆ­”¹…™Ñ•È¬ˆ¼ˆ­”¹µ…á!À¬ˆ¤ˆ¤¹©½¥¸ ˆƒ
+Ü€ˆ¤í¡¥ÍÑ½Éä¹…ÁÁ•¹¡±¥¹”¥õÍ•Ñ¥½¸¹…ÁÁ•¹¡¡¥ÍÑ½Éä¤ì(ô(‰½à¹…ÁÁ•¹¡Í•Ñ¥½¸¤ì)ô)™Õ¹Ñ¥½¸É•ÍÕ±Ð¡…Ñ¥½¸¥ì4(¥˜¡…Ñ¥½¸¹ÑåÁ”ôôô‰½µ‰…Ðˆ˜™±¥Ù¥¹¹•µ¥•Ì ¤¹±•¹Ñ ¥É•ÑÕÉ¸™¥¡Ñá¡…¹”¡…Ñ¥½¸¤ì(½¹ÍÐÍ­¥±°õÍ½¥…±M­¥±°¡…Ñ¥½¸¤í¥˜¡Í­¥±°¥É•ÑÕÉ¸Í½¥…±¡•¬¡…Ñ¥½¸±Í­¥±°¤ì(½¹ÍÐÐõ…Ñ¥½¸¹ÑåÁ”±í½ÍÐ±Ñ…É•Ñôõ…Ñ¥½¹=‘‘Ì¡…Ñ¥½¸¤í±•Ð‘…µ…”ôÀì(¥˜¡Ì¹•¸ñ½ÍÐ¥É•ÑÕÉ¸¹Õ±°ì4(½¹ÍÐÉ½±±•ôÄ­5…Ñ ¹™±½½È¡5…Ñ ¹É…¹‘½´ ¤¨ÄÀÀ¤±½¬õÉ½±±•ðõÑ…É•Ðì4(Ì¹•¸õ5…Ñ ¹µ¥¸ ÄÀÀ±Ì¹•¸µ½ÍÐ¬ÄÀ¤íÌ¹Ñ¥µ”¬¬ì¥˜ …½¬˜™l‰ÍÑ•…±Ñ ˆ°‰•¹¥¹••É¥¹œˆ°‰½µ‰…Ð‰t¹¥¹±Õ‘•Ì¡Ð¤¥íÌ¹…±•ÉÐõ5…Ñ ¹µ¥¸ Ì±Ì¹…±•ÉÐ¬Ä¤í‘…µ…”õÐôôô‰½µ‰…ÐˆüàéÐôôô‰ÍÑ•…±Ñ ˆüÌèÀíÌ¹¡Àõ5…Ñ ¹µ…à Ä±Ì¹¡Àµ‘…µ…”¥ô4(¥˜¡½¬˜™Ðôôô‰É•ÍÐˆ¥Ì¹¡Àõ5…Ñ ¹µ¥¸ ÄÀÀ±Ì¹¡À¬Ð¤ì4(€¼¼•™•…Ñ¥¹œ…¸½ÁÁ½¹•¹Ð‘½•Ì¹½Ð¥ÑÍ•±˜±½½ÐÑ¡•´èÕÉÉ•¹ä¡…¹•ÌÉ•ÅÕ¥É”•áÁ±¥¥ÐÍ•…É ½±½½Ð…Ñ¥½¹Ì¸4(½¹ÍÐµÍœõ½¬ü‰MÕ•ÍÌˆè‰½µÁ±¥…Ñ¥½¸ˆì4(±•Ð•™™•ÐõÐôôô‰½µ‰…Ðˆü¡½¬ü‰Q¡”¥µµ•‘¥…Ñ”½ÁÁ½¹•¹Ð¥Ì½Ù•É½µ”¥¸„Í¥¹±”…‰ÍÑÉ…ÐÍ­¥Éµ¥Í ¸ˆè‰Q¡”½ÁÁ½¹•¹ÐÉ•µ…¥¹Ì„Ñ¡É•…ÐìM¹…­äÑ…­•Ì€ˆ­‘…µ…”¬ˆ‘…µ…”¸ˆ¤éÐôôô‰ÍÑ•…±Ñ ˆü¡½¬ü‰M¹…­äÉ•µ…¥¹Ì½¹•…±•¸ˆè‰¹½¥Í”…ÑÑÉ…ÑÌ¹•…É‰ä…ÑÑ•¹Ñ¥½¸¸ˆ¤éÐôôô‰•¹¥¹••É¥¹œˆü¡½¬ü‰A¥ÁÁ„Ìµ•¡…¹¥Í´Ý½É­Ì…Ì¥¹Ñ•¹‘•¸ˆè‰Q¡”…ÁÁ…É…ÑÕÌÍÁ…É­Ì…¹É…¥Í•ÌÍÕÍÁ¥¥½¸¸ˆ¤éÐôôô‰Í½¥…°ˆü¡½¬ü‰Q¡”…ÁÁÉ½… ¥ÌÉ••¥Ù•™…Ù½É…‰±ä¸ˆè‰Q¡”Ñ…É•ÐÉ•™ÕÍ•ÌÑ¼½½Á•É…Ñ”¸ˆ¤éÐôôô‰É•ÍÐˆü¡½¬ü‰Q¡”Á…ÉÑäÉ•…¥¹Ì½µÁ½ÍÕÉ”¸ˆè‰Q¡”Á…ÉÑä…¹¹½ÐÍ…™•±äÉ•ÍÐ¸ˆ¤é½¬ü‰Q¡”…Ñ¥½¸…¡¥•Ù•Ì¥ÑÌ¥µµ•‘¥…Ñ”¥¹Ñ•¹Ð¸ˆè‰Q¡”…Ñ¥½¸•¹½Õ¹Ñ•ÉÌÉ•Í¥ÍÑ…¹”¸ˆì4(É•ÑÕÉ¸µÍœ¬ˆèÄÀÀÉ½±°€ˆ­É½±±•¬ˆÙÌÑ…É•Ð€ˆ­Ñ…É•Ð¬ˆ€ ˆ¬¡½¬ü‰ÍÕ•ÍÌˆè‰™…¥±ÕÉ”ˆ¤¬ˆ¤¸€ˆ­•™™•Ð¬ˆI•ÍÕ±Ð¥Ì…ÕÑ¡½É¥Ñ…Ñ¥Ù”ì‘¼¹½Ð¥¹Ù•¹Ð…‘‘¥Ñ¥½¹…°µ•¡…¹¥…°•™™•ÑÌ¸ˆì4)ô4)™Õ¹Ñ¥½¸¥¹Ñ•É™…•U$ ¥ì4(¥˜¡•Ð ‰…µÁ…¥¸µ‰½àˆ¤¥É•ÑÕÉ¸ì4(½¹ÍÐ•°õ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰Í•Ñ¥½¸ˆ¤í•°¹±…ÍÍ9…µ”ô‰Á…¹•°ˆí•°¹¥ô‰…µÁ…¥¸µ‰½àˆì4(½¹ÍÐ‘¥Í±½ÍÕÉ”õ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰‘•Ñ…¥±Ìˆ¤í‘¥Í±½ÍÕÉ”¹±…ÍÍ9…µ”ô‰Í½„µÁ…¹•°µ‘¥Í±½ÍÕÉ”Í½„µ…µÁ…¥¸µ‘¥Í±½ÍÕÉ”ˆì(‘¥Í±½ÍÕÉ”¹½Á•¸õ±½…±MÑ½É…”¹•Ñ%Ñ•´ ‰Í½„µ…µÁ…¥¸µÁ…¹•°µ½Á•¸ˆ¤ôôôˆÄˆì(‘¥Í±½ÍÕÉ”¹½¹Ñ½±”ô ¤ôù±½…±MÑ½É…”¹Í•Ñ%Ñ•´ ‰Í½„µ…µÁ…¥¸µÁ…¹•°µ½Á•¸ˆ±‘¥Í±½ÍÕÉ”¹½Á•¸üˆÄˆèˆÀˆ¤ì(½¹ÍÐÍÕµµ…Éäõ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰ÍÕµµ…Éäˆ¤íÍÕµµ…Éä¹¥¹¹•É!Q50ô1¥Ù¥¹œ…µÁ…¥¸€ñÍÁ…¸±…ÍÌô‰Ñ…œˆù•µ¥¹¤ƒ
+Ü=¹±¥¹”ð½ÍÁ…¸øœì(½¹ÍÐ½¹Ñ•¹Ðõ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰‘¥Øˆ¤í½¹Ñ•¹Ð¹±…ÍÍ9…µ”ô‰Í½„µÁ…¹•°µ‘¥Í±½ÍÕÉ”µ½¹Ñ•¹Ðˆì(½¹ÍÐÑ½±•1…‰•°õ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰±…‰•°ˆ¤íÑ½±•1…‰•°¹±…ÍÍ9…µ”ô‰…¤µÑ½±”ˆíÑ½±•1…‰•°¹¡Ñµ±½Èô‰…µÁ…¥¸µµ½‘”ˆì(½¹ÍÐÑ½±”õ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰¥¹ÁÕÐˆ¤íÑ½±”¹ÑåÁ”ô‰¡•­‰½àˆíÑ½±”¹¥ô‰…µÁ…¥¸µµ½‘”ˆíÑ½±•1…‰•°¹…ÁÁ•¹¡Ñ½±”±‘½Õµ•¹Ð¹É•…Ñ•Q•áÑ9½‘” ˆ¹…‰±”±¥Ù¥¹œ…µÁ…¥¸ˆ¤¤ì(½¹ÍÐÍÑ…ÉÐõ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰‰ÕÑÑ½¸ˆ¤íÍÑ…ÉÐ¹¥ô‰…µÁ…¥¸µÍÑ…ÉÐˆíÍÑ…ÉÐ¹Ñ•áÑ½¹Ñ•¹Ðô‰MÑ…ÉÐ€¼I•ÍÕµ”$…µÁ…¥¸ˆì(½¹ÍÐ½™™±¥¹”õ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰‰ÕÑÑ½¸ˆ¤í½™™±¥¹”¹¥ô‰…µÁ…¥¸µ½™™±¥¹”ˆí½™™±¥¹”¹±…ÍÍ9…µ”ô‰ÍÕˆˆí½™™±¥¹”¹Ñ•áÑ½¹Ñ•¹Ðô‰I•ÑÕÉ¸Ñ¼½™™±¥¹”…‘Ù•¹ÑÕÉ”ˆì(½¹ÍÐ…µÁ…¥¹MÑ…ÑÕÌõ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰‘¥Øˆ¤í…µÁ…¥¹MÑ…ÑÕÌ¹¥ô‰…µÁ…¥¸µÍÑ…ÑÕÌˆí…µÁ…¥¹MÑ…ÑÕÌ¹±…ÍÍ9…µ”ô‰µÕÑ•ˆí…µÁ…¥¹MÑ…ÑÕÌ¹Í•ÑÑÑÉ¥‰ÕÑ” ‰…É¥„µ±¥Ù”ˆ°‰Á½±¥Ñ”ˆ¤ì(½¹ÍÐÍ•¹”õ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰‘¥Øˆ¤íÍ•¹”¹¥ô‰…µÁ…¥¸µÍ•¹”ˆì(½¹Ñ•¹Ð¹…ÁÁ•¹¡Ñ½±•1…‰•°±ÍÑ…ÉÐ±½™™±¥¹”±…µÁ…¥¹MÑ…ÑÕÌ±Í•¹”¤í‘¥Í±½ÍÕÉ”¹…ÁÁ•¹¡ÍÕµµ…Éä±½¹Ñ•¹Ð¤í•°¹…ÁÁ•¹¡‘¥Í±½ÍÕÉ”¤ì(‘½Õµ•¹Ð¹ÅÕ•ÉåM•±•Ñ½È ‰¡•…‘•Èˆ¤¹…™Ñ•È¡•°¤ì4(•Ð ‰…µÁ…¥¸µµ½‘”ˆ¤¹½¹¡…¹”õ”ôùí•¹…‰±•õ”¹Ñ…É•Ð¹¡•­•í±½…±MÑ½É…”¹Í•Ñ%Ñ•´ ‰Í½„µ…µÁ…¥¸µ•¹…‰±•ˆ±•¹…‰±•üˆÄˆèˆÀˆ¤í¥˜¡•¹…‰±•¥í¥˜ ……µÁ…¥¸¥…µÁ…¥¸õµ…­” ¤íÍÑ½É” ¤í‘É…Ü ¤í¥˜¡¹…Ù¥…Ñ½È¹½¹1¥¹”˜˜ ……µÁ…¥¸¹Í•¹•ññÁ•¹‘¥¹œ ¤¤¥…‘Ù…¹”¡…µÁ…¥¸¹±…ÍÑÑ¥½¸±…µÁ…¥¸¹±…ÍÑI•ÍÕ±Ð±ÑÉÕ”¥õ•±Í•í‘½Õµ•¹Ð¹‰½‘ä¹±…ÍÍ1¥ÍÐ¹É•µ½Ù” ‰Í½„µ±¥Ù¥¹œµµ½‘”ˆ¤í•Ð ‰…µÁ…¥¸µÍ•¹”ˆ¤¹É•Á±…•¡¥±‘É•¸ ¤íÍ¡½Ý=É¥¥¹…°¡ÑÉÕ”¥õôì4(•Ð ‰…µÁ…¥¸µÍÑ…ÉÐˆ¤¹½¹±¥¬ô ¤ôùí¥˜ ……µÁ…¥¸¥…µÁ…¥¸õµ…­” ¤í•¹…‰±•õÑÉÕ”í•Ð ‰…µÁ…¥¸µµ½‘”ˆ¤¹¡•­•õÑÉÕ”í±½…±MÑ½É…”¹Í•Ñ%Ñ•´ ‰Í½„µ…µÁ…¥¸µ•¹…‰±•ˆ°ˆÄˆ¤í‘É…Ü ¤í¥˜ ……•ÍÍ½‘” ¤¥í™½ÕÍ•ÍÌ ¤íÉ•ÑÕÉ¹õ¥˜¡Á•¹‘¥¹œ ¥ñð……µÁ…¥¸¹Í•¹”¥…‘Ù…¹”¡…µÁ…¥¸¹±…ÍÑÑ¥½¸±…µÁ…¥¸¹±…ÍÑI•ÍÕ±Ð±ÑÉÕ”¤í•±Í•íÍÑ…ÑÕÌ ‰M…Ù•Í•¹”É•…‘ä¸¡½½Í”…¸…Ñ¥½¸‰•±½Ü¸ˆ¤íÉ•™É•Í¡¥ÍÁ±…ä ¥õôì4(•Ð ‰…µÁ…¥¸µ½™™±¥¹”ˆ¤¹½¹±¥¬ô ¤ôùí•¹…‰±•õ™…±Í”í‘½Õµ•¹Ð¹‰½‘ä¹±…ÍÍ1¥ÍÐ¹É•µ½Ù” ‰Í½„µ±¥Ù¥¹œµµ½‘”ˆ¤í•Ð ‰…µÁ…¥¸µµ½‘”ˆ¤¹¡•­•õ™…±Í”í±½…±MÑ½É…”¹Í•Ñ%Ñ•´ ‰Í½„µ…µÁ…¥¸µ•¹…‰±•ˆ°ˆÀˆ¤íÍ¡½Ý=É¥¥¹…°¡ÑÉÕ”¤í•Ð ‰…µÁ…¥¸µÍÑ…ÑÕÌˆ¤¹Ñ•áÑ½¹Ñ•¹Ðô‰=™™±¥¹”ÍÉ¥ÁÑ•…‘Ù•¹ÑÕÉ”•¹…‰±•¸‰ôì4)ô4)™Õ¹Ñ¥½¸Í¡½Ý=É¥¥¹…°¡Í¡½Ü¥í¥˜¡Ý¥¹‘½Ü¹Í½…¡…É…Ñ•ÉÌü¹¥Í9•Ý¡…É…Ñ•Èü¸ ¤¥Í¡½Üõ™…±Í”í™½È¡½¹ÍÐ•°½˜‘½Õµ•¹Ð¹ÅÕ•ÉåM•±•Ñ½É±° ‰µ…¥¸€øÍ•Ñ¥½¸¹Á…¹•°ˆ¤¥í¥˜¡•°¹¥ôôô‰…µÁ…¥¸µ‰½àˆ¥½¹Ñ¥¹Õ”í½¹ÍÐ¥ÍMÑ½Éäô„…•°¹ÅÕ•ÉåM•±•Ñ½È ˆ¡½¥•Ìˆ¤í¥˜¡¥ÍMÑ½Éä¥•°¹ÍÑå±”¹‘¥ÍÁ±…äõÍ¡½Üüˆˆè‰¹½¹”‰õô4)™Õ¹Ñ¥½¸É•½¹¥±•ÕÑ¡½É¥é•‘5¥ÍÍ¥½¹I•Ý…É ¥ì(¥˜ ……µÁ…¥¹ññÝ¥¹‘½Ü¹Í½…¡…É…Ñ•ÉÌü¹ÁÉ½™¥±”ü¸ ¤ü¹¥„ôô‰Í¹…­äˆ¥É•ÑÕÉ¸ì(½¹ÍÐÄõÝ¥¹‘½Ü¹Í½…EÕ•ÍÑÌü¹•¹ÍÕÉ”ü¸¡…µÁ…¥¸¤ì(¥˜ …ÅññÄ¹±…¥µ•ü¹l‰µ¥ÍÍ¥½¸éÍÑ½ÉµÝ¥¹µ•áÁ±½Í¥Ù•Ìµ‘•™ÕÍ•éØÄ‰t¥É•ÑÕÉ¸ì(€¼¼ÁÁÉ½Ù•‰äÁ±…å•ÈÍÁ•¥™¥…±±ä™½ÈÑ¡”½µÁ±•Ñ•‘•™ÕÍ…°¸9½Ð¥¹™•ÉÉ•™É½´•µ¥¹¤ÁÉ½Í”¸(½¹ÍÐÉ•ÍÕ±ÐõÝ¥¹‘½Ü¹Í½…EÕ•ÍÑÌü¹É…¹ÑMÑ½ÉµÝ¥¹‘5¥ÍÍ¥½¸ü¸¡…µÁ…¥¸±Ì¹µ½¹•ä¤ì(¥˜¡9Õµ‰•È¹¥ÍM…™•%¹Ñ••È¡É•ÍÕ±Ðü¹Ý…±±•Ð¤¥ì(€Ì¹µ½¹•äõÉ•ÍÕ±Ð¹Ý…±±•Ðì(€…µÁ…¥¸¹±…ÍÑA…åµ•¹ÐõÉ•ÍÕ±Ð¹‘•ÍÉ¥ÁÑ¥½¸ì(€…µÁ…¥¸¹¡¥ÍÑ½Éä¹ÁÕÍ ¡É•ÍÕ±Ð¹‘•ÍÉ¥ÁÑ¥½¸¤ì(€…µÁ…¥¸¹¡¥ÍÑ½Éäõ…µÁ…¥¸¹¡¥ÍÑ½Éä¹Í±¥” µ5`¤ì(€ÍÑ½É” ¤íÍ…Ù” ¤ì(ô)ô)™Õ¹Ñ¥½¸‘É…Ü ¥ì4(¥˜ …•¹…‰±•‘ñð……µÁ…¥¸¥É•ÑÕÉ¸í‘½Õµ•¹Ð¹‰½‘ä¹±…ÍÍ1¥ÍÐ¹…‘ ‰Í½„µ±¥Ù¥¹œµµ½‘”ˆ¤íÍ¡½Ý=É¥¥¹…°¡™…±Í”¤ì4(½¹ÍÐ‰½àõ•Ð ‰…µÁ…¥¸µÍ•¹”ˆ¤í‰½à¹É•Á±…•¡¥±‘É•¸ ¤ì4(¥˜ ……µÁ…¥¸¹Í•¹”¥íÍÑ…ÑÕÌ¡ÍÑ…ÑÕÍ5•ÍÍ…•ñð‰I•…‘äÑ¼•¹•É…Ñ”Ñ¡”¹•áÐÍ•¹”¸ˆ¤íÉ•ÑÕÉ¹ô4(½¹ÍÐÍŒõ…µÁ…¥¸¹Í•¹”±¡•…õ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰ Ìˆ¤±Ý¡•É”õ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰‘¥Øˆ¤±Ñ•áÐõ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰Àˆ¤ì(É•½¹¥±•ÕÑ¡½É¥é•‘5¥ÍÍ¥½¹I•Ý…É ¤ì(½¹ÍÐÅÕ•ÍÑA…¹•°õÝ¥¹‘½Ü¹Í½…EÕ•ÍÑÌü¹Á…¹•°ü¸¡…µÁ…¥¸±ÍŒ¹±½…Ñ¥½¸° ¤ôùÌ¹µ½¹•ä°¡É•ÍÕ±Ð¤ôùí¥˜¡É•ÍÕ±Ðü¹•ÉÉ½È¥íÍÑ…ÑÕÌ¡É•ÍÕ±Ð¹•ÉÉ½È¤íÉ•ÑÕÉ¹õ¥˜¡9Õµ‰•È¹¥ÍM…™•%¹Ñ••È¡É•ÍÕ±Ðü¹Ý…±±•Ð¤¥íÌ¹µ½¹•äõÉ•ÍÕ±Ð¹Ý…±±•ÐíÍ…Ù” ¥õÍÑ½É” ¤íÉ•¹‘•È ¤í‘É…Ü ¤íÍÑ…ÑÕÌ¡É•ÍÕ±Ðü¹‘•ÍÉ¥ÁÑ¥½¹ññÉ•ÍÕ±Ðü¹µ•ÍÍ…•ñð‰½¹ÑÉ…ÐÕÁ‘…Ñ•¸ˆ¤íô¤ñð¹Õ±°ì(½¹ÍÐÑÉ…¹Í¥Ñ¥½¸õÝ¥¹‘½Ü¹Í½…¡É½¹¥±”ü¹‰…¹¹•Èü¸¡…µÁ…¥¸¤í¥˜¡ÑÉ…¹Í¥Ñ¥½¸¥‰½à¹…ÁÁ•¹¡ÑÉ…¹Í¥Ñ¥½¸¤ì(½¹ÍÐ­¥­•Èõ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰‘¥Øˆ¤í­¥­•È¹±…ÍÍ9…µ”ô‰Í½„µÍ•¹”µ­¥­•Èˆí½¹ÍÐÁ½Í¥Ñ¥½¸õÝ¥¹‘½Ü¹Í½…¡É½¹¥±”ü¹ÁÉ½É•ÍÌü¸¡…µÁ…¥¸¤í­¥­•È¹Ñ•áÑ½¹Ñ•¹ÐõÁ½Í¥Ñ¥½¸ü‰P€ˆ­Á½Í¥Ñ¥½¸¹…ÑI½µ…¸¬ˆƒ
+Ü!AQH€ˆ­Á½Í¥Ñ¥½¸¹¡…ÁÑ•ÉI½µ…¸¬ˆƒ
+ÜM9€ˆ­Á½Í¥Ñ¥½¸¹Í•¹”è‰%1!I=9%1ƒ
+ÜM9€ˆ­…µÁ…¥¸¹ÑÕÉ¸í‰½à¹…ÁÁ•¹¡­¥­•È¤í¡•…¹Ñ•áÑ½¹Ñ•¹ÐõÍŒ¹Ñ¥Ñ±•ñð‰Q¡”!½±±½ÜI…Ù•¸ˆíÝ¡•É”¹±…ÍÍ9…µ”ô‰µÕÑ•ˆíÝ¡•É”¹Ñ•áÑ½¹Ñ•¹ÐõÍŒ¹±½…Ñ¥½¹ñð‰I…Ù•¸!¥±°ˆíÑ•áÐ¹±…ÍÍ9…µ”ô‰Í½„µÍÑ½ÉäµÁÉ½Í”ˆíÑ•áÐ¹ÍÑå±”¹Ý¡¥Ñ•MÁ…”ô‰ÁÉ”µ±¥¹”ˆíÑ•áÐ¹Ñ•áÑ½¹Ñ•¹ÐõÉ•…‘…‰±•MÑ½Éä¡ÍŒ¹ÍÑ½Éä¤í‰½à¹…ÁÁ•¹¡¡•…±Ý¡•É”±Ñ•áÐ¤ì(½¹ÍÐÁ…¥õ…µÁ…¥¸¹ÅÕ•ÍÑÌü¹±…¥µ•ü¹l‰µ¥ÍÍ¥½¸éÍÑ½ÉµÝ¥¹µ•áÁ±½Í¥Ù•Ìµ‘•™ÕÍ•éØÄ‰tì(¥˜¡Á…¥¥í½¹ÍÐÉ••¥ÁÐõ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰Àˆ¤íÉ••¥ÁÐ¹±…ÍÍ9…µ”ô‰Í½„µ±•Ù•°µÑ½…ÍÐˆíÉ••¥ÁÐ¹Ñ•áÑ½¹Ñ•¹Ðô‰5%MM%=8A%ƒ
+ÜMÑ½ÉµÝ¥¹•áÁ±½Í¥Ù•Ì‘•™ÕÍ•ƒ
+ÜQ½Ñ…°Á…ÉÑäÉ•Ý…Éè€¬Õœ€ÀÁÌ€ÀÁŒƒ
+ÜÉ•‘¥Ñ•Ñ¼Í¡…É•Ý…±±•Ð½¹”¸ˆí‰½à¹…ÁÁ•¹¡É••¥ÁÐ¥ô(¥˜¡ÅÕ•ÍÑA…¹•°¥‰½à¹…ÁÁ•¹¡ÅÕ•ÍÑA…¹•°¤ì(½¹ÍÐµ¥ÍÍ¥½¹ÌõÝ¥¹‘½Ü¹Í½…EÕ•ÍÑÌü¹µ¥ÍÍ¥½¹A…¹•°ü¸¡…µÁ…¥¸±ÍŒ¹±½…Ñ¥½¸° ¤ôùÌ¹µ½¹•ä°¡É•ÍÕ±Ð¤ôùí¥˜¡É•ÍÕ±Ðü¹•ÉÉ½È¥íÍÑ…ÑÕÌ¡É•ÍÕ±Ð¹•ÉÉ½È¤íÉ•ÑÕÉ¹õ¥˜¡9Õµ‰•È¹¥ÍM…™•%¹Ñ••È¡É•ÍÕ±Ðü¹Ý…±±•Ð¤¥íÌ¹µ½¹•äõÉ•ÍÕ±Ð¹Ý…±±•ÐíÍ…Ù” ¥õÍÑ½É” ¤íÉ•¹‘•È ¤í‘É…Ü ¤íÍÑ…ÑÕÌ¡É•ÍÕ±Ðü¹‘•ÍÉ¥ÁÑ¥½¹ññÉ•ÍÕ±Ðü¹µ•ÍÍ…•ñð‰5¥ÍÍ¥½¸ÕÁ‘…Ñ•¸ˆ¤íô¤í¥˜¡µ¥ÍÍ¥½¹Ì¥‰½à¹…ÁÁ•¹¡µ¥ÍÍ¥½¹Ì¤ì(Ý¥¹‘½Ü¹Í½…ÅÕ¥Áµ•¹Ðü¹É•¹‘•ÉMÑ…ÑÕÌü¸ ¤ì(½¹ÍÐ•…ÈõÝ¥¹‘½Ü¹Í½…ÅÕ¥Áµ•¹Ðü¹Á…¹•°ü¸ ¤í¥˜¡•…È¥í½¹ÍÐÝÉ…Àõ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰‘¥Øˆ¤íÝÉ…À¹¥ô‰Í½„µ•ÅÕ¥Áµ•¹ÐµÍ¡½ÉÑÕÐˆíÝÉ…À¹…ÁÁ•¹¡•…È¤í‰½à¹ÁÉ•Á•¹¡ÝÉ…À¥ô(½¹ÍÐ•¹¡…¹Ñ¥¹œõÝ¥¹‘½Ü¹Í½…¹¡…¹Ñ¥¹œü¹Á…¹•°ü¸¡…µÁ…¥¸±ÍŒ¹±½…Ñ¥½¸° ¤ôùÌ¹µ½¹•ä°¡É•ÍÕ±Ð¤ôùí¥˜¡9Õµ‰•È¹¥ÍM…™•%¹Ñ••È¡É•ÍÕ±Ðü¹Ý…±±•Ð¤¥íÌ¹µ½¹•äõÉ•ÍÕ±Ð¹Ý…±±•ÐíÍ…Ù” ¥õÍÑ½É” ¤íÉ•¹‘•È ¤í‘É…Ü ¤íÍÑ…ÑÕÌ¡É•ÍÕ±Ðü¹µ•ÍÍ…•ñð‰¹¡…¹Ñ¥¹œÕÁ‘…Ñ•¸ˆ¥ô¤í¥˜¡•¹¡…¹Ñ¥¹œ¥‰½à¹…ÁÁ•¹¡•¹¡…¹Ñ¥¹œ¤ì(¥˜ ½qqˆ üé½¥¹ÌýñÍ¥±Ù•Éñ½±‘ñ½ÁÁ•ÉñÉ•Ñ…¥¹•ÉñÁ…åµ•¹ÑñÁ…å½ÕÑñÉ•Ý…É‘ñÍÑ¥Á•¹‘ñÝ…•Ì¥qqˆ½¤¹Ñ•ÍÐ¡ÍŒ¹ÍÑ½Éåñðˆˆ¤˜˜½qqˆ üé¡…¹‘Ìü€ üé½Ù•Éñå½Ô¥ñÍ±¥‘•Ìü€ üé…¸üñÑ¡”€¤ü üé¥É½¸µ‰½Õ¹€¤ü üé±½­‰½áñ½¥¹Ìü¥ñÁ…¥‘ñÁ…åÍñÉ••¥Ø üé•ñ•¥ñ½±±•Ð üé•¤ýñ±…¥´ üé•¤ýñ…ÕÑ¡½É¥é•‘ñÉ•Ý…É‘•¥qqˆ½¤¹Ñ•ÍÐ¡ÍŒ¹ÍÑ½Éåñðˆˆ¤˜˜……µÁ…¥¸¹±…ÍÑA…åµ•¹Ð¥ì(€½¹ÍÐ¹½Ñ¥”õ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰Àˆ¤í¹½Ñ¥”¹±…ÍÍ9…µ”ô‰Í½„µ±•Ù•°µÑ½…ÍÐˆì(€¹½Ñ¥”¹Ñ•áÑ½¹Ñ•¹Ðô‰A…åµ•¹Ðµ•¹Ñ¥½¹•¥¸¹…ÉÉ…Ñ¥½¸ƒ
+Üµ½Õ¹Ð¹½ÐÙ•É¥™¥•ƒ
+Ü9¼ÕÉÉ•¹äÉ•‘¥Ñ•‰äÑ¡”…µ”•¹¥¹”¸ˆì(€‰½à¹…ÁÁ•¹¡¹½Ñ¥”¤ì(ô(¥˜¡…µÁ…¥¸¹±…ÍÑAÉ½É•ÍÍ¥½¸¥í½¹ÍÐ…¥¹•õ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰Àˆ¤í…¥¹•¹±…ÍÍ9…µ”ô‰Í½„µ±•Ù•°µÑ½…ÍÐˆí…¥¹•¹Ñ•áÑ½¹Ñ•¹Ðõ…µÁ…¥¸¹±…ÍÑAÉ½É•ÍÍ¥½¸í‰½à¹…ÁÁ•¹¡…¥¹•¥ô(½¹ÍÐµ½µ•¹ÑÌõÝ¥¹‘½Ü¹Í½…½µÁ…¹¥½¹Ìü¹•Ñ‘Ù•¹ÑÕÉ•5½µ•¹ÑÌü¸ ¥ññmtì(¥˜¡µ½µ•¹ÑÌ¹±•¹Ñ ¥ì(€½¹ÍÐ‘¥…±½Õ”õ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰Í•Ñ¥½¸ˆ¤í‘¥…±½Õ”¹±…ÍÍ9…µ”ô‰Í½„µ½µÁ…¹¥½¸µ‘¥…±½Õ”ˆí‘¥…±½Õ”¹¥ô‰Í½„µ½µÁ…¹¥½¸µ‘¥…±½Õ”ˆì(€‘¥…±½Õ”¹Í•ÑÑÑÉ¥‰ÕÑ” ‰…É¥„µ±…‰•°ˆ°‰½µÁ…¹¥½¸½¹Ù•ÉÍ…Ñ¥½¹Ìˆ¤ì(€½¹ÍÐ±…‰•°õ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰‘¥Øˆ¤í±…‰•°¹±…ÍÍ9…µ”ô‰Í½„µ½µÁ…¹¥½¸µ‘¥…±½Õ”µ¡•…‘¥¹œˆí±…‰•°¹Ñ•áÑ½¹Ñ•¹Ðô‰=5A9%=8=9YIMQ%=9Lˆì(€‘¥…±½Õ”¹…ÁÁ•¹¡±…‰•°¤ì(€™½È¡½¹ÍÐµ½µ•¹Ð½˜µ½µ•¹ÑÌ¥ì(€€½¹ÍÐ•¹ÑÉäõ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰‰±½­ÅÕ½Ñ”ˆ¤í•¹ÑÉä¹±…ÍÍ9…µ”ô‰Í½„µ½µÁ…¹¥½¸µÅÕ½Ñ”ˆì(€€½¹ÍÐÝ¡¼õ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰ÍÑÉ½¹œˆ¤íÝ¡¼¹Ñ•áÑ½¹Ñ•¹Ðõµ½µ•¹Ð¹Á•ÉÍ½¸ì(€€½¹ÍÐÝ½É‘Ìõ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰Àˆ¤íÝ½É‘Ì¹Ñ•áÑ½¹Ñ•¹Ðõµ½µ•¹Ð¹‘¥…±½Õ”ì(€€•¹ÑÉä¹…ÁÁ•¹¡Ý¡¼±Ý½É‘Ì¤í‘¥…±½Õ”¹…ÁÁ•¹¡•¹ÑÉä¤ì(€ô(€‰½à¹…ÁÁ•¹¡‘¥…±½Õ”¤ì(ô4(¥˜¡Á•¹‘¥¹œ ¤¥í½¹ÍÐ¹½Ñ”õ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰Àˆ¤í¹½Ñ”¹±…ÍÍ9…µ”ô‰Í½„µÁ•¹‘¥¹œˆí¹½Ñ”¹Ñ•áÑ½¹Ñ•¹Ðô‰e½ÕÈ±…ÍÐ‘•¥Í¥½¸¥ÌÍ…Ù•¸Q¡”¹•áÐÍÑ½ÉäÍ•¹”¡…Ì¹½Ð…ÉÉ¥Ù•¸I•ÑÉäÍ…™•±äÝ¥Ñ¡½ÕÐÉ•Á•…Ñ¥¹œÑ¡”…Ñ¥½¸¸ˆí‰½à¹…ÁÁ•¹¡¹½Ñ”¤í½¹ÍÐÉ•ÑÉäõ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰‰ÕÑÑ½¸ˆ¤íÉ•ÑÉä¹±…ÍÍ9…µ”ô‰µ•ˆíÉ•ÑÉä¹Ñ•áÑ½¹Ñ•¹Ðô‰I•ÑÉä•¹•É…Ñ¥¹œ¹•áÐÍ•¹”ˆíÉ•ÑÉä¹‘¥Í…‰±•õ‰ÕÍäíÉ•ÑÉä¹½¹±¥¬ô ¤ôùíÉ•ÑÕÉ¹Q½‘Ù•¹ÑÕÉ” ‰ÍÑ…ÑÕÌˆ¤í…‘Ù…¹”¡…µÁ…¥¸¹±…ÍÑÑ¥½¸±…µÁ…¥¸¹±…ÍÑI•ÍÕ±Ð±ÑÉÕ”¥ôí‰½à¹…ÁÁ•¹¡É•ÑÉä¥ô(¥˜¡…µÁ…¥¸¹©½ÕÉ¹…°¹±•¹Ñ ¥ì(€½¹ÍÐ¹½Ñ•Ìõ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰‘•Ñ…¥±Ìˆ¤í¹½Ñ•Ì¹±…ÍÍ9…µ”ô‰Í½„µ™¥•±µ¹½Ñ•Ìˆì(€½¹ÍÐÍÕµµ…Éäõ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰ÍÕµµ…Éäˆ¤íÍÕµµ…Éä¹Ñ•áÑ½¹Ñ•¹Ðô‰¥•±¹½Ñ•Ìƒ
+Ü€ˆ­…µÁ…¥¸¹©½ÕÉ¹…°¹±•¹Ñ ¬ˆ‘¥Í½Ù•É¥•Ìˆí¹½Ñ•Ì¹…ÁÁ•¹¡ÍÕµµ…Éä¤ì(€½¹ÍÐ±¥ÍÐõ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰Õ°ˆ¤ì(€™½È¡½¹ÍÐ™…Ð½˜…µÁ…¥¸¹©½ÕÉ¹…°¹Í±¥” ´à¤¹É•Ù•ÉÍ” ¤¥í½¹ÍÐ¥Ñ•´õ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰±¤ˆ¤í¥Ñ•´¹Ñ•áÑ½¹Ñ•¹Ðõ™…Ðí±¥ÍÐ¹…ÁÁ•¹¡¥Ñ•´¥ô(€¹½Ñ•Ì¹…ÁÁ•¹¡±¥ÍÐ¤í‰½à¹…ÁÁ•¹¡¹½Ñ•Ì¤ì(ô(‘É…Ý¹•µåMÑ…ÑÕÌ¡‰½à¤ì(¥˜¡…µÁ…¥¸ü¹¡É½¹¥±”ü¹Á•¹‘¥¹5¥±•ÍÑ½¹”¥ì(€½¹ÍÐ¹½Ñ¥”õ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰‰ÕÑÑ½¸ˆ¤í¹½Ñ¥”¹ÑåÁ”ô‰‰ÕÑÑ½¸ˆí¹½Ñ¥”¹±…ÍÍ9…µ”ô‰Í½„µ¡…ÁÑ•ÈµÉ•Ù¥•Üˆì(€¹½Ñ¥”¹Ñ•áÑ½¹Ñ•¹Ðô‹Šr˜¡…ÁÑ•Èµ¥±•ÍÑ½¹”¥ÌÉ•…‘ä™½Èå½ÕÈÉ•Ù¥•Üƒ
+Ü=Á•¸)½ÕÉ¹…°ˆì(€¹½Ñ¥”¹½¹±¥¬ô ¤ôù•Ð ‰Í½„µ¡É½¹¥±”ˆ¤ü¹ÍÉ½±±%¹Ñ½Y¥•Ü¡í‰•¡…Ù¥½ÈéÝ¥¹‘½Ü¹µ…Ñ¡5•‘¥„ü¸ ˆ¡ÁÉ•™•ÉÌµÉ•‘Õ•µµ½Ñ¥½¸èÉ•‘Õ”¤ˆ¤ü¹µ…Ñ¡•Ìü‰…ÕÑ¼ˆè‰Íµ½½Ñ ˆ±‰±½¬è‰ÍÑ…ÉÐ‰ô¤ì(€‰½à¹…ÁÁ•¹¡¹½Ñ¥”¤ì(ô(½¹ÍÐ¡½¥•Í!•…‘•Èõ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰‘¥Øˆ¤í¡½¥•Í!•…‘•È¹±…ÍÍ9…µ”ô‰Í½„µ¡½¥•Ìµ¡•…‘¥¹œˆì(½¹ÍÐÑ¥Ñ±”õ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰ÍÑÉ½¹œˆ¤íÑ¥Ñ±”¹Ñ•áÑ½¹Ñ•¹Ðô‰¡½½Í”å½ÕÈ¹•áÐµ½Ù”ˆì(½¹ÍÐ½Õ¹Ðõ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰ÍÁ…¸ˆ¤í½Õ¹Ð¹Ñ•áÑ½¹Ñ•¹ÐõÍŒ¹¡½¥•Ì¹±•¹Ñ ¬ˆÁ…Ñ¡Ì€¬É•Í½ÕÉ•Ì€¬ÕÍÑ½´ˆì(¡½¥•Í!•…‘•È¹…ÁÁ•¹¡Ñ¥Ñ±”±½Õ¹Ð¤í‰½à¹…ÁÁ•¹¡¡½¥•Í!•…‘•È¤ì(™½È¡½¹ÍÐm¥¹‘•à±¡½¥•t½˜ÍŒ¹¡½¥•Ì¹•¹ÑÉ¥•Ì ¤¥í½¹ÍÐˆõ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰‰ÕÑÑ½¸ˆ¤íˆ¹±…ÍÍ9…µ”õ¡½¥”¹‘¥™™¥Õ±Ñäôôô‰•…Íäˆü‰±½Üˆé¡½¥”¹‘¥™™¥Õ±Ñäôôô‰¡…Éˆü‰¡¥ ˆè‰µ•ˆí½¹ÍÐ¡•…‘±¥¹”õ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰ÍÑÉ½¹œˆ¤±‘•Ñ…¥°õ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰Íµ…±°ˆ¤í¡•…‘±¥¹”¹Ñ•áÑ½¹Ñ•¹ÐõMÑÉ¥¹œ¹™É½µ¡…É½‘” ØÔ­¥¹‘•à¤¬ˆ¤€ˆ­¡½¥”¹Ñ•áÐí¡•…‘±¥¹”¹ÍÑå±”¹‘¥ÍÁ±…äô‰‰±½¬ˆí½¹ÍÐÁÉ•Ù¥•Üõ‘¥•AÉ•Ù¥•Ü¡¡½¥”¤ì(‘•Ñ…¥°¹Ñ•áÑ½¹Ñ•¹Ðô¡¡½¥”¹‘¥™™¥Õ±Ñåñð‰µ•‘¥Õ´ˆ¤¬ˆ‘¥™™¥Õ±Ñäƒ
+Ü€ˆ¬¡Í½¥…±M­¥±°¡¡½¥”¥ññ¡½¥”¹ÑåÁ•ñð‰¥¹Ù•ÍÑ¥…Ñ”ˆ¤ì(½¹ÍÐÉ½±±1¥¹”õ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰ÍÁ…¸ˆ¤íÉ½±±1¥¹”¹±…ÍÍ9…µ”ô‰Í½„µÉ½±°µÁÉ•Ù¥•ÜˆíÉ½±±1¥¹”¹Ñ•áÑ½¹Ñ•¹ÐõÁÉ•Ù¥•Ü¹ÁÉ¥µ…Éäì(½¹ÍÐÉ½±±!¥¹Ðõ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰ÍÁ…¸ˆ¤íÉ½±±!¥¹Ð¹±…ÍÍ9…µ”ô‰Í½„µÉ½±°µ¡¥¹ÐˆíÉ½±±!¥¹Ð¹Ñ•áÑ½¹Ñ•¹ÐõÁÉ•Ù¥•Ü¹Í•½¹‘…Éäí‘•Ñ…¥°¹ÍÑå±”¹ÍÍQ•áÐô‰‘¥ÍÁ±…äé‰±½¬íµ…É¥¸µÑ½ÀèÕÁàí½±½Èè‰‰Øí™½¹ÐèÄÉÁàÍåÍÑ•´µÕ¤íÑ•áÐµÑÉ…¹Í™½É´é…Á¥Ñ…±¥é”ˆíˆ¹…ÁÁ•¹¡¡•…‘±¥¹”±‘•Ñ…¥°±É½±±1¥¹”±É½±±!¥¹Ð¤íˆ¹‘¥Í…‰±•õ‰ÕÍåñð„…Á•¹‘¥¹œ ¤íˆ¹½¹±¥¬ô ¤ôù¡½½Í”¡¡½¥”¤í‰½à¹…ÁÁ•¹¡ˆ¥ô4(½¹ÍÐÍÕÉÙ•å%¹‘•àõÍŒ¹¡½¥•Ì¹±•¹Ñ ì(½¹ÍÐÍÕÉÙ•äõ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰‰ÕÑÑ½¸ˆ¤ì(ÍÕÉÙ•ä¹ÑåÁ”ô‰‰ÕÑÑ½¸ˆíÍÕÉÙ•ä¹±…ÍÍ9…µ”ô‰±½ÜÍ½„µÉ•Í½ÕÉ”µÍÕÉÙ•äˆì(½¹ÍÐÍÕÉÙ•åQ¥Ñ±”õ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰ÍÑÉ½¹œˆ¤±ÍÕÉÙ•å!¥¹Ðõ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰Íµ…±°ˆ¤ì(ÍÕÉÙ•åQ¥Ñ±”¹Ñ•áÑ½¹Ñ•¹ÐõMÑÉ¥¹œ¹™É½µ¡…É½‘” ØÔ­ÍÕÉÙ•å%¹‘•à¤¬ˆ¤MÕÉÙ•äÍÕÉÉ½Õ¹‘¥¹œÉ•Í½ÕÉ•Ìˆì(ÍÕÉÙ•åQ¥Ñ±”¹ÍÑå±”¹‘¥ÍÁ±…äô‰‰±½¬ˆì(ÍÕÉÙ•å!¥¹Ð¹Ñ•áÑ½¹Ñ•¹Ðô‰1½½¬™½È½É”°¡•É‰Ì°Ý…Ñ•È…¹½Ñ¡•È¹…ÑÕÉ…°µ…Ñ•É¥…±Ìƒ
+Ü%¹Ù•ÍÑ¥…Ñ”ˆì(ÍÕÉÙ•å!¥¹Ð¹ÍÑå±”¹ÍÍQ•áÐô‰‘¥ÍÁ±…äé‰±½¬íµ…É¥¸µÑ½ÀèÕÁàí½±½ÈèÙ‘™Èí™½¹ÐèÄÉÁàÍåÍÑ•´µÕ¤ˆì(½¹ÍÐÍÕÉÙ•åI½±°õ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰ÍÁ…¸ˆ¤íÍÕÉÙ•åI½±°¹±…ÍÍ9…µ”ô‰Í½„µÉ½±°µÁÉ•Ù¥•ÜˆíÍÕÉÙ•åI½±°¹Ñ•áÑ½¹Ñ•¹Ðõ‘¥•AÉ•Ù¥•Ü¡íÑåÁ”è‰¥¹Ù•ÍÑ¥…Ñ”ˆ±‘¥™™¥Õ±Ñäè‰µ•‘¥Õ´‰ô¤¹ÁÉ¥µ…Éäì(ÍÕÉÙ•ä¹…ÁÁ•¹¡ÍÕÉÙ•åQ¥Ñ±”±ÍÕÉÙ•å!¥¹Ð±ÍÕÉÙ•åI½±°¤ì(ÍÕÉÙ•ä¹‘¥Í…‰±•õ‰ÕÍåñð„…Á•¹‘¥¹œ ¥ñð…¹…Ù¥…Ñ½È¹½¹1¥¹”ì(ÍÕÉÙ•ä¹½¹±¥¬ô ¤ôù¡½½Í”¡íÑ•áÐè‰MÕÉÙ•äÑ¡”¥µµ•‘¥…Ñ”ÍÕÉÉ½Õ¹‘¥¹Ì™½È…•ÍÍ¥‰±”¹…ÑÕÉ…°É•Í½ÕÉ•ÌÍÕ¥Ñ…‰±”™½ÈÑ¡¥Ì¡…É…Ñ•ÈÌÁÉ½™•ÍÍ¥½¹Ì¸M•…É …É•™Õ±±ä™½ÈÙ¥Í¥‰±”½É”Ù•¥¹Ì°¡•É‰Ì°™¥Í¡…‰±”Ý…Ñ•È°É•½Ù•É…‰±”¡¥‘•Ì…¹½Ñ¡•ÈÁ±…ÕÍ¥‰±”µ…Ñ•É¥…±Ìì¹½Ñ”Ý¡…Ð¥Ì…ÑÕ…±±äÁÉ•Í•¹Ð¸¼¹½Ð¡…ÉÙ•ÍÐ°µ¥¹”°…Ñ¡•È½È…Ý…Éµ…Ñ•É¥…±Ìå•Ð¸%˜¹½¹”…É”…•ÍÍ¥‰±”°É•Á½ÉÐÑ¡…Ð±•…É±ä¸ˆ±ÑåÁ”è‰¥¹Ù•ÍÑ¥…Ñ”ˆ±‘¥™™¥Õ±Ñäè‰µ•‘¥Õ´ˆ±ÍÕÉÙ•äéÑÉÕ•ô¤ì(‰½à¹…ÁÁ•¹¡ÍÕÉÙ•ä¤ì(½¹ÍÐ™½É´õ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰™½É´ˆ¤±±…‰•°õ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰±…‰•°ˆ¤±¥¹ÁÕÐõ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰Ñ•áÑ…É•„ˆ¤±ÑåÁ•1…‰•°õ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰±…‰•°ˆ¤±ÑåÁ”õ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰Í•±•Ðˆ¤±Í­¥±±1…‰•°õ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰±…‰•°ˆ¤±Í­¥±±M•±•Ðõ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰Í•±•Ðˆ¤±ÍÕ‰µ¥Ðõ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰‰ÕÑÑ½¸ˆ¤±¡•±Àõ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰Àˆ¤ì4(±…‰•°¹¡Ñµ±½Èô‰…µÁ…¥¸µÕÍÑ½´µ…Ñ¥½¸ˆí±…‰•°¹Ñ•áÑ½¹Ñ•¹ÐõMÑÉ¥¹œ¹™É½µ¡…É½‘” ØÔ­5…Ñ ¹µ¥¸¡ÍŒ¹¡½¥•Ì¹±•¹Ñ ¬Ä°ÈÔ¤¤¬ˆ¤ÕÍÑ½´…Ñ¥½¸ƒŠP¡½½Í”å½ÕÈ½Ý¸…ÁÁÉ½… ˆì4(¥¹ÁÕÐ¹¥ô‰…µÁ…¥¸µÕÍÑ½´µ…Ñ¥½¸ˆí¥¹ÁÕÐ¹±…ÍÍ9…µ”ô‰…¤µ¥¹ÁÕÐˆí¥¹ÁÕÐ¹µ…á1•¹Ñ ôÌÀÀí¥¹ÁÕÐ¹É•ÅÕ¥É•õÑÉÕ”í¥¹ÁÕÐ¹É½ÝÌôÌí¥¹ÁÕÐ¹Á±…•¡½±‘•Èô‰”¹œ¸Í¬A¥ÁÁ„Ñ¼‰Õ¥±„‘¥ÍÑÉ…Ñ¥½¸Ý¡¥±”$Í±¥ÀÁ…ÍÐÑ¡”Õ…É‘Ìˆí¥¹ÁÕÐ¹Ù…±Õ”õÕÍÑ½µÉ…™Ðí¥¹ÁÕÐ¹‘¥Í…‰±•õ‰ÕÍåñð„…Á•¹‘¥¹œ ¤ì4(¥¹ÁÕÐ¹½¹¥¹ÁÕÐô ¤ôùíÕÍÑ½µÉ…™Ðõ¥¹ÁÕÐ¹Ù…±Õ”íÍÕ‰µ¥Ð¹‘¥Í…‰±•õ‰ÕÍåñð„…Á•¹‘¥¹œ ¥ñð…¹…Ù¥…Ñ½È¹½¹1¥¹•ñð…ÕÍÑ½µÉ…™Ð¹ÑÉ¥´ ¥ôì4(ÑåÁ•1…‰•°¹¡Ñµ±½Èô‰…µÁ…¥¸µÕÍÑ½´µÑåÁ”ˆíÑåÁ•1…‰•°¹Ñ•áÑ½¹Ñ•¹Ðô‰Ñ¥½¸ÑåÁ”ˆíÑåÁ”¹¥ô‰…µÁ…¥¸µÕÍÑ½´µÑåÁ”ˆíÑåÁ”¹±…ÍÍ9…µ”ô‰…¤µ¥¹ÁÕÐˆíÑåÁ”¹‘¥Í…‰±•õ‰ÕÍåñð„…Á•¹‘¥¹œ ¤ì4(™½È¡½¹ÍÐmÙ…±Õ”±¹…µ•t½˜ml‰¥¹Ù•ÍÑ¥…Ñ”ˆ°‰%¹Ù•ÍÑ¥…Ñ”‰t±l‰ÍÑ•…±Ñ ˆ°‰MÑ•…±Ñ ‰t±l‰•¹¥¹••É¥¹œˆ°‰¹¥¹••É¥¹œ‰t±l‰Í½¥…°ˆ°‰M½¥…°‰t±l‰½µ‰…Ðˆ°‰½µ‰…Ð‰t±l‰µ½Ù”ˆ°‰5½Ù”‰t±l‰É•ÍÐˆ°‰I•ÍÐ‰ut¥í½¹ÍÐ½ÁÑ¥½¸õ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰½ÁÑ¥½¸ˆ¤í½ÁÑ¥½¸¹Ù…±Õ”õÙ…±Õ”í½ÁÑ¥½¸¹Ñ•áÑ½¹Ñ•¹Ðõ¹…µ”íÑåÁ”¹…ÁÁ•¹¡½ÁÑ¥½¸¥ô4(ÑåÁ”¹Ù…±Õ”õÕÍÑ½µQåÁ”íÑåÁ”¹½¹¡…¹”ô ¤ôùíÕÍÑ½µQåÁ”õÑåÁ”¹Ù…±Õ•ôì4(Í­¥±±1…‰•°¹¡Ñµ±½Èô‰…µÁ…¥¸µÍ½¥…°µÍ­¥±°ˆíÍ­¥±±1…‰•°¹Ñ•áÑ½¹Ñ•¹Ðô‰M½¥…°¡•¬€¡½ÁÑ¥½¹…°¤ˆì(Í­¥±±M•±•Ð¹¥ô‰…µÁ…¥¸µÍ½¥…°µÍ­¥±°ˆíÍ­¥±±M•±•Ð¹±…ÍÍ9…µ”ô‰…¤µ¥¹ÁÕÐˆíÍ­¥±±M•±•Ð¹‘¥Í…‰±•õ‰ÕÍåñð„…Á•¹‘¥¹œ ¤ì(™½È¡½¹ÍÐmÙ…±Õ”±±…‰•±t½˜ml‰…ÕÑ¼ˆ°‰ÕÑ¼µ‘•Ñ•Ð‰t±l‰‰±Õ™˜ˆ°‰	±Õ™˜ƒ
+Ü••ÁÑ¥½¸‰t±l‰‰É¥‰”ˆ°‰	É¥‰”ƒ
+Ü9•½Ñ¥…Ñ¥½¸‰t±l‰É½µ…¹”ˆ°‰I½µ…¹”ƒ
+Ü¡…É´‰t±l‰Ñ¡É•…Ñ•¸ˆ°‰Q¡É•…Ñ•¸ƒ
+Ü%¹Ñ¥µ¥‘…Ñ¥½¸‰ut¥í½¹ÍÐ½ÁÐõ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰½ÁÑ¥½¸ˆ¤í½ÁÐ¹Ù…±Õ”õÙ…±Õ”í½ÁÐ¹Ñ•áÑ½¹Ñ•¹Ðõ±…‰•°íÍ­¥±±M•±•Ð¹…ÁÁ•¹¡½ÁÐ¥ô(Í­¥±±M•±•Ð¹Ù…±Õ”õÕÍÑ½µM½¥…±M­¥±°íÍ­¥±±M•±•Ð¹½¹¡…¹”ô ¤ôùíÕÍÑ½µM½¥…±M­¥±°õÍ­¥±±M•±•Ð¹Ù…±Õ•ôì(½¹ÍÐÕÍÑ½µI½±°õ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰Àˆ¤íÕÍÑ½µI½±°¹±…ÍÍ9…µ”ô‰Í½„µÕÍÑ½´µÉ½±°µÁÉ•Ù¥•ÜˆíÕÍÑ½µI½±°¹Í•ÑÑÑÉ¥‰ÕÑ” ‰…É¥„µ±¥Ù”ˆ°‰Á½±¥Ñ”ˆ¤ì(™Õ¹Ñ¥½¸ÕÁ‘…Ñ•ÕÍÑ½µI½±° ¥í½¹ÍÐ…Ñ¥½¸õíÑ•áÐé¥¹ÁÕÐ¹Ù…±Õ”±ÑåÁ”éÑåÁ”¹Ù…±Õ”±‘¥™™¥Õ±Ñäè‰µ•‘¥Õ´ˆ±Í½¥…±M­¥±°éÍ­¥±±M•±•Ð¹Ù…±Õ”ôôô‰…ÕÑ¼ˆýÕ¹‘•™¥¹•éÍ­¥±±M•±•Ð¹Ù…±Õ•ôì(½¹ÍÐÁÉ•Ù¥•Üõ‘¥•AÉ•Ù¥•Ü¡…Ñ¥½¸¤íÕÍÑ½µI½±°¹Ñ•áÑ½¹Ñ•¹ÐõÁÉ•Ù¥•Ü¹ÁÉ¥µ…Éä¬ˆƒ
+Ü€ˆ­ÁÉ•Ù¥•Ü¹Í•½¹‘…Éåô(¥¹ÁÕÐ¹…‘‘Ù•¹Ñ1¥ÍÑ•¹•È ‰¥¹ÁÕÐˆ±ÕÁ‘…Ñ•ÕÍÑ½µI½±°¤íÑåÁ”¹…‘‘Ù•¹Ñ1¥ÍÑ•¹•È ‰¡…¹”ˆ±ÕÁ‘…Ñ•ÕÍÑ½µI½±°¤íÍ­¥±±M•±•Ð¹…‘‘Ù•¹Ñ1¥ÍÑ•¹•È ‰¡…¹”ˆ±ÕÁ‘…Ñ•ÕÍÑ½µI½±°¤ì(ÕÁ‘…Ñ•ÕÍÑ½µI½±° ¤ì(¡•±À¹¥ô‰…µÁ…¥¸µÕÍÑ½´µ¡•±Àˆí¡•±À¹±…ÍÍ9…µ”ô‰µÕÑ•ˆí¡•±À¹Ñ•áÑ½¹Ñ•¹Ðô‰	±Õ™˜°	É¥‰”°I½µ…¹”…¹Q¡É•…Ñ•¸ÕÍ”ÈÀ€¬Í­¥±°……¥¹ÍÐ‘¥™™¥Õ±Ñä¸	É¥‰•ÌÉ•ÅÕ¥É”…¸•áÁ±¥¥Ð…µ½Õ¹Ð€¡”¹œ¸½™™•È€ÔÀÍ¥±Ù•È¤ì½¥¹Ì…É”Á…¥½¹±äÝ¡•¸…•ÁÑ•¸ÍÕ•ÍÍ™Õ°É½µ…¹”¡•¬¹•Ù•È½Ù•ÉÉ¥‘•Ì½¹Í•¹Ð¸=Ñ¡•ÈÕÍÑ½´…Ñ¥½¹ÌÕÍ”Ñ¡•¥ÈÍ•±•Ñ•ÑåÁ”¸ˆììí¥¹ÁÕÐ¹Í•ÑÑÑÉ¥‰ÕÑ” ‰…É¥„µ‘•ÍÉ¥‰•‘‰äˆ±¡•±À¹¥¤ì4(ÍÕ‰µ¥Ð¹ÑåÁ”ô‰ÍÕ‰µ¥ÐˆíÍÕ‰µ¥Ð¹Ñ•áÑ½¹Ñ•¹Ðô‰Q…­”ÕÍÑ½´…Ñ¥½¸ˆíÍÕ‰µ¥Ð¹‘¥Í…‰±•õ‰ÕÍåñð„…Á•¹‘¥¹œ ¥ñð…¹…Ù¥…Ñ½È¹½¹1¥¹•ñð…ÕÍÑ½µÉ…™Ð¹ÑÉ¥´ ¤ì4(™½É´¹½¹ÍÕ‰µ¥Ðõ”ôùí”¹ÁÉ•Ù•¹Ñ•™…Õ±Ð ¤í½¹ÍÐÑ•áÐõ¥¹ÁÕÐ¹Ù…±Õ”¹ÑÉ¥´ ¤í¥˜ …Ñ•áÑññ‰ÕÍåññÁ•¹‘¥¹œ ¤¥É•ÑÕÉ¸í¡½½Í”¡íÑ•áÐ±ÑåÁ”éÑåÁ”¹Ù…±Õ”±‘¥™™¥Õ±Ñäè‰µ•‘¥Õ´ˆ±ÕÍÑ½´éÑÉÕ”±Í½¥…±M­¥±°éÍ­¥±±M•±•Ð¹Ù…±Õ”ôôô‰…ÕÑ¼ˆýÕ¹‘•™¥¹•éÍ­¥±±M•±•Ð¹Ù…±Õ•ô¥ôí™½É´¹…ÁÁ•¹¡±…‰•°±¥¹ÁÕÐ±ÑåÁ•1…‰•°±ÑåÁ”±Í­¥±±1…‰•°±Í­¥±±M•±•Ð±ÕÍÑ½µI½±°±¡•±À±ÍÕ‰µ¥Ð¤í‰½à¹…ÁÁ•¹¡™½É´¤ì4(½¹ÍÐ™½½Ðõ‘½Õµ•¹Ð¹É•…Ñ•±•µ•¹Ð ‰Àˆ¤í™½½Ð¹±…ÍÍ9…µ”ô‰µÕÑ•ˆí™½½Ð¹±…ÍÍ9…µ”ô‰µÕÑ•Í½„µÍ•¹”µ™½½Ñ•Èˆí™½½Ð¹Ñ•áÑ½¹Ñ•¹Ðô‰M•¹”€ˆ­…µÁ…¥¸¹ÑÕÉ¸¬ˆƒ
+ÜM…Ù•½¸Ñ¡¥Ì‘•Ù¥”ƒ
+Ü€ˆ¬¡¹…Ù¥…Ñ½È¹½¹1¥¹”ü‰=¹±¥¹”ˆè‰=™™±¥¹”É•…‘¥¹œˆ¤í‰½à¹…ÁÁ•¹¡™½½Ð¤4)ô4)…Íå¹Œ™Õ¹Ñ¥½¸¡½½Í”¡¡½¥”¥ì(¥˜¡‰ÕÍåññÁ•¹‘¥¹œ ¤¥É•ÑÕÉ¸ì(¥˜ …¹…Ù¥…Ñ½È¹½¹1¥¹”¥íÍÑ…ÑÕÌ ‰=™™±¥¹”èå½ÕÈÍ…Ù•Í•¹”¥Ì…Ù…¥±…‰±”¸I•½¹¹•ÐÑ¼•¹•É…Ñ”…¹½Ñ¡•È¸ˆ¤íÉ•ÑÕÉ¹ô(¥˜ ……•ÍÍ½‘” ¤¥í™½ÕÍ•ÍÌ ¤íÉ•ÑÕÉ¹ô(½¹ÍÐ‘•Ñ•Ñ•õ‘¥…±½Õ•É½µÕÍÑ½´¡¡½¥”¤í¥˜ ¡‘•Ñ•Ñ•‘ññÍ½¥…±M­¥±°¡¡½¥”¤¤˜™¡½¥”¹ÕÍÑ½´˜™¡½¥”¹ÑåÁ”ôôô‰¥¹Ù•ÍÑ¥…Ñ”ˆ¥¡½¥”õì¸¸¹¡½¥”±ÑåÁ”è‰Í½¥…°‰ôì(½¹ÍÐÉ•Í½±ÕÑ¥½¸õÉ•ÍÕ±Ð¡¡½¥”¤ì(¥˜ …É•Í½±ÕÑ¥½¸¥í¥˜ …Í½¥…±M­¥±°¡¡½¥”¤˜™¡½¥”¹ÑåÁ”„ôô‰½µ‰…Ðˆ¥ÍÑ…ÑÕÌ ‰9½Ð•¹½Õ ¹•Éä™½ÈÑ¡…Ð…Ñ¥½¸¸ˆ¤íÉ•ÑÕÉ¹ô(…µÁ…¥¸¹±…ÍÑAÉ½É•ÍÍ¥½¸ôˆˆì(…µÁ…¥¸¹…Ñ¥½¹M•É¥…°ô¡9Õµ‰•È¡…µÁ…¥¸¹…Ñ¥½¹M•É¥…°¥ñðÀ¤¬Äì(½¹ÍÐ…Ñ¥½¹I••¥ÁÐô‰ÑÕÉ¸´ˆ­…µÁ…¥¸¹ÑÕÉ¸¬ˆµ…Ñ¥½¸´ˆ­…µÁ…¥¸¹…Ñ¥½¹M•É¥…°ì(É•½É‘Ñ¥½¹AÉ…Ñ¥”¡¡½¥”±É•Í½±ÕÑ¥½¸±…Ñ¥½¹I••¥ÁÐ¤ì(…µÁ…¥¸¹±…ÍÑÑ¥½¸õÍ…™”¡¡½¥”¹Ñ•áÐ¤í…µÁ…¥¸¹±…ÍÑI•ÍÕ±ÐõÉ•Í½±ÕÑ¥½¸ì(…µÁ…¥¸¹Á•¹‘¥¹œõí…Ñ¥½¸é…µÁ…¥¸¹±…ÍÑÑ¥½¸±É•Í½±ÕÑ¥½¸±ÍÑ…ÉÑ•‘Ðé…Ñ”¹¹½Ü ¤±‘¥…±½Õ”é‘•Ñ•Ñ•±ÍÕÉÙ•äé¡½¥”¹ÍÕÉÙ•äôôõÑÉÕ”±½µ‰…Ðé¡½¥”¹ÑåÁ”ôôô‰½µ‰…Ðˆ±…Ñ¥½¹I••¥ÁÑôì(…µÁ…¥¸¹¡¥ÍÑ½Éä¹ÁÕÍ  ‰Ð€ˆ­Í…™”¡…µÁ…¥¸¹Í•¹”ü¹±½…Ñ¥½¹ñð‰Õ¹­¹½Ý¸±½…Ñ¥½¸ˆ¤¬ˆèA±…å•Èè€ˆ­…µÁ…¥¸¹±…ÍÑÑ¥½¸¬ˆð€ˆ­É•Í½±ÕÑ¥½¸¤ì(…µÁ…¥¸¹¡¥ÍÑ½Éäõ…µÁ…¥¸¹¡¥ÍÑ½Éä¹Í±¥” µ5`¤íÍÑ½É” ¤íÉ•™É•Í¡¥ÍÁ±…ä ¤ì(€¼¼I•±•…Í”Ñ¡”¥A¡½¹”­•å‰½…É…¹É•ÑÕÉ¸Ñ¼Ñ¡”ÍÑ½ÉäÝ¡¥±”•µ¥¹¤Ý½É­Ì¸(¥˜¡¡½¥”¹ÕÍÑ½´˜™‘½Õµ•¹Ð¹…Ñ¥Ù•±•µ•¹Ðü¹‰±ÕÈ¥‘½Õµ•¹Ð¹…Ñ¥Ù•±•µ•¹Ð¹‰±ÕÈ ¤ì(É•ÑÕÉ¹Q½‘Ù•¹ÑÕÉ” ‰ÍÑ…ÑÕÌˆ¤ì(…Ý…¥Ð…‘Ù…¹”¡…µÁ…¥¸¹±…ÍÑÑ¥½¸±É•Í½±ÕÑ¥½¸±™…±Í”¤ì)ô)…Íå¹Œ™Õ¹Ñ¥½¸…‘Ù…¹”¡…Ñ¥½¸±É•Í½±ÕÑ¥½¸±É•ÑÉä¥ì4(¥˜¡‰ÕÍä¥É•ÑÕÉ¸í¥˜ …¹…Ù¥…Ñ½È¹½¹1¥¹”¥í•Ð ‰…µÁ…¥¸µÍÑ…ÑÕÌˆ¤¹Ñ•áÑ½¹Ñ•¹Ðô‰=™™±¥¹”èÍ…Ù•Í•¹”…Ù…¥±…‰±”ì¹•ÜÍ•¹•ÌÉ•ÅÕ¥É”¥¹Ñ•É¹•Ð¸ˆí‘É…Ü ¤íÉ•ÑÕÉ¹ô4(½¹ÍÐ½‘”õ…•ÍÍ½‘” ¤ì4(¥˜ …½‘”¥í™½ÕÍ•ÍÌ ¤í‘É…Ü ¤íÉ•ÑÕÉ¹ô4(‰ÕÍäõÑÉÕ”íÍÑ…ÑÕÌ ‰•µ¥¹¤¥ÌÝÉ¥Ñ¥¹œÑ¡”¹•áÐÍ•¹—Š˜ˆ¤í‘É…Ü ¤ì4(ÑÉåì4(½¹ÍÐÉ•ÍÁ½¹Í”õ…Ý…¥Ð™•Ñ  ˆ¸½…Á¤½…µÁ…¥¸ˆ±íµ•Ñ¡½è‰A=MPˆ±¡•…‘•ÉÌéì‰½¹Ñ•¹ÐµÑåÁ”ˆè‰…ÁÁ±¥…Ñ¥½¸½©Í½¸ˆ°‰àµÍÑ½Éäµ…•ÍÌˆé½‘•ô±‰½‘äé)M=8¹ÍÑÉ¥¹¥™ä¡í½¹Ñ•áÐéí±½…Ñ¥½¸é…µÁ…¥¸¹Í•¹”ü¹±½…Ñ¥½¹ñð¡Ý¥¹‘½Ü¹Í½…¡…É…Ñ•ÉÌü¹¥Í9•Ý¡…É…Ñ•Èü¸ ¤ü¡Ý¥¹‘½Ü¹Í½…¡…É…Ñ•ÉÌü¹ÁÉ½™¥±”ü¸ ¤ü¹ÍÑ…ÉÑ¥¹i½¹•ñð‰9•Ü…‘Ù•¹ÑÕÉ•ÈÍÑ…ÉÑ¥¹œé½¹”ˆ¤è‰!½±±½ÜI…Ù•¸±…‰½É…Ñ½Éäˆ¤±ÁÉ•Ù¥½ÕÍQ¥Ñ±”é…µÁ…¥¸¹Í•¹”ü¹Ñ¥Ñ±•ñðˆˆ±ÁÉ•Ù¥½ÕÍM•¹”é…µÁ…¥¸¹Í•¹”ü¹ÍÑ½Éåñðˆˆ±…µÁ…¥¹=É¥¥¸é½É¥¥¹=™…µÁ…¥¸ ¤±ÍÑ…ÉÑ¥¹i½¹”éÝ¥¹‘½Ü¹Í½…¡…É…Ñ•ÉÌü¹ÁÉ½™¥±”ü¸ ¤ü¹ÍÑ…ÉÑ¥¹i½¹•ññ¹Õ±°±É••¹Ñ¥Í½Ù•É¥•Ìé…µÁ…¥¸¹©½ÕÉ¹…°¹Í±¥” ´ÄÈ¤±…Ñ¥½¸±É•Í½±ÕÑ¥½¸±¡ÀéÌ¹¡À±•¹•ÉäéÌ¹•¸±½±é™µÑ5½¹•ä¡Ì¹µ½¹•ä¤±…±…É´éÌ¹…±•ÉÐ±ÑÕÉ¸é…µÁ…¥¸¹ÑÕÉ¸±¡¥ÍÑ½Éäé…µÁ…¥¸¹¡¥ÍÑ½Éä¹Í±¥” ´ÈÀ¤±™±…Ìé=‰©•Ð¹­•åÌ¡Ì¹™±…Íññíô¤±½µÁ…¹¥½¹5½µ•¹ÑÌéÝ¥¹‘½Ü¹Í½…½µÁ…¹¥½¹Ìü¹•ÑI••¹Ðü¸ ¥ññmt±½µÁ…¹¥½¹AÉ½™¥±•ÌéÝ¥¹‘½Ü¹Í½…½µÁ…¹¥½¹Ìü¹•ÑAÉ½™¥±•Ìü¸ ¥ññíô±É•±…Ñ¥½¹Í¡¥ÁÌéÝ¥¹‘½Ü¹Í½…½µÁ…¹¥½¹Ìü¹•ÑI•±…Ñ¥½¹Í¡¥ÁÌü¸ ¥ññíô±½¹Ù•ÉÍ…Ñ¥½¹½¹Ñ•áÐéÝ¥¹‘½Ü¹Í½…½µÁ…¹¥½¹Ìü¹•Ñ½¹Ù•ÉÍ…Ñ¥½¹½¹Ñ•áÐü¸ ¥ññíô±¡…É…Ñ•ÈéÝ¥¹‘½Ü¹Í½…¡…É…Ñ•ÉÌü¹ÁÉ½™¥±”ü¸ ¥ññ¹Õ±°±…‰¥±¥ÑåM½É•ÌéÝ¥¹‘½Ü¹Í½…‰¥±¥Ñ¥•Ìü¹•Ðü¸ ‰¡•É¼ˆ¤ü¹ÍÑ…ÑÍññ¹Õ±°±É•ÁÕÑ…Ñ¥½¸éÝ¥¹‘½Ü¹Í½…I•ÁÕÑ…Ñ¥½¸ü¹•ÑMÑ…¹‘¥¹Ìü¸ ¥ññíô±É•ÁÕÑ…Ñ¥½¹•Ù•±½Áµ•¹ÑÌéÝ¥¹‘½Ü¹Í½…I•ÁÕÑ…Ñ¥½¸ü¹•Ñ•Ù•±½Áµ•¹ÑÌü¸ ¥ññmt±•¹•µ¥•Ìé±¥Ù¥¹¹•µ¥•Ì ¤¹µ…À¡”ôø¡í¹…µ”é”¹¹…µ”±¡Àé”¹¡À±µ…á!Àé”¹µ…á!Áô¤¤±…±±¥•Ìé½µ‰…ÑA…ÉÑä ¤¹µ…À¡”ôø¡í¹…µ”é”¹¹…µ”±¡Àé”¹¡À±µ…á!Àé”¹µ…á!Áô¤¤±ÅÕ•ÍÑI•Ý…É‘Ìéí±…ÍÐé…µÁ…¥¸¹ÅÕ•ÍÑÌü¹±…ÍÑI•Ý…É‘ññ¹Õ±°±…Ñ¥Ù•5¥ÍÍ¥½¹Ìé=‰©•Ð¹•¹ÑÉ¥•Ì¡…µÁ…¥¸¹ÅÕ•ÍÑÌü¹µ¥ÍÍ¥½¹Íññíô¤¹™¥±Ñ•È ¡l±Ùt¤ôùØ¹ÍÑ…Ñ”„ôô‰±…¥µ•ˆ¤¹µ…À ¡m¥±Ùt¤ôø¡í¥±ÍÑ…Ñ”éØ¹ÍÑ…Ñ•ô¤¥ô±½µ‰…Ñ1½œè¡…µÁ…¥¸¹½µ‰…Ñ1½ññmt¤¹Í±¥” ´Ì¤±±…ÍÑá¡…¹”é…µÁ…¥¸¹±…ÍÑá¡…¹•ññ¹Õ±°±¡É½¹¥±”éÝ¥¹‘½Ü¹Í½…¡É½¹¥±”ü¹½¹Ñ•áÐü¸¡…µÁ…¥¸¥ññ¹Õ±°±É•Í½ÕÉ•MÕÉÙ•äé…µÁ…¥¸¹Á•¹‘¥¹œü¹ÍÕÉÙ•äôôõÑÉÕ•õô¥ô¤ì4(½¹ÍÐ‘…Ñ„õ…Ý…¥ÐÉ•ÍÁ½¹Í”¹©Í½¸ ¤¹…Ñ   ¤ôø¡í•ÉÉ½Èè‰%¹Ù…±¥Í•ÉÙ•ÈÉ•ÍÁ½¹Í”‰ô¤¤í¥˜ …É•ÍÁ½¹Í”¹½¬¥Ñ¡É½ÜÉÉ½È¡‘…Ñ„¹•ÉÉ½Éñð‰I•ÅÕ•ÍÐ™…¥±•ˆ¤ì4(¥˜ …ÉÉ…ä¹¥ÍÉÉ…ä¡‘…Ñ„¹¡½¥•Ì¥ñð…‘…Ñ„¹ÍÑ½Éä¥Ñ¡É½ÜÉÉ½È ‰%¹½µÁ±•Ñ”•¹•É…Ñ•Í•¹”ˆ¤ì4(½¹ÍÐ½µÁ±•Ñ•‘¥…±½Õ”õ…µÁ…¥¸¹Á•¹‘¥¹œü¹‘¥…±½Õ”ýì¸¸¹…µÁ…¥¸¹Á•¹‘¥¹œ¹‘¥…±½Õ”±¥è‰…µÁ…¥¸µ‘¥…±½Õ”´ˆ­…µÁ…¥¸¹Á•¹‘¥¹œ¹ÍÑ…ÉÑ•‘Ð¬ˆ´ˆ­…µÁ…¥¸¹ÑÕÉ¸±ÍÕ•ÍÌè½yMÕ•ÍÌè½¤¹Ñ•ÍÐ¡…µÁ…¥¸¹Á•¹‘¥¹œ¹É•Í½±ÕÑ¥½¸¥ôé¹Õ±°ì(½¹ÍÐ½µÁ±•Ñ•‘AÉ½™•ÍÍ¥½¸õ…µÁ…¥¸¹Á•¹‘¥¹œ˜˜……µÁ…¥¸¹Á•¹‘¥¹œ¹ÍÕÉÙ•äýí…Ñ¥½¸é…µÁ…¥¸¹Á•¹‘¥¹œ¹…Ñ¥½¸±É•Í½±ÕÑ¥½¸é…µÁ…¥¸¹Á•¹‘¥¹œ¹É•Í½±ÕÑ¥½¸±¥è‰ÁÉ½™•ÍÍ¥½¸´ˆ­…µÁ…¥¸¹Á•¹‘¥¹œ¹ÍÑ…ÉÑ•‘Ð¬ˆ´ˆ­…µÁ…¥¸¹ÑÕÉ¹ôé¹Õ±°ì(½¹ÍÐ½µÁ±•Ñ•‘…Ñ¥½¸õ…µÁ…¥¸¹Á•¹‘¥¹œýí…Ñ¥½¸é…µÁ…¥¸¹Á•¹‘¥¹œ¹…Ñ¥½¸±É•Í½±ÕÑ¥½¸é…µÁ…¥¸¹Á•¹‘¥¹œ¹É•Í½±ÕÑ¥½¸±¥è‰™…Ñ¥½¸´ˆ­…µÁ…¥¸¹Á•¹‘¥¹œ¹ÍÑ…ÉÑ•‘Ð¬ˆ´ˆ­…µÁ…¥¸¹ÑÕÉ¹ôé¹Õ±°ì(ÕÁ‘…Ñ•1¥Ù¥¹¹•µ¥•Ì¡‘…Ñ„¤íÉ•½¹¥±•½µ‰…Ñ±±¥•Ì¡‘…Ñ„¤ì(¥˜¡…µÁ…¥¸¹áÁ¹½Õ¹Ñ•Èü¹…Ñ¥Ù”¥ì(€™½È¡½¹ÍÐ¥½˜Á…ÉÑåáÁ•É¥•¹•%‘Ì ¤¥¥˜ ……µÁ…¥¸¹áÁ¹½Õ¹Ñ•È¹Á…ÉÑä¹¥¹±Õ‘•Ì¡¥¤¥…µÁ…¥¸¹áÁ¹½Õ¹Ñ•È¹Á…ÉÑä¹ÁÕÍ ¡¥¤ì(€¥˜¡…µÁ…¥¸¹áÁ¹½Õ¹Ñ•È¹‘•™•…Ñ•¹±•¹Ñ ˜˜…±¥Ù¥¹¹•µ¥•Ì ¤¹±•¹Ñ ¥…µÁ…¥¸¹áÁ¹½Õ¹Ñ•È¹Á•¹‘¥¹Y¥Ñ½ÉäõÑÉÕ”ì(€¥˜¡…µÁ…¥¸¹áÁ¹½Õ¹Ñ•È¹Á•¹‘¥¹Y¥Ñ½Éä¥½¹±Õ‘•AÉ½É•ÍÍ¥½¹¹½Õ¹Ñ•È ¤ì(ô(…µÁ…¥¸¹Í•¹”õ‘…Ñ„í…µÁ…¥¸¹ÑÕÉ¸¬¬íÝ¥¹‘½Ü¹Í½…¡É½¹¥±”ü¹É••¥Ù”ü¸¡…µÁ…¥¸±‘…Ñ„¤í…µÁ…¥¸¹Á•¹‘¥¹œõ¹Õ±°íÕÍÑ½µÉ…™ÐôˆˆíÕÍÑ½µM½¥…±M­¥±°ô‰…ÕÑ¼ˆí…µÁ…¥¸¹¡¥ÍÑ½Éä¹ÁÕÍ  ‰M•¹”è€ˆ­Í…™”¡‘…Ñ„¹Ñ¥Ñ±”¤¬ˆ €ˆ­Í…™”¡‘…Ñ„¹±½…Ñ¥½¸¤¬ˆƒŠP€ˆ­Í…™”¡‘…Ñ„¹ÍÑ½Éä¤¹Í±¥” À°ÌàÀ¤¤í…µÁ…¥¸¹¡¥ÍÑ½Éäõ…µÁ…¥¸¹¡¥ÍÑ½Éä¹Í±¥” µ5`¤í¥˜¡‘…Ñ„¹©½ÕÉ¹…°¥…µÁ…¥¸¹©½ÕÉ¹…°¹ÁÕÍ ¡Í…™”¡‘…Ñ„¹©½ÕÉ¹…°¤¹Í±¥” À°ÈÀÀ¤¤í…µÁ…¥¸¹©½ÕÉ¹…°õ…µÁ…¥¸¹©½ÕÉ¹…°¹Í±¥” ´ÄÀÀ¤íÝ¥¹‘½Ü¹Í½…¡É½¹¥±”ü¹É•¹‘•Èü¸¡…µÁ…¥¸¤í…µÁ…¥¸¹±…ÍÑÉÉ½Èôˆˆí¥˜¡½µÁ±•Ñ•‘¥…±½Õ”¥Ý¥¹‘½Ü¹Í½…½µÁ…¹¥½¹Ìü¹…ÁÁ±å¥…±½Õ•=ÕÑ½µ”ü¸¡½µÁ±•Ñ•‘¥…±½Õ”¤í¥˜¡½µÁ±•Ñ•‘AÉ½™•ÍÍ¥½¸¥Ý¥¹‘½Ü¹Í½…¡…É…Ñ•ÉÌü¹…ÁÁ±åAÉ½™•ÍÍ¥½¸ü¸¡½µÁ±•Ñ•‘AÉ½™•ÍÍ¥½¸¹…Ñ¥½¸±½µÁ±•Ñ•‘AÉ½™•ÍÍ¥½¸¹É•Í½±ÕÑ¥½¸±½µÁ±•Ñ•‘AÉ½™•ÍÍ¥½¸¹¥¤í¥˜¡½µÁ±•Ñ•‘…Ñ¥½¸¥Ý¥¹‘½Ü¹Í½…I•ÁÕÑ…Ñ¥½¸ü¹™É½µÑ¥½¸ü¸¡½µÁ±•Ñ•‘…Ñ¥½¸¤íÍÑ½É” ¤íÍÑ…ÑÕÌ ‰M•¹”•¹•É…Ñ•…¹Í…Ù•¸¡½½Í”å½ÕÈ¹•áÐ…Ñ¥½¸¸ˆ¤ì4(õ…Ñ ¡”¥í…µÁ…¥¸¹±…ÍÑÉÉ½Èõ”¹µ•ÍÍ…”íÍÑ½É” ¤íÍÑ…ÑÕÌ ‰$Õ¹…Ù…¥±…‰±”è€ˆ­”¹µ•ÍÍ…”¬ˆ¸e½ÕÈ±…ÍÐ…Ñ¥½¸¥ÌÁÉ•Í•ÉÙ•¸Q…ÀI•ÑÉä•¹•É…Ñ¥¹œ¹•áÐÍ•¹”ì¥ÐÝ¥±°¹½ÐÍÁ•¹¹•ÉäÑÝ¥”¸ˆ¥õ™¥¹…±±åí‰ÕÍäõ™…±Í”íÉ•™É•Í¡¥ÍÁ±…ä ¤íÉ•ÑÕÉ¹Q½‘Ù•¹ÑÕÉ”¡…µÁ…¥¸ü¹±…ÍÑÉÉ½Èü‰ÍÑ…ÑÕÌˆè‰Í•¹”ˆ¥ô4)ô4)™Õ¹Ñ¥½¸µ¥É…Ñ•½µÁ…¹¥½¹¥ÍÁ±…å9…µ•Ì ¥ì(¥˜ ……µÁ…¥¸¥É•ÑÕÉ¸ì(½¹ÍÐ…¹½¹¥…°õ¹…µ”ôù¹…µ”ôôô‰1•Ñ¡…É¥•°ˆü‰1•Ñ¡…É¥•°5½½¹Õ…Éˆé¹…µ”ì(¥˜¡ÉÉ…ä¹¥ÍÉÉ…ä¡…µÁ…¥¸¹½µ‰…Ñ±±¥•Ì¤¥™½È¡½¹ÍÐ…±±ä½˜…µÁ…¥¸¹½µ‰…Ñ±±¥•Ì¥¥˜¡…±±ä˜™ÑåÁ•½˜…±±ä¹¹…µ”ôôô‰ÍÑÉ¥¹œˆ¥…±±ä¹¹…µ”õ…¹½¹¥…°¡…±±ä¹¹…µ”¤ì(¥˜¡…µÁ…¥¸¹Á…ÉÑå!•…±Ñ ˜™ÑåÁ•½˜…µÁ…¥¸¹Á…ÉÑå!•…±Ñ ôôô‰½‰©•Ðˆ˜™…µÁ…¥¸¹Á…ÉÑå!•…±Ñ ¹1•Ñ¡…É¥•°¥ì(€¥˜ ……µÁ…¥¸¹Á…ÉÑå!•…±Ñ¡l‰1•Ñ¡…É¥•°5½½¹Õ…É‰t¥…µÁ…¥¸¹Á…ÉÑå!•…±Ñ¡l‰1•Ñ¡…É¥•°5½½¹Õ…É‰tõ…µÁ…¥¸¹Á…ÉÑå!•…±Ñ ¹1•Ñ¡…É¥•°ì(€‘•±•Ñ”…µÁ…¥¸¹Á…ÉÑå!•…±Ñ ¹1•Ñ¡…É¥•°ì(ô(¥˜¡…µÁ…¥¸¹±…ÍÑá¡…¹”ü¹É•¥Á¥•¹Ðôôô‰1•Ñ¡…É¥•°ˆ¥…µÁ…¥¸¹±…ÍÑá¡…¹”¹É•¥Á¥•¹Ðô‰1•Ñ¡…É¥•°5½½¹Õ…Éˆì(¥˜¡ÉÉ…ä¹¥ÍÉÉ…ä¡…µÁ…¥¸¹½µ‰…Ñ1½œ¤¥™½È¡½¹ÍÐÉ½Ü½˜…µÁ…¥¸¹½µ‰…Ñ1½œ¥¥˜¡ÉÉ…ä¹¥ÍÉÉ…ä¡É½Üü¹•Ù•¹ÑÌ¤¥™½È¡½¹ÍÐ•Ù•¹Ð½˜É½Ü¹•Ù•¹ÑÌ¥¥˜¡•Ù•¹Ðü¹¹…µ”ôôô‰1•Ñ¡…É¥•°ˆ¥•Ù•¹Ð¹¹…µ”ô‰1•Ñ¡…É¥•°5½½¹Õ…Éˆì)ô)ÑÉåí…µÁ…¥¸õ)M=8¹Á…ÉÍ”¡±½…±MÑ½É…”¹•Ñ%Ñ•´¡-d¥ñð‰¹Õ±°ˆ¥õ…Ñ ¡”¥í…µÁ…¥¸õ¹Õ±±ô)µ¥É…Ñ•½µÁ…¹¥½¹¥ÍÁ±…å9…µ•Ì ¤ì4)•¹…‰±•õ±½…±MÑ½É…”¹•Ñ%Ñ•´ ‰Í½„µ…µÁ…¥¸µ•¹…‰±•ˆ¤ôôôˆÄˆí¥˜¡…µÁ…¥¸¥íÝ¥¹‘½Ü¹Í½…¡É½¹¥±”ü¹…ÑÑ… ü¸¡…µÁ…¥¸¤íÍÑ½É” ¥õÝ¥¹‘½Ü¹Í½…¡É½¹¥±•M•ÑM…Ù”ü¸¡ÍÑ½É”¤í¥¹Ñ•É™…•U$ ¤í•Ð ‰…µÁ…¥¸µµ½‘”ˆ¤¹¡•­•õ•¹…‰±•ì4)¥˜¡•¹…‰±•¥í¥˜ ……µÁ…¥¸¥…µÁ…¥¸õµ…­” ¤í‘É…Ü ¤í¥˜ ……µÁ…¥¸¹Í•¹”˜™¹…Ù¥…Ñ½È¹½¹1¥¹”¥…‘Ù…¹”¡…µÁ…¥¸¹±…ÍÑÑ¥½¸±…µÁ…¥¸¹±…ÍÑI•ÍÕ±Ð±ÑÉÕ”¥ô4)Ý¥¹‘½Ü¹Í½…1¥Ù¥¹…µÁ…¥¸õí•ÑMÑ…Ñ”è ¤ôù…µÁ…¥¸±•¹…‰±•è ¤ôù•¹…‰±•±Á•ÉÍ¥ÍÐéÍÑ½É”±É•™É•Í¡U$è ¤ôùí‘É…Ü ¤íÝ¥¹‘½Ü¹Í½…¡…É…Ñ•ÉÌü¹É•™É•Í¡AÉ½™•ÍÍ¥½¹Ìü¸ ¥õôíô¤ ¤ì
