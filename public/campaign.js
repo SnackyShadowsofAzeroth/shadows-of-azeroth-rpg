@@ -182,7 +182,53 @@ function recordActionPractice(choice,resolution,receipt){
   if(allowed)window.soaProgression?.check?.({receipt:"companion:"+receipt,name:skill,success,difficulty:choice.difficulty||"medium",actorId:id});
  }
 }
+function companionExchange(action){
+ const rules=window.soaCombatRules, id=action.ability;
+ const types={bromli_guard:{name:"Bromli Ironkeg",cooldown:2},pippa_snare:{name:"Pippa Sparkwhistle",cooldown:3},lethariel_heal:{name:"Lethariel Moonguard",cooldown:3}};
+ const spec=types[id];if(!spec)return null;
+ const ally=campaign.combatAllies?.find(a=>a.name===spec.name&&a.hp>0);
+ if(!ally){status(spec.name+" is not available to assist.");return null}
+ campaign.supportCooldowns||={};
+ const round=Number(campaign.combatRound)||0;
+ if((campaign.supportCooldowns[id]||0)>round){status("Ability cooling down; no turn spent.");return null}
+ const foes=livingEnemies();if(!foes.length)return null;
+ const previous=s.en;
+ let description="";
+ if(id==="bromli_guard"){campaign.guardUntil=round+2;description="Bromli raises his shield: enemy attacks suffer disadvantage for this exchange and the next."}
+ if(id==="pippa_snare"){
+  const target=foes.find(e=>e.name===selectedCombatTarget)||foes[0],block=rules.statBlock(target);
+  const roll=rules.attack(5,block.ac);
+  if(roll.hit){campaign.snaredEnemy=target.name;campaign.snareUntil=round+2;description="Pippa's snare catches "+target.name+" (d20 "+roll.die+" total "+roll.total+" vs AC "+block.ac+"). The foe loses its next attack."}
+  else description="Pippa's snare misses "+target.name+" (d20 "+roll.die+" total "+roll.total+" vs AC "+block.ac+").";
+ }
+ if(id==="lethariel_heal"){
+  const recipient=combatParty().filter(a=>Number.isFinite(a.hp)&&a.hp<a.maxHp).sort((a,b)=>(a.hp/a.maxHp)-(b.hp/b.maxHp))[0];
+  if(!recipient){status("No wounded ally needs healing; no turn spent.");return null}
+  const value=rules.roll(8)+5;
+  if(recipient.player){const before=s.hp;s.hp=Math.min(recipient.maxHp,s.hp+value);description="Lethariel heals "+recipient.name+" for "+(s.hp-before)+" HP."}
+  else{const allyRecord=campaign.combatAllies.find(a=>a.name===recipient.name),before=allyRecord.hp;allyRecord.hp=Math.min(allyRecord.maxHp,allyRecord.hp+value);campaign.partyHealth||={};campaign.partyHealth[allyRecord.name]={hp:allyRecord.hp,maxHp:allyRecord.maxHp,derived:true};description="Lethariel heals "+recipient.name+" for "+(allyRecord.hp-before)+" HP."}
+ }
+ campaign.supportCooldowns[id]=round+spec.cooldown+1;
+ campaign.combatRound=round+1;
+ s.time++;s.en=Math.min(100,s.en+10);
+ const enemy=foes.find(e=>e.hp>0);
+ let retaliation="";
+ if(enemy){
+  const block=rules.statBlock(enemy),hero=window.soaAbilities?.get?.("hero"),heroAC=hero?.armorClass||12;
+  const caught=campaign.snaredEnemy===enemy.name&&campaign.snareUntil>=campaign.combatRound;
+  if(caught){retaliation=enemy.name+" is snared and cannot attack.";campaign.snareUntil=0}
+  else{
+   const roll=rules.attack(block.bonus,heroAC,{advantage:campaign.guardUntil>=campaign.combatRound?-1:0});
+   if(roll.hit){const wound=rules.damage(block.die,2,roll.critical),before=s.hp;s.hp=Math.max(1,s.hp-wound);retaliation=enemy.name+" attacks: d20 "+roll.die+" total "+roll.total+" vs AC "+heroAC+", dealing "+(before-s.hp)+" damage."}
+   else retaliation=enemy.name+" misses: d20 "+roll.die+" total "+roll.total+" vs AC "+heroAC+".";
+  }
+ }
+ campaign.parryReady=false;
+ campaign.lastSupport={round:campaign.combatRound,actor:spec.name,description,retaliation};
+ return "Success: Round "+campaign.combatRound+". "+description+" "+retaliation+" Energy "+previous+" → "+s.en+". Exactly one exchange resolved.";
+}
 function fightExchange(action){
+ if(["bromli_guard","pippa_snare","lethariel_heal"].includes(action.ability))return companionExchange(action);
  const targets=livingEnemies();
  if(!targets.length)return null;
  const ability=resolvedCombatAbility(action);
@@ -221,13 +267,16 @@ function fightExchange(action){
  const defeated=target.hp===0;
  const interrupted=ability==="kick"&&hit;
  const heroAC=actor?.armorClass||12;
- const retaliationAttempt=!defeated&&!interrupted;
+ const enemyActsFirst=(campaign.enemyInitiative||0)>(campaign.initiativeRoll||0);
+ const retaliationAttempt=enemyActsFirst||(!defeated&&!interrupted);
  const eligibleTargets=combatParty().filter(e=>!e.player&&Number.isInteger(e.hp)&&e.hp>0&&e.maxHp>0);
  const defendingAlly=retaliationAttempt&&eligibleTargets.length&&Math.random()<.35?eligibleTargets[Math.floor(Math.random()*eligibleTargets.length)]:null;
  const defendingId=defendingAlly?({"Pippa Sparkwhistle":"pippa","Bromli Ironkeg":"bromli","Lethariel Moonguard":"lethariel"})[defendingAlly.name]:null;
  const defenderAC=defendingId?window.soaAbilities?.get?.(defendingId)?.armorClass||12:heroAC;
- const enemyAttack=retaliationAttempt?rules.attack(block.bonus,defenderAC,{advantage:ability==="evasion"?-1:0}):null;
- const retaliates=!!enemyAttack?.hit;
+ const enemyAttack=retaliationAttempt?rules.attack(block.bonus,defenderAC,{advantage:ability==="evasion"||campaign.guardUntil>=(Number(campaign.combatRound)||0)+1?-1:0}):null;
+ const caught=campaign.snaredEnemy===target.name&&campaign.snareUntil>=(Number(campaign.combatRound)||0)+1;
+ const retaliates=!caught&&!!enemyAttack?.hit;
+ if(caught)campaign.snareUntil=0;
  const amount=retaliates?rules.damage(block.die,2,enemyAttack.critical):0;
  const allyRecipient=defendingAlly;
  const receivedName=allyRecipient?.name||(window.soaCharacters?.profile?.()?.name||"Your hero");
@@ -431,6 +480,23 @@ function drawEnemyStatus(box){
    choose({text:"Coordinate defensively with "+target.name+" to assist their next move without inventing healing, supplies, damage or extra turns.",type:"investigate",difficulty:"medium"});
   };
   allyTargets.append(assist);roster.after(allyTargets);
+ }
+ if(enemies.length){
+  const support=document.createElement("section");support.className="soa-combat-abilities";
+  const heading=document.createElement("strong");heading.textContent="Companion combat actions · one exchange each";support.append(heading);
+  const options=[["bromli_guard","Bromli · Shield Wall (disadvantage)","Bromli Ironkeg"],["pippa_snare","Pippa · Engineering Snare","Pippa Sparkwhistle"],["lethariel_heal","Lethariel · Healing Prayer","Lethariel Moonguard"]];
+  for(const [ability,title,name] of options){
+   const member=combatParty().find(a=>a.name===name&&a.hp>0);
+   if(!member)continue;
+   const btn=document.createElement("button");btn.type="button";btn.className="soa-ability-button";
+   const left=Math.max(0,(campaign.supportCooldowns?.[ability]||0)-(campaign.combatRound||0));
+   btn.textContent=title+(left?" · cooldown "+left+" rounds":" · Ready");
+   btn.disabled=busy||!!pending()||left>0;
+   btn.onclick=()=>choose({text:title+" supports the party",type:"combat",difficulty:"medium",ability});
+   support.append(btn);
+  }
+  section.append(support);
+  if(campaign.lastSupport){const note=document.createElement("p");note.className="soa-combat-hint";note.textContent="Support round "+campaign.lastSupport.round+": "+campaign.lastSupport.description+" "+campaign.lastSupport.retaliation;section.append(note)}
  }
  const picker=document.createElement("div");picker.className="soa-combat-targets";const label=document.createElement("strong");label.textContent="Choose an enemy target";picker.append(label);
  for(const foe of enemies){
