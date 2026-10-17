@@ -157,6 +157,16 @@ function draw(){
  companionsButton.onclick=()=>showView("companions");
  factionsButton.onclick=()=>showView("factions");
  showView(activeReputationView);
+ // Fresh heroes must not inherit Snacky's named companions or relationship actions.
+ const soloHero=window.soaCharacters?.isNewCharacter?.()===true;
+ const present=window.soaLivingCampaign?.getState?.()?.combatAllies||[];
+ const hasKnownCompanion=Array.isArray(present)&&present.some(ally=>Object.values(PEOPLE).some(p=>p.name===ally?.name));
+ if(soloHero&&!hasKnownCompanion){
+  const empty=add("p","Your adventurer is traveling alone. Companions and relationships will become available when you meet someone and they actually join your adventure.");
+  empty.className="muted";companionGroup.append(empty);
+  showView("factions");window.soaReputation?.renderInto?.(factionGroup);
+  return;
+ }
  const subhead=add("h3","Companions & personal relationships");subhead.className="soa-section-title";companionGroup.append(subhead);
  const nav=add("div","");nav.className="soa-people";nav.setAttribute("role","group");nav.setAttribute("aria-label","Choose companion");
  for(const [id,p] of Object.entries(PEOPLE)){
