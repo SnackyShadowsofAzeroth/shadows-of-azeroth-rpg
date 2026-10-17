@@ -14,6 +14,8 @@ const RACES={
 };
 const PROFS=["Alchemy","Blacksmithing","Enchanting","Engineering","Herbalism","Leatherworking","Mining","Skinning","Tailoring"];
 const SECONDARY=["Cooking","Fishing","First Aid"];
+const BASIC_GEAR={Warrior:["Worn Training Sword","Plain Shield","Simple Cloth Tunic"],Paladin:["Worn Training Mace","Plain Shield","Simple Cloth Tunic"],Hunter:["Worn Practice Bow","Small Quiver","Simple Cloth Tunic"],Rogue:["Worn Practice Dagger","Plain Cloth Tunic"],Priest:["Worn Wooden Staff","Plain Cloth Robe"],Shaman:["Worn Wooden Mace","Plain Cloth Tunic"],Mage:["Worn Wooden Staff","Plain Cloth Robe"],Warlock:["Worn Wooden Staff","Plain Cloth Robe"],Druid:["Worn Wooden Staff","Plain Cloth Tunic"]};
+const isSnackyEgg=p=>p?.name==="Snacky Lugnuts"&&p?.gender==="Male"&&p?.race==="Gnome"&&p?.className==="Rogue"&&Object.keys(p?.professions||{}).includes("Mining")&&Object.keys(p?.professions||{}).includes("Engineering");
 const START_ZONES={"Human":"Northshire Valley, Elwynn Forest","Dwarf":"Coldridge Valley, Dun Morogh","Gnome":"Coldridge Valley, Dun Morogh","Night Elf":"Shadowglen, Teldrassil","Orc":"Valley of Trials, Durotar","Troll":"Valley of Trials, Durotar","Undead":"Deathknell, Tirisfal Glades","Tauren":"Red Cloud Mesa, Mulgore","Skyborne":"Skyborne Enclave (original starting settlement)"};
 const startingZone=p=>START_ZONES[p.race]||"a settlement in "+(p.faction==="Horde"?"Kalimdor":"the Eastern Kingdoms");
 let roster,active;
@@ -23,12 +25,12 @@ const read=(key)=>{try{return JSON.parse(localStorage.getItem(key)||"null")}catc
 const write=(key,val)=>{try{localStorage.setItem(key,JSON.stringify(val));return true}catch{return false}};
 function defaults(){
  const professions={Mining:{skill:225,events:0},Engineering:{skill:225,events:0}};
- return {id:"snacky",name:"Snacky Lugnuts",race:"Gnome",faction:"Alliance",className:"Rogue",specialization:"Combat Swords",professions,secondary:Object.fromEntries(SECONDARY.map(x=>[x,{skill:1,events:0}])),professionLog:[],professionEvents:[],origin:"legacy"};
+ return {id:"snacky",name:"Snacky Lugnuts",gender:"Male",race:"Gnome",faction:"Alliance",className:"Rogue",specialization:"Combat Swords",professions,secondary:Object.fromEntries(SECONDARY.map(x=>[x,{skill:1,events:0}])),professionLog:[],professionEvents:[],origin:"legacy"};
 }
 function init(){
  roster=read(ROSTER_KEY);
  if(!roster||!Array.isArray(roster.characters)||!roster.characters.length){roster={version:1,active:"snacky",characters:[defaults()]};write(ROSTER_KEY,roster);snapshot("snacky");}
- for(const p of roster.characters){p.professions ||= {};p.secondary ||= {};p.professionLog ||= [];p.professionEvents ||= []}
+ for(const p of roster.characters){p.professions ||= {};p.secondary ||= {};if(p.id==="snacky"&&!p.gender)p.gender="Male";p.professionLog ||= [];p.professionEvents ||= []}
  // One-time correction for Snacky only. Preserve any progress above the established 225 baseline.
  const snacky=roster.characters.find(p=>p.id==="snacky");
  if(snacky&&!roster.snackyProfession225Applied){
@@ -75,10 +77,10 @@ function restore(id){
   return false;
  }
 }
-function baseState(profile){return {id:"new-hero-start",hp:100,en:100,money:1500,time:0,alert:0,seen:[],flags:{},enemy:null,log:["A new journey begins for "+profile.name+" in "+startingZone(profile)+".","You have 15 silver and no companions."]}}
+function baseState(profile){return {equipment:[...(profile.startingEquipment||BASIC_GEAR[profile.className]||[])],id:"new-hero-start",hp:100,en:100,money:1500,time:0,alert:0,seen:[],flags:{},enemy:null,log:["A new journey begins for "+profile.name+" in "+startingZone(profile)+".","You have 15 silver and no companions."]}}
 function newCampaign(profile){
  const zone=startingZone(profile);
- return {turn:0,scene:null,history:[],journal:[],startingZone:zone,lastError:"",lastAction:"Begin the FIRST scene of a completely new adventure for "+profile.name+", a LEVEL 1 "+profile.race+" "+profile.className+" of the "+profile.faction+". STARTING LOCATION: "+zone+". The character starts PHYSICALLY IN THIS STARTING ZONE, ALONE, with exactly 15 silver (1,500 copper) and no existing allies, companions, party, completed missions, or earned equipment. Introduce a modest class-appropriate first task and six distinct action choices. No travel skips, established companions, Hollow Raven or Snacky's storyline. Do not grant XP, extra currency, equipment, specialization, or followers in the opening narration.",lastResult:"Level 1 newcomer in "+zone+". Starting funds: 15 silver. No previous battles, companions, or rewards.",pending:null};
+ return {turn:0,scene:null,history:[],journal:[],startingZone:zone,lastError:"",lastAction:"Begin the FIRST scene of a completely new adventure for "+profile.name+", a LEVEL 1 "+profile.race+" "+profile.className+" of the "+profile.faction+". STARTING LOCATION: "+zone+". The character starts PHYSICALLY IN THIS STARTING ZONE, ALONE, with exactly 15 silver (1,500 copper), basic class starter equipment only, and no existing allies, companions, party, completed missions, or earned equipment beyond the starter kit. Introduce a modest class-appropriate first task and six distinct action choices. No travel skips, established companions, Hollow Raven or Snacky's storyline. Do not grant XP, extra currency, equipment, specialization, or followers in the opening narration.",lastResult:"Level 1 newcomer in "+zone+". Starting funds: 15 silver. No previous battles, companions, or rewards.",pending:null};
 }
 // Social bonuses are per-character, derived from established class/race backgrounds.
 // All figures are visible on the Character Record. Existing saves need no migration.
@@ -96,10 +98,10 @@ const SOCIAL_BASE={
 function socialSkills(){
  const base=SOCIAL_BASE[active.className]||SOCIAL_BASE.Rogue;
  // Snacky's training as an SI:7 operative is reflected in his bluff score.
- const si7=active.id==="snacky"?1:0;
+ const si7=active.id==="snacky"?1:0;const hidden=isSnackyEgg(active)?1:0;
  const trained=window.soaProgression?.bonus;
  const mod=skill=>window.soaAbilities?.modifier?.(skill)||0;
- return {bluff:base.bluff+si7+(trained?.("bluff")||0)+mod("bluff"),bribe:base.bribe+(trained?.("bribe")||0)+mod("bribe"),romance:base.romance+(trained?.("romance")||0)+mod("romance"),threaten:base.threaten+(trained?.("threaten")||0)+mod("threaten")};
+ return {bluff:base.bluff+si7+hidden+(trained?.("bluff")||0)+mod("bluff"),bribe:base.bribe+(trained?.("bribe")||0)+mod("bribe"),romance:base.romance+(trained?.("romance")||0)+mod("romance"),threaten:base.threaten+(trained?.("threaten")||0)+mod("threaten")};
 }
 function selectedProfile(){return {...active,level:window.soaProgression?.level?.()||10,professions:Object.fromEntries(Object.entries(active.professions||{}).map(([k,v])=>[k,v.skill||1]))}}
 function commitRoster(){return write(ROSTER_KEY,roster)}
@@ -125,7 +127,7 @@ function enter(id){
 function create(profile){
  if(roster.characters.length>=16){alert("Character roster full (16).");return}
  const id="hero-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,7);
- const p={...profile,id,origin:"custom",startLevel:1,startingZone:startingZone(profile),specialization:"Unchosen",professions:Object.fromEntries(profile.professionNames.map(n=>[n,{skill:1,events:0}])),secondary:Object.fromEntries(SECONDARY.map(n=>[n,{skill:1,events:0}])),professionEvents:[],professionLog:[]};
+ const p={...profile,id,origin:"custom",startLevel:1,startingZone:startingZone(profile),startingEquipment:[...(BASIC_GEAR[profile.className]||[])],specialization:"Unchosen",professions:Object.fromEntries(profile.professionNames.map(n=>[n,{skill:1,events:0}])),secondary:Object.fromEntries(SECONDARY.map(n=>[n,{skill:1,events:0}])),professionEvents:[],professionLog:[]};
  delete p.professionNames;
  const previous=active.id;
  if(!snapshot(previous)){alert("Unable to back up your current adventure. Character creation has been stopped to protect your save.");return}
@@ -189,9 +191,9 @@ function drawMenu(){
  const form=make("form");form.className="soa-create-form";
  const name=make("input");name.type="text";name.maxLength=36;name.minLength=2;name.required=true;name.placeholder="Character name";
  const nameLabel=make("label","Character name");nameLabel.append(name);
- const race=make("select"),faction=make("select"),className=make("select"),prof1=make("select"),prof2=make("select");
+ const race=make("select"),gender=make("select"),faction=make("select"),className=make("select"),prof1=make("select"),prof2=make("select");
  const labeled=(title,field)=>{const label=make("label",title);label.append(field);return label};
- selectOptions(race,Object.keys(RACES));race.value="Human";
+ selectOptions(race,Object.keys(RACES));race.value="Human";selectOptions(gender,["Male","Female"]);
  function update(){
   const r=RACES[race.value];const oldFaction=faction.value;
   selectOptions(faction,r.faction==="Choose"?["Alliance","Horde"]:[r.faction]);
@@ -201,11 +203,11 @@ function drawMenu(){
  }
  race.onchange=update;faction.onchange=update;update();
  selectOptions(prof1,PROFS);selectOptions(prof2,PROFS);prof1.value="Mining";prof2.value="Engineering";
- form.append(nameLabel,labeled("Race",race),labeled("Faction",faction),labeled("Class",className),labeled("Primary profession I",prof1),labeled("Primary profession II",prof2));
+ form.append(nameLabel,labeled("Gender",gender),labeled("Race",race),labeled("Faction",faction),labeled("Class",className),labeled("Primary profession I",prof1),labeled("Primary profession II",prof2));
  const hint=make("p","New heroes begin alone at level 1 with 15 silver in their starting zone. Independent saves and professions; generating the new story requires Gemini online.","muted");form.append(hint);
  const warning=make("p","","soa-menu-error");warning.setAttribute("aria-live","polite");form.append(warning);
  const submit=make("button","Create Character & Start Story");submit.type="submit";form.append(submit);
- form.onsubmit=e=>{e.preventDefault();const n=name.value.trim();if(n.length<2||n.length>36){warning.textContent="Enter a name between 2 and 36 characters.";return}if(prof1.value===prof2.value){warning.textContent="Choose two different primary professions.";return}if(roster.characters.some(x=>x.name.toLowerCase()===n.toLowerCase())){warning.textContent="That character name is already in your roster.";return}create({name:n,race:race.value,faction:faction.value,className:className.value,professionNames:[prof1.value,prof2.value]})};
+ form.onsubmit=e=>{e.preventDefault();const n=name.value.trim();if(n.length<2||n.length>36){warning.textContent="Enter a name between 2 and 36 characters.";return}if(prof1.value===prof2.value){warning.textContent="Choose two different primary professions.";return}if(roster.characters.some(x=>x.name.toLowerCase()===n.toLowerCase())){warning.textContent="That character name is already in your roster.";return}create({name:n,gender:gender.value,race:race.value,faction:faction.value,className:className.value,professionNames:[prof1.value,prof2.value]})};
  expand.append(form);shell.append(expand);
  const backup=make("button","Download All Character Saves");backup.type="button";backup.className="soa-roster-backup";backup.onclick=exportRosterBackup;shell.append(backup);
  const backupHelp=make("p","Download a backup of every hero, story, reputation and relationship. Keep the file somewhere safe; in-app full-roster restore is not available yet.","soa-menu-help");shell.append(backupHelp);
@@ -314,7 +316,7 @@ function applyProfession(action,resolution,id){
  return !!(found&&success);
 }
 init();
-window.soaCharacters={profile:selectedProfile,isNewCharacter:()=>active.origin==="custom",initialLocalState:baseState,applyProfession,showMenu:drawMenu,refreshProfessions:drawProfessions,exportRosterBackup,getSocialSkills:socialSkills};
+window.soaCharacters={profile:selectedProfile,startingEquipment:()=>[...(active.startingEquipment||[])],isNewCharacter:()=>active.origin==="custom",initialLocalState:baseState,applyProfession,showMenu:drawMenu,refreshProfessions:drawProfessions,exportRosterBackup,getSocialSkills:socialSkills};
 window.addEventListener("pagehide",()=>snapshot(active.id));
 document.addEventListener("DOMContentLoaded",()=>{
  profilePanel();
