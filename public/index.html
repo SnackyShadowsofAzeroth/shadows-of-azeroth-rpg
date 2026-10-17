@@ -68,16 +68,17 @@ function doChoice(c){if(c.min&&s.en<c.min){alert("Not enough Energy.");return}co
 function choice(label,to,level="low",cost=0){return{label,to,level,cost}}
 function encounter(name,hp,damage){s.enemy={name,hp,max:hp,damage};go("combat")}
 function combat(action){let msg="";let damage=0;let cost=0;let stunned=false;
+ const previousEnemy=s.enemy?{name:s.enemy.name,hp:s.enemy.hp,max:s.enemy.max}:null;const previousHero=s.hp;
  if(action==="strike"){cost=35;damage=18+Math.floor(Math.random()*15);msg="Snacky cuts across the enemy's guard."}
  if(action==="kick"){cost=25;damage=6+Math.floor(Math.random()*7);stunned=true;msg="A sharp kick interrupts the opponent."}
  if(action==="evade"){s.flags.evade=2;msg="Snacky adopts a defensive stance."}
  if(action==="vanish"){if(s.alert>1){msg="Too much attention: the foe tracks Snacky's position."}else{s.enemy=null;s.flags.vanished=true;go("afterbattle");return}}
  if(action==="riposte"){if(!s.flags.parry){alert("Riposte requires a successful parry.");return}cost=10;damage=24;delete s.flags.parry;msg="A precise Riposte finds the opening."}
  if(s.en<cost){alert("Not enough Energy.");return}tick(cost);s.enemy.hp=Math.max(0,s.enemy.hp-damage);
- if(s.enemy.hp<=0){s.money+=86;addLog(s.enemy.name+" defeated · 86 copper automatically pocketed");s.enemy=null;s.flags.defeated=true;s.id="afterbattle";render();return}
+ if(s.enemy.hp<=0){s.flags.lastCombat={enemy:previousEnemy.name,dealt:Math.max(0,previousEnemy.hp-s.enemy.hp),received:0,before:previousEnemy.hp,after:0,max:previousEnemy.max,heroBefore:previousHero,heroAfter:s.hp,defeated:true};s.money+=86;addLog(s.enemy.name+" defeated · 86 copper automatically pocketed");s.enemy=null;s.flags.defeated=true;s.id="afterbattle";render();return}
  const enemyHit=stunned?0:check(s.flags.evade?0.19:0.62);if(enemyHit){let d=s.enemy.damage;if(s.flags.evade)d=Math.ceil(d/2);s.hp=Math.max(0,s.hp-d);msg+=" Enemy strikes for "+d+" HP."}else{msg+=" Enemy attack misses.";s.flags.parry=check(.5)}
  if(s.flags.evade)s.flags.evade--;
- s.flags.combatmsg=msg;if(s.hp===0)s.id="death";render()}
+ s.flags.combatmsg=msg;s.flags.lastCombat={enemy:previousEnemy.name,dealt:Math.max(0,previousEnemy.hp-s.enemy.hp),received:Math.max(0,previousHero-s.hp),before:previousEnemy.hp,after:s.enemy.hp,max:previousEnemy.max,heroBefore:previousHero,heroAfter:s.hp,defeated:false};if(s.hp===0)s.id="death";render()}
 function node(){switch(s.id){
  case"junction":return{title:"The Spoils of Silence",chapter:"Part LI · 10:23 PM",text:"The corridor beneath Raven Hill settles into an uneasy quiet. The patrol crossbowman lies dead; Harlan Vex remains bound, disarmed, and thoroughly questioned.\n\nPippa studies the central junction's maintenance plates. Somewhere beyond the steel, machinery ticks in patient intervals. No alarm has sounded.\n\nYour six-member expedition waits for a command.",opts:[
  {label:"Examine the trapped central junction (carefully)",level:"low",to:"trap"},
@@ -99,7 +100,28 @@ function node(){switch(s.id){
  case"archives":return{title:"A Door That Remembers",chapter:"Chapter I · Prototype ending",text:"At the edge of the archives, the Memory Anchor vibrates. Behind the sealed door, a voice speaks a name no one in your party has uttered.\n\nSUBJECT SEVEN: RECOGNITION EVENT.\n\nThis is the end of the current playable prototype. Your progress is saved, and future chapters can be added without erasing it.",opts:[choice("Return to the junction","junction"),{label:"Record the discovery in your journal",level:"low",act:()=>{addLog("Reached the sealed Memory Archives");tick();render()}}]};
  case"death":return{title:"Fallen Beneath Raven Hill",text:"Snacky falls to the cold stone. The Hollow Raven laboratory remains unbroken.",opts:[{label:"Restart from the last expedition checkpoint",level:"low",act:()=>{s=structuredClone(INIT);save();render()}}]};
  default:s.id="junction";return node()}}
-function render(){save();document.querySelector("#hp").textContent=s.hp+"/100";document.querySelector("#energy").textContent=s.en+"/100";document.querySelector("#gold").textContent=fmtMoney(s.money);document.querySelector("#time").textContent="10:"+String(s.time).padStart(2,"0")+" PM";document.querySelector("#alert").textContent=s.alert===0?"Silent":s.alert===1?"Cautious":"Suspicious";document.querySelector("#hpbar").style.width=s.hp+"%";document.querySelector("#enbar").style.width=s.en+"%";const hero=window.soaCharacters?.profile?.();document.querySelector("#abilities").textContent=hero&&hero.id!=="snacky"?"Class: "+hero.className+" · Early adventure skills · Professions: "+Object.keys(hero.professions||{}).join(" / "):"Sprint: Ready · Blade Flurry: Ready · Evasion: Ready · Vanish: Ready · Riposte: "+(s.flags.parry?"Parry opportunity":"Requires parry");const n=node();document.querySelector("#chapter").textContent=n.chapter||"Hollow Raven Laboratory";document.querySelector("#title").textContent=n.title;document.querySelector("#scene").textContent=n.text;const root=document.querySelector("#choices");root.replaceChildren();for(const [index,c] of n.opts.entries()){const b=document.createElement("button");b.className=c.level||"low";b.textContent=String.fromCharCode(65+index)+") "+c.label;b.onclick=()=>doChoice(c);root.append(b)}document.querySelector("#journal").textContent="Pippa Sparkwhistle · Bromli · Lethariel · six expedition members total · two secured prisoners · intact Memory Anchor · silver Level III token · Thorne memorandum · coded notebook.\n\nRecent findings: "+s.log.join(" · ")}
+function render(){save();document.querySelector("#hp").textContent=s.hp+"/100";document.querySelector("#energy").textContent=s.en+"/100";document.querySelector("#gold").textContent=fmtMoney(s.money);document.querySelector("#time").textContent="10:"+String(s.time).padStart(2,"0")+" PM";document.querySelector("#alert").textContent=s.alert===0?"Silent":s.alert===1?"Cautious":"Suspicious";document.querySelector("#hpbar").style.width=s.hp+"%";document.querySelector("#enbar").style.width=s.en+"%";const hero=window.soaCharacters?.profile?.();document.querySelector("#abilities").textContent=hero&&hero.id!=="snacky"?"Class: "+hero.className+" · Early adventure skills · Professions: "+Object.keys(hero.professions||{}).join(" / "):"Sprint: Ready · Blade Flurry: Ready · Evasion: Ready · Vanish: Ready · Riposte: "+(s.flags.parry?"Parry opportunity":"Requires parry");const n=node();document.querySelector("#chapter").textContent=n.chapter||"Hollow Raven Laboratory";document.querySelector("#title").textContent=n.title;document.querySelector("#scene").textContent=n.text;
+ const sceneNode=document.querySelector("#scene");
+ let combatPane=document.querySelector("#soa-offline-combat");
+ if(!combatPane){combatPane=document.createElement("section");combatPane.id="soa-offline-combat";combatPane.className="soa-battle-status";sceneNode.after(combatPane)}
+ combatPane.replaceChildren();const foe=s.enemy,last=s.flags.lastCombat;
+ combatPane.hidden=!foe&&!last;
+ if(foe||last){
+  const label=document.createElement("h4");label.textContent="Combat status";combatPane.append(label);
+  if(foe){
+   const enemyRow=document.createElement("div");enemyRow.className="soa-battle-enemy";
+   const title=document.createElement("div");title.className="soa-battle-label";
+   const nm=document.createElement("strong");nm.textContent=foe.name;
+   const hp=document.createElement("span");hp.textContent=foe.hp+" / "+foe.max+" HP";title.append(nm,hp);
+   const track=document.createElement("div");track.className="soa-battle-track";track.setAttribute("role","progressbar");track.setAttribute("aria-label",foe.name+" health");track.setAttribute("aria-valuemin","0");track.setAttribute("aria-valuemax",String(foe.max));track.setAttribute("aria-valuenow",String(foe.hp));
+   const fill=document.createElement("div");fill.className="soa-battle-fill";fill.style.width=Math.max(0,Math.min(100,100*foe.hp/foe.max))+"%";track.append(fill);enemyRow.append(title,track);combatPane.append(enemyRow);
+  }
+  if(last){
+   const report=document.createElement("div");report.className="soa-battle-report";
+   const text=document.createElement("p");text.textContent=last.enemy+": "+last.before+" → "+last.after+"/"+last.max+" HP · Damage dealt "+last.dealt+". Damage received "+last.received+" · Your HP "+last.heroBefore+" → "+last.heroAfter+".";report.append(text);combatPane.append(report);
+  }
+ }
+ const root=document.querySelector("#choices");root.replaceChildren();for(const [index,c] of n.opts.entries()){const b=document.createElement("button");b.className=c.level||"low";b.textContent=String.fromCharCode(65+index)+") "+c.label;b.onclick=()=>doChoice(c);root.append(b)}document.querySelector("#journal").textContent="Pippa Sparkwhistle · Bromli · Lethariel · six expedition members total · two secured prisoners · intact Memory Anchor · silver Level III token · Thorne memorandum · coded notebook.\n\nRecent findings: "+s.log.join(" · ")}
 document.querySelector("#export").onclick=()=>{const blob=new Blob([JSON.stringify(s,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="shadows-of-azeroth-save.json";a.click();setTimeout(()=>URL.revokeObjectURL(url),3000)};
 document.querySelector("#import").onclick=()=>document.querySelector("#importfile").click();
 document.querySelector("#importfile").onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const data=JSON.parse(await f.text());if(typeof data.id!=="string"||typeof data.hp!=="number")throw Error("Invalid save");s=data;save();render()}catch(err){alert("Cannot load save: "+err.message)}};
