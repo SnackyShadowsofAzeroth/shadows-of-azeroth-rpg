@@ -558,11 +558,26 @@ function interfaceUI(){
  get("campaign-offline").onclick=()=>{enabled=false;get("campaign-mode").checked=false;localStorage.setItem("soa-campaign-enabled","0");showOriginal(true);get("campaign-status").textContent="Offline scripted adventure enabled."};
 }
 function showOriginal(show){if(window.soaCharacters?.isNewCharacter?.())show=false;for(const el of document.querySelectorAll("main > section.panel")){if(el.id==="campaign-box")continue;const isStory=!!el.querySelector("#choices");if(isStory)el.style.display=show?"":"none"}}
+function reconcileAuthorizedMissionReward(){
+ if(!campaign||window.soaCharacters?.profile?.()?.id!=="snacky")return;
+ const q=window.soaQuests?.ensure?.(campaign);
+ if(!q||q.claimed?.["mission:stormwind-explosives-defused:v1"])return;
+ // Approved by player specifically for the completed defusal. Not inferred from Gemini prose.
+ const result=window.soaQuests?.grantStormwindMission?.(campaign,s.money);
+ if(Number.isSafeInteger(result?.wallet)){
+  s.money=result.wallet;
+  campaign.lastPayment=result.description;
+  campaign.history.push(result.description);
+  campaign.history=campaign.history.slice(-MAX);
+  store();save();
+ }
+}
 function draw(){
  if(!enabled||!campaign)return;showOriginal(false);
  const box=get("campaign-scene");box.replaceChildren();
  if(!campaign.scene){status(statusMessage||"Ready to generate the next scene.");return}
  const sc=campaign.scene,head=document.createElement("h3"),where=document.createElement("div"),text=document.createElement("p");
+ reconcileAuthorizedMissionReward();
  const questPanel=window.soaQuests?.panel?.(campaign,sc.location,()=>s.money,(result)=>{if(result?.error){status(result.error);return}if(Number.isInteger(result?.wallet))s.money=result.wallet;store();render();draw();status(result?.description||result?.message||"Contract updated.");}) || null;
  const transition=window.soaChronicle?.banner?.(campaign);if(transition)box.append(transition);
  const kicker=document.createElement("div");kicker.className="soa-scene-kicker";const position=window.soaChronicle?.progress?.(campaign);kicker.textContent=position?"ACT "+position.actRoman+" · CHAPTER "+position.chapterRoman+" · SCENE "+position.scene:"FIELD CHRONICLE · SCENE "+campaign.turn;box.append(kicker);head.textContent=sc.title||"The Hollow Raven";where.className="muted";where.textContent=sc.location||"Raven Hill";text.className="soa-story-prose";text.style.whiteSpace="pre-line";text.textContent=readableStory(sc.story);box.append(head,where,text);if(questPanel)box.append(questPanel);
