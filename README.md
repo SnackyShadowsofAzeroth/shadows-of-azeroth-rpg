@@ -353,3 +353,25 @@ The Reputation/Companions section displays these profiles. The Living Campaign n
 **Backward compatibility:** Companion ID keys `pippa`, `bromli`, `lethariel` are unchanged, so trust, affection, respect, romance and interaction history remain in place. Historical relationship entries whose person is exactly `Lethariel` display `Lethariel Moonguard`. Active combat records, stored health ledger keys, last damage recipients and recent combat logs also use her full new name while retaining the existing numerical HP. The original story text and discovery notes are not rewritten.
 
 JavaScript syntax checks and simulated companion profile / save migration checks passed. Offline cache **v34**. Production Cloudflare deploy and live iPhone rendering remain to be confirmed.
+
+
+## Character levels, experience and skill mastery (v36)
+
+**Every playable hero and established party companion starts at level 10 and can reach level 60.** Leveling is determined entirely by the local game engine, not by Gemini narration. Existing save data migrates automatically without changing story, HP, Energy, currency, professions, relationships, or learned character appearance. Character-specific progression lives under `soa-progression-v1` and is included in `SAVES`, so it follows the independent per-character save-slot system and appears in all-character backups. Unknown additional party members are initialized at level 10 only after their names are actually established as participating allies; no identities are invented.
+
+### Level calculations
+- XP required to advance from level `L` to `L+1`: **`140 + 22*L + 2*L²`** (560 XP from level 10 to 11). Multiple levels may be gained from one reward; at **level 60** additional XP does not accumulate in the current-level bar.
+- Successful skill checks award **16 XP (Easy), 23 XP (Medium), 30 XP (Hard)** and **2 practice points**. Failed checks earn **7 XP** and **1 practice point**. Only actual resolved actions earn credit; previews, invalid attempts, scene refreshes, and retrying Gemini do not.
+- Skill ranks begin at 0 and stop at 15. Rank `R` costs `4 + 2*R` practice points to advance. The trained ranks in Bluff, Bribe, Romance and Threaten improve their existing d20 skill bonuses. Stealth, Engineering, Investigation, Persuasion and Combat ranks grant **+0.8 percentage points of success chance per rank** where applicable. Hero level grants **+0.15 percentage points per level above 10** to applicable d100 action and tracked hit rolls, within preexisting probability caps; the displayed dice previews use these same authoritative calculations. Profession levels/skill-up chances remain separate.
+- Combat skill checks are earned for actual attempts. Named companions participating in relevant shared tasks can earn independent practice and XP where that character and action are both established in the scene.
+- Confirmed encounter victory grants **`55 + 0.8 × enemy maximum HP`**, rounded, per defeated enemy (capped to 5,000 XP per battle). Only after the **last tracked hostile has been defeated and the following scene confirms no further hostile** is a battle paid. Eligible, identified allies who took part receive **70% of the victory XP**, individually. Each reward is save-receipted to prevent duplicate claims after a retry or refresh. Retreating, Vanishing, and unresolved battles do not grant victory XP.
+- The **original scripted offline adventure** also grants combat practice and an idempotent XP award after defeating an opponent; it otherwise retains its own original damage, loot and action mechanics.
+
+### UI and continuity
+- **Character Record** shows Level 10–60, XP progress bar, expandable trained skill ranks, practice toward next rank and recent rewards.
+- **Companion profiles** display individual levels and XP bars. Additional named expedition members have progression tracked in the hero record.
+- **Hero selection** shows the actual level from saved character slots; player level and companion levels are also passed to the AI as informational, non-authoritative context, with explicit instructions not to invent XP or level gains.
+- The main Adventure includes unobtrusive earned-XP messages and notifications upon skill increase or level-up.
+- Offline service-worker cache **v36** includes both `progression.js` and `progression.css`.
+
+**Validation:** Parsing checks passed for all edited scripts. Simulated checks confirmed skill gains and training, bonus/odds behavior, receipt-based duplicate protection, different progression for each companion, level 59→60 cap with zero overflow, registered extra expedition members, and delayed once-only XP after a battle is fully won. Full browser/cloud deployment and iPhone presentation have not yet been verified.
