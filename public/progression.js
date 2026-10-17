@@ -3,6 +3,7 @@
 const KEY="soa-progression-v1",START_LEVEL=10,MAX_LEVEL=60,MAX_RANK=15;
 const SKILLS=["bluff","bribe","romance","threaten","stealth","engineering","investigate","social","combat"];
 const HERO="hero",PARTY=["pippa","bromli","lethariel"];
+const knownNames={"Pippa Sparkwhistle":"pippa","Bromli Ironkeg":"bromli","Lethariel Moonguard":"lethariel"};
 const LABELS={bluff:"Bluff",bribe:"Bribe",romance:"Romance",threaten:"Threaten",stealth:"Stealth",engineering:"Engineering",investigate:"Investigation",social:"Persuasion",combat:"Combat"};
 const clamp=(n,lo,hi)=>Math.max(lo,Math.min(hi,Number.isFinite(Number(n))?Math.trunc(Number(n)):lo));
 const xpNeeded=level=>level>=MAX_LEVEL?0:140+22*level+2*level*level;
@@ -22,10 +23,21 @@ for(const id of [HERO,...PARTY]){
 }
 if(!Array.isArray(data.receipts))data.receipts=[];
 if(!Array.isArray(data.history))data.history=[];
+if(!data.labels||typeof data.labels!=="object")data.labels={};
 function persist(){try{localStorage.setItem(KEY,JSON.stringify(data));return true}catch{return false}}
 persist();
 const elem=(tag,label,cls)=>{const e=document.createElement(tag);if(label!==undefined)e.textContent=label;if(cls)e.className=cls;return e};
-function identity(id){return [HERO,...PARTY].includes(id)?id:null}
+function identity(id){return [HERO,...PARTY].includes(id)||(typeof id==="string"&&id.startsWith("party:")&&Object.prototype.hasOwnProperty.call(data.actors,id))?id:null}
+function register(name){
+ if(typeof name!=="string"||!name.trim())return null;
+ const cleanName=name.trim().slice(0,60);
+ if(knownNames[cleanName])return knownNames[cleanName];
+ const slug=cleanName.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,50);
+ if(!slug)return null;
+ const id="party:"+slug;
+ if(!data.actors[id])data.actors[id]=blank();data.labels[id]=cleanName;
+ persist();return id;
+}
 function score(id=HERO){return data.actors[identity(id)||HERO]}
 function level(id=HERO){return score(id).level}
 function skill(id,name){
@@ -76,7 +88,7 @@ function battle({receipt,defeated,allies}){
  check({receipt:"victory:"+receipt,name:"combat",success:true,difficulty:"medium",actorId:HERO});
  const party=[];
  for(const id of new Set(Array.isArray(allies)?allies:[])){
-  if(!PARTY.includes(id))continue;
+  if(!identity(id)||id===HERO)continue;
   const reward=award(id,Math.max(1,Math.round(amount*.7)),"party:"+receipt+":"+id,"Shared battle victory");
   check({receipt:"victory:"+receipt,name:"combat",success:true,difficulty:"medium",actorId:id});
   party.push({id,...reward});
@@ -101,8 +113,10 @@ function heroPanel(){
   row.append(elem("span",LABELS[name]),elem("span","Rank "+x.rank+" / "+MAX_RANK+" · "+(x.rank===MAX_RANK?"Mastered":x.practice+"/"+skillNeeded(x.rank)+" practice")));detail.append(row);
  }
  box.append(detail);
+ const extras=Object.entries(data.labels);
+ if(extras.length){const party=elem("details",undefined,"soa-xp-history");party.append(elem("summary","Additional party members ("+extras.length+")"));for(const [id,name] of extras){const p=progress(id);party.append(elem("p",name+" · Level "+p.level+" · "+(p.level===MAX_LEVEL?"Maximum level":p.xp+"/"+p.needed+" XP")))}box.append(party)}
  const history=recent();
- if(history.length){const logs=elem("details",undefined,"soa-xp-history");logs.append(elem("summary","Recent experience"));for(const h of history){const who=h.actor==="hero"?"You":h.actor[0].toUpperCase()+h.actor.slice(1);logs.append(elem("p",who+" · +"+h.amount+" XP · "+h.reason))}box.append(logs)}
+ if(history.length){const logs=elem("details",undefined,"soa-xp-history");logs.append(elem("summary","Recent experience"));for(const h of history){const who=h.actor==="hero"?"You":data.labels[h.actor]||h.actor[0].toUpperCase()+h.actor.slice(1);logs.append(elem("p",who+" · +"+h.amount+" XP · "+h.reason))}box.append(logs)}
  return box;
 }
 function companionBadge(id){
@@ -120,6 +134,6 @@ function refresh(){
  }
  window.soaCompanions?.refreshProgress?.();
 }
-window.soaProgression={level,progress,skill,bonus,check,battle,recent,refresh,heroPanel,companionBadge,xpNeeded,skillNeeded,MAX_LEVEL};
+window.soaProgression={level,progress,skill,bonus,check,battle,register,recent,refresh,heroPanel,companionBadge,xpNeeded,skillNeeded,MAX_LEVEL};
 document.addEventListener("DOMContentLoaded",refresh);
 })();
