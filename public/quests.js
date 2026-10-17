@@ -28,6 +28,7 @@ function accept(campaign,id,location){
 function onDefeat(campaign,enemy){
  const q=ensure(campaign),name=String(enemy||"").trim().toLowerCase();
  for(const id of Object.keys(q.accepted)){const c=definition(id);if(c&&c.target.toLowerCase()===name&&!q.completed[id])q.completed[id]={turn:campaign.turn||0,target:c.target};}
+ missionDefeat(campaign,name);
 }
 function claim(campaign,id,location,wallet){
  const board=boardAt(location),contract=board?.contracts.find(c=>c.id===id);
@@ -42,6 +43,7 @@ function claim(campaign,id,location,wallet){
  q.claimed[id]={turn:campaign.turn||0,amount:contract.copper,items};
  q.inventory.push(...items.map(name=>({name,source:contract.title,rarity:name===rare?"rare":"common"})));
  q.lastReward={title:contract.title,copper:contract.copper,items,receipt,atTurn:campaign.turn||0};
+ q.rewardHistory||=[];q.rewardHistory.push(q.lastReward);q.rewardHistory=q.rewardHistory.slice(-60);
  return {copper:contract.copper,items,wallet:wallet+contract.copper,description:"The bounty clerk counts "+format(contract.copper)+" into your purse"+(items.length?" and issues "+items.join(", "):"")+". Verified payout."};
 }
 // User-confirmed completed Stormwind explosives operation: one 5g party award.
@@ -58,6 +60,62 @@ function grantStormwindMission(campaign,wallet){
  q.lastReward=reward;
  q.rewardHistory||=[];q.rewardHistory.push(reward);q.rewardHistory=q.rewardHistory.slice(-60);
  return {wallet:wallet+amount,copper:amount,items:[],description:"SI:7 quartermaster: \"Five gold for your entire crew, Lugnuts. Stormwind owes you all a debt.\" Party mission reward: +5g 0s 0c."};
+}
+
+// Engine-authored mission contracts: AI cannot invent payout values or complete objectives.
+const MISSIONS=[
+ {id:"si7-intelligence",title:"SI:7 Intelligence Courier",issuer:"SI:7 Handler",region:/stormwind|old town/i,objective:{kind:"defeat",target:"Defias Intelligence Courier"},reward:{copper:18000,items:[{name:"Sealed SI:7 Field Kit",rarity:"uncommon",slot:"trinket"}]},description:"Intercept the named Defias courier and return to the SI:7 handler."},
+ {id:"duskwood-necromancer",title:"Raven Hill Necromancer",issuer:"Darkshire Watch",region:/darkshire|duskwood|raven hill/i,objective:{kind:"defeat",target:"Raven Hill Necromancer"},reward:{copper:24500,items:[{name:"Consecrated Silver Pendant",rarity:"uncommon",slot:"trinket"}]},description:"Defeat the named necromancer and return to the Darkshire Watch."},
+ {id:"ironforge-saboteur",title:"Ironforge Supply Sabotage",issuer:"Ironforge Quartermaster",region:/ironforge|dun morogh/i,objective:{kind:"defeat",target:"Mountain Saboteur"},reward:{copper:21000,items:[{name:"Reinforced Explorer's Gloves",rarity:"uncommon",slot:"armor"}]},description:"Defeat the wanted saboteur and return to the quartermaster."}
+];
+function journal(campaign){const q=ensure(campaign);q.missions||={};q.rewardHistory||=[];return q}
+function missionById(id){return MISSIONS.find(m=>m.id===id)}
+function startMission(campaign,id,location){
+ const mission=missionById(id),q=journal(campaign);
+ if(!mission||!mission.region.test(String(location||"")))return {error:"This mission is not offered here."};
+ if(q.missions[id])return {error:"Mission already recorded."};
+ q.missions[id]={state:"active",started:campaign.turn||0};
+ return {message:"Mission accepted: "+mission.title+" · "+format(mission.reward.copper)+(mission.reward.items.length?" + "+mission.reward.items.map(x=>x.name).join(", "):"")+". Objective: "+mission.description};
+}
+function missionDefeat(campaign,name){
+ const q=journal(campaign);
+ for(const [id,state] of Object.entries(q.missions)){
+  const m=missionById(id);
+  if(state.state==="active"&&m&&m.objective.kind==="defeat"&&m.objective.target.toLowerCase()===String(name).toLowerCase()){
+   state.state="completed";state.completed=campaign.turn||0;state.proof=m.objective.target;
+  }
+ }
+}
+function claimMission(campaign,id,location,wallet){
+ const q=journal(campaign),m=missionById(id),entry=q.missions[id];
+ if(!m||!entry||entry.state!=="completed"||!m.region.test(String(location||"")))return {error:"The mission must be verified and returned to its issuing region."};
+ if(!Number.isSafeInteger(wallet)||wallet<0||wallet>Number.MAX_SAFE_INTEGER-m.reward.copper)return {error:"Invalid wallet value."};
+ const receipt="mission:"+id;
+ if(q.receipts.includes(receipt))return {error:"Already paid."};
+ const items=m.reward.items.map(item=>({...item,source:m.title}));
+ const reward={title:m.title,copper:m.reward.copper,items:items.map(x=>x.name),receipt,atTurn:campaign.turn||0,issuer:m.issuer};
+ q.receipts.push(receipt);q.receipts=q.receipts.slice(-500);
+ entry.state="claimed";entry.reward=reward;
+ q.inventory.push(...items);q.rewardHistory.push(reward);q.rewardHistory=q.rewardHistory.slice(-60);q.lastReward=reward;
+ return {wallet:wallet+m.reward.copper,copper:m.reward.copper,items:reward.items,description:m.issuer+": \"Your verified mission payment is "+format(m.reward.copper)+".\" "+(items.length?"Additional equipment: "+items.map(x=>x.name).join(", ")+".":"")};
+}
+function missionPanel(campaign,location,wallet,onChange){
+ const q=journal(campaign),el=document.createElement("details");
+ const h=document.createElement("summary");h.textContent="Mission Journal & Rewards";el.append(h);
+ for(const m of MISSIONS){
+  const record=q.missions[m.id];
+  if(!record&&!m.region.test(String(location||"")))continue;
+  const row=document.createElement("div");row.style.cssText="border-top:1px solid #a48b68;padding:9px 0";
+  const title=document.createElement("strong");title.textContent=m.title;row.append(title);
+  const desc=document.createElement("p");desc.textContent=m.description+" · Reward "+format(m.reward.copper)+(m.reward.items.length?" + "+m.reward.items.map(x=>x.name).join(", "):"");row.append(desc);
+  const button=document.createElement("button");button.type="button";
+  button.textContent=record?.state==="claimed"?"Paid":record?.state==="completed"?"Claim verified mission reward":record?"In progress":"Accept mission";
+  button.disabled=record?.state==="claimed"||record?.state==="active"||!m.region.test(String(location||""));
+  button.onclick=()=>onChange(record?.state==="completed"?claimMission(campaign,m.id,location,wallet()):startMission(campaign,m.id,location));row.append(button);el.append(row);
+ }
+ const history=document.createElement("details"),hd=document.createElement("summary");hd.textContent="Payment history · "+q.rewardHistory.length+" receipts";history.append(hd);
+ for(const reward of q.rewardHistory.slice().reverse().slice(0,25)){const line=document.createElement("p");line.textContent=reward.title+" · +"+format(reward.copper)+(reward.items?.length?" · "+reward.items.join(", "):"");history.append(line)}
+ el.append(history);return el;
 }
 function panel(campaign,location,wallet,onChange){
  const q=ensure(campaign),board=boardAt(location),wrapper=document.createElement("details");
@@ -79,5 +137,5 @@ function panel(campaign,location,wallet,onChange){
  if(q.inventory.length){const bag=document.createElement("details");const head=document.createElement("summary");head.textContent="Reward inventory · "+q.inventory.length+" items";bag.append(head);for(const item of q.inventory){const p=document.createElement("p");p.textContent=item.name+" ("+item.rarity+") · "+item.source;bag.append(p)}wrapper.append(bag)}
  return wrapper;
 }
-window.soaQuests={boardAt,definition,ensure,accept,onDefeat,claim,grantStormwindMission,panel,format};
+window.soaQuests={boardAt,definition,ensure,accept,onDefeat,claim,grantStormwindMission,panel,missionPanel,startMission,claimMission,missionDefeat,journal,format};
 })();
