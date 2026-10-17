@@ -107,7 +107,15 @@ function render(){save();document.querySelector("#hp").textContent=s.hp+"/100";d
  combatPane.replaceChildren();const foe=s.enemy,last=/^(?:combat|afterbattle|death)$/.test(s.id)?s.flags.lastCombat:null;
  combatPane.hidden=!foe&&!last;
  if(foe||last){
-  const label=document.createElement("h4");label.textContent="Combat status";combatPane.append(label);
+  const label=document.createElement("h4");label.textContent="Battle Overview";combatPane.append(label);
+  const fighter=document.createElement("div");fighter.className="soa-combat-person";
+  const heroHeader=document.createElement("div");heroHeader.className="soa-combat-person-heading";
+  const heroName=document.createElement("strong");heroName.textContent="Snacky Lugnuts";
+  const heroHealth=document.createElement("span");heroHealth.textContent=s.hp+" / 100 HP";heroHeader.append(heroName,heroHealth);
+  const heroRail=document.createElement("div");heroRail.className="soa-combat-ally-rail";heroRail.setAttribute("role","progressbar");
+  heroRail.setAttribute("aria-label","Snacky Lugnuts health");heroRail.setAttribute("aria-valuemin","0");heroRail.setAttribute("aria-valuemax","100");heroRail.setAttribute("aria-valuenow",String(s.hp));
+  const heroFill=document.createElement("div");heroFill.className="soa-combat-ally-fill";heroFill.style.width=Math.max(0,Math.min(100,s.hp))+"%";heroRail.append(heroFill);
+  fighter.append(heroHeader,heroRail);combatPane.append(fighter);
   if(foe){
    const enemyRow=document.createElement("div");enemyRow.className="soa-battle-enemy";
    const title=document.createElement("div");title.className="soa-battle-label";
