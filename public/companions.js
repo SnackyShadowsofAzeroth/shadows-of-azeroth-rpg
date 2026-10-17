@@ -90,9 +90,11 @@ function overnightRest(){
  if(Array.isArray(adventure?.enemies)&&adventure.enemies.some(x=>x.hp>0)){
   last="A hostile encounter is active. Rest is unsafe.";draw();return
  }
- const dayKey=String(adventure?.turn??0)+"|"+place;
- if(r.lastNightDay===dayKey){last="You already shared a peaceful night here. Continue adventuring before resting together again.";draw();return}
- const receipt="shared-night:"+id+":"+String(adventure?.turn??0)+":"+String(adventure?.actionSerial??0);
+ // A fixed story-turn interval prevents farming successive scenes for unlimited XP.
+ const dayKey=Math.floor(Math.max(0,Number(adventure?.turn)||0)/12);
+ if(Number.isInteger(r.lastNightDay)&&dayKey<=r.lastNightDay){last="You have already received a shared-rest bonus during this story period. Spend time adventuring before another overnight rest.";draw();return}
+ 
+ const receipt="shared-night:"+id+":period-"+dayKey;
  const reward=window.soaProgression?.overnightBond?.({receipt,companionId:id,quality:r.affection>=85&&r.trust>=80?2:1});
  if(!reward?.awarded){last="The morning reward could not be recorded. No relationship change was made.";draw();return}
  r.lastNightDay=dayKey;r.nights=(r.nights||0)+1;
