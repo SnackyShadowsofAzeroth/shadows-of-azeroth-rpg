@@ -278,22 +278,15 @@ function hydrateKnownAllyHP(){
   const expected=window.soaAbilities?.get?.(id)?.maxHp;
   if(!Number.isInteger(expected)||expected<1)continue;
   const old=campaign.partyHealth[ally.name];
-  // The original saved HP, including wounds, always outranks an estimate.
-  if(old&&Number.isInteger(old.hp)&&Number.isInteger(old.maxHp)&&!old.derived){
-   ally.hp=old.hp;ally.maxHp=old.maxHp;continue;
-  }
-  if(Number.isInteger(ally.hp)&&Number.isInteger(ally.maxHp)&&!old?.derived){
-   campaign.partyHealth[ally.name]={hp:ally.hp,maxHp:ally.maxHp};
-   continue;
-  }
-  if(old?.derived&&Number.isInteger(old.hp)&&Number.isInteger(old.maxHp)){
-   // Level increase enlarges maximum HP without curing existing wounds.
-   const delta=expected-old.maxHp;
-   ally.maxHp=expected;ally.hp=Math.max(0,Math.min(expected,old.hp+Math.max(0,delta)));
-  }else{
-   ally.hp=expected;ally.maxHp=expected;
-  }
-  campaign.partyHealth[ally.name]={hp:ally.hp,maxHp:ally.maxHp,derived:true};
+  // Derive maximum HP from class hit die, CON and level. Preserve existing wounds
+  // as missing HP; legacy manual entries may establish wounds but not max HP.
+  const priorMax=Number.isInteger(old?.maxHp)&&old.maxHp>0?old.maxHp:Number.isInteger(ally.maxHp)&&ally.maxHp>0?ally.maxHp:expected;
+  const priorCurrent=Number.isInteger(old?.hp)?old.hp:Number.isInteger(ally.hp)?ally.hp:priorMax;
+  const missing=Math.max(0,priorMax-Math.max(0,Math.min(priorMax,priorCurrent)));
+  ally.maxHp=expected;
+  ally.hp=Math.max(0,expected-missing);
+  campaign.partyHealth[ally.name]={hp:ally.hp,maxHp:expected,derived:true};
+
  }
 }
 function combatParty(){
@@ -387,24 +380,13 @@ function drawEnemyStatus(box){
   if(Number.isFinite(ally.hp)&&Number.isFinite(ally.maxHp)&&ally.maxHp>0){
    const bar=document.createElement("div");bar.className="soa-combat-ally-rail";bar.setAttribute("role","progressbar");bar.setAttribute("aria-label",ally.name+" health");bar.setAttribute("aria-valuemin","0");bar.setAttribute("aria-valuemax",String(ally.maxHp));bar.setAttribute("aria-valuenow",String(ally.hp));
    const fill=document.createElement("div");fill.className="soa-combat-ally-fill";fill.style.width=Math.max(0,Math.min(100,ally.hp/ally.maxHp*100))+"%";bar.append(fill);item.append(bar);
-  }if(!ally.player){
-   const setup=document.createElement("details");setup.className="soa-hp-setup";
-   const caption=document.createElement("summary");caption.textContent=(Number.isFinite(ally.hp)?"Review / correct ":"Confirm ")+ally.name+"'s HP";setup.append(caption);
-   const form=document.createElement("form");const current=document.createElement("input"),maximum=document.createElement("input");
-   current.type=maximum.type="number";current.min="0";maximum.min="1";current.max=maximum.max="500";
-   current.required=maximum.required=true;current.placeholder="Current HP";maximum.placeholder="Maximum HP";
-   if(Number.isInteger(ally.hp))current.value=String(ally.hp);if(Number.isInteger(ally.maxHp))maximum.value=String(ally.maxHp);
-   current.setAttribute("aria-label",ally.name+" current HP");maximum.setAttribute("aria-label",ally.name+" maximum HP");
-   const apply=document.createElement("button");apply.type="submit";apply.textContent="Record known HP";apply.disabled=busy||!!pending();
-   const error=document.createElement("span");error.className="soa-combat-hint";
-   form.append(current,maximum,apply,error);
-   form.onsubmit=e=>{e.preventDefault();const hp=Number(current.value),max=Number(maximum.value);
-    if(!Number.isInteger(hp)||!Number.isInteger(max)||max<1||max>500||hp<0||hp>max){error.textContent="Enter known values: 0 ≤ current HP ≤ maximum HP ≤ 500.";return}
-    const found=campaign.combatAllies?.find(x=>x.name===ally.name);
-    if(!found||busy||pending())return;
-    found.hp=hp;found.maxHp=max;campaign.partyHealth||={};campaign.partyHealth[found.name]={hp,maxHp:max,derived:false};store();draw();
-   };setup.append(form);item.append(setup);
   }
+  const statId=ally.player?"hero":({"Pippa Sparkwhistle":"pippa","Bromli Ironkeg":"bromli","Lethariel Moonguard":"lethariel"})[ally.name];
+  const ac=statId?window.soaAbilities?.get?.(statId)?.armorClass:null;
+  const info=document.createElement("div");info.className="soa-combat-hint";
+  info.textContent=Number.isFinite(ac)?"Armor Class "+ac+" · HP calculated from class, Constitution, and level":"Armor Class unknown · HP tracked by the combat engine";
+  item.append(info);
+
   roster.append(item);
  }
  section.insertBefore(roster,section.children[1]||null);
