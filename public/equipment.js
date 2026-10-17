@@ -25,7 +25,7 @@ const SNACKY_LOADOUT=[
  ["Legs","Triprunner Dungarees"],
  ["Feet","Feet of the Lynx"],
  ["Ring 1","Ironspine’s Eye"],
- ["Ring 2","Field Researcher's Ring"],
+ ["Ring 2","Field Researcher's Loop"],
  ["Main hand","Ruby-Adorned Blade"],
  ["Off hand","Bloody Brass Knuckles"],
  ["Sidearm","Toxic Revenger"],
@@ -88,7 +88,7 @@ function panel(){
  const isSnacky=window.soaCharacters?.profile?.()?.id==="snacky";
  if(isSnacky){
   const title=document.createElement("h3");title.textContent="Snacky's Current Equipment";section.append(title);
-  const hint=document.createElement("p");hint.textContent="Forever item tooltip values shown where verified. Combat uses capped RPG conversions, not raw WoW stat totals. Unresolved ring and Highlander class eligibility are excluded from bonuses.";section.append(hint);
+  const hint=document.createElement("p");hint.textContent="Forever item tooltip values shown where verified. Combat uses capped RPG conversions, not raw WoW stat totals. Only verified Forever item attributes are converted to capped RPG bonuses.";section.append(hint);
   const grid=document.createElement("div");grid.style.cssText="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin:12px 0 20px";
   for(const [slot,name] of SNACKY_LOADOUT){
    const cell=document.createElement("div");cell.style.cssText="border:1px solid #ae9365;border-radius:8px;padding:9px;min-width:0";
