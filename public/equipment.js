@@ -1,5 +1,7 @@
 (()=>{"use strict";
 const CATALOG={
+ "Defias Shadowblade":{slot:"weapon",rarity:"rare",classes:["Rogue"],bonuses:{attack:1,damage:2},description:"Attack +1, weapon damage +2 · Rogue"},
+ "Ironforge Warhammer":{slot:"weapon",rarity:"rare",classes:["Warrior","Paladin"],bonuses:{attack:1,damage:2},description:"Attack +1, weapon damage +2 · Warrior/Paladin"},
  "Sealed SI:7 Field Kit":{slot:"trinket",rarity:"uncommon",classes:["Rogue"],bonuses:{DEX:1},description:"Dexterity +1"},
  "Consecrated Silver Pendant":{slot:"trinket",rarity:"uncommon",classes:[],bonuses:{WIS:1},description:"Wisdom +1"},
  "Reinforced Explorer's Gloves":{slot:"armor",rarity:"uncommon",classes:[],bonuses:{ac:1},description:"Armor Class +1"},
@@ -37,7 +39,7 @@ function modifiers(){
 }
 function panel(){
  const q=holder();if(!q)return null;
- const section=document.createElement("details"),head=document.createElement("summary");head.textContent="Equipment & Reward Inventory";section.append(head);
+ const section=document.createElement("details"),head=document.createElement("summary");section.open=sessionStorage.getItem("soa-equipment-panel-open")==="1";section.ontoggle=()=>sessionStorage.setItem("soa-equipment-panel-open",section.open?"1":"0");head.textContent="Equipment & Reward Inventory";section.append(head);
  const intro=document.createElement("p");intro.textContent="Equipped items modify your stats and combat; rewards remain in your saved inventory.";section.append(intro);
  const items=q.inventory||[],eq=equipment();
  if(!items.length){const p=document.createElement("p");p.textContent="No quest equipment collected yet.";section.append(p)}
