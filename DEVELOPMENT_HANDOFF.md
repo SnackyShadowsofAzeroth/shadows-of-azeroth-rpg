@@ -85,3 +85,9 @@ Outstanding priorities: complete automated integration tests for combat, save sw
 - Active tab saved under soa-layout-v1; desktop original long-scroll layout remains unchanged. Character menu overlay and native in-panel controls remain.
 - Rollback plan: remove the <link ... mobile-layout.css> and <script src="./mobile-layout.js" defer> tags from public/index.html, bump service-worker cache version, and redeploy. Files can remain in repository unused. PRE-UI baseline commit: fd9cb267032efa7cd979efbcdfb572380acb3ce5 (note gameplay changes after this commit SHOULD NOT be reverted). Last preceding non-UI app change commit: c8b49b2a250e70024138985968392e34bce3c54c. Revert ONLY UI related files, not whole repository history or saves.
 - Known verification gap: must test live Safari with screen reader/safe-area and validate dynamic panels, all tab targets, and scroll navigation. No existing user saves reset.
+
+
+## Social progression balance (2026-10-16)
+- Casual conversations, greetings, joking, flirting, compliments and companionship can still affect relationships but do not award Social skill practice or character XP; meaningful negotiations, persuasion, interrogations, deception and high-stakes influence still qualify.
+- Meaningful Social-family checks award 8/16/28 XP on easy/medium/hard success or 3 on failure, compared with previous 16/23/30 and 7. Other skills unchanged; existing Social ranks and prior XP retained.
+- campaign.js classifies conversational intent before calling progression.check, which independently rejects non-meaningful Social-family awards. Companion passive Social practice also respects eligibility. Cache v25. This is heuristic text classification and needs gameplay verification for unusual custom wording; live iPhone unverified.
