@@ -26,3 +26,12 @@ public/characters.js updated on main (commit 5862c9b): gender field, basic gear 
 - Do not send empty GitHub file content or overwrite files without first fetching their existing SHA/content.
 - Keep conversations shorter; read this handoff and repository code in a new session.
 - Before changes that may reset or affect saves, request backup and explicit permission.
+
+
+## Combat overhaul (2026-10-16)
+- Added public/combat-rules.js reusable d20 resolution module; public/index.html loads it before campaign.js; sw.js caches it as v15.
+- All real tracked combat exchanges in public/campaign.js now roll d20 + hero proficiency + DEX vs derived enemy AC, with natural 1 misses, natural 20 hits/criticals, and dice-based damage.
+- Hostile attacks also roll d20 + estimated enemy attack modifier vs the targeted hero/companion's derived AC. Evasion imposes disadvantage; Kick on hit interrupts retaliation. Riposte remains gated behind a parry.
+- Combat UI reveals attack totals and AC, and keeps the one-exchange-at-a-time flow. HP remains derived and manual editing is removed. Offline game scripts remain in use.
+- Source JS syntax and deterministic attack-rule edge cases tested (natural 1, natural 20, advantage, disadvantage, critical damage).
+- Caveat: unknown enemies still receive a deterministic estimated AC/attack modifier from HP until creature stat blocks are implemented; full live iPhone and Cloudflare deployment testing remains pending. Preserve existing saves.
