@@ -42,3 +42,6 @@ body.theme-alternative .ai-input::placeholder,body.theme-alternative textarea::p
 /* Group headings label visible content; they are no longer collapse controls. */
 details>summary{list-style:none;cursor:default;pointer-events:none}
 details>summary::-webkit-details-marker{display:none}
+details.soa-collapsible-quests>summary{list-style:disclosure-closed inside;cursor:pointer;pointer-events:auto}
+details.soa-collapsible-quests[open]>summary{list-style-type:disclosure-open}
+details.soa-collapsible-quests>summary::-webkit-details-marker{display:inline-block}
