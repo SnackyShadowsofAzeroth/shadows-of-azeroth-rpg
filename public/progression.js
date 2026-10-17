@@ -72,8 +72,9 @@ function award(id,amount,receipt,reason){
  if(!persist())return {awarded:amount,levels:actor.level-previous,storageWarning:true};
  return {awarded:amount,levels:actor.level-previous,level:actor.level};
 }
-function check({receipt,name,success,difficulty,actorId="hero",practiceOnly=false}){
+function check({receipt,name,success,difficulty,actorId="hero",practiceOnly=false,meaningful=true}){
  if(!receipt||!identity(actorId)||!SKILLS.includes(name)||data.receipts.includes("check:"+actorId+":"+receipt))return {awarded:0,rankUp:false};
+ if(!meaningful&&["social","romance","bluff","bribe","threaten"].includes(name))return {awarded:0,rankUp:false,reason:"Conversation only"};
  const actor=score(actorId),value=skill(actorId,name);
  const old=value.rank;
  value.attempts++;if(success)value.successes++;
@@ -83,7 +84,8 @@ function check({receipt,name,success,difficulty,actorId="hero",practiceOnly=fals
  }
  if(value.rank===MAX_RANK)value.practice=0;
  actor.skills[name]=value;
- const amount=success?(difficulty==="hard"?30:difficulty==="easy"?16:23):7;
+ const isSocial=["social","romance","bluff","bribe","threaten"].includes(name);
+ const amount=isSocial?(success?(difficulty==="hard"?28:difficulty==="easy"?8:16):3):(success?(difficulty==="hard"?30:difficulty==="easy"?16:23):7);
  let result;
  if(practiceOnly){
   data.receipts.push("check:"+actorId+":"+receipt);data.receipts=data.receipts.slice(-800);
