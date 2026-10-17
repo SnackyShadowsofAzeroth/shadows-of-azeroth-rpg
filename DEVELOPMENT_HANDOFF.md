@@ -49,3 +49,10 @@ public/characters.js updated on main (commit 5862c9b): gender field, basic gear 
 - Added one-exchange ally combat choices to the living campaign: Bromli shield protection (enemy disadvantage), Pippa engineering snare (d20 vs enemy AC; suppresses a counterattack), Lethariel targeted healing (1d8+5, only to wounded combatants). Each action advances one round and regenerates +10 Energy, with cooldowns tracked in campaign save.
 - Hero-vs-enemy initiative comparison now affects whether an opponent may strike even if defeated/interrupted during the exchange; **this is an initiative-order approximation, not yet a full actor-by-actor sorted queue**. Do not describe it as a full D&D initiative scheduler.
 - New support controls require living combat allies; original offline campaign, save schema, and prior combat options remain. Offline cache bumped to v17. Cloudflare/iPhone end-to-end tests pending.
+
+
+## Relationship dialogue deepening (2026-10-16)
+- Root cause: companion relationship meters reached Gemini but narrative prompt did not strongly prioritize them; successful romantic dialogue could be written as dismissive mission redirection.
+- Gemini campaign function now prioritizes focused conversations, interprets positive affection and established romance consistently, and avoids reflexively redirecting player-led personal conversations to quests. Consent and stage changes remain governed by game mechanics.
+- Client forwards sanitized recent per-companion relationship moments, trust/affection/respect, grievance and romantic status (no credentials). Existing saved relationship data is unchanged and available for narration.
+- Static cache v18; source parse checks passed. Live Cloudflare/Gemini response and current player relationship values have not been independently verified.
