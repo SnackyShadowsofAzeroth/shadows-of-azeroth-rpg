@@ -262,7 +262,15 @@ function drawEnemyStatus(box){
   allyTargets.append(b);
  }
  const info=document.createElement("p");info.className="soa-combat-hint";info.textContent="Selecting an ally drafts a support action. It never heals or spends a turn by itself; health changes require a confirmed action.";roster.append(info);
- if(allyTargets.children.length>1)roster.after(allyTargets);
+ if(allyTargets.children.length>1){
+  const assist=document.createElement("button");assist.type="button";assist.className="soa-assist-button";
+  assist.textContent="Coordinate with selected ally · 1 action";
+  assist.disabled=busy||!!pending()||!combatParty().some(a=>!a.player&&a.name===selectedAllyTarget);
+  assist.onclick=()=>{const target=combatParty().find(a=>!a.player&&a.name===selectedAllyTarget);if(!target)return;
+   choose({text:"Coordinate defensively with "+target.name+" to assist their next move without inventing healing, supplies, damage or extra turns.",type:"investigate",difficulty:"medium"});
+  };
+  allyTargets.append(assist);roster.after(allyTargets);
+ }
  const picker=document.createElement("div");picker.className="soa-combat-targets";const label=document.createElement("strong");label.textContent="Choose an enemy target";picker.append(label);
  for(const foe of enemies){
   const button=document.createElement("button");button.type="button";button.className="soa-target-button";button.textContent=foe.name+" · "+foe.hp+"/"+foe.maxHp+" HP";button.setAttribute("aria-pressed",String(selectedCombatTarget===foe.name));
