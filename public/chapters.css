@@ -11,10 +11,23 @@ body.theme-alternative .soa-quest-entry{border:1px solid #a68d61;border-radius:1
 body.theme-alternative .soa-quest-entry h4{margin:0 0 10px;font:700 16px Georgia,serif;color:#56341e}
 body.theme-alternative .soa-quest-objective{display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid #b3986d;padding:10px 0;font:13px/1.5 system-ui}
 body.theme-alternative .soa-quest-objective button{width:auto;min-height:35px;padding:6px 9px;margin:0;flex-shrink:0;font:600 11px system-ui}
-body.theme-alternative .soa-archive-entry{margin:12px 0;padding:12px;background:#e5d0a9ab;border-left:4px solid #997142;border-radius:6px;font:13px/1.65 system-ui;color:#503720}
-body.theme-alternative .soa-archive-entry strong{font:700 14px/1.5 Georgia,serif}
-body.theme-alternative .soa-archive-entry p{margin:5px 0}
 body.theme-alternative .soa-journal-record{border-bottom:1px solid #96744975;margin:0;padding:10px 2px;color:#503a24;font:13px/1.6 system-ui}
+body.theme-alternative .soa-personal-journal{margin-top:8px}
+body.theme-alternative .soa-journal-compose,
+body.theme-alternative .soa-journal-edit{display:grid;gap:10px;margin:0 0 18px;padding:13px;border:1px solid #a58a61;border-radius:10px;background:linear-gradient(145deg,#f5e3bc,#dfc391)}
+body.theme-alternative .soa-journal-compose label{display:grid;gap:8px;font:700 14px/1.5 system-ui;color:#50351d}
+body.theme-alternative .soa-journal-compose textarea,
+body.theme-alternative .soa-journal-edit textarea{width:100%;min-height:108px;resize:vertical;box-sizing:border-box;padding:12px;border:1px solid #a58b60;border-radius:8px;background:#fff0cb;color:#392719;font:15px/1.55 system-ui}
+body.theme-alternative .soa-journal-compose button,
+body.theme-alternative .soa-journal-edit button{min-height:44px;margin:0}
+body.theme-alternative .soa-journal-list-heading{margin:16px 2px 6px;font:700 16px/1.4 Georgia,serif;color:#57371f}
+body.theme-alternative .soa-personal-entry{margin:9px 0;padding:10px 12px;border:1px solid #a68d61;border-radius:9px;background:#f3dfb39e}
+body.theme-alternative .soa-personal-entry .soa-journal-record{white-space:pre-wrap;overflow-wrap:anywhere;border:0;margin:0;padding:2px 0 10px}
+body.theme-alternative .soa-entry-actions{display:flex;justify-content:flex-end;gap:8px;border-top:1px solid #aa9165;padding-top:8px}
+body.theme-alternative .soa-entry-actions button{width:auto;min-width:78px;min-height:38px;margin:0;padding:7px 12px;font:650 12px system-ui}
+body.theme-alternative .soa-entry-actions button:last-child{background:linear-gradient(#76504a,#50322d);border-color:#9b6658}
+body.theme-alternative .soa-journal-edit{grid-template-columns:1fr 1fr}
+body.theme-alternative .soa-journal-edit textarea{grid-column:1/-1}
 body.theme-alternative .soa-chapter-proposal{padding:15px;margin:17px 0;border:2px solid #a77e4c;border-radius:10px;background:#eed49be6;color:#53351d}
 body.theme-alternative .soa-chapter-proposal strong{font:700 17px Georgia,serif}
 body.theme-alternative .soa-chapter-proposal p{font:13px/1.65 system-ui}
