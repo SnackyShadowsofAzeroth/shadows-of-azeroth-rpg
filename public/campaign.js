@@ -85,7 +85,76 @@ function socialCheck(action,skill){
  s.time++;s.en=Math.min(100,s.en+10);
  return (ok?"Success":"Complication")+": "+skill[0].toUpperCase()+skill.slice(1)+" check: d20 "+roll+" + "+bonus+" = "+total+" vs DC "+dc+". "+effect+" Result is authoritative. Do not fabricate further costs, relationship stages, or compelled consent.";
 }
+function livingEnemies(){return Array.isArray(campaign?.enemies)?campaign.enemies.filter(e=>e&&e.hp>0&&e.maxHp>0):[]}
+function fightExchange(action){
+ const targets=livingEnemies();
+ if(!targets.length)return null;
+ if(s.en<35){status("Not enough Energy for combat (35 required).");return null}
+ const requested=String(action.text||"").toLowerCase();
+ const matches=targets.filter(e=>requested.includes(e.name.toLowerCase()));
+ const enemy=matches.length===1?matches[0]:targets.length===1?targets[0]:null;
+ if(!enemy){status("Choose one target by name in a Custom Combat action.");return null}
+ const oldHP=enemy.hp,heroHP=s.hp,oldEnergy=s.en;
+ const accuracy=Math.max(.25,Math.min(.90,.74-s.alert*.04+(action.difficulty==="easy"?.08:action.difficulty==="hard"?-.13:0)));
+ const hit=Math.random()<accuracy;
+ const dealt=hit?Math.min(enemy.hp,14+Math.floor(Math.random()*11)):0;
+ enemy.hp=Math.max(0,enemy.hp-dealt);
+ const retaliates=enemy.hp>0&&Math.random()<.46;
+ const taken=retaliates?Math.min(Math.max(0,s.hp-1),4+Math.floor(Math.random()*8)):0;
+ s.hp=Math.max(1,s.hp-taken);s.en=Math.min(100,s.en-35+10);s.time++;
+ const defeated=enemy.hp===0;
+ campaign.combatRound=(Number(campaign.combatRound)||0)+1;
+ campaign.lastExchange={round:campaign.combatRound,target:enemy.name,dealt,taken,hit,defeated,enemyBefore:oldHP,enemyAfter:enemy.hp,enemyMax:enemy.maxHp,heroBefore:heroHP,heroAfter:s.hp,energyBefore:oldEnergy,energyAfter:s.en};
+ if(defeated){
+  campaign.defeatedEnemies||=[];
+  campaign.defeatedEnemies.push(String(campaign.enemyLocation||campaign.scene?.location||"")+"|"+enemy.name.toLowerCase());
+  campaign.defeatedEnemies=campaign.defeatedEnemies.slice(-80);
+ }
+ const effect=(hit?"Hit "+enemy.name+" for "+dealt+" HP.":"Missed "+enemy.name+".")+" Enemy HP "+oldHP+"/"+enemy.maxHp+" -> "+enemy.hp+"/"+enemy.maxHp+". "+(retaliates?"Enemy retaliates for "+taken+" HP.":"Enemy causes no damage.")+" Player HP "+heroHP+" -> "+s.hp+"; Energy "+oldEnergy+" -> "+s.en+". "+(defeated?"Opponent defeated. ":"");
+ return (hit?"Success":"Complication")+": Combat exchange "+campaign.combatRound+": "+effect+"Exactly one combat exchange. No automatic loot or additional actions.";
+}
+function updateLivingEnemies(scene){
+ if(!Array.isArray(scene?.enemies))return;
+ const location=String(scene.location||"");
+ const previous=campaign.enemyLocation===location?livingEnemies():[];
+ const defeated=campaign.defeatedEnemies||[];
+ const next=[];
+ for(const item of scene.enemies.slice(0,4)){
+  if(!item||typeof item.name!=="string"||!Number.isInteger(item.maxHp)||item.maxHp<1)continue;
+  const name=item.name.trim().slice(0,60),id=location+"|"+name.toLowerCase();
+  if(!name||defeated.includes(id)||next.some(x=>x.name.toLowerCase()===name.toLowerCase()))continue;
+  const existing=previous.find(x=>x.name.toLowerCase()===name.toLowerCase());
+  const maxHp=Math.min(500,item.maxHp);
+  next.push(existing||{name,maxHp,hp:Math.max(1,Math.min(maxHp,Math.round(Number(item.hp)||maxHp)))});
+ }
+ campaign.enemies=next;campaign.enemyLocation=location;
+}
+function drawEnemyStatus(box){
+ const enemies=livingEnemies(),exchange=campaign?.lastExchange;
+ if(!enemies.length&&!exchange)return;
+ const section=document.createElement("section");section.className="soa-enemy-status";
+ const heading=document.createElement("h4");heading.textContent="Combat status";section.append(heading);
+ for(const enemy of enemies){
+  const item=document.createElement("div");item.className="soa-foe";
+  const header=document.createElement("div");header.className="soa-foe-heading";
+  const name=document.createElement("strong");name.textContent=enemy.name;
+  const hp=document.createElement("span");hp.textContent=enemy.hp+" / "+enemy.maxHp+" HP";
+  header.append(name,hp);
+  const rail=document.createElement("div");rail.className="soa-foe-track";rail.setAttribute("role","progressbar");
+  rail.setAttribute("aria-label",enemy.name+" health");rail.setAttribute("aria-valuemin","0");rail.setAttribute("aria-valuemax",String(enemy.maxHp));rail.setAttribute("aria-valuenow",String(enemy.hp));
+  const fill=document.createElement("div");fill.className="soa-foe-fill";fill.style.width=Math.max(0,Math.min(100,enemy.hp/enemy.maxHp*100))+"%";rail.append(fill);item.append(header,rail);section.append(item);
+ }
+ if(exchange){
+  const summary=document.createElement("div");summary.className="soa-exchange";
+  const title=document.createElement("strong");title.textContent="Last exchange · Round "+exchange.round;
+  const dealt=document.createElement("p");dealt.textContent=exchange.hit?"Damage dealt: "+exchange.dealt+" HP to "+exchange.target+" ("+exchange.enemyBefore+" → "+exchange.enemyAfter+"/"+exchange.enemyMax+").":"Missed "+exchange.target+" · 0 damage.";
+  const taken=document.createElement("p");taken.textContent="Damage received: "+exchange.taken+" HP · Your health "+exchange.heroBefore+" → "+exchange.heroAfter+".";
+  summary.append(title,dealt,taken);if(exchange.defeated){const note=document.createElement("p");note.textContent=exchange.target+" defeated; no loot collected automatically.";summary.append(note)}section.append(summary);
+ }
+ box.append(section);
+}
 function result(action){
+ if(action.type==="combat"&&livingEnemies().length)return fightExchange(action);
  const skill=socialSkill(action);if(skill)return socialCheck(action,skill);
  const t=action.type;let cost=0,chance=1,damage=0;
  if(t==="stealth"){cost=20;chance=.78-s.alert*.08}
