@@ -256,6 +256,11 @@ function updateLivingEnemies(scene){
  // If Gemini omits surviving enemies right after a strike, keep their locally tracked HP.
  // Deliberate movement or noncombat disengagement can clear the previous encounter.
  if(!next.length&&previous.length&&campaign.pending?.combat)next.push(...previous);
+ // Disengaging from a fight without defeating every tracked foe ends that encounter
+ // without a victory payment. A later fight starts a new receipt and reward pool.
+ if(!next.length&&!campaign.pending?.combat&&campaign.xpEncounter?.active&&!campaign.xpEncounter.pendingVictory){
+  campaign.xpEncounter.active=false;campaign.xpEncounter.abandoned=true;
+ }
  campaign.enemies=next;campaign.enemyLocation=location;
 }
 function combatParty(){
