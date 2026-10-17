@@ -154,6 +154,7 @@ function concludeProgressionEncounter(){
  return result;
 }
 function resolvedSkillName(choice){
+ if(choice.type==="combat")return "combat";
  const social=socialSkill(choice);
  if(social)return social;
  const t=String(choice.type||"");
@@ -523,6 +524,7 @@ async function choose(choice){
  const detected=dialogueFromCustom(choice);if((detected||socialSkill(choice))&&choice.custom&&choice.type==="investigate")choice={...choice,type:"social"};
  const resolution=result(choice);
  if(!resolution){if(!socialSkill(choice)&&choice.type!=="combat")status("Not enough Energy for that action.");return}
+ campaign.lastProgression="";
  campaign.actionSerial=(Number(campaign.actionSerial)||0)+1;
  const actionReceipt="turn-"+campaign.turn+"-action-"+campaign.actionSerial;
  recordActionPractice(choice,resolution,actionReceipt);
