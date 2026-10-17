@@ -193,9 +193,10 @@ function recordCombatDelta(enemy,dealt,taken,recipient,recipientBefore,recipient
 }
 function drawEnemyStatus(box){
  const enemies=livingEnemies(),exchange=campaign?.lastExchange;
- if(!enemies.length&&!exchange&&!(campaign?.combatAllies||[]).length)return;
+ if(!enemies.length&&!exchange&&!(campaign?.combatAllies||[]).length&&!campaign?.scene?.choices?.some(x=>x.type==="combat"))return;
  const section=document.createElement("section");section.className="soa-enemy-status";
- const heading=document.createElement("h4");heading.textContent="Combat status";section.append(heading);
+ const heading=document.createElement("h4");heading.textContent="Battle Overview";section.append(heading);
+ if(!enemies.length){const hint=document.createElement("p");hint.className="soa-combat-hint";hint.textContent="No enemy HP has been confirmed for this scene yet. The story will reveal enemy health when combatants are identified.";section.append(hint)}
  for(const enemy of enemies){
   const item=document.createElement("div");item.className="soa-foe";
   const header=document.createElement("div");header.className="soa-foe-heading";
@@ -227,7 +228,24 @@ function drawEnemyStatus(box){
   if(Number.isFinite(ally.hp)&&Number.isFinite(ally.maxHp)&&ally.maxHp>0){
    const bar=document.createElement("div");bar.className="soa-combat-ally-rail";bar.setAttribute("role","progressbar");bar.setAttribute("aria-label",ally.name+" health");bar.setAttribute("aria-valuemin","0");bar.setAttribute("aria-valuemax",String(ally.maxHp));bar.setAttribute("aria-valuenow",String(ally.hp));
    const fill=document.createElement("div");fill.className="soa-combat-ally-fill";fill.style.width=Math.max(0,Math.min(100,ally.hp/ally.maxHp*100))+"%";bar.append(fill);item.append(bar);
-  }roster.append(item);
+  }if(!ally.player&&(!Number.isFinite(ally.hp)||!Number.isFinite(ally.maxHp))){
+   const setup=document.createElement("details");setup.className="soa-hp-setup";
+   const caption=document.createElement("summary");caption.textContent="Confirm "+ally.name+"'s HP";setup.append(caption);
+   const form=document.createElement("form");const current=document.createElement("input"),maximum=document.createElement("input");
+   current.type=maximum.type="number";current.min="0";maximum.min="1";current.max=maximum.max="500";
+   current.required=maximum.required=true;current.placeholder="Current HP";maximum.placeholder="Maximum HP";
+   current.setAttribute("aria-label",ally.name+" current HP");maximum.setAttribute("aria-label",ally.name+" maximum HP");
+   const apply=document.createElement("button");apply.type="submit";apply.textContent="Record known HP";apply.disabled=busy||!!pending();
+   const error=document.createElement("span");error.className="soa-combat-hint";
+   form.append(current,maximum,apply,error);
+   form.onsubmit=e=>{e.preventDefault();const hp=Number(current.value),max=Number(maximum.value);
+    if(!Number.isInteger(hp)||!Number.isInteger(max)||max<1||max>500||hp<0||hp>max){error.textContent="Enter known values: 0 ≤ current HP ≤ maximum HP ≤ 500.";return}
+    const found=campaign.combatAllies?.find(x=>x.name===ally.name);
+    if(!found||busy||pending())return;
+    found.hp=hp;found.maxHp=max;store();draw();
+   };setup.append(form);item.append(setup);
+  }
+  roster.append(item);
  }
  section.insertBefore(roster,section.children[1]||null);
  const allyTargets=document.createElement("div");allyTargets.className="soa-combat-targets soa-combat-ally-targets";
@@ -236,9 +254,10 @@ function drawEnemyStatus(box){
   const b=document.createElement("button");b.type="button";b.className="soa-target-button soa-ally-target-button";
   b.textContent=ally.name+(Number.isFinite(ally.hp)? " · "+ally.hp+"/"+ally.maxHp+" HP":" · HP unknown");
   b.setAttribute("aria-pressed",String(selectedAllyTarget===ally.name));b.disabled=busy||!!pending();
-  b.onclick=()=>{selectedAllyTarget=ally.name;customDraft="Coordinate with "+ally.name+" to protect or assist them without assuming any healing or damage.";customType="investigate";draw()};
+  b.onclick=()=>{selectedAllyTarget=ally.name;customDraft="Coordinate with "+ally.name+" to protect or assist them without assuming any healing or damage.";customType="investigate";customSocialSkill="auto";draw()};
   allyTargets.append(b);
  }
+ const info=document.createElement("p");info.className="soa-combat-hint";info.textContent="Selecting an ally drafts a support action. It never heals or spends a turn by itself; health changes require a confirmed action.";roster.append(info);
  if(allyTargets.children.length>1)roster.after(allyTargets);
  const picker=document.createElement("div");picker.className="soa-combat-targets";const label=document.createElement("strong");label.textContent="Choose an enemy target";picker.append(label);
  for(const foe of enemies){
