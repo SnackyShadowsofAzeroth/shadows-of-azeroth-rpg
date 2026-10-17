@@ -36,14 +36,17 @@ function register(name){
  const cleanName=name.trim().slice(0,60);
  if(knownNames[cleanName]){
   const id=knownNames[cleanName];
-  if(!data.actors[id])data.actors[id]=blank();
-  persist();return id;
+  if(!data.actors[id]){data.actors[id]=blank();persist()}
+  return id;
  }
  const slug=cleanName.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,50);
  if(!slug)return null;
  const id="party:"+slug;
- if(!data.actors[id])data.actors[id]=blank();data.labels[id]=cleanName;
- persist();return id;
+ if(!data.actors[id]||data.labels[id]!==cleanName){
+  if(!data.actors[id])data.actors[id]=blank();
+  data.labels[id]=cleanName;persist();
+ }
+ return id;
 }
 function score(id=HERO){return data.actors[identity(id)||HERO]||data.actors[HERO]}
 function level(id=HERO){return score(id).level}
