@@ -221,7 +221,7 @@ function profilePanel(){
  if(typeof render==="function")render();
  const menu=make("button","☰ Characters");menu.id="soa-characters-button";menu.type="button";menu.onclick=drawMenu;head.append(menu);
  const nav=make("nav",undefined,"soa-quick-nav");nav.setAttribute("aria-label","Game sections");
- for(const [label,targetId] of [["Adventure","campaign-box"],["Journal","soa-chronicle"],["Character","soa-profession-panel"],["Reputation",active.origin==="custom"?"soa-standalone-reputation":"companion-panel"]]){
+ for(const [label,targetId] of [["Adventure","campaign-box"],["Journal","soa-chronicle"],["Character","soa-profession-panel"],["Reputation",active.origin==="custom"?"soa-standalone-reputation":"companion-panel"],["Settings","soa-legacy-ai"]]){
   const jump=make("button",label);jump.type="button";jump.className="soa-quick-link";
   jump.onclick=()=>{const dest=get(targetId);if(dest){const disclosure=dest.matches("details")?dest:dest.querySelector(":scope > details.soa-panel-disclosure");if(disclosure)disclosure.open=true;dest.scrollIntoView({behavior:"smooth",block:"start"})}};
   nav.append(jump);
@@ -230,6 +230,15 @@ function profilePanel(){
  // while the player scrolls through a long scene or character record.
  const pane=make("section");pane.className="panel soa-profession-panel";pane.id="soa-profession-panel";
  head.after(pane);head.after(nav);drawProfessions();window.soaPortraits?.refresh?.();
+}
+function makePanelCollapsible(panelId,key){
+ const panel=get(panelId),heading=panel?.querySelector(":scope > h2");if(!panel||!heading)return;
+ const disclosure=make("details",undefined,"soa-panel-disclosure");disclosure.open=localStorage.getItem(key)==="1";
+ disclosure.ontoggle=()=>localStorage.setItem(key,disclosure.open?"1":"0");
+ const summary=make("summary");summary.append(heading);
+ const content=make("div",undefined,"soa-panel-disclosure-content");
+ for(const child of [...panel.childNodes])if(child!==heading)content.append(child);
+ disclosure.append(summary,content);panel.append(disclosure);
 }
 function drawProfessions(){
  const root=get("soa-profession-panel");if(!root)return;root.replaceChildren();
@@ -344,6 +353,9 @@ window.soaCharacters={retrainPrimaryProfession,updateCraftSkill,profile:selected
 window.addEventListener("pagehide",()=>snapshot(active.id));
 document.addEventListener("DOMContentLoaded",()=>{
  profilePanel();
+ makePanelCollapsible("soa-party-evidence","soa-party-panel-open");
+ makePanelCollapsible("soa-legacy-ai","soa-ai-settings-open");
+ makePanelCollapsible("soa-save-settings","soa-save-settings-open");
  try{if(sessionStorage.getItem(ENTER_KEY)!=="1")drawMenu()}catch(e){drawMenu()}
  // New-character adventures need their own future companions. Snacky's fixed party should not be shown as theirs.
  if(active.origin==="custom"){const pane=get("companion-panel");if(pane)pane.hidden=true;const rep=document.createElement("section");rep.className="panel soa-standalone-reputation";rep.id="soa-standalone-reputation";rep.append(document.createElement("h2"));rep.firstChild.textContent="Reputation";get("soa-profession-panel")?.after(rep);window.soaReputation?.renderInto?.(rep);const journal=get("journal");if(journal?.closest){const legacy=journal.closest("section.panel");if(legacy)legacy.hidden=true}}

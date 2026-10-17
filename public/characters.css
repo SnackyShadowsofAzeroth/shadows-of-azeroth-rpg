@@ -26,6 +26,7 @@
 .soa-profession-panel details summary{cursor:pointer;padding:8px 0;color:inherit}
 .soa-panel-disclosure>summary{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:46px;padding:8px 2px;cursor:pointer;list-style-position:inside;font:700 18px/1.35 Georgia,serif}
 .soa-panel-disclosure>summary:focus-visible{outline:2px solid #9a6f35;outline-offset:3px;border-radius:6px}
+.soa-panel-disclosure>summary>h2{margin:0;font:inherit;color:inherit;text-shadow:inherit}
 .soa-panel-disclosure-content{padding-top:8px}
 body.theme-alternative .soa-panel-disclosure>summary{color:#543217;text-shadow:0 1px 0 #f9e6b9}
 .soa-campaign-disclosure>summary{font-size:clamp(21px,5vw,27px)}
