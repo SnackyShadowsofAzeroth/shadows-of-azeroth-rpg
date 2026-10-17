@@ -264,13 +264,14 @@ function fightExchange(action){
   campaign.enemyInitiative=rules.initiative(block.initiative);
  }
  const advantage=campaign.flags?.advantage?1:0;
- const playerAttack=ability==="riposte"||ability==="evasion"?null:rules.attack(proficiency+dex,targetAC,{advantage});
+ const gearBonus=window.soaEquipment?.modifiers?.()||{};
+ const playerAttack=ability==="riposte"||ability==="evasion"?null:rules.attack(proficiency+dex+(gearBonus.attack||0),targetAC,{advantage});
  const attackRoll=playerAttack?.die??null;
  const hit=ability==="riposte"?true:ability==="evasion"?false:playerAttack.hit;
  const hitTarget=targetAC;
  const damageModifier=dex;
  const arm=rules.weapon(actor,ability);
- const rolled=ability==="riposte"?24+damageModifier:ability==="evasion"?0:rules.damage(arm.die,arm.flat,!!playerAttack?.critical);
+ const rolled=ability==="riposte"?24+damageModifier+(gearBonus.damage||0):ability==="evasion"?0:rules.damage(arm.die,arm.flat+(gearBonus.damage||0),!!playerAttack?.critical);
  const dealt=hit?Math.min(target.hp,rules.mitigate(rolled,arm.type,block)):0;
  target.hp=Math.max(0,target.hp-dealt);
  const defeated=target.hp===0;
@@ -585,6 +586,7 @@ function draw(){
  if(paid){const receipt=document.createElement("p");receipt.className="soa-level-toast";receipt.textContent="MISSION PAID · Stormwind explosives defused · Total party reward: +5g 00s 00c · Credited to shared wallet once.";box.append(receipt)}
  if(questPanel)box.append(questPanel);
  const missions=window.soaQuests?.missionPanel?.(campaign,sc.location,()=>s.money,(result)=>{if(result?.error){status(result.error);return}if(Number.isSafeInteger(result?.wallet)){s.money=result.wallet;save()}store();render();draw();status(result?.description||result?.message||"Mission updated.");});if(missions)box.append(missions);
+ const gear=window.soaEquipment?.panel?.();if(gear)box.append(gear);
  if(/\\b(?:coins?|silver|gold|copper|retainer|payment|payout|reward|stipend|wages)\\b/i.test(sc.story||"")&&/\\b(?:hands? (?:over|you)|slides? (?:an? |the )?(?:iron-bound )?(?:lockbox|coins?)|paid|pays|receiv(?:e|ed)|collect(?:ed)?|claim(?:ed)?|authorized|rewarded)\\b/i.test(sc.story||"")&&!campaign.lastPayment){
   const notice=document.createElement("p");notice.className="soa-level-toast";
   notice.textContent="Payment mentioned in narration · Amount not verified · No currency credited by the game engine.";
@@ -718,4 +720,4 @@ try{campaign=JSON.parse(localStorage.getItem(KEY)||"null")}catch(e){campaign=nul
 migrateCompanionDisplayNames();
 enabled=localStorage.getItem("soa-campaign-enabled")==="1";if(campaign){window.soaChronicle?.attach?.(campaign);store()}window.soaChronicleSetSave?.(store);interfaceUI();get("campaign-mode").checked=enabled;
 if(enabled){if(!campaign)campaign=make();draw();if(!campaign.scene&&navigator.onLine)advance(campaign.lastAction,campaign.lastResult,true)}
-window.soaLivingCampaign={getState:()=>campaign,enabled:()=>enabled,refreshUI:()=>{draw()}};})();
+window.soaLivingCampaign={getState:()=>campaign,enabled:()=>enabled,persist:store,refreshUI:()=>{draw();window.soaCharacters?.refreshProfessions?.()}};})();
