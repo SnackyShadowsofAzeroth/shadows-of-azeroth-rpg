@@ -125,7 +125,7 @@ function drawMenu(){
  const list=make("div",undefined,"soa-character-list");
  for(const p of roster.characters){
   const item=make("div",undefined,"soa-character-item");
-  const description=make("div");description.append(make("strong",p.name),make("span",p.faction+" · "+p.race+" "+p.className+" · Level "+(p.id===active.id?(window.soaProgression?.level?.()||10):(()=>{const slot=read(SLOT_PREFIX+p.id);try{return Number(JSON.parse(slot?.["soa-progression-v1"]||"null")?.actors?.hero?.level)||10}catch{return 10}})())+" · "+Object.keys(p.professions||{}).join(" / ")));
+  const description=make("div");description.append(make("strong",p.name),make("span",p.faction+" · "+p.race+" "+p.className+" · Level "+(p.id===active.id?(window.soaProgression?.level?.()||p.startLevel||10):(()=>{const slot=read(SLOT_PREFIX+p.id);try{return Number(JSON.parse(slot?.["soa-progression-v1"]||"null")?.actors?.hero?.level)||p.startLevel||10}catch{return p.startLevel||10}})())+" · "+Object.keys(p.professions||{}).join(" / ")));
   const button=make("button",p.id===active.id?"Play":"Switch & Play");button.type="button";button.onclick=()=>enter(p.id);
   item.append(description,button);list.append(item);
  }
