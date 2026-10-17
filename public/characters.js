@@ -42,13 +42,30 @@ function init(){
  active=roster.characters.find(x=>x.id===roster.active)||roster.characters[0];roster.active=active.id;write(ROSTER_KEY,roster);
 }
 function snapshot(id){
- const data={};for(const key of SAVES)data[key]=localStorage.getItem(key);
- return write(SLOT_PREFIX+id,data);
+ try{
+  const data={};for(const key of SAVES)data[key]=localStorage.getItem(key);
+  return write(SLOT_PREFIX+id,data);
+ }catch{return false}
 }
 function restore(id){
  const data=read(SLOT_PREFIX+id);if(!data)return false;
- for(const key of SAVES){if(data[key]===null||data[key]===undefined)localStorage.removeItem(key);else localStorage.setItem(key,data[key])}
- return true;
+ const previous={};
+ try{
+  for(const key of SAVES)previous[key]=localStorage.getItem(key);
+  for(const key of SAVES){
+   if(data[key]===null||data[key]===undefined)localStorage.removeItem(key);
+   else localStorage.setItem(key,data[key]);
+  }
+  return true;
+ }catch{
+  // Best-effort rollback: a partial slot cannot silently become the active save.
+  for(const key of SAVES)try{
+   if(previous[key]===null||previous[key]===undefined)localStorage.removeItem(key);
+   else localStorage.setItem(key,previous[key]);
+  }catch{}
+  alert("Character switch could not finish. Your previous adventure is still selected; check available device storage.");
+  return false;
+ }
 }
 function baseState(profile){return {id:"new-hero-start",hp:100,en:100,money:1500,time:0,alert:0,seen:[],flags:{},enemy:null,log:["A new journey begins for "+profile.name+" in "+startingZone(profile)+".","You have 15 silver and no companions."]}}
 function newCampaign(profile){
@@ -76,10 +93,23 @@ function socialSkills(){
  return {bluff:base.bluff+si7+(trained?.("bluff")||0),bribe:base.bribe+(trained?.("bribe")||0),romance:base.romance+(trained?.("romance")||0),threaten:base.threaten+(trained?.("threaten")||0)};
 }
 function selectedProfile(){return {...active,level:window.soaProgression?.level?.()||10,professions:Object.fromEntries(Object.entries(active.professions||{}).map(([k,v])=>[k,v.skill||1]))}}
-function commitRoster(){write(ROSTER_KEY,roster)}
+function commitRoster(){return write(ROSTER_KEY,roster)}
 function enter(id){
  if(!roster.characters.some(x=>x.id===id))return;
- if(id!==active.id){if(!snapshot(active.id)){alert("Cannot switch: unable to back up your current character. Check available device storage.");return}if(!restore(id))return;active=roster.characters.find(x=>x.id===id);roster.active=id;commitRoster()}
+ if(id!==active.id){
+  const previousId=active.id;
+  if(!snapshot(previousId)){alert("Cannot switch: unable to back up your current character. Check available device storage.");return}
+  if(!restore(id))return;
+  const next=roster.characters.find(x=>x.id===id);
+  roster.active=id;
+  if(!commitRoster()){
+   roster.active=previousId;
+   restore(previousId);
+   alert("Unable to save the active character selection. Your previous character was retained.");
+   return;
+  }
+  active=next;
+ }
  try{sessionStorage.setItem(ENTER_KEY,"1")}catch(e){}
  location.reload();
 }
@@ -88,11 +118,26 @@ function create(profile){
  const id="hero-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,7);
  const p={...profile,id,origin:"custom",startLevel:1,startingZone:startingZone(profile),specialization:"Unchosen",professions:Object.fromEntries(profile.professionNames.map(n=>[n,{skill:1,events:0}])),secondary:Object.fromEntries(SECONDARY.map(n=>[n,{skill:1,events:0}])),professionEvents:[],professionLog:[]};
  delete p.professionNames;
- if(!snapshot(active.id)){alert("Unable to back up your current adventure. Character creation has been stopped to protect your save.");return}
- roster.characters.push(p);roster.active=id;active=p;commitRoster();
- write("soa-save-v1",baseState(p));write("soa-campaign-v1",newCampaign(p));
- localStorage.removeItem("soa-companions-v1");localStorage.removeItem("soa-reputation-v1");localStorage.removeItem("soa-progression-v1");localStorage.setItem("soa-campaign-enabled","1");
- snapshot(id);
+ const previous=active.id;
+ if(!snapshot(previous)){alert("Unable to back up your current adventure. Character creation has been stopped to protect your save.");return}
+ try{
+  if(!write("soa-save-v1",baseState(p))||!write("soa-campaign-v1",newCampaign(p)))throw Error("Insufficient storage for new character data");
+  localStorage.removeItem("soa-companions-v1");
+  localStorage.removeItem("soa-reputation-v1");
+  localStorage.removeItem("soa-progression-v1");
+  localStorage.setItem("soa-campaign-enabled","1");
+  if(!snapshot(id))throw Error("Could not create the character's independent save slot");
+  roster.characters.push(p);roster.active=id;
+  if(!commitRoster())throw Error("Could not save the updated character roster");
+  active=p;
+ }catch(err){
+  roster.characters=roster.characters.filter(x=>x.id!==id);
+  roster.active=previous;
+  active=roster.characters.find(x=>x.id===previous)||active;
+  restore(previous);commitRoster();
+  alert("Character creation was canceled safely: "+err.message+". Your previous character remains active.");
+  return;
+ }
  try{sessionStorage.setItem(ENTER_KEY,"1")}catch(e){}
  location.reload();
 }
