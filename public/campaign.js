@@ -60,7 +60,7 @@ function bribeCopper(text){
 }
 function socialTarget(action,skill){
  const bonuses=window.soaCharacters?.getSocialSkills?.()||{bluff:5,bribe:3,romance:3,threaten:2};
- const bonus=(Number(bonuses[skill])||0)+(window.soaAbilities?.modifier?.(skill)||0);
+ const bonus=Number(bonuses[skill])||0;
  const baseDC=action.difficulty==="easy"?10:action.difficulty==="hard"?18:14;
  let modifier=0;
  if(skill==="romance"){
@@ -108,7 +108,7 @@ function dicePreview(action){
  const skill=socialSkill(action);
  if(skill){
   const {bonus,dc}=socialTarget(action,skill);
-  return {primary:"🎲 d20 "+(bonus>=0?"+ "+bonus:"− "+Math.abs(bonus))+" vs DC "+dc,secondary:skill[0].toUpperCase()+skill.slice(1)+" check · Natural 1 fails, 20 succeeds"};
+  return {primary:"🎲 d20 "+(bonus>=0?"+ "+bonus:"− "+Math.abs(bonus))+" vs DC "+dc,secondary:"CHA-based "+skill+" check · Natural 1 fails, 20 succeeds"};
  }
  const {cost,target}=actionOdds(action);
  return {primary:"🎲 d100 · succeed on 1–"+target,secondary:cost+" Energy · "+target+"% success at current alarm"};
