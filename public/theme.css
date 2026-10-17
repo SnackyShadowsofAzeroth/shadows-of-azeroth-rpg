@@ -39,3 +39,6 @@ body.theme-alternative .soa-relation-fill.affection{background:#bd788a}
 body.theme-alternative .soa-relation-fill.respect{background:#7189b0}
 body.theme-alternative .ai-input,body.theme-alternative textarea,body.theme-alternative select,body.theme-alternative input[type="password"]{background:#f5e4bd;color:#392818;border:1px solid #9e8154}
 body.theme-alternative .ai-input::placeholder,body.theme-alternative textarea::placeholder{color:#806643}
+/* Group headings label visible content; they are no longer collapse controls. */
+details>summary{list-style:none;cursor:default;pointer-events:none}
+details>summary::-webkit-details-marker{display:none}
