@@ -1,6 +1,6 @@
 (()=>{"use strict";
 const KEY="soa-campaign-v1", MAX=24;
-let campaign=null,busy=false,enabled=false,customDraft="",customType="investigate",customSocialSkill="auto",statusMessage="";
+let campaign=null,busy=false,enabled=false,customDraft="",customType="investigate",customSocialSkill="auto",statusMessage="",selectedCombatTarget=null;
 const get=id=>document.getElementById(id);
 function store(){try{localStorage.setItem(KEY,JSON.stringify(campaign))}catch(e){}}
 function make(){return {turn:0,scene:null,history:[],journal:[],lastError:"",lastAction:"Begin the next chapter of Snacky’s continuing mission in Stormwind, addressing the explosives threat and preparing his SI:7 debrief.",lastResult:"Hollow Raven is complete; the Stormwind threat is unresolved. No new action has yet been taken.",pending:null}}
@@ -92,7 +92,8 @@ function fightExchange(action){
  if(s.en<35){status("Not enough Energy for combat (35 required).");return null}
  const requested=String(action.text||"").toLowerCase();
  const matches=targets.filter(e=>requested.includes(e.name.toLowerCase()));
- const enemy=matches.length===1?matches[0]:targets.length===1?targets[0]:null;
+ const selected=targets.find(e=>e.name===selectedCombatTarget);
+ const enemy=matches.length===1?matches[0]:matches.length>1?null:(selected||targets.length===1?selected||targets[0]:null);
  if(!enemy){status("Choose one target by name in a Custom Combat action.");return null}
  const oldHP=enemy.hp,heroHP=s.hp,oldEnergy=s.en;
  const accuracy=Math.max(.25,Math.min(.90,.74-s.alert*.04+(action.difficulty==="easy"?.08:action.difficulty==="hard"?-.13:0)));
@@ -105,6 +106,7 @@ function fightExchange(action){
  const defeated=enemy.hp===0;
  campaign.combatRound=(Number(campaign.combatRound)||0)+1;
  campaign.lastExchange={round:campaign.combatRound,target:enemy.name,dealt,taken,hit,defeated,enemyBefore:oldHP,enemyAfter:enemy.hp,enemyMax:enemy.maxHp,heroBefore:heroHP,heroAfter:s.hp,energyBefore:oldEnergy,energyAfter:s.en};
+ recordCombatDelta(enemy,dealt,taken,heroHP,s.hp);
  if(defeated){
   campaign.defeatedEnemies||=[];
   campaign.defeatedEnemies.push(String(campaign.enemyLocation||campaign.scene?.location||"")+"|"+enemy.name.toLowerCase());
@@ -132,6 +134,38 @@ function updateLivingEnemies(scene){
  if(!next.length&&previous.length&&campaign.pending?.combat)next.push(...previous);
  campaign.enemies=next;campaign.enemyLocation=location;
 }
+function combatParty(){
+ const list=Array.isArray(campaign?.combatAllies)?campaign.combatAllies:[];
+ const isSn=window.soaCharacters?.profile?.()?.id==="snacky";
+ return [{name:window.soaCharacters?.profile?.()?.name||"Your hero",hp:s.hp,maxHp:100,player:true},...list.filter(e=>e&&typeof e.name==="string").slice(0,6).filter(e=>!isSn||!/^Snacky Lugnuts$/i.test(e.name)).map(e=>({...e,player:false}))];
+}
+function reconcileCombatAllies(scene){
+ if(!Array.isArray(scene?.allies))return;
+ const existing=Array.isArray(campaign.combatAllies)?campaign.combatAllies:[];
+ const currentLocation=String(scene.location||"");
+ const knownSameScene=campaign.allyLocation===currentLocation;
+ const incoming=[];
+ for(const e of scene.allies.slice(0,6)){
+  if(!e||typeof e.name!=="string"||!e.name.trim())continue;
+  const name=e.name.trim().slice(0,60);
+  if(name===(window.soaCharacters?.profile?.()?.name||"Snacky Lugnuts")||incoming.some(v=>v.name===name))continue;
+  const previous=(knownSameScene||campaign.pending?.combat)?existing.find(x=>x.name===name):null;
+  const max=Number.isInteger(e.maxHp)&&e.maxHp>0?Math.min(500,e.maxHp):null;
+  const hp=Number.isInteger(e.hp)&&e.hp>=0&&max!==null?Math.min(max,e.hp):null;
+  // Only accept an actual HP number from a confirmed prior record or new scene.
+  incoming.push(previous&&previous.hp!==null?{...previous,name}:{name,maxHp:max,hp,role:String(e.role||"Ally").slice(0,32)});
+ }
+ if(!incoming.length&&campaign.pending?.combat&&knownSameScene)return;
+ campaign.combatAllies=incoming;campaign.allyLocation=currentLocation;
+}
+function recordCombatDelta(enemy,dealt,taken,before,after){
+ const log=Array.isArray(campaign.combatLog)?campaign.combatLog:[];
+ log.push({round:campaign.combatRound,events:[
+  {name:enemy.name,side:"enemy",delta:-dealt,after:enemy.hp,maxHp:enemy.maxHp},
+  {name:window.soaCharacters?.profile?.()?.name||"Your hero",side:"ally",delta:-taken,after,maxHp:100}
+ ]});
+ campaign.combatLog=log.slice(-12);
+}
 function drawEnemyStatus(box){
  const enemies=livingEnemies(),exchange=campaign?.lastExchange;
  if(!enemies.length&&!exchange)return;
@@ -153,6 +187,31 @@ function drawEnemyStatus(box){
   const dealt=document.createElement("p");dealt.textContent=exchange.hit?"Damage dealt: "+exchange.dealt+" HP to "+exchange.target+" ("+exchange.enemyBefore+" → "+exchange.enemyAfter+"/"+exchange.enemyMax+").":"Missed "+exchange.target+" · 0 damage.";
   const taken=document.createElement("p");taken.textContent="Damage received: "+exchange.taken+" HP · Your health "+exchange.heroBefore+" → "+exchange.heroAfter+".";
   summary.append(title,dealt,taken);if(exchange.defeated){const note=document.createElement("p");note.textContent=exchange.target+" defeated; no loot collected automatically.";summary.append(note)}section.append(summary);
+ }
+ const roster=document.createElement("section");roster.className="soa-combat-roster";
+ const caption=document.createElement("h4");caption.textContent="Allied combatants";roster.append(caption);
+ for(const ally of combatParty()){
+  const item=document.createElement("div");item.className="soa-combat-person";
+  const heading=document.createElement("div");heading.className="soa-combat-person-heading";
+  const name=document.createElement("strong");name.textContent=ally.name;
+  const hp=document.createElement("span");hp.textContent=Number.isFinite(ally.hp)&&Number.isFinite(ally.maxHp)?ally.hp+" / "+ally.maxHp+" HP":"HP unconfirmed";
+  heading.append(name,hp);item.append(heading);
+  if(Number.isFinite(ally.hp)&&Number.isFinite(ally.maxHp)&&ally.maxHp>0){
+   const bar=document.createElement("div");bar.className="soa-combat-ally-rail";bar.setAttribute("role","progressbar");bar.setAttribute("aria-label",ally.name+" health");bar.setAttribute("aria-valuemin","0");bar.setAttribute("aria-valuemax",String(ally.maxHp));bar.setAttribute("aria-valuenow",String(ally.hp));
+   const fill=document.createElement("div");fill.className="soa-combat-ally-fill";fill.style.width=Math.max(0,Math.min(100,ally.hp/ally.maxHp*100))+"%";bar.append(fill);item.append(bar);
+  }roster.append(item);
+ }
+ section.insertBefore(roster,section.children[1]||null);
+ const picker=document.createElement("div");picker.className="soa-combat-targets";const label=document.createElement("strong");label.textContent="Choose an enemy target";picker.append(label);
+ for(const foe of enemies){
+  const button=document.createElement("button");button.type="button";button.className="soa-target-button";button.textContent=foe.name+" · "+foe.hp+"/"+foe.maxHp+" HP";button.setAttribute("aria-pressed",String(selectedCombatTarget===foe.name));
+  button.disabled=busy||!!pending();button.onclick=()=>{selectedCombatTarget=foe.name;draw()};
+  picker.append(button);
+ }
+ if(enemies.length)roster.after(picker);
+ if(Array.isArray(campaign.combatLog)&&campaign.combatLog.length){
+  const history=document.createElement("details");history.className="soa-battle-history";const head=document.createElement("summary");head.textContent="Damage log · "+campaign.combatLog.length+" exchanges";history.append(head);
+  for(const entry of campaign.combatLog.slice(-5).reverse()){const line=document.createElement("p");line.textContent="Round "+entry.round+": "+entry.events.map(e=>e.name+" "+(e.delta<0?e.delta+" HP":"no damage")+" ("+e.after+"/"+e.maxHp+")").join(" · ");history.append(line)}section.append(history);
  }
  box.append(section);
 }
@@ -264,13 +323,13 @@ async function advance(action,resolution,retry){
  if(!code){focusAccess();draw();return}
  busy=true;status("Gemini is writing the next scene…");draw();
  try{
- const response=await fetch("./api/campaign",{method:"POST",headers:{"content-type":"application/json","x-story-access":code},body:JSON.stringify({context:{location:campaign.scene?.location||(window.soaCharacters?.isNewCharacter?.()?"New adventurer prologue":"Hollow Raven laboratory"),previousTitle:campaign.scene?.title||"",previousScene:campaign.scene?.story||"",campaignOrigin:originOfCampaign(),recentDiscoveries:campaign.journal.slice(-12),action,resolution,hp:s.hp,energy:s.en,gold:fmtMoney(s.money),alarm:s.alert,turn:campaign.turn,history:campaign.history.slice(-20),flags:Object.keys(s.flags||{}),companionMoments:window.soaCompanions?.getRecent?.()||[],relationships:window.soaCompanions?.getRelationships?.()||{},character:window.soaCharacters?.profile?.()||null,reputation:window.soaReputation?.getStandings?.()||{},reputationDevelopments:window.soaReputation?.getDevelopments?.()||[],enemies:livingEnemies().map(e=>({name:e.name,hp:e.hp,maxHp:e.maxHp})),lastExchange:campaign.lastExchange||null,chronicle:window.soaChronicle?.context?.(campaign)||null,resourceSurvey:campaign.pending?.survey===true}})});
+ const response=await fetch("./api/campaign",{method:"POST",headers:{"content-type":"application/json","x-story-access":code},body:JSON.stringify({context:{location:campaign.scene?.location||(window.soaCharacters?.isNewCharacter?.()?"New adventurer prologue":"Hollow Raven laboratory"),previousTitle:campaign.scene?.title||"",previousScene:campaign.scene?.story||"",campaignOrigin:originOfCampaign(),recentDiscoveries:campaign.journal.slice(-12),action,resolution,hp:s.hp,energy:s.en,gold:fmtMoney(s.money),alarm:s.alert,turn:campaign.turn,history:campaign.history.slice(-20),flags:Object.keys(s.flags||{}),companionMoments:window.soaCompanions?.getRecent?.()||[],relationships:window.soaCompanions?.getRelationships?.()||{},character:window.soaCharacters?.profile?.()||null,reputation:window.soaReputation?.getStandings?.()||{},reputationDevelopments:window.soaReputation?.getDevelopments?.()||[],enemies:livingEnemies().map(e=>({name:e.name,hp:e.hp,maxHp:e.maxHp})),allies:combatParty().map(e=>({name:e.name,hp:e.hp,maxHp:e.maxHp})),combatLog:(campaign.combatLog||[]).slice(-3),lastExchange:campaign.lastExchange||null,chronicle:window.soaChronicle?.context?.(campaign)||null,resourceSurvey:campaign.pending?.survey===true}})});
  const data=await response.json().catch(()=>({error:"Invalid server response"}));if(!response.ok)throw Error(data.error||"Request failed");
  if(!Array.isArray(data.choices)||!data.story)throw Error("Incomplete generated scene");
  const completedDialogue=campaign.pending?.dialogue?{...campaign.pending.dialogue,id:"campaign-dialogue-"+campaign.pending.startedAt+"-"+campaign.turn,success:/^Success:/i.test(campaign.pending.resolution)}:null;
  const completedProfession=campaign.pending&&!campaign.pending.survey?{action:campaign.pending.action,resolution:campaign.pending.resolution,id:"profession-"+campaign.pending.startedAt+"-"+campaign.turn}:null;
  const completedFaction=campaign.pending?{action:campaign.pending.action,resolution:campaign.pending.resolution,id:"faction-"+campaign.pending.startedAt+"-"+campaign.turn}:null;
- updateLivingEnemies(data);campaign.scene=data;campaign.turn++;window.soaChronicle?.receive?.(campaign,data);campaign.pending=null;customDraft="";customSocialSkill="auto";campaign.history.push("Scene: "+safe(data.title)+" @ "+safe(data.location)+" — "+safe(data.story).slice(0,380));campaign.history=campaign.history.slice(-MAX);if(data.journal)campaign.journal.push(safe(data.journal).slice(0,200));campaign.journal=campaign.journal.slice(-100);campaign.lastError="";if(completedDialogue)window.soaCompanions?.applyDialogueOutcome?.(completedDialogue);if(completedProfession)window.soaCharacters?.applyProfession?.(completedProfession.action,completedProfession.resolution,completedProfession.id);if(completedFaction)window.soaReputation?.fromAction?.(completedFaction);store();status("Scene generated and saved. Choose your next action.");
+ updateLivingEnemies(data);reconcileCombatAllies(data);campaign.scene=data;campaign.turn++;window.soaChronicle?.receive?.(campaign,data);campaign.pending=null;customDraft="";customSocialSkill="auto";campaign.history.push("Scene: "+safe(data.title)+" @ "+safe(data.location)+" — "+safe(data.story).slice(0,380));campaign.history=campaign.history.slice(-MAX);if(data.journal)campaign.journal.push(safe(data.journal).slice(0,200));campaign.journal=campaign.journal.slice(-100);campaign.lastError="";if(completedDialogue)window.soaCompanions?.applyDialogueOutcome?.(completedDialogue);if(completedProfession)window.soaCharacters?.applyProfession?.(completedProfession.action,completedProfession.resolution,completedProfession.id);if(completedFaction)window.soaReputation?.fromAction?.(completedFaction);store();status("Scene generated and saved. Choose your next action.");
  }catch(e){campaign.lastError=e.message;store();status("AI unavailable: "+e.message+". Your last action is preserved. Tap Retry generating next scene; it will not spend Energy twice.")}finally{busy=false;refreshDisplay();returnToAdventure(campaign?.lastError?"status":"scene")}
 }
 try{campaign=JSON.parse(localStorage.getItem(KEY)||"null")}catch(e){campaign=null}
