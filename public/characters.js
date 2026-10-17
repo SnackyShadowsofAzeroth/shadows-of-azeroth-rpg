@@ -229,6 +229,7 @@ function profilePanel(){
 function drawProfessions(){
  const root=get("soa-profession-panel");if(!root)return;root.replaceChildren();
  root.append(make("div","CHARACTER RECORD","soa-roster-kicker"),make("h2",active.name+" · "+active.race+" "+active.className));
+ const abilityCard=window.soaAbilities?.card?.("hero");if(abilityCard)root.append(abilityCard);
  window.soaProgression?.refresh?.();
  window.soaPortraits?.refresh?.();
  const meta=make("p",active.faction+" · "+(active.specialization||"Unchosen"),"muted");root.append(meta);
