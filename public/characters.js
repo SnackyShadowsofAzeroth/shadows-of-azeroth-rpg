@@ -315,8 +315,18 @@ function applyProfession(action,resolution,id){
  commitRoster();drawProfessions();
  return !!(found&&success);
 }
+function retrainPrimaryProfession(dropName,newName){
+ if(!PROFS.includes(newName)||!active?.professions||!Object.hasOwn(active.professions,dropName))return {error:"Choose a currently trained primary profession."};
+ if(Object.hasOwn(active.professions,newName))return {error:"Already trained in that profession."};
+ if(Object.keys(active.professions).length>2)return {error:"Invalid profession roster."};
+ const before={...active.professions};
+ delete active.professions[dropName];
+ active.professions[newName]={skill:1,events:0};
+ if(!commitRoster()){active.professions=before;return {error:"Could not save profession change."}}
+ drawProfessions();return {message:"Unlearned "+dropName+" and trained "+newName+" at skill 1. Previous profession progress is lost."};
+}
 init();
-window.soaCharacters={profile:selectedProfile,startingEquipment:()=>[...(active.startingEquipment||[])],isNewCharacter:()=>active.origin==="custom",initialLocalState:baseState,applyProfession,showMenu:drawMenu,refreshProfessions:drawProfessions,exportRosterBackup,getSocialSkills:socialSkills};
+window.soaCharacters={retrainPrimaryProfession,profile:selectedProfile,startingEquipment:()=>[...(active.startingEquipment||[])],isNewCharacter:()=>active.origin==="custom",initialLocalState:baseState,applyProfession,showMenu:drawMenu,refreshProfessions:drawProfessions,exportRosterBackup,getSocialSkills:socialSkills};
 window.addEventListener("pagehide",()=>snapshot(active.id));
 document.addEventListener("DOMContentLoaded",()=>{
  profilePanel();
