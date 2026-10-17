@@ -124,3 +124,9 @@ Added three region-bound, engine-authored missions with immutable reward terms a
 - UI-only: Equipment & Reward Inventory expandable section now appears at the TOP of the Living Campaign scene, before story paragraphs, for easy access. It shows collected items, slot occupancy via Equip/Unequip labels, bonuses and restrictions. Requires an item to have been earned for it to appear in inventory.
 - The original AI Story Director was narrating the old Hollow Raven scripted prototype, unrelated to the current Gemini living campaign. In Living Campaign mode we hide legacy narration focus, generate button, spinner, stale output and errors with body.soa-living-mode; preserve the access-code field and Cloudflare test control used by living campaign. Offline scripted mode shows the legacy narration controls again.
 - UI rollback: revert the related additions to public/index.html and public/campaign.js only; preserve game saves and logic. Offline cache v32. Live iPhone UI not verified.
+
+
+## Snacky's established in-game loadout display (2026-10-16)
+- User provided 15 current items: Gnomish Goggles, Parachute Cloak, Barbaric Bracers, Mantle of Thieves, Dusky Leather Armor, Tiger Hunter Gloves, Highlander's Chain Girdle, Triprunner Dungarees, Feet of the Lynx, Ironspine’s Eye, Field Researcher's Ring, Ruby-Adorned Blade, Bloody Brass Knuckles, Toxic Revenger, Golemsight Long Gun.
+- Equipment panel now displays these as Snacky's baseline equipped items only when the active roster character is Snacky; additional quest reward inventory stays separate and unchanged. No unverified numerical bonus or loot grant was made. Future work: model real item statistics and unify main/off-hand/ranged slots without overwriting baseline equipment or save files.
+- Code in public/equipment.js, offline cache v33; selective rollback can remove SNACKY_LOADOUT display only.
