@@ -80,11 +80,14 @@ function actionOdds(action){
  if(t==="investigate"){cost=10;chance=.88}
  if(t==="move"){cost=0;chance=.95}
  if(t==="rest"){cost=0;chance=.94}
- chance=Math.max(.25,Math.min(.97,chance+(action.difficulty==="easy"?.09:action.difficulty==="hard"?-.2:0)));
+ const trained=window.soaProgression?.bonus?.(t==="investigate"?"investigate":t==="engineering"?"engineering":t==="stealth"?"stealth":t==="combat"?"combat":t==="social"?"social":"")||0;
+ const level=window.soaProgression?.level?.()||10;
+ chance=Math.max(.25,Math.min(.97,chance+(action.difficulty==="easy"?.09:action.difficulty==="hard"?-.2:0)+Math.max(0,level-10)*.0015+trained*.008));
  return {cost,target:Math.round(chance*100)};
 }
 function combatAccuracy(action){
- return Math.max(.25,Math.min(.90,.74-s.alert*.04+(action.difficulty==="easy"?.08:action.difficulty==="hard"?-.13:0)));
+ const rank=window.soaProgression?.bonus?.("combat")||0,level=window.soaProgression?.level?.()||10;
+ return Math.max(.25,Math.min(.90,.74-s.alert*.04+(action.difficulty==="easy"?.08:action.difficulty==="hard"?-.13:0)+rank*.008+Math.max(0,level-10)*.0015));
 }
 function resolvedCombatAbility(action){
  const description=String(action.text||"");
@@ -128,6 +131,52 @@ function socialCheck(action,skill){
  return (ok?"Success":"Complication")+": "+skill[0].toUpperCase()+skill.slice(1)+" check: d20 "+roll+" + "+bonus+" = "+total+" vs DC "+dc+". "+effect+" Result is authoritative. Do not fabricate further costs, relationship stages, or compelled consent.";
 }
 function livingEnemies(){return Array.isArray(campaign?.enemies)?campaign.enemies.filter(e=>e&&e.hp>0&&e.maxHp>0):[]}
+function partyExperienceIds(){
+ const names=Array.isArray(campaign?.combatAllies)?campaign.combatAllies.map(a=>a?.name).filter(Boolean):[];
+ return [...new Set(names.map(name=>window.soaProgression?.register?.(name)).filter(Boolean))];
+}
+function startProgressionEncounter(){
+ if(campaign.xpEncounter&&campaign.xpEncounter.active)return campaign.xpEncounter;
+ campaign.encounterSerial=(Number(campaign.encounterSerial)||0)+1;
+ const reference="encounter-"+campaign.encounterSerial;
+ campaign.xpEncounter={id:reference,active:true,defeated:[],party:partyExperienceIds(),pendingVictory:false};
+ return campaign.xpEncounter;
+}
+function concludeProgressionEncounter(){
+ const encounter=campaign.xpEncounter;
+ if(!encounter?.active||!encounter.pendingVictory||livingEnemies().length||!encounter.defeated.length)return null;
+ const result=window.soaProgression?.battle?.({receipt:encounter.id,defeated:encounter.defeated,allies:encounter.party})||null;
+ encounter.active=false;encounter.pendingVictory=false;encounter.completed=true;
+ if(result?.awarded){
+  const extra=result.party?.reduce((sum,p)=>sum+(p.awarded||0),0)||0;
+  campaign.lastProgression="Victory · +"+result.awarded+" XP to your hero"+(extra?" · companions shared "+extra+" XP":"")+(result.levels?" · LEVEL UP!":"");
+ }
+ return result;
+}
+function resolvedSkillName(choice){
+ const social=socialSkill(choice);
+ if(social)return social;
+ const t=String(choice.type||"");
+ return ["stealth","engineering","investigate","social","combat"].includes(t)?t:null;
+}
+function recordActionPractice(choice,resolution,receipt){
+ const skill=resolvedSkillName(choice);
+ if(!skill)return;
+ const success=/^Success:/i.test(String(resolution||""));
+ const earned=window.soaProgression?.check?.({receipt,name:skill,success,difficulty:choice.difficulty||"medium"});
+ if(earned?.awarded){
+  campaign.lastProgression=(success?"Successful":"Attempted")+" "+skill+" check · +"+earned.awarded+" XP"+(earned.rankUp?" · "+skill+" skill rank increased!":"")+(earned.levels?" · LEVEL UP!":"");
+ }
+ // Participating companions gain skill practice only for an explicitly shared named task.
+ const text=String(choice.text||"").toLowerCase();
+ const scene=String(campaign.scene?.story||"").toLowerCase();
+ const possible=[["pippa","pippa"],["bromli","bromli"],["lethariel","lethariel"]];
+ for(const [name,id] of possible){
+  if(!text.includes(name)||!scene.includes(name))continue;
+  const allowed=id==="pippa"?(skill==="engineering"||skill==="stealth"||skill==="investigate"):id==="bromli"?(skill==="combat"||skill==="investigate"):id==="lethariel"?(skill==="social"||skill==="investigate"):false;
+  if(allowed)window.soaProgression?.check?.({receipt:"companion:"+receipt,name:skill,success,difficulty:choice.difficulty||"medium",actorId:id});
+ }
+}
 function fightExchange(action){
  const targets=livingEnemies();
  if(!targets.length)return null;
@@ -140,6 +189,8 @@ function fightExchange(action){
  const selected=targets.find(e=>e.name===selectedCombatTarget);
  const enemy=matches.length===1?matches[0]:matches.length>1?null:selected||(targets.length===1?targets[0]:null);
  if(!enemy&&ability!=="evasion"){status("Select a specific enemy target before attacking. No action spent.");return null}
+ const encounter=startProgressionEncounter();
+ for(const id of partyExperienceIds())if(!encounter.party.includes(id))encounter.party.push(id);
  const target=enemy||targets[0],oldHP=target.hp,heroHP=s.hp,oldEnergy=s.en;
  const accuracy=combatAccuracy(action);
  const attackRoll=ability==="riposte"||ability==="evasion"?null:1+Math.floor(Math.random()*100);
@@ -172,6 +223,8 @@ function fightExchange(action){
  campaign.lastExchange=event;
  recordCombatDelta(target,dealt,taken,receivedName,recipientBefore,recipientAfter);
  if(defeated){
+  if(!encounter.defeated.some(x=>x.name===target.name))encounter.defeated.push({name:target.name,maxHp:target.maxHp});
+  if(!livingEnemies().length)encounter.pendingVictory=true;
   if(selectedCombatTarget===target.name)selectedCombatTarget=null;
   campaign.defeatedEnemies||=[];
   campaign.defeatedEnemies.push(String(campaign.enemyLocation||campaign.scene?.location||"")+"|"+target.name.toLowerCase());
@@ -391,6 +444,7 @@ function draw(){
  const sc=campaign.scene,head=document.createElement("h3"),where=document.createElement("div"),text=document.createElement("p");
  const transition=window.soaChronicle?.banner?.(campaign);if(transition)box.append(transition);
  const kicker=document.createElement("div");kicker.className="soa-scene-kicker";const position=window.soaChronicle?.progress?.(campaign);kicker.textContent=position?"ACT "+position.actRoman+" · CHAPTER "+position.chapterRoman+" · SCENE "+position.scene:"FIELD CHRONICLE · SCENE "+campaign.turn;box.append(kicker);head.textContent=sc.title||"The Hollow Raven";where.className="muted";where.textContent=sc.location||"Raven Hill";text.className="soa-story-prose";text.style.whiteSpace="pre-line";text.textContent=readableStory(sc.story);box.append(head,where,text);
+ if(campaign.lastProgression){const gained=document.createElement("p");gained.className="soa-level-toast";gained.textContent=campaign.lastProgression;box.append(gained)}
  const moments=window.soaCompanions?.getAdventureMoments?.()||[];
  if(moments.length){
   const dialogue=document.createElement("section");dialogue.className="soa-companion-dialogue";dialogue.id="soa-companion-dialogue";
@@ -469,8 +523,11 @@ async function choose(choice){
  const detected=dialogueFromCustom(choice);if((detected||socialSkill(choice))&&choice.custom&&choice.type==="investigate")choice={...choice,type:"social"};
  const resolution=result(choice);
  if(!resolution){if(!socialSkill(choice)&&choice.type!=="combat")status("Not enough Energy for that action.");return}
+ campaign.actionSerial=(Number(campaign.actionSerial)||0)+1;
+ const actionReceipt="turn-"+campaign.turn+"-action-"+campaign.actionSerial;
+ recordActionPractice(choice,resolution,actionReceipt);
  campaign.lastAction=safe(choice.text);campaign.lastResult=resolution;
- campaign.pending={action:campaign.lastAction,resolution,startedAt:Date.now(),dialogue:detected,survey:choice.survey===true,combat:choice.type==="combat"};
+ campaign.pending={action:campaign.lastAction,resolution,startedAt:Date.now(),dialogue:detected,survey:choice.survey===true,combat:choice.type==="combat",actionReceipt};
  campaign.history.push("At "+safe(campaign.scene?.location||"unknown location")+": Player: "+campaign.lastAction+" | "+resolution);
  campaign.history=campaign.history.slice(-MAX);store();refreshDisplay();
  // Release the iPhone keyboard and return to the story while Gemini works.
@@ -490,7 +547,13 @@ async function advance(action,resolution,retry){
  const completedDialogue=campaign.pending?.dialogue?{...campaign.pending.dialogue,id:"campaign-dialogue-"+campaign.pending.startedAt+"-"+campaign.turn,success:/^Success:/i.test(campaign.pending.resolution)}:null;
  const completedProfession=campaign.pending&&!campaign.pending.survey?{action:campaign.pending.action,resolution:campaign.pending.resolution,id:"profession-"+campaign.pending.startedAt+"-"+campaign.turn}:null;
  const completedFaction=campaign.pending?{action:campaign.pending.action,resolution:campaign.pending.resolution,id:"faction-"+campaign.pending.startedAt+"-"+campaign.turn}:null;
- updateLivingEnemies(data);reconcileCombatAllies(data);campaign.scene=data;campaign.turn++;window.soaChronicle?.receive?.(campaign,data);campaign.pending=null;customDraft="";customSocialSkill="auto";campaign.history.push("Scene: "+safe(data.title)+" @ "+safe(data.location)+" — "+safe(data.story).slice(0,380));campaign.history=campaign.history.slice(-MAX);if(data.journal)campaign.journal.push(safe(data.journal).slice(0,200));campaign.journal=campaign.journal.slice(-100);campaign.lastError="";if(completedDialogue)window.soaCompanions?.applyDialogueOutcome?.(completedDialogue);if(completedProfession)window.soaCharacters?.applyProfession?.(completedProfession.action,completedProfession.resolution,completedProfession.id);if(completedFaction)window.soaReputation?.fromAction?.(completedFaction);store();status("Scene generated and saved. Choose your next action.");
+ updateLivingEnemies(data);reconcileCombatAllies(data);
+ if(campaign.xpEncounter?.active){
+  for(const id of partyExperienceIds())if(!campaign.xpEncounter.party.includes(id))campaign.xpEncounter.party.push(id);
+  if(campaign.xpEncounter.defeated.length&&!livingEnemies().length)campaign.xpEncounter.pendingVictory=true;
+  if(campaign.xpEncounter.pendingVictory)concludeProgressionEncounter();
+ }
+ campaign.scene=data;campaign.turn++;window.soaChronicle?.receive?.(campaign,data);campaign.pending=null;customDraft="";customSocialSkill="auto";campaign.history.push("Scene: "+safe(data.title)+" @ "+safe(data.location)+" — "+safe(data.story).slice(0,380));campaign.history=campaign.history.slice(-MAX);if(data.journal)campaign.journal.push(safe(data.journal).slice(0,200));campaign.journal=campaign.journal.slice(-100);campaign.lastError="";if(completedDialogue)window.soaCompanions?.applyDialogueOutcome?.(completedDialogue);if(completedProfession)window.soaCharacters?.applyProfession?.(completedProfession.action,completedProfession.resolution,completedProfession.id);if(completedFaction)window.soaReputation?.fromAction?.(completedFaction);store();status("Scene generated and saved. Choose your next action.");
  }catch(e){campaign.lastError=e.message;store();status("AI unavailable: "+e.message+". Your last action is preserved. Tap Retry generating next scene; it will not spend Energy twice.")}finally{busy=false;refreshDisplay();returnToAdventure(campaign?.lastError?"status":"scene")}
 }
 function migrateCompanionDisplayNames(){
