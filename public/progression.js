@@ -149,6 +149,14 @@ function refresh(){
  }
  window.soaCompanions?.refreshProgress?.();
 }
-window.soaProgression={level,progress,skill,bonus,check,battle,register,recent,refresh,heroPanel,companionBadge,xpNeeded,skillNeeded,MAX_LEVEL};
+function overnightBond({receipt,companionId,quality=1}={}){
+ if(!receipt||!["pippa","bromli","lethariel"].includes(companionId))return {awarded:0};
+ // Fixed, modest once-per-rest reward, no stacking from repeated UI renders.
+ const amount=quality>=2?35:25;
+ const result=award("hero",amount,"bond-rest:"+receipt,"Restful morning with trusted companion");
+ if(result.awarded)refresh();
+ return result;
+}
+window.soaProgression={level,progress,skill,bonus,check,battle,overnightBond,register,recent,refresh,heroPanel,companionBadge,xpNeeded,skillNeeded,MAX_LEVEL};
 document.addEventListener("DOMContentLoaded",refresh);
 })();
