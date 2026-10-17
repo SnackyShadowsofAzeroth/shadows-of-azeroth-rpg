@@ -185,3 +185,9 @@ body.theme-alternative .soa-hp-setup form{display:grid;grid-template-columns:rep
 body.theme-alternative .soa-hp-setup input{min-width:0;padding:10px;border:1px solid #a38b60;border-radius:6px;background:#fff2d1;color:#462c16;font:14px system-ui}
 body.theme-alternative .soa-hp-setup button{grid-column:1/-1;width:100%;margin:0;min-height:42px}
 body.theme-alternative .soa-hp-setup .soa-combat-hint{grid-column:1/-1;margin:0}
+
+
+body.theme-alternative .soa-assist-button{width:100%;min-height:45px;margin:5px 0 0;padding:9px 12px;text-align:center;border:1px solid #6c956e;border-radius:8px;background:linear-gradient(#53785e,#315043);color:#f3f5e7;font:700 12px/1.45 system-ui}
+body.theme-alternative .soa-assist-button:disabled{opacity:.48;cursor:not-allowed}
+body.theme-alternative .soa-foe-defeated{opacity:.77}
+body.theme-alternative .soa-foe-defeated .soa-foe-heading strong:after{content:" · Defeated";color:#7c4942;font-size:11px}
