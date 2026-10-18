@@ -22,7 +22,12 @@ function group(section){
  if(["soa-legacy-ai","soa-save-settings"].includes(section.id)||section.querySelector?.("#ai-enabled,#export"))return "settings";
  return "adventure";
 }
+function removeLegacyNavigation(){
+ document.getElementById("soa-mobile-nav")?.remove();
+ document.getElementById("soa-mobile-summary")?.remove();
+}
 function init(){
+ removeLegacyNavigation();
  window.soaCharacters?.organizeSections?.();
  const nav=document.querySelector(".soa-quick-nav");if(!nav)return;
  const buttons=[...nav.querySelectorAll("button.soa-quick-link")];
@@ -40,7 +45,7 @@ function init(){
   render();window.scrollTo?.({top:0,behavior:"auto"});
  }
  window.soaLayout={
-  select,refresh:render,
+  version:2,select,refresh:render,
   disable:()=>{document.body.classList.remove("soa-tabbed");sections().forEach(section=>{section.hidden=section.dataset.soaUnavailable==="true"})},
   enable:()=>{document.body.classList.add("soa-tabbed");render()},
  };

@@ -315,7 +315,18 @@ function profilePanel(){
  const nav=make("nav",undefined,"soa-quick-nav");nav.setAttribute("aria-label","Game sections");
  for(const [tab,label,targetId] of [["adventure","Adventure","campaign-box"],["quest","Quest","soa-chronicle"],["character","Character","soa-character-screen"],["reputation","Reputation",active.origin==="custom"?"soa-standalone-reputation":"companion-panel"],["settings","Settings","soa-save-settings"]]){
   const jump=make("button",label);jump.type="button";jump.className="soa-quick-link";jump.dataset.gameTab=tab;jump.setAttribute("aria-current","false");jump.setAttribute("aria-controls",targetId);
-  jump.onclick=()=>{if(window.soaLayout?.select)window.soaLayout.select(tab);else{const dest=get(targetId);if(dest){dest.scrollIntoView({behavior:"auto",block:"start"})}}};
+  jump.onclick=()=>{
+   const layout=window.soaLayout;
+   if(layout?.version===2){layout.select(tab);return}
+   if(layout?.select){
+    const legacyTab={quest:"journal",reputation:"companions"}[tab]||tab;
+    layout.select(legacyTab);
+    document.querySelectorAll("main > section.soa-game-screen").forEach(section=>{section.hidden=tab!=="character"||section.dataset.soaUnavailable==="true"});
+    for(const button of nav.querySelectorAll("button.soa-quick-link")){const selected=button.dataset.gameTab===tab;button.setAttribute("aria-current",selected?"page":"false");button.classList.toggle("active",selected)}
+    return;
+   }
+   const dest=get(targetId);if(dest)dest.scrollIntoView({behavior:"auto",block:"start"});
+  };
   nav.append(jump);
  }
  head.append(nav);

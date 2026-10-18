@@ -1,4 +1,7 @@
 /* Section switching lives in the existing top navigation at every viewport. */
+#soa-mobile-nav,#soa-mobile-summary{display:none!important}
+body.soa-tabbed{padding-bottom:0!important}
+body.soa-tabbed main{padding-bottom:0!important}
 body.soa-tabbed main>section.panel[hidden],
 body.soa-tabbed main>section.soa-game-screen[hidden],
 body.soa-tabbed .soa-character-screen[hidden]{display:none!important}

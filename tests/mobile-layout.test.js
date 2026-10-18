@@ -10,6 +10,7 @@ const source = fs.readFileSync(path.join(__dirname, "..", "public", "mobile-layo
 const html = fs.readFileSync(path.join(__dirname, "..", "public", "index.html"), "utf8");
 const characters = fs.readFileSync(path.join(__dirname, "..", "public", "characters.js"), "utf8");
 const serviceWorker = fs.readFileSync(path.join(__dirname, "..", "public", "sw.js"), "utf8");
+const layoutCss = fs.readFileSync(path.join(__dirname, "..", "public", "mobile-layout.css"), "utf8");
 const tabIds = ["adventure", "quest", "character", "reputation", "settings"];
 
 function element(tagName, id = "", tab = "") {
@@ -56,6 +57,8 @@ function startLayout({ getItem = () => null, setItem = () => {}, readyState = "l
   sections.find(section => section.id === "companion-panel").dataset.soaUnavailable = "true";
   const reports = [];
   const listeners = {};
+  const legacyRemoved = new Set();
+  const legacyElements = Object.fromEntries(["soa-mobile-nav", "soa-mobile-summary"].map(id => [id, { remove() { legacyRemoved.add(id); } }]));
   const storage = { getItem, setItem };
   let scrollCalls = 0;
   let organizationCalls = 0;
@@ -63,7 +66,7 @@ function startLayout({ getItem = () => null, setItem = () => {}, readyState = "l
     body, readyState,
     querySelector: selector => selector === ".soa-quick-nav" ? nav : null,
     querySelectorAll: selector => selector.startsWith("main > section") ? sections : [],
-    getElementById: () => null,
+    getElementById: id => legacyElements[id] || null,
     addEventListener(name, callback) { listeners[name] = callback; },
   };
   const context = {
@@ -76,7 +79,7 @@ function startLayout({ getItem = () => null, setItem = () => {}, readyState = "l
   };
   vm.runInNewContext(source, context, { filename: "mobile-layout.js" });
   if (listeners.DOMContentLoaded) listeners.DOMContentLoaded();
-  return { layout: context.window.soaLayout, nav, tabs, sections, reports, body, get scrollCalls() { return scrollCalls; }, organizationCalls };
+  return { layout: context.window.soaLayout, nav, tabs, sections, reports, body, legacyRemoved, get scrollCalls() { return scrollCalls; }, organizationCalls };
 }
 
 test("one five-destination top navigation is loaded and cached for offline play", () => {
@@ -85,7 +88,17 @@ test("one five-destination top navigation is loaded and cached for offline play"
   assert.match(serviceWorker, /"\.\/mobile-layout\.js"/);
   assert.match(serviceWorker, /"\.\/mobile-layout\.css"/);
   assert.match(characters, /\[\["adventure","Adventure","campaign-box"\],\["quest","Quest","soa-chronicle"\],\["character","Character","soa-character-screen"\],\["reputation","Reputation"/);
-  assert.doesNotMatch(source, /soa-mobile-nav|soa-mobile-summary|position:\s*fixed/);
+  assert.match(serviceWorker, /shadows-of-azeroth-v53/);
+  assert.match(layoutCss, /#soa-mobile-nav,#soa-mobile-summary\{display:none!important\}/);
+  assert.doesNotMatch(source, /createElement\(["']nav["']\)/);
+  assert.match(characters, /layout\?\.version===2/);
+  assert.match(characters, /quest:"journal",reputation:"companions"/);
+});
+
+test("new layout removes the cached legacy bottom menu", () => {
+  const { legacyRemoved, layout } = startLayout();
+  assert.deepEqual([...legacyRemoved].sort(), ["soa-mobile-nav", "soa-mobile-summary"]);
+  assert.equal(layout.version, 2);
 });
 
 test("tab selection displays only its screen and maps old saved tab names", () => {
