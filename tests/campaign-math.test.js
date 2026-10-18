@@ -1,0 +1,152 @@
+"use strict";
+
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const test = require("node:test");
+const vm = require("node:vm");
+
+const source = fs.readFileSync(path.join(__dirname, "..", "public", "campaign.js"), "utf8");
+function functionBlock(name, nextName) {
+  const start = source.indexOf(`function ${name}(`);
+  const end = source.indexOf(`\nfunction ${nextName}(`, start);
+  assert.notEqual(start, -1, `${name} is present`);
+  assert.notEqual(end, -1, `${nextName} follows ${name}`);
+  return source.slice(start, end);
+}
+
+function makeContext({ random = () => 0.5 } = {}) {
+  const deterministicMath = Object.create(Math);
+  deterministicMath.random = random;
+  const context = {
+    Math: deterministicMath,
+    s: { en: 100, hp: 100, money: 0, time: 0, alert: 1 },
+    campaign: { flags: {} },
+    window: {
+      soaAbilities: {
+        modifier: skill => skill === "stealth" || skill === "investigate" ? 2 : 0,
+        get: () => ({ className: "Rogue", proficiency: 3, modifiers: { DEX: 4 } }),
+      },
+      soaProgression: {
+        bonus: skill => skill === "stealth" || skill === "investigate" ? 1 : 0,
+        level: () => 13,
+      },
+      soaCharacters: { profile: () => ({ className: "Rogue" }) },
+      soaEquipment: { modifiers: () => ({ attack: 2, damage: 3 }) },
+      soaCombatRules: {
+        weapon: (actor, ability) => ability === "kick"
+          ? { die: 6, flat: 4 + (actor?.modifiers?.DEX || 0) }
+          : actor?.className === "Warrior" || actor?.className === "Paladin"
+            ? { die: 8, flat: 5 + (actor?.modifiers?.STR || 0) }
+            : { die: 10, flat: 10 + (actor?.modifiers?.DEX || 0) },
+        statBlock: () => ({ ac: 14 }),
+      },
+    },
+    selectedCombatTarget: "Guard",
+    livingEnemies: () => [{ name: "Guard", hp: 20, maxHp: 20 }],
+    socialSkill: () => null,
+    socialTarget: () => ({ bonus: 0, dc: 14 }),
+    fightExchange: () => null,
+    socialCheck: () => null,
+  };
+  vm.createContext(context);
+  return context;
+}
+
+test("inferred skill drives preview, energy cost, effects, and practice", () => {
+  const context = makeContext();
+  vm.runInContext([
+    functionBlock("actionOdds", "resolvedCombatAbility"),
+    functionBlock("resolvedSkillName", "meaningfulSocialPractice"),
+    functionBlock("result", "interfaceUI"),
+    "globalThis.testApi = { actionOdds, resolvedSkillName, result };",
+  ].join("\n"), context);
+
+  const action = { type: "engineering", text: "Sneak past the guard", difficulty: "easy" };
+  const odds = context.testApi.actionOdds(action);
+  assert.equal(odds.skill, "stealth");
+  assert.equal(odds.cost, 20);
+  assert.equal(odds.target, 85);
+  assert.equal(context.testApi.resolvedSkillName(action), "stealth");
+  assert.match(context.testApi.result(action), /Snacky remains concealed/);
+  assert.equal(context.s.en, 90);
+  assert.equal(context.s.time, 1);
+
+  const search = context.testApi.actionOdds({ type: "stealth", text: "Search the room" });
+  assert.equal(search.skill, "investigate");
+  assert.equal(search.cost, 10);
+  assert.equal(context.testApi.resolvedSkillName({ type: "stealth", text: "Search the room" }), "investigate");
+  context.livingEnemies = () => [];
+  assert.equal(context.testApi.resolvedSkillName({ type: "combat", text: "Search the room" }), "investigate");
+  context.livingEnemies = () => [{ name: "Guard", hp: 20, maxHp: 20 }];
+  assert.equal(context.testApi.resolvedSkillName({ type: "combat", text: "Search the room" }), "combat");
+});
+
+test("combat preview includes the same equipment attack and damage bonuses as resolution", () => {
+  const context = makeContext();
+  vm.runInContext([
+    functionBlock("resolvedCombatAbility", "dicePreview"),
+    functionBlock("dicePreview", "socialCheck"),
+    "globalThis.testPreview = dicePreview;",
+  ].join("\n"), context);
+
+  const strike = context.testPreview({ type: "combat", ability: "strike", text: "Strike the Guard" });
+  assert.match(strike.primary, /d20 \+ 9 vs AC 14/);
+  assert.match(strike.secondary, /1d10 \+ 17 raw damage · 35 Energy/);
+
+  const kick = context.testPreview({ type: "combat", ability: "kick", text: "Kick the Guard" });
+  assert.match(kick.secondary, /1d6 \+ 11 raw damage · 25 Energy cost · up to \+10 recovery · interrupt on hit/);
+
+  const riposte = context.testPreview({ type: "combat", ability: "riposte", text: "Riposte" });
+  assert.match(riposte.secondary, /31 raw damage on a valid Riposte/);
+
+  context.campaign.flags.advantage = true;
+  const advantaged = context.testPreview({ type: "combat", ability: "strike", text: "Strike the Guard" });
+  assert.match(advantaged.primary, /d20 with advantage \+ 9 vs AC 14/);
+  context.campaign.flags.advantage = false;
+
+  context.window.soaAbilities.get = () => ({ className: "Warrior", proficiency: 3, modifiers: { DEX: 4, STR: 2 } });
+  const warriorStrike = context.testPreview({ type: "combat", ability: "strike", text: "Strike the Guard" });
+  assert.match(warriorStrike.primary, /d20 \+ 7 vs AC 14/);
+  assert.match(warriorStrike.secondary, /1d8 \+ 10 raw damage/);
+});
+
+test("campaign save normalization repairs partial state and drops malformed scene data", () => {
+  const context = makeContext();
+  context.MAX = 24;
+  context.make = () => ({ lastAction: "Start the next scene", lastResult: "No new action yet." });
+  context.window.soaSaveRules = { validateCampaignSave: value => value };
+  vm.runInContext([
+    functionBlock("normalizeCampaignState", "safe"),
+    "globalThis.normalize = normalizeCampaignState;",
+  ].join("\n"), context);
+
+  const normalized = context.normalize({
+    turn: 3,
+    scene: { story: "An open door.", choices: [{ text: "Investigate", type: "unknown", difficulty: "odd" }] },
+    history: ["one", null, "two"], journal: "invalid", pending: { action: 4 },
+    enemies: [{ name: "Guard", hp: 90, maxHp: 20 }, { name: "Scout", hp: 8, maxHp: 12 }],
+    combatLog: [{ round: 2, events: [{ name: "Guard", after: 5, maxHp: 20 }] }, "bad row"],
+  });
+  assert.equal(normalized.turn, 3);
+  assert.equal(normalized.scene.choices[0].type, "investigate");
+  assert.equal(normalized.scene.choices[0].difficulty, "medium");
+  assert.deepEqual(Array.from(normalized.history), ["one", "two"]);
+  assert.deepEqual(Array.from(normalized.journal), []);
+  assert.equal(normalized.pending, null);
+  assert.equal(normalized.enemies.length, 1);
+  assert.equal(normalized.enemies[0].name, "Scout");
+  assert.equal(normalized.combatLog.length, 1);
+  assert.equal(context.normalize(["not", "a", "campaign"]), null);
+  assert.equal(context.normalize({ scene: { story: "broken", choices: "not choices" } }).scene, null);
+
+  const bounded = context.normalize({
+    pending: { action: "a".repeat(400), resolution: "r".repeat(900), startedAt: -1, dialogue: { target: "unknown", tone: "flirt" } },
+    scene: { story: "Open.", choices: [{ text: "x".repeat(200) }] },
+  });
+  assert.equal(bounded.pending.action.length, 320);
+  assert.equal(bounded.pending.resolution.length, 700);
+  assert.equal(bounded.pending.startedAt, 0);
+  assert.equal(bounded.pending.dialogue, null);
+  assert.equal(bounded.scene.choices[0].text.length, 170);
+});

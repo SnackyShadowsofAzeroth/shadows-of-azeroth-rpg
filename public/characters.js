@@ -13,17 +13,16 @@ const BASIC_GEAR={Warrior:["Worn Training Sword","Plain Shield","Simple Cloth Tu
 const isSnackyEgg=p=>p?.name==="Snacky Lugnuts"&&p?.gender==="Male"&&p?.race==="Gnome"&&p?.className==="Rogue"&&Object.keys(p?.professions||{}).includes("Mining")&&Object.keys(p?.professions||{}).includes("Engineering");
 const START_ZONES={"Human":"Northshire Valley, Elwynn Forest","Dwarf":"Coldridge Valley, Dun Morogh","Gnome":"Coldridge Valley, Dun Morogh","Night Elf":"Shadowglen, Teldrassil","Orc":"Valley of Trials, Durotar","Troll":"Valley of Trials, Durotar","Undead":"Deathknell, Tirisfal Glades","Tauren":"Red Cloud Mesa, Mulgore","Skyborne":"Skyborne Enclave (original starting settlement)"};
 const startingZone=p=>START_ZONES[p.race]||"a settlement in "+(p.faction==="Horde"?"Kalimdor":"the Eastern Kingdoms");
-let roster,active;
+let roster,active,rosterLoadBlocked=false;
 const get=id=>document.getElementById(id);
 const make=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e};
-// Keep grouped game content visible. Details elements remain useful as semantic containers,
-// but players should not have to expand menus to reach their contents.
+// Keep grouped game content visible, except the intentional character-creation disclosure.
 function keepGameSectionsExpanded(root=document){
- const expand=scope=>scope.querySelectorAll?.("details:not(.soa-collapsible-quests)").forEach(node=>{node.open=true});
+ const expand=scope=>scope.querySelectorAll?.("details:not(.soa-collapsible-quests):not(.soa-create-new)").forEach(node=>{node.open=true});
  expand(root);
  const observer=new MutationObserver(records=>records.forEach(record=>record.addedNodes.forEach(node=>{
   if(node.nodeType!==1)return;
-  if(node.matches("details")&&!node.classList.contains("soa-collapsible-quests"))node.open=true;
+  if(node.matches("details")&&!node.classList.contains("soa-collapsible-quests")&&!node.classList.contains("soa-create-new"))node.open=true;
   expand(node);
  })));
  observer.observe(document.documentElement,{childList:true,subtree:true});
@@ -49,15 +48,22 @@ addPanelTopButtons();
 new MutationObserver(records=>records.forEach(record=>record.addedNodes.forEach(node=>{
  if(node.nodeType===1)addPanelTopButtons(node.closest?.("main > section.panel")||node);
 }))).observe(document.querySelector("main")||document.documentElement,{childList:true,subtree:true});
-const read=(key)=>{try{return JSON.parse(localStorage.getItem(key)||"null")}catch{return null}};
-const write=(key,val)=>{try{localStorage.setItem(key,JSON.stringify(val));return true}catch{return false}};
+const read=(key)=>{const result=window.soaSaveRules.readStoredJSON(key);if(!result.ok&&result.unavailable)window.soaReportStorageFailure?.("Character save could not be read because device storage is unavailable.");return result.ok?result.value:null};
+const write=(key,val)=>{if(window.soaSaveRules.isIntegrityBlocked()||(key===ROSTER_KEY&&rosterLoadBlocked))return false;try{localStorage.setItem(key,JSON.stringify(val));return true}catch{window.soaReportStorageFailure?.("Character data could not be saved. Check available browser storage.");return false}};
 function defaults(){
  const professions={Mining:{skill:225,events:0},Engineering:{skill:225,events:0}};
  return {id:"snacky",name:"Snacky Lugnuts",gender:"Male",race:"Gnome",faction:"Alliance",className:"Rogue",specialization:"Combat Swords",professions,secondary:Object.fromEntries(SECONDARY.map(x=>[x,{skill:1,events:0}])),professionLog:[],professionEvents:[],origin:"legacy"};
 }
 function init(){
- roster=read(ROSTER_KEY);
- if(!roster||!Array.isArray(roster.characters)||!roster.characters.length){roster={version:1,active:"snacky",characters:[defaults()]};write(ROSTER_KEY,roster);snapshot("snacky");}
+ const loaded=window.soaSaveRules.readStoredJSON(ROSTER_KEY);
+ let storedRoster=null,invalidRoster=false;
+ if(loaded.ok&&!loaded.missing)try{storedRoster=window.soaSaveRules.validateCharacterRoster(loaded.value)}catch{invalidRoster=true;window.soaSaveRules.reportCorruption(ROSTER_KEY)}
+ if(!loaded.ok||invalidRoster){
+  rosterLoadBlocked=true;roster={version:1,active:"snacky",characters:[defaults()]};active=roster.characters[0];return;
+ }
+ roster=storedRoster;
+ if(loaded.missing){roster={version:1,active:"snacky",characters:[defaults()]};if(!window.soaSaveRules.isIntegrityBlocked()){write(ROSTER_KEY,roster);snapshot("snacky")}active=roster.characters[0];return}
+ if(window.soaSaveRules.isIntegrityBlocked()){active=roster.characters.find(x=>x?.id===roster.active)||roster.characters[0];return}
  for(const p of roster.characters){p.professions ||= {};p.secondary ||= {};if(p.id==="snacky"&&!p.gender)p.gender="Male";p.professionLog ||= [];p.professionEvents ||= []}
  // One-time correction for Snacky only. Preserve any progress above the established 225 baseline.
  const snacky=roster.characters.find(p=>p.id==="snacky");
@@ -72,33 +78,38 @@ function init(){
  active=roster.characters.find(x=>x.id===roster.active)||roster.characters[0];roster.active=active.id;write(ROSTER_KEY,roster);
 }
 function snapshot(id){
+ if(window.soaSaveRules.isIntegrityBlocked())return false;
  try{
   const data={};for(const key of SAVES)data[key]=localStorage.getItem(key);
   return write(SLOT_PREFIX+id,data);
  }catch{return false}
 }
 function restore(id){
+ if(window.soaSaveRules.isIntegrityBlocked())return false;
  const data=read(SLOT_PREFIX+id);
  // Never restore a corrupt slot that contains none of the actual save payloads.
  if(!data||typeof data!=="object"||!SAVES.some(key=>typeof data[key]==="string")){
   alert("This character slot is missing its save data. The current character has not been changed.");
   return false;
  }
- const previous={};
+ const previous={};let snapshotComplete=false,mutationStarted=false;
  try{
   for(const key of SAVES)previous[key]=localStorage.getItem(key);
+  snapshotComplete=true;
   for(const key of SAVES){
    const next=data[key]===null||data[key]===undefined?null:data[key];
    // Avoid unnecessary writes, particularly important if iOS storage is nearly full.
    if(next===previous[key])continue;
+   mutationStarted=true;
    if(next===null)localStorage.removeItem(key);
    else localStorage.setItem(key,next);
   }
   return true;
  }catch{
   // Best-effort rollback: a partial slot cannot silently become the active save.
-  for(const key of SAVES)try{
-   if(previous[key]===null||previous[key]===undefined)localStorage.removeItem(key);
+  if(snapshotComplete&&mutationStarted)for(const key of SAVES)try{
+   if(!Object.hasOwn(previous,key))continue;
+   if(previous[key]===null)localStorage.removeItem(key);
    else localStorage.setItem(key,previous[key]);
   }catch{}
   alert("Character switch could not finish. Your previous adventure is still selected; check available device storage.");
@@ -134,6 +145,7 @@ function socialSkills(){
 function selectedProfile(){return {...active,factionPath:active.race==="Skyborne"?skybornePath(active.faction):null,level:window.soaProgression?.level?.()||10,professions:Object.fromEntries(Object.entries(active.professions||{}).map(([k,v])=>[k,v.skill||1]))}}
 function commitRoster(){return write(ROSTER_KEY,roster)}
 function enter(id){
+ if(window.soaSaveRules.isIntegrityBlocked()){alert("Character changes are paused until the saved data has been recovered.");return}
  if(!roster.characters.some(x=>x.id===id))return;
  if(id!==active.id){
   const previousId=active.id;
@@ -153,6 +165,7 @@ function enter(id){
  location.reload();
 }
 function create(profile){
+ if(window.soaSaveRules.isIntegrityBlocked()){alert("Character creation is paused until the saved data has been recovered.");return}
  if(!validCharacterChoice(profile)){alert("That faction and class combination is not available for the selected race.");return}
  if(!Array.isArray(profile.professionNames)||profile.professionNames.length>2||new Set(profile.professionNames).size!==profile.professionNames.length||profile.professionNames.some(n=>!PROFS.includes(n))){alert("Choose at most two distinct primary professions.");return}
  if(roster.characters.length>=16){alert("Character roster full (16).");return}
@@ -186,6 +199,7 @@ function selectOptions(select,values){select.replaceChildren();for(const item of
 // Non-destructive multi-character backup. Does not include AI access codes or API secrets.
 // The current live working save is snapshotted before the archive is generated.
 function exportRosterBackup(){
+ if(window.soaSaveRules.isIntegrityBlocked()){alert("Backup export is paused because saved data could not be read. Restore a known good backup first.");return false}
  if(!snapshot(active.id)){alert("Couldn't safely read your current save for export. No data was changed.");return false}
  const slots={};
  for(const p of roster.characters){
@@ -203,11 +217,52 @@ function exportRosterBackup(){
   return true;
  }catch(e){alert("Unable to download backup: "+e.message);return false}
 }
+function restoreRosterBackup(archive){
+ let checked;
+ try{checked=window.soaSaveRules.validateRosterBackup(archive)}catch(e){alert("Cannot restore backup: "+e.message);return false}
+ if(!confirm("Replace all characters and their local saves with this backup? This also replaces their portraits."))return false;
+ if(!rosterLoadBlocked&&!window.soaSaveRules.isIntegrityBlocked()&&!snapshot(active.id)){alert("Restore stopped because the current save could not be backed up. No data was changed.");return false}
+ const previous=new Map(),affected=new Set([...SAVES,ROSTER_KEY]);let snapshotComplete=false,mutationStarted=false;
+ try{
+  for(let i=0;i<localStorage.length;i++){
+   const key=localStorage.key(i);
+   if(key&&(key.startsWith(SLOT_PREFIX)||key.startsWith("soa-portrait-v1-")))affected.add(key);
+  }
+  for(const id of checked.roster.characters.map(person=>person.id)){affected.add(SLOT_PREFIX+id);affected.add("soa-portrait-v1-"+id)}
+  for(const key of affected)previous.set(key,localStorage.getItem(key));
+  snapshotComplete=true;mutationStarted=true;
+  for(const key of affected)localStorage.removeItem(key);
+  for(const person of checked.roster.characters)localStorage.setItem(SLOT_PREFIX+person.id,JSON.stringify(checked.slots[person.id]));
+  for(const [id,data] of Object.entries(checked.portraits||{}))localStorage.setItem("soa-portrait-v1-"+id,data);
+  const activeSlot=checked.slots[checked.roster.active];
+  for(const key of SAVES){const value=activeSlot[key];if(value!==null)localStorage.setItem(key,value)}
+  localStorage.setItem(ROSTER_KEY,JSON.stringify(checked.roster));
+  try{sessionStorage.setItem(ENTER_KEY,"1")}catch(e){}
+  window.soaSaveRules.clearAllCorruption();
+  location.reload();
+  return true;
+ }catch(e){
+  if(snapshotComplete&&mutationStarted){
+   for(const key of affected)try{localStorage.removeItem(key)}catch{}
+   for(const [key,value] of previous)if(value!==null)try{localStorage.setItem(key,value)}catch{}
+  }
+  alert("Restore could not finish. The previous roster was restored where device storage allowed; no other data was changed.");
+  return false;
+ }
+}
+function importRosterBackupFile(event){
+ const file=event.target.files?.[0];if(!file)return;
+ if(file.size>12*1024*1024){alert("Cannot restore backup: file is larger than 12 MB.");event.target.value="";return}
+ file.text().then(text=>{
+  return restoreRosterBackup(JSON.parse(text));
+ }).catch(error=>alert("Cannot restore backup: "+error.message)).finally(()=>{event.target.value=""});
+}
 function drawMenu(){
  let overlay=get("soa-character-menu");if(overlay)overlay.remove();
  overlay=make("div",undefined,"soa-menu-overlay");overlay.id="soa-character-menu";
  const shell=make("div",undefined,"soa-menu-card");
  shell.append(make("div","SHADOWS OF AZEROTH · CHARACTER SELECT","soa-roster-kicker"),make("h1","Choose Your Hero"));
+ if(window.soaSaveRules.isIntegrityBlocked())shell.append(make("p","Saved data could not be read and is preserved. Gameplay is paused. Use Restore All Character Saves with a known-good backup to recover safely.","soa-menu-error"));
  const list=make("div",undefined,"soa-character-list");
  for(const p of roster.characters){
   const item=make("div",undefined,"soa-character-item");
@@ -246,7 +301,9 @@ function drawMenu(){
  form.onsubmit=e=>{e.preventDefault();const n=name.value.trim();if(n.length<2||n.length>36){warning.textContent="Enter a name between 2 and 36 characters.";return}if(!validCharacterChoice({race:race.value,faction:faction.value,className:className.value})){warning.textContent="Choose a faction and class allowed for that race.";return}if(prof1.value===prof2.value){warning.textContent="Choose two different primary professions.";return}if(roster.characters.some(x=>x.name.toLowerCase()===n.toLowerCase())){warning.textContent="That character name is already in your roster.";return}create({name:n,gender:gender.value,race:race.value,faction:faction.value,className:className.value,professionNames:[prof1.value,prof2.value]})};
  expand.append(form);shell.append(expand);
  const backup=make("button","Download All Character Saves");backup.type="button";backup.className="soa-roster-backup";backup.onclick=exportRosterBackup;shell.append(backup);
- const backupHelp=make("p","Download a backup of every hero, story, reputation and relationship. Keep the file somewhere safe; in-app full-roster restore is not available yet.","soa-menu-help");shell.append(backupHelp);
+ const restore=make("button","Restore All Character Saves");restore.type="button";restore.className="soa-roster-backup";restore.onclick=()=>get("soa-roster-restore-file").click();shell.append(restore);
+ const restoreInput=make("input");restoreInput.type="file";restoreInput.id="soa-roster-restore-file";restoreInput.accept="application/json,.json";restoreInput.hidden=true;restoreInput.onchange=importRosterBackupFile;shell.append(restoreInput);
+ const backupHelp=make("p","Back up or restore the complete character roster, including local stories, relationships, progression and portraits.","soa-menu-help");shell.append(backupHelp);
  const close=make("button","Return to Game");close.className="soa-menu-back";close.onclick=()=>{overlay.remove();document.documentElement.classList.remove("soa-character-menu-open");try{sessionStorage.setItem(ENTER_KEY,"1")}catch(e){}};
  shell.append(close);overlay.append(shell);document.body.append(overlay);document.documentElement.classList.add("soa-character-menu-open");window.soaPortraits?.refreshMenu?.();
 }
@@ -344,6 +401,7 @@ function professionRoll(id,name){
  return (h>>>0)/4294967296;
 }
 function applyProfession(action,resolution,id){
+ if(window.soaSaveRules.isIntegrityBlocked())return false;
  if(!id||!active||active.professionEvents.includes(id))return false;
  const txt=String(action||"").slice(0,500);
  const success=/^Success:/i.test(String(resolution||""));
@@ -366,12 +424,14 @@ function applyProfession(action,resolution,id){
  return !!(found&&success);
 }
 function updateCraftSkill(name,level){
+ if(window.soaSaveRules.isIntegrityBlocked())return false;
  const r=active?.professions?.[name];if(!r||!Number.isInteger(level)||level<1||level>300)return false;
  const old=r.skill;r.skill=Math.max(Number(r.skill)||1,level);
  if(!commitRoster()){r.skill=old;return false}
  drawProfessions();return true;
 }
 function retrainPrimaryProfession(dropName,newName){
+ if(window.soaSaveRules.isIntegrityBlocked())return {error:"Character changes are paused until saved data has been recovered."};
  if(Object.keys(active?.professions||{}).length!==2)return {error:"Retraining requires two occupied primary profession slots."};
  if(!PROFS.includes(newName)||!active?.professions||!Object.hasOwn(active.professions,dropName))return {error:"Choose a currently trained primary profession."};
  if(Object.hasOwn(active.professions,newName))return {error:"Already trained in that profession."};
@@ -387,7 +447,7 @@ window.soaCharacters={retrainPrimaryProfession,updateCraftSkill,profile:selected
 window.addEventListener("pagehide",()=>snapshot(active.id));
 document.addEventListener("DOMContentLoaded",()=>{
  profilePanel();
- try{if(sessionStorage.getItem(ENTER_KEY)!=="1")drawMenu()}catch(e){drawMenu()}
+ try{if(rosterLoadBlocked||window.soaSaveRules.isIntegrityBlocked()||sessionStorage.getItem(ENTER_KEY)!=="1")drawMenu()}catch(e){drawMenu()}
  // New-character adventures need their own future companions. Snacky's fixed party should not be shown as theirs.
  if(active.origin==="custom"){const pane=get("companion-panel");if(pane)pane.hidden=true;const rep=document.createElement("section");rep.className="panel soa-standalone-reputation";rep.id="soa-standalone-reputation";rep.append(document.createElement("h2"));rep.firstChild.textContent="Reputation";get("soa-profession-panel")?.after(rep);window.soaReputation?.renderInto?.(rep);const journal=get("journal");if(journal?.closest){const legacy=journal.closest("section.panel");if(legacy)legacy.hidden=true}}
  organizeGameSections();

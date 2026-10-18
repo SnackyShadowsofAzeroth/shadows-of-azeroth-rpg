@@ -45,23 +45,21 @@
 6. Write short narrative and clear choice consequences; display concise UI.
 7. Never claim GitHub changes, Cloudflare deployment, Gemini reachability, cross-device saves or sync without independently verifying them.
 
-## Web-app engineering backlog (not represented as already complete)
+## Web-app engineering review (status as of 2026-10-17)
 
-**P0 save safety**: Export/import **both** legacy offline state and AI campaign state in a versioned bundle, with validation, confirmation before overwriting, backup/restore, and tests. Current implementation exports offline state alone.
+**Save recovery — addressed in v51.** Offline saves, campaign journals and complete roster archives are validated before application. All-character archives include campaign and per-character data and restore with confirmation and best-effort rollback. Malformed local saves are preserved instead of silently replaced; XP and skill awards roll back if storage fails. Live iPhone restore testing remains outstanding.
 
-**P0 deterministic action engine**: Existing AI-campaign result logic resolves fights in one abstract skirmish, may award 75 copper from winning combat without a loot action, and uses generic probabilities and fixed Energy costs. Align with the rule invariant without mutating older saves or conflating narrative intent with resolved mechanical effects.
+**Action and combat calculations — partly addressed in v50.** Inferred action skill now determines the preview, energy cost, result text and practice credit together. Tracked combat preview now includes equipment bonuses, and attack rolls use Dexterity for Rogues or Strength for Warriors/Paladins. Combat remains one player exchange at a time; local mechanics remain authoritative and narration cannot grant unverified currency or loot. Broader game balance should be reviewed separately from correctness.
 
-**P0 continuity**: Existing cloud director prompt hardcodes an early 10:23 PM starting point and three named companions; it must not reset ongoing campaigns. Use explicitly versioned canonical checkpoints only when a new campaign is intentionally started.
+**Continuity — current inputs are state-based.** The server receives the prior scene, saved history, campaign origin and starting zone. New scenes remain optional online narration; the AI does not write gameplay state. Long-campaign continuity still needs real play testing.
 
-**P1 retry safety**: Record action result and state atomically, prevent duplicated rewards or costs on retries, and preserve pending generated turns when network fails.
+**Retry safety — partially addressed.** Chosen campaign actions are recorded in the pending save before the network request, and retrying scene generation does not reapply the action. Storage is split across local keys, so atomic writes across all character, relationship and progression records cannot be guaranteed if the browser terminates during a write.
 
-**P1 offline-first**: Display the last AI scene/choices when offline, support the legacy adventure, signal clearly that *new AI scenes* require connectivity; exclude /api traffic and secrets from service-worker caching.
+**Offline-first and mobile UX — implemented with live-device checks pending.** The legacy adventure is local, API routes are not cached, and recent scenes remain available from the save. The mobile navigation script and stylesheet are now linked and included in the offline cache; unknown saved tabs fall back to Adventure. Cloudflare and iPhone Safari behavior still require verification.
 
-**P1 UX/mobile**: Accessible disabled/busy states, responsive compact stats and choice cards, persistent recent discovery log, clear online/offline state, confirmation on resets.
+**Server hardening — partly addressed in v50.** Request bodies are bounded by bytes read from the stream (64 KiB Campaign, 12 KiB Story), and upstream provider details are withheld. Input fields remain individually bounded. Per-user rate limiting and replay abuse protection require a Cloudflare-side policy or a durable shared rate-limit store.
 
-**P1 server hardening**: Limit body sizes based on actual parsed bytes rather than only Content-Length; bound inputs, protect against replay and quota abuse, don't leak detailed upstream errors or secrets. Cloudflare secrets remain server-side. No billing changes without approval.
-
-**P2 testing**: Automated smoke checks for fresh/legacy saves, cross-version migration, queued action retry, offline mode, no-duplicate loot, one-round combat, skill/DC reporting, alarm/log separation and story-continues-from-checkpoint semantics.
+**Regression tests — expanded in v51.** Automated checks now cover race/faction restrictions, action calculation alignment, combat preview modifiers, save and archive validation, nested journal records, campaign normalization, quest migration, rare reward stability, request size enforcement and mobile navigation fallback. GitHub Actions runs syntax and test checks on pull requests and `main`. Browser interaction, queued-request retries, offline reloads and complete iPhone backup restoration remain manual checks.
 
 ## Last action and next decision
 

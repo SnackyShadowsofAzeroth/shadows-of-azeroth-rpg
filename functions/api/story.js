@@ -1,11 +1,14 @@
+import { readJsonLimited } from "../_lib/read-json.js";
+
 const respond=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store","x-content-type-options":"nosniff"}});
 export async function onRequestPost({request,env}){
  if(!env.GEMINI_API_KEY||!env.AI_ACCESS_CODE)return respond({error:"AI Story Director not configured. Add GEMINI_API_KEY and AI_ACCESS_CODE as Cloudflare secrets."},503);
  const origin=new URL(request.url).origin;
  if(request.headers.get("origin")&&request.headers.get("origin")!==origin)return respond({error:"Origin not allowed"},403);
  if(request.headers.get("x-story-access")!==env.AI_ACCESS_CODE)return respond({error:"Incorrect story access code"},401);
- if(Number(request.headers.get("content-length")||0)>12000)return respond({error:"Request too large"},413);
- let data;try{data=await request.json()}catch{return respond({error:"Invalid JSON"},400)}
+ const parsed=await readJsonLimited(request,12000);
+ if(!parsed.ok)return respond({error:parsed.tooLarge?"Request too large":"Invalid JSON"},parsed.tooLarge?413:400);
+ const data=parsed.value;
  const {scene,action,state}=data||{};
  if(typeof scene!=="string"||scene.length>2300||typeof action!=="string"||action.length>300||!state||typeof state!=="object")return respond({error:"Invalid scene data"},400);
  const safeState={hp:Math.max(0,Math.min(100,Number(state.hp)||0)),energy:Math.max(0,Math.min(100,Number(state.energy)||0)),money:String(state.money||"").slice(0,40),location:String(state.location||"").slice(0,120),alert:String(state.alert||"").slice(0,60),notes:Array.isArray(state.notes)?state.notes.slice(0,12).map(x=>String(x).slice(0,120)):[]};
@@ -18,7 +21,7 @@ export async function onRequestPost({request,env}){
    body:JSON.stringify({systemInstruction:{parts:[{text:instructions}]},contents:[{role:"user",parts:[{text:JSON.stringify({scene,requested_framing:action,confirmed_state:safeState})}]}],generationConfig:{maxOutputTokens:700,temperature:0.8,thinkingConfig:{thinkingLevel:"low"}}}),
    signal:controller.signal
   });
-  if(!response.ok){const err=await response.json().catch(()=>({}));return respond({error:response.status===429?"Gemini free-tier rate limit reached.":response.status===400?"Gemini rejected the request.":response.status===403?"Gemini API key unauthorized or model unavailable.":"Gemini request failed ("+response.status+").",detail:String(err?.error?.message||"").slice(0,160)},502)}
+  if(!response.ok)return respond({error:response.status===429?"Gemini free-tier rate limit reached.":response.status===400?"Gemini rejected the request.":response.status===403?"Gemini API key unauthorized or model unavailable.":"Gemini request failed ("+response.status+")."},502);
   const output=await response.json();
   const story=(output.candidates||[]).flatMap(c=>c.content?.parts||[]).map(p=>p.text||"").join("\n").trim();
   if(!story)return respond({error:"Gemini returned no narration."},502);

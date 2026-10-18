@@ -1,13 +1,51 @@
 (()=>{"use strict";
 const KEY="soa-campaign-v1", MAX=24;
-let campaign=null,busy=false,enabled=false,customDraft="",customType="investigate",customSocialSkill="auto",statusMessage="",selectedCombatTarget=null,selectedAllyTarget=null;
+let campaign=null,busy=false,enabled=false,customDraft="",customType="investigate",customSocialSkill="auto",statusMessage="",campaignSaveFailed=false,campaignLoadBlocked=false,campaignStorageReadFailed=false,selectedCombatTarget=null,selectedAllyTarget=null;
 const get=id=>document.getElementById(id);
-function store(){try{localStorage.setItem(KEY,JSON.stringify(campaign))}catch(e){}}
-function make(){return {turn:0,scene:null,history:[],journal:[],lastError:"",lastAction:"Begin the next chapter of Snacky’s continuing mission in Stormwind, addressing the explosives threat and preparing his SI:7 debrief.",lastResult:"Hollow Raven is complete; the Stormwind threat is unresolved. No new action has yet been taken.",pending:null}}
+function localGet(key){try{return localStorage.getItem(key)}catch{campaignStorageReadFailed=true;return null}}
+function localSet(key,value){try{localStorage.setItem(key,value);return true}catch{return false}}
+function store(){if(campaignLoadBlocked||window.soaSaveRules.isIntegrityBlocked()){status("Saved data could not be read. Restore a valid backup before continuing.");return false}try{localStorage.setItem(KEY,JSON.stringify(campaign));campaignSaveFailed=false;return true}catch(e){campaignSaveFailed=true;status("Campaign save failed. Check device storage; your current scene is still open.");window.soaReportStorageFailure?.("Campaign save failed. Check browser storage before continuing.");return false}}
+function make(){return {turn:0,scene:null,history:[],journal:[],lastError:"",lastAction:"Begin the next scene of this character’s adventure.",lastResult:"A new campaign is ready. No action has been taken yet.",pending:null}}
+function normalizeCampaignState(value){
+ value=window.soaSaveRules.validateCampaignSave(value);
+ if(!value||typeof value!=="object"||Array.isArray(value))return null;
+ const c=value;
+ c.turn=Number.isSafeInteger(c.turn)&&c.turn>=0?c.turn:0;
+ c.history=Array.isArray(c.history)?c.history.filter(item=>typeof item==="string").slice(-MAX):[];
+ c.journal=Array.isArray(c.journal)?c.journal.filter(item=>typeof item==="string").slice(-100):[];
+ c.lastAction=typeof c.lastAction==="string"?c.lastAction.slice(0,320):make().lastAction;
+ c.lastResult=typeof c.lastResult==="string"?c.lastResult.slice(0,900):make().lastResult;
+ c.flags=c.flags&&typeof c.flags==="object"&&!Array.isArray(c.flags)?c.flags:{};
+ c.enemies=Array.isArray(c.enemies)?c.enemies.filter(enemy=>enemy&&typeof enemy.name==="string"&&Number.isFinite(enemy.hp)&&enemy.hp>=0&&Number.isFinite(enemy.maxHp)&&enemy.maxHp>0&&enemy.hp<=enemy.maxHp).slice(0,4):[];
+ c.combatAllies=Array.isArray(c.combatAllies)?c.combatAllies.filter(ally=>ally&&typeof ally.name==="string").slice(0,7):[];
+ c.combatLog=Array.isArray(c.combatLog)?c.combatLog.slice(-30).filter(row=>row&&typeof row==="object"&&Array.isArray(row.events)).map(row=>({round:Number.isSafeInteger(row.round)&&row.round>=0?row.round:0,events:row.events.filter(event=>event&&typeof event.name==="string").slice(0,10).map(event=>({name:event.name.slice(0,80),side:typeof event.side==="string"?event.side.slice(0,12):"",delta:Number.isFinite(event.delta)?event.delta:0,after:Number.isFinite(event.after)?event.after:0,maxHp:Number.isFinite(event.maxHp)?event.maxHp:null}))})):[];
+ c.supportCooldowns=c.supportCooldowns&&typeof c.supportCooldowns==="object"&&!Array.isArray(c.supportCooldowns)?c.supportCooldowns:{};
+ c.partyHealth=c.partyHealth&&typeof c.partyHealth==="object"&&!Array.isArray(c.partyHealth)?c.partyHealth:{};
+ c.defeatedEnemies=Array.isArray(c.defeatedEnemies)?c.defeatedEnemies.filter(item=>typeof item==="string").slice(-80):[];
+ if(c.pending&&(typeof c.pending!=="object"||Array.isArray(c.pending)||typeof c.pending.action!=="string"||typeof c.pending.resolution!=="string"))c.pending=null;
+ else if(c.pending){
+  const p=c.pending,tones=new Set(["betray","insult","apologize","flirt","disagree","support","honest","friendly","neutral"]),targets=new Set(["pippa","bromli","lethariel"]);
+  c.pending={action:p.action.slice(0,320),resolution:p.resolution.slice(0,700),startedAt:Number.isSafeInteger(p.startedAt)&&p.startedAt>=0?p.startedAt:0,dialogue:p.dialogue&&targets.has(p.dialogue.target)?{target:p.dialogue.target,tone:tones.has(p.dialogue.tone)?p.dialogue.tone:"neutral"}:null,survey:p.survey===true,combat:p.combat===true,actionReceipt:typeof p.actionReceipt==="string"?p.actionReceipt.slice(0,120):""};
+ }
+ if(c.xpEncounter&&typeof c.xpEncounter==="object"&&!Array.isArray(c.xpEncounter)){
+  const e=c.xpEncounter;
+  e.id=typeof e.id==="string"?e.id.slice(0,100):"encounter-legacy";
+  e.active=e.active===true;e.pendingVictory=e.pendingVictory===true;
+  e.party=Array.isArray(e.party)?e.party.filter(id=>typeof id==="string").slice(0,20):[];
+  e.defeated=Array.isArray(e.defeated)?e.defeated.filter(foe=>foe&&typeof foe.name==="string"&&Number.isFinite(foe.maxHp)&&foe.maxHp>0).slice(0,20):[];
+ }else c.xpEncounter=null;
+ if(c.scene&&typeof c.scene==="object"&&!Array.isArray(c.scene)&&typeof c.scene.story==="string"&&Array.isArray(c.scene.choices)){
+  const types=new Set(["stealth","combat","social","investigate","move","engineering","rest"]),difficulties=new Set(["easy","medium","hard"]);
+  c.scene.choices=c.scene.choices.filter(choice=>choice&&typeof choice.text==="string"&&choice.text.trim()).slice(0,6).map(choice=>({text:choice.text.slice(0,170),type:types.has(choice.type)?choice.type:"investigate",difficulty:difficulties.has(choice.difficulty)?choice.difficulty:"medium"}));
+  if(!c.scene.choices.length)c.scene=null;
+  else{c.scene.title=typeof c.scene.title==="string"?c.scene.title.slice(0,95):"The Continuing Adventure";c.scene.location=typeof c.scene.location==="string"?c.scene.location.slice(0,120):"Unknown location";c.scene.story=c.scene.story.slice(0,2800)}
+ }else c.scene=null;
+ return c;
+}
 function safe(text){return String(text||"").slice(0,2600)}
 function readableStory(text){return String(text||"").replace(/\bPipprained in her satchel\b/gi,"Pippa rummaged in her satchel").replace(/\bPipprained\b/gi,"Pippa")}
 
-function status(message){statusMessage=message;const el=get("campaign-status");if(el)el.textContent=message}
+function status(message){statusMessage=message;const el=get("campaign-status");if(el)el.textContent=campaignLoadBlocked?"Stored Living Campaign could not be read. Restore a valid all-character backup before starting it again.":campaignStorageReadFailed?"Device storage could not be read. Reload after enabling browser storage; no new campaign was started.":campaignSaveFailed?"Campaign save failed. Retry saving before continuing. "+message:message}
 function accessCode(){return get("ai-code")?.value.trim()||""}
 function focusAccess(){status("Enter your private AI access code in the AI Story Director panel to continue.");const f=get("ai-code");if(f){f.scrollIntoView({behavior:"smooth",block:"center"});f.focus()}}
 function refreshDisplay(){render();draw();window.soaCharacters?.refreshProfessions?.()}
@@ -83,10 +121,6 @@ function actionOdds(action){
  const target=Math.max(10,Math.min(95,Math.round(base+modifier*3+trained*2+Math.max(0,level-1)*.2+difficulty-(s.alert||0)*5)));
  return {cost:costs[relevant]??costs[t]??0,target,skill:relevant,modifier,trained};
 }
-function combatAccuracy(action){
- const rank=window.soaProgression?.bonus?.("combat")||0,level=window.soaProgression?.level?.()||10;
- return Math.max(.25,Math.min(.90,.74+(window.soaAbilities?.percent?.("combat")||0)-s.alert*.04+(action.difficulty==="easy"?.08:action.difficulty==="hard"?-.13:0)+rank*.008+Math.max(0,level-10)*.0015));
-}
 function resolvedCombatAbility(action){
  const description=String(action.text||"");
  const rogue=window.soaCharacters?.profile?.()?.className==="Rogue";
@@ -97,13 +131,19 @@ function dicePreview(action){
  // Combat takes priority over social keyword detection, matching the resolver.
  if(action.type==="combat"&&livingEnemies().length){
   const ability=resolvedCombatAbility(action);
-  if(ability==="evasion")return {primary:"🎲 No attack roll",secondary:"Defensive exchange · 0 Energy"};
-  if(ability==="riposte")return {primary:"🎲 Automatic hit after parry",secondary:(24+Math.max(-2,Math.min(4,window.soaAbilities?.modifier?.("combat")||0)))+" HP on a valid Riposte · 10 Energy"};
+  if(ability==="evasion")return {primary:"🎲 No attack roll",secondary:"Defensive exchange · 0 Energy cost · up to +10 Energy recovery"};
   const attacker=window.soaAbilities?.get?.("hero");
-  const bonus=(attacker?.proficiency||2)+(attacker?.modifiers?.DEX||0);
+  const gear=window.soaEquipment?.modifiers?.()||{};
+  if(ability==="riposte")return {primary:"🎲 Automatic hit after parry",secondary:(24+(attacker?.modifiers?.DEX||0)+(gear.damage||0))+" raw damage on a valid Riposte · 10 Energy cost · up to +10 recovery"};
+  const attackAbility=attacker?.className==="Warrior"||attacker?.className==="Paladin"?"STR":"DEX";
+  const attackModifier=attacker?.modifiers?.[attackAbility]??2;
+  const bonus=(attacker?.proficiency??2)+attackModifier+(gear.attack||0);
   const targets=livingEnemies(),selected=targets.find(e=>e.name===selectedCombatTarget)||targets[0];
   const ac=window.soaCombatRules?.statBlock?.(selected)?.ac||12;
-  return {primary:"🎲 d20 + "+bonus+" vs AC "+ac+" · natural 20 critical",secondary:ability==="kick"?"1d6 + "+(4+(attacker?.modifiers?.DEX||0))+" damage · 25 Energy · interrupt on hit":"1d10 + "+(10+(attacker?.modifiers?.DEX||0))+" damage · 35 Energy"};
+  const weapon=window.soaCombatRules?.weapon?.(attacker,ability)||{die:ability==="kick"?6:10,flat:ability==="kick"?4+(attacker?.modifiers?.DEX||0):10+(attacker?.modifiers?.DEX||0)};
+  const cost={strike:35,kick:25}[ability]??35;
+  const rollLabel=campaign?.flags?.advantage?"d20 with advantage + ":"d20 + ";
+  return {primary:"🎲 "+rollLabel+bonus+" vs AC "+ac+" · natural 20 critical",secondary:"1d"+weapon.die+" + "+(weapon.flat+(gear.damage||0))+" raw damage · "+cost+" Energy cost · up to +10 recovery"+(ability==="kick"?" · interrupt on hit":"")};
  }
  const skill=socialSkill(action);
  if(skill){
@@ -111,7 +151,7 @@ function dicePreview(action){
   return {primary:"🎲 d20 "+(bonus>=0?"+ "+bonus:"− "+Math.abs(bonus))+" vs DC "+dc,secondary:"CHA-based "+skill+" check · Natural 1 fails, 20 succeeds"};
  }
  const odds=actionOdds(action);
- const {cost,target}=odds;return {primary:"🎲 "+odds.skill+" · d100 ≤ "+target+" ("+target+"%)",secondary:cost+" Energy · ability modifier "+(odds.modifier>=0?"+":"")+odds.modifier+" · training +"+odds.trained};
+ const {cost,target}=odds;return {primary:"🎲 "+odds.skill+" · d100 ≤ "+target+" ("+target+"%)",secondary:cost+" Energy cost · up to +10 recovery · ability modifier "+(odds.modifier>=0?"+":"")+odds.modifier+" · training +"+odds.trained};
 }
 
 function socialCheck(action,skill){
@@ -155,10 +195,10 @@ function concludeProgressionEncounter(){
  return result;
 }
 function resolvedSkillName(choice){
- if(choice.type==="combat")return "combat";
+ if(choice.type==="combat"&&livingEnemies().length)return "combat";
  const social=socialSkill(choice);
  if(social)return social;
- const t=String(choice.type||"");
+ const t=actionOdds(choice).skill;
  return ["stealth","engineering","investigate","social","combat"].includes(t)?t:null;
 }
 function meaningfulSocialPractice(choice,skill){
@@ -255,6 +295,8 @@ function fightExchange(action){
  const rules=window.soaCombatRules;
  const actor=window.soaAbilities?.get?.("hero");
  const dex=actor?.modifiers?.DEX??2;
+ const attackAbility=actor?.className==="Warrior"||actor?.className==="Paladin"?"STR":"DEX";
+ const attackModifier=actor?.modifiers?.[attackAbility]??dex;
  const proficiency=actor?.proficiency??2;
  const block=rules.statBlock(target);
  const targetAC=block.ac;
@@ -265,7 +307,7 @@ function fightExchange(action){
  }
  const advantage=campaign.flags?.advantage?1:0;
  const gearBonus=window.soaEquipment?.modifiers?.()||{};
- const playerAttack=ability==="riposte"||ability==="evasion"?null:rules.attack(proficiency+dex+(gearBonus.attack||0),targetAC,{advantage});
+ const playerAttack=ability==="riposte"||ability==="evasion"?null:rules.attack(proficiency+attackModifier+(gearBonus.attack||0),targetAC,{advantage});
  const attackRoll=playerAttack?.die??null;
  const hit=ability==="riposte"?true:ability==="evasion"?false:playerAttack.hit;
  const hitTarget=targetAC;
@@ -319,7 +361,7 @@ function fightExchange(action){
   campaign.defeatedEnemies=campaign.defeatedEnemies.slice(-80);
  }
  const report=(ability==="evasion"?"Defensive evasion; no attack roll.":hit?"Used "+ability+" on "+target.name+" for "+dealt+" HP.":"Used "+ability+" on "+target.name+" but missed.")+
-  (attackRoll!==null?" d20 attack "+attackRoll+" + "+(proficiency+dex)+" vs AC "+targetAC+".":"")+
+  (attackRoll!==null?" d20 attack "+attackRoll+" + "+playerAttack.bonus+" vs AC "+targetAC+".":"")+
   " Enemy "+target.name+" HP "+oldHP+"/"+target.maxHp+" → "+target.hp+"/"+target.maxHp+". "+
   (retaliates?target.name+" retaliates against "+receivedName+" for "+taken+" HP ("+recipientBefore+" → "+recipientAfter+").":"No damage received.")+
   " Player HP "+heroHP+" → "+s.hp+"; Energy "+oldEnergy+" → "+s.en+"."+
@@ -539,7 +581,7 @@ function drawEnemyStatus(box){
 function result(action){
  if(action.type==="combat"&&livingEnemies().length)return fightExchange(action);
  const skill=socialSkill(action);if(skill)return socialCheck(action,skill);
- const t=action.type,{cost,target}=actionOdds(action);let damage=0;
+ const {cost,target,skill:t}=actionOdds(action);let damage=0;
  if(s.en<cost)return null;
  const rolled=1+Math.floor(Math.random()*100),ok=rolled<=target;
  s.en=Math.min(100,s.en-cost+10);s.time++; if(!ok&&["stealth","engineering","combat"].includes(t)){s.alert=Math.min(3,s.alert+1);damage=t==="combat"?8:t==="stealth"?3:0;s.hp=Math.max(1,s.hp-damage)}
@@ -553,8 +595,8 @@ function interfaceUI(){
  if(get("campaign-box"))return;
  const el=document.createElement("section");el.className="panel";el.id="campaign-box";
  const disclosure=document.createElement("details");disclosure.className="soa-panel-disclosure soa-campaign-disclosure";
- disclosure.open=localStorage.getItem("soa-campaign-panel-open")==="1";
- disclosure.ontoggle=()=>localStorage.setItem("soa-campaign-panel-open",disclosure.open?"1":"0");
+ disclosure.open=localGet("soa-campaign-panel-open")==="1";
+ disclosure.ontoggle=()=>{if(!localSet("soa-campaign-panel-open",disclosure.open?"1":"0"))window.soaReportStorageFailure?.("Campaign panel preference could not be saved; game progress is unchanged.")};
  const summary=document.createElement("summary");summary.innerHTML='Living Campaign <span class="tag">Gemini · Online</span>';
  const content=document.createElement("div");content.className="soa-panel-disclosure-content";
  const toggleLabel=document.createElement("label");toggleLabel.className="ai-toggle";toggleLabel.htmlFor="campaign-mode";
@@ -565,15 +607,22 @@ function interfaceUI(){
  const scene=document.createElement("div");scene.id="campaign-scene";
  content.append(toggleLabel,start,offline,campaignStatus,scene);disclosure.append(summary,content);el.append(disclosure);
  document.querySelector("header").after(el);
- get("campaign-mode").onchange=e=>{enabled=e.target.checked;localStorage.setItem("soa-campaign-enabled",enabled?"1":"0");if(enabled){if(!campaign)campaign=make();store();draw();if(navigator.onLine&&(!campaign.scene||pending()))advance(campaign.lastAction,campaign.lastResult,true)}else{document.body.classList.remove("soa-living-mode");get("campaign-scene").replaceChildren();showOriginal(true)}};
- get("campaign-start").onclick=()=>{if(!campaign)campaign=make();enabled=true;get("campaign-mode").checked=true;localStorage.setItem("soa-campaign-enabled","1");draw();if(!accessCode()){focusAccess();return}if(pending()||!campaign.scene)advance(campaign.lastAction,campaign.lastResult,true);else{status("Saved scene ready. Choose an action below.");refreshDisplay()}};
- get("campaign-offline").onclick=()=>{enabled=false;document.body.classList.remove("soa-living-mode");get("campaign-mode").checked=false;localStorage.setItem("soa-campaign-enabled","0");showOriginal(true);get("campaign-status").textContent="Offline scripted adventure enabled."};
+ get("campaign-mode").onchange=e=>{if(e.target.checked){if(campaignLoadBlocked||campaignStorageReadFailed){e.target.checked=false;status("");return}if(!campaign)campaign=make();if(!store()){e.target.checked=false;enabled=false;return}enabled=true;if(!localSet("soa-campaign-enabled","1"))window.soaReportStorageFailure?.("Campaign mode preference could not be saved.");draw();if(navigator.onLine&&(!campaign.scene||pending()))advance(campaign.lastAction,campaign.lastResult,true)}else{enabled=false;if(!localSet("soa-campaign-enabled","0"))window.soaReportStorageFailure?.("Campaign mode preference could not be saved.");document.body.classList.remove("soa-living-mode");get("campaign-scene").replaceChildren();showOriginal(true)}};
+ get("campaign-start").onclick=()=>{if(campaignLoadBlocked||campaignStorageReadFailed){status("");return}if(!campaign)campaign=make();if(!store())return;enabled=true;get("campaign-mode").checked=true;if(!localSet("soa-campaign-enabled","1"))window.soaReportStorageFailure?.("Campaign mode preference could not be saved.");draw();if(!accessCode()){focusAccess();return}if(pending()||!campaign.scene)advance(campaign.lastAction,campaign.lastResult,true);else{status("Saved scene ready. Choose your next action below.");refreshDisplay()}};
+ get("campaign-offline").onclick=()=>{enabled=false;document.body.classList.remove("soa-living-mode");get("campaign-mode").checked=false;if(!localSet("soa-campaign-enabled","0"))window.soaReportStorageFailure?.("Campaign mode preference could not be saved.");showOriginal(true);get("campaign-status").textContent="Offline scripted adventure enabled."};
 }
 function showOriginal(show){if(window.soaCharacters?.isNewCharacter?.())show=false;for(const el of document.querySelectorAll("main > section.panel")){if(el.id==="campaign-box")continue;const isStory=!!el.querySelector("#choices");if(isStory)el.style.display=show?"":"none"}}
 function reconcileAuthorizedMissionReward(){
  if(!campaign||window.soaCharacters?.profile?.()?.id!=="snacky")return;
  const q=window.soaQuests?.ensure?.(campaign);
  if(!q||q.claimed?.["mission:stormwind-explosives-defused:v1"])return;
+ // Require the player to confirm every Stormwind quest objective before the
+ // one-time mission payment is credited. A scene render alone is not proof.
+ const stormwindComplete=campaign.chronicle?.quests?.some(quest=>
+  quest?.id==="stormwind"&&quest.status==="completed"&&Array.isArray(quest.objectives)&&
+  quest.objectives.length>0&&quest.objectives.every(objective=>objective?.done===true)
+ );
+ if(!stormwindComplete)return;
  // Approved by player specifically for the completed defusal. Not inferred from Gemini prose.
  const result=window.soaQuests?.grantStormwindMission?.(campaign,s.money);
  if(Number.isSafeInteger(result?.wallet)){
@@ -587,6 +636,7 @@ function reconcileAuthorizedMissionReward(){
 function draw(){
  if(!enabled||!campaign)return;document.body.classList.add("soa-living-mode");showOriginal(false);
  const box=get("campaign-scene");box.replaceChildren();
+ if(campaignSaveFailed){const retrySave=document.createElement("button");retrySave.type="button";retrySave.className="med";retrySave.textContent="Retry saving campaign";retrySave.onclick=()=>{if(!store())return;status("Campaign saved. You can safely continue.");if(pending())advance(campaign.lastAction,campaign.lastResult,true);else if(!campaign.scene&&navigator.onLine)advance(campaign.lastAction,campaign.lastResult,true);else refreshDisplay()};box.append(retrySave)}
  if(!campaign.scene){status(statusMessage||"Ready to generate the next scene.");return}
  const sc=campaign.scene,head=document.createElement("h3"),where=document.createElement("div"),text=document.createElement("p");
  reconcileAuthorizedMissionReward();
@@ -679,6 +729,9 @@ function draw(){
 }
 async function choose(choice){
  if(busy||pending())return;
+ if(window.soaSaveRules.isIntegrityBlocked()){status("Saved data could not be read. Restore a valid backup before continuing.");return}
+ if(campaignLoadBlocked||campaignStorageReadFailed){status("");return}
+ if(campaignSaveFailed&&!store()){draw();return}
  if(!navigator.onLine){status("Offline: your saved scene is available. Reconnect to generate another.");return}
  if(!accessCode()){focusAccess();return}
  const detected=dialogueFromCustom(choice);if((detected||socialSkill(choice))&&choice.custom&&choice.type==="investigate")choice={...choice,type:"social"};
@@ -691,20 +744,21 @@ async function choose(choice){
  campaign.lastAction=safe(choice.text);campaign.lastResult=resolution;
  campaign.pending={action:campaign.lastAction,resolution,startedAt:Date.now(),dialogue:detected,survey:choice.survey===true,combat:choice.type==="combat",actionReceipt};
  campaign.history.push("At "+safe(campaign.scene?.location||"unknown location")+": Player: "+campaign.lastAction+" | "+resolution);
- campaign.history=campaign.history.slice(-MAX);store();refreshDisplay();
+ campaign.history=campaign.history.slice(-MAX);const saved=store();refreshDisplay();if(!saved)return;
  // Release the iPhone keyboard and return to the story while Gemini works.
  if(choice.custom&&document.activeElement?.blur)document.activeElement.blur();
  returnToAdventure("status");
  await advance(campaign.lastAction,resolution,false);
 }
 async function advance(action,resolution,retry){
+ if(window.soaSaveRules.isIntegrityBlocked()){status("Saved data could not be read. Restore a valid backup before continuing.");return}
  if(busy)return;if(!navigator.onLine){get("campaign-status").textContent="Offline: saved scene available; new scenes require internet.";draw();return}
  const code=accessCode();
  if(!code){focusAccess();draw();return}
  busy=true;status("Gemini is writing the next scene…");draw();
  try{
  const response=await fetch("./api/campaign",{method:"POST",headers:{"content-type":"application/json","x-story-access":code},body:JSON.stringify({context:{location:campaign.scene?.location||(window.soaCharacters?.isNewCharacter?.()?(window.soaCharacters?.profile?.()?.startingZone||"New adventurer starting zone"):"Hollow Raven laboratory"),previousTitle:campaign.scene?.title||"",previousScene:campaign.scene?.story||"",campaignOrigin:originOfCampaign(),startingZone:window.soaCharacters?.profile?.()?.startingZone||null,recentDiscoveries:campaign.journal.slice(-12),action,resolution,hp:s.hp,energy:s.en,gold:fmtMoney(s.money),alarm:s.alert,turn:campaign.turn,history:campaign.history.slice(-20),flags:Object.keys(s.flags||{}),companionMoments:window.soaCompanions?.getRecent?.()||[],companionProfiles:window.soaCompanions?.getProfiles?.()||{},relationships:window.soaCompanions?.getRelationships?.()||{},conversationContext:window.soaCompanions?.getConversationContext?.()||{},character:window.soaCharacters?.profile?.()||null,abilityScores:window.soaAbilities?.get?.("hero")?.stats||null,reputation:window.soaReputation?.getStandings?.()||{},reputationDevelopments:window.soaReputation?.getDevelopments?.()||[],enemies:livingEnemies().map(e=>({name:e.name,hp:e.hp,maxHp:e.maxHp})),allies:combatParty().map(e=>({name:e.name,hp:e.hp,maxHp:e.maxHp})),questRewards:{last:campaign.quests?.lastReward||null,activeMissions:Object.entries(campaign.quests?.missions||{}).filter(([,v])=>v.state!=="claimed").map(([id,v])=>({id,state:v.state}))},combatLog:(campaign.combatLog||[]).slice(-3),lastExchange:campaign.lastExchange||null,chronicle:window.soaChronicle?.context?.(campaign)||null,resourceSurvey:campaign.pending?.survey===true}})});
- const data=await response.json().catch(()=>({error:"Invalid server response"}));if(!response.ok)throw Error(data.error||"Request failed");
+ const data=await response.json().catch(()=>({error:"Invalid server response"}));if(window.soaSaveRules.isIntegrityBlocked()){status("Saved data could not be read. The pending scene was not applied; restore a valid backup before continuing.");return}if(!response.ok)throw Error(data.error||"Request failed");
  if(!Array.isArray(data.choices)||!data.story)throw Error("Incomplete generated scene");
  const completedDialogue=campaign.pending?.dialogue?{...campaign.pending.dialogue,id:"campaign-dialogue-"+campaign.pending.startedAt+"-"+campaign.turn,success:/^Success:/i.test(campaign.pending.resolution)}:null;
  const completedProfession=campaign.pending&&!campaign.pending.survey?{action:campaign.pending.action,resolution:campaign.pending.resolution,id:"profession-"+campaign.pending.startedAt+"-"+campaign.turn}:null;
@@ -729,8 +783,9 @@ function migrateCompanionDisplayNames(){
  if(campaign.lastExchange?.recipient==="Lethariel")campaign.lastExchange.recipient="Lethariel Moonguard";
  if(Array.isArray(campaign.combatLog))for(const row of campaign.combatLog)if(Array.isArray(row?.events))for(const event of row.events)if(event?.name==="Lethariel")event.name="Lethariel Moonguard";
 }
-try{campaign=JSON.parse(localStorage.getItem(KEY)||"null")}catch(e){campaign=null}
+const savedCampaign=localGet(KEY);if(campaignStorageReadFailed)campaignSaveFailed=true;
+if(savedCampaign!==null){try{campaign=normalizeCampaignState(JSON.parse(savedCampaign));if(!campaign)campaignLoadBlocked=true}catch{campaign=null;campaignLoadBlocked=true;window.soaSaveRules.reportCorruption(KEY)}}
 migrateCompanionDisplayNames();
-enabled=localStorage.getItem("soa-campaign-enabled")==="1";if(campaign){window.soaChronicle?.attach?.(campaign);store()}window.soaChronicleSetSave?.(store);interfaceUI();get("campaign-mode").checked=enabled;
-if(enabled){if(!campaign)campaign=make();draw();if(!campaign.scene&&navigator.onLine)advance(campaign.lastAction,campaign.lastResult,true)}
+enabled=localGet("soa-campaign-enabled")==="1"&&!campaignLoadBlocked&&!campaignStorageReadFailed;let campaignReady=true;if(campaign){window.soaChronicle?.attach?.(campaign);campaignReady=store()}window.soaChronicleSetSave?.(store);interfaceUI();get("campaign-mode").checked=enabled;
+if(campaignLoadBlocked||campaignStorageReadFailed){status("")}else if(enabled){if(!campaign){campaign=make();campaignReady=store()}draw();if(campaignReady&&!campaign.scene&&navigator.onLine)advance(campaign.lastAction,campaign.lastResult,true)}
 window.soaLivingCampaign={getState:()=>campaign,enabled:()=>enabled,persist:store,refreshUI:()=>{draw();window.soaCharacters?.refreshProfessions?.()}};})();

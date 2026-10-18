@@ -45,3 +45,4 @@ details>summary::-webkit-details-marker{display:none}
 details.soa-collapsible-quests>summary{list-style:disclosure-closed inside;cursor:pointer;pointer-events:auto}
 details.soa-collapsible-quests[open]>summary{list-style-type:disclosure-open}
 details.soa-collapsible-quests>summary::-webkit-details-marker{display:inline-block}
+#save-retry[hidden],#importfile[hidden],#soa-roster-restore-file[hidden]{display:none!important}

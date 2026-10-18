@@ -1,5 +1,5 @@
 # Shadows of Azeroth — Development Handoff
-Updated: 2026-10-16
+Updated: 2026-10-17
 
 ## Repository
 GitHub: SnackyShadowsofAzeroth/shadows-of-azeroth-rpg
@@ -173,3 +173,15 @@ Added three region-bound, engine-authored missions with immutable reward terms a
 - Skyborne share Warrior, Hunter, Rogue, and Druid. The Druid note identifies unique bird-inspired forms. Alliance High Order Skyborne may choose Mage; Horde Windshaper Skyborne may choose Shaman. Changing faction refreshes the class list and removes incompatible choices.
 - Creation validates race/faction/class combinations before saving. Skyborne characters store and display their allegiance label (High Order Skyborne · Alliance or Windshaper Skyborne · Horde); their opening story prompt carries that identity and the Skyborne Druid form detail.
 - No existing saves or characters are migrated or reset. Offline cache v48.
+
+
+## Stability and save-safety review (2026-10-17)
+- Current local changes are on the isolated `audit/stability-cohesion` branch. They are not deployed. No existing save key or player progress was reset or migrated.
+- Campaign outcome labels, preview chance, energy cost and progression now use the same resolved skill. Combat previews report equipment attack/damage bonuses, and Warrior/Paladin attack rolls use Strength while Rogues use Dexterity. Current d100 and combat formulas are documented in the v50 README section.
+- Offline saves now validate scene/stat/encounter shapes before import. Corrupt saves are preserved; gameplay pauses on validation or storage failure until a valid import, retry, or confirmed restart.
+- Versioned all-character backups can be restored in-app, with archive validation, confirmation and rollback on storage errors. The archive includes per-character stories, progression, relationships, reputation and portraits.
+- Living Campaign records are normalized on load. An unreadable campaign is not overwritten; restore a valid all-character backup to recover it.
+- API body limits are enforced while streaming actual bytes (64 KiB for Campaign and 12 KiB for Story), and upstream provider error details are no longer sent to the browser. API traffic stays uncached.
+- The mobile navigation script and stylesheet are now linked from the page and precached; invalid saved tabs fall back to Adventure, and storage errors do not interrupt navigation. Campaign turns pause when a campaign save fails and resume through an explicit save retry.
+- Offline cache is v51 and includes `save-rules.js`, `mobile-layout.js` and `mobile-layout.css`. `npm run check` parses the JavaScript and inline page script; `npm test` runs 27 Node tests plus 128 faction-rule assertions. New checks cover corrupt-save preservation, nested journal validation and XP transaction rollback. Live Cloudflare preview/production and iPhone restore verification remain outstanding until this branch is reviewed and merged.
+- The AI endpoint has no server-side request budget yet. Cloudflare rate limiting must be configured in the hosting account; do not count the shared access code as per-player authentication. The account binding or WAF rule needs its actual account-specific configuration before we can verify that protection.

@@ -24,6 +24,7 @@ const bad=/\b(?:betray\w*|attack\w*|steal\w*|sabotag\w*|assault\w*|rob\w*|ambush
 const reputationLabel=n=>n<=-75?"Hunted":n<=-50?"Hostile":n<=-20?"Unfriendly":n<20?"Neutral":n<50?"Friendly":n<75?"Honored":"Exalted";
 const clamp=n=>Math.max(-100,Math.min(100,Math.round(Number(n)||0)));
 let data={factions:{},individuals:{},events:[],handled:[],notices:[]};
+let storageBlocked=false;
 const $=id=>document.getElementById(id);
 const node=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e};
 const character=()=>window.soaCharacters?.profile?.()?.id||"snacky";
@@ -37,7 +38,12 @@ function baseline(id){
  return r;
 }
 function load(){
- try{const saved=JSON.parse(localStorage.getItem(KEY)||"null");
+ const loaded=window.soaSaveRules.readStoredJSON(KEY);
+ if(!loaded.ok){storageBlocked=true;return}
+ let saved=loaded.value;
+ if(saved!==null)try{saved=window.soaSaveRules.validateReputationSave(saved)}catch{storageBlocked=true;window.soaSaveRules.reportCorruption(KEY);return}
+ if(saved){
+  if((saved.individuals!==undefined&&(!saved.individuals||typeof saved.individuals!=="object"||Array.isArray(saved.individuals)))||(saved.events!==undefined&&!Array.isArray(saved.events))||(saved.handled!==undefined&&!Array.isArray(saved.handled))||(saved.notices!==undefined&&!Array.isArray(saved.notices))){storageBlocked=true;window.soaSaveRules.reportCorruption(KEY);return}
   if(saved&&saved.factions&&typeof saved.factions==="object"){
     for(const [key,entry] of Object.entries(saved.factions)){if(FACTIONS[key])data.factions[key]={value:clamp(entry?.value)}}
     if(saved.individuals&&typeof saved.individuals==="object")for(const [key,entry] of Object.entries(saved.individuals)){if(FIGURES[key])data.individuals[key]={value:clamp(entry?.value)}};
@@ -45,16 +51,17 @@ function load(){
     data.handled=Array.isArray(saved.handled)?saved.handled.filter(x=>typeof x==="string").slice(-200):[];
     data.notices=Array.isArray(saved.notices)?saved.notices.slice(-30):[];
   }
- }catch(e){}
+ }
  const base=baseline(character());
  for(const [key,entry] of Object.entries(base))if(!data.factions[key])data.factions[key]=entry;
  if(character()==="snacky")for(const [id,figure] of Object.entries(FIGURES))if(!data.individuals[id])data.individuals[id]={value:figure.base};
  persist();
 }
-function persist(){try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){}}
+function persist(){if(storageBlocked||window.soaSaveRules.isIntegrityBlocked())return false;try{localStorage.setItem(KEY,JSON.stringify(data));return true}catch{window.soaReportStorageFailure?.("Reputation save failed. Check available browser storage.");return false}}
 function standing(){return Object.fromEntries(Object.entries(data.factions).map(([id,r])=>[id,{name:FACTIONS[id].name,value:r.value,label:reputationLabel(r.value)}]))}
 function pendingNotices(){return data.notices.slice(-6).map(e=>({faction:FACTIONS[e.faction]?.name||"",kind:e.kind,status:"unresolved"}))}
 function applyChange({id,faction,delta,source}){
+ if(storageBlocked||window.soaSaveRules.isIntegrityBlocked())return false;
  if(!id||!FACTIONS[faction]||!Number.isFinite(delta)||data.handled.includes(id))return false;
  const record=data.factions[faction],before=record.value,after=clamp(before+Math.max(-20,Math.min(20,delta)));
  record.value=after;data.handled.push(id);data.handled=data.handled.slice(-200);
@@ -65,6 +72,7 @@ function applyChange({id,faction,delta,source}){
  data.notices=data.notices.slice(-30);persist();renderAll();return true;
 }
 function fromAction({id,action,resolution}){
+ if(storageBlocked||window.soaSaveRules.isIntegrityBlocked())return false;
  if(!id||!/^Success:/i.test(String(resolution||"")))return false;
  const text=String(action||"").slice(0,360);
  const positive=good.test(text),negative=bad.test(text);
@@ -83,6 +91,7 @@ function fromAction({id,action,resolution}){
 }
 
 function markResolved(id){
+ if(storageBlocked||window.soaSaveRules.isIntegrityBlocked())return false;
  const n=data.notices.find(x=>x.id===id);if(!n)return false;
  data.notices=data.notices.filter(x=>x.id!==id);
  persist();renderAll();return true;
