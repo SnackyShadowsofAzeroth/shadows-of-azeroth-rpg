@@ -7,6 +7,7 @@ const roman=n=>{const vals=[["X",10],["IX",9],["V",5],["IV",4],["I",1]];let out=
 const el=(tag,value,cls)=>{const e=document.createElement(tag);if(value!==undefined)e.textContent=value;if(cls)e.className=cls;return e};
 const get=id=>document.getElementById(id);
 let save=()=>{},current=null;
+const integrityBlocked=()=>window.soaSaveRules?.isIntegrityBlocked?.()===true;
 function makeQuest(id,title,objectives,complete=false){
  return {id,title,status:complete?"completed":"active",objectives:objectives.map((label,i)=>({id:id+"-"+i,label,done:complete}))};
 }
@@ -51,9 +52,10 @@ function trimCompletedQuests(d){
 }
 function context(c){
  const d=attach(c);if(!d)return null;
- return {act:d.act,actTitle:d.actTitle,chapter:d.chapter,chapterTitle:d.chapterTitle,activeQuests:d.quests.filter(q=>q.status==="active").slice(0,8).map(q=>({title:clean(q.title),objectives:q.objectives.filter(o=>!o.done).map(o=>clean(o.label))})),completedQuests:d.quests.filter(q=>q.status==="completed").sort((a,b)=>completedTime(b)-completedTime(a)).slice(0,6).map(q=>clean(q.title)),recentArchives:d.archives.slice(-4).map(x=>({act:x.act,chapter:x.chapter,title:clean(x.chapterTitle),summary:clean(x.summary,180)}))};
+ return {act:d.act,actTitle:d.actTitle,chapter:d.chapter,chapterTitle:d.chapterTitle,activeQuests:d.quests.filter(q=>q&&q.status==="active"&&Array.isArray(q.objectives)).slice(0,8).map(q=>({title:clean(q.title),objectives:q.objectives.filter(o=>o&&o.done!==true).map(o=>clean(o.label))})),completedQuests:d.quests.filter(q=>q&&q.status==="completed").sort((a,b)=>completedTime(b)-completedTime(a)).slice(0,6).map(q=>clean(q.title)),recentArchives:d.archives.slice(-4).map(x=>({act:x.act,chapter:x.chapter,title:clean(x.chapterTitle),summary:clean(x.summary,180)}))};
 }
 function receive(c,scene){
+ if(integrityBlocked())return;
  const d=attach(c);if(!d||!scene||d.pendingMilestone)return;
  const candidate=scene.chapterMilestone;
  if(!candidate||candidate.propose!==true||typeof candidate.title!=="string")return;
@@ -64,6 +66,7 @@ function receive(c,scene){
  save();render(c);
 }
 function confirm(c){
+ if(integrityBlocked())return;
  const d=attach(c);if(!d?.pendingMilestone)return;
  const m=d.pendingMilestone,archive={id:"archive-"+d.act+"-"+d.chapter,act:d.act,actTitle:d.actTitle,chapter:d.chapter,chapterTitle:d.chapterTitle,summary:clean(m.reason,220),completed:true};
  if(!d.archives.some(x=>x.id===archive.id))d.archives.push(archive);
@@ -73,8 +76,9 @@ function confirm(c){
  d.startedAtTurn=Number(c.turn)||0;d.banner={act:d.act,chapter:d.chapter,title:m.title,reason:m.reason};
  d.pendingMilestone=null;save();render();window.soaLivingCampaign?.refreshUI?.();
 }
-function dismiss(c){const d=attach(c);if(!d)return;d.pendingMilestone=null;save();render();window.soaLivingCampaign?.refreshUI?.()}
+function dismiss(c){if(integrityBlocked())return;const d=attach(c);if(!d)return;d.pendingMilestone=null;save();render();window.soaLivingCampaign?.refreshUI?.()}
 function completeObjective(c,questId,objectiveId){
+ if(integrityBlocked())return;
  const d=attach(c),q=d?.quests.find(x=>x.id===questId&&x.status==="active");
  if(!q)return;
  const o=q.objectives.find(x=>x.id===objectiveId&&!x.done);if(!o)return;
@@ -89,7 +93,7 @@ function journalPanel(c,d){
  const label=el("label","Write a journal entry");
  const input=el("textarea");input.maxLength=2000;input.rows=4;input.placeholder="Record a thought, clue, or moment from your adventure…";input.setAttribute("aria-label","Journal entry");label.append(input);
  const add=el("button","Add to Journal");add.type="submit";form.append(label,add);
- form.onsubmit=e=>{e.preventDefault();const text=clean(input.value,2000);if(!text)return;d.entries.push({id:"entry-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,7),text,createdAt:new Date().toISOString(),updatedAt:null});d.entries=d.entries.slice(-100);save();render(c)};
+ form.onsubmit=e=>{e.preventDefault();if(integrityBlocked())return;const text=clean(input.value,2000);if(!text)return;d.entries.push({id:"entry-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,7),text,createdAt:new Date().toISOString(),updatedAt:null});d.entries=d.entries.slice(-100);save();render(c)};
  panel.append(form,el("h3","Saved entries · "+d.entries.length,"soa-journal-list-heading"));
  if(!d.entries.length)panel.append(el("p","Your journal is empty. Add a note above to keep track of clues, plans, or memorable moments.","muted"));
  for(const entry of d.entries.slice().reverse()){
@@ -99,12 +103,13 @@ function journalPanel(c,d){
   const edit=el("button","Edit");edit.type="button";edit.setAttribute("aria-label","Edit journal entry");
   const remove=el("button","Remove");remove.type="button";remove.setAttribute("aria-label","Remove journal entry");
   edit.onclick=()=>{
+   if(integrityBlocked())return;
    const editor=el("form",undefined,"soa-journal-edit");const field=el("textarea");field.value=entry.text;field.maxLength=2000;field.rows=4;field.setAttribute("aria-label","Edit journal entry");
    const saveButton=el("button","Save changes");saveButton.type="submit";const cancel=el("button","Cancel");cancel.type="button";cancel.onclick=()=>render(c);
-   editor.append(field,saveButton,cancel);editor.onsubmit=e=>{e.preventDefault();const text=clean(field.value,2000);if(!text){field.focus();return}entry.text=text;entry.updatedAt=new Date().toISOString();save();render(c)};
+   editor.append(field,saveButton,cancel);editor.onsubmit=e=>{e.preventDefault();if(integrityBlocked())return;const text=clean(field.value,2000);if(!text){field.focus();return}entry.text=text;entry.updatedAt=new Date().toISOString();save();render(c)};
    card.replaceChildren(editor);field.focus();
   };
-  remove.onclick=()=>{if(!window.confirm("Remove this journal entry?"))return;d.entries=d.entries.filter(item=>item.id!==entry.id);save();render(c)};
+  remove.onclick=()=>{if(integrityBlocked()||!window.confirm("Remove this journal entry?"))return;d.entries=d.entries.filter(item=>item.id!==entry.id);save();render(c)};
   actions.append(edit,remove);card.append(actions);panel.append(card);
  }
  return panel;
@@ -161,7 +166,7 @@ function banner(c){
  wrap.append(el("h3","ACT "+roman(d.banner.act)+" · CHAPTER "+roman(d.banner.chapter)));
  wrap.append(el("h4",d.banner.title));
  wrap.append(el("p",d.banner.reason));
- const button=el("button","Continue the adventure");button.type="button";button.onclick=()=>{d.banner=null;save();render();wrap.remove()};
+ const button=el("button","Continue the adventure");button.type="button";button.onclick=()=>{if(integrityBlocked())return;d.banner=null;save();render();wrap.remove()};
  wrap.append(button);return wrap;
 }
 function progress(c){

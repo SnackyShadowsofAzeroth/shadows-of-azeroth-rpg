@@ -16,8 +16,22 @@ const BOARDS=[
 const format=n=>{const c=Math.max(0,Math.floor(n));return [Math.floor(c/10000)+"g",Math.floor(c%10000/100)+"s",c%100+"c"].join(" ")};
 const boardAt=location=>BOARDS.find(b=>b.region.test(String(location||"")));
 const definition=id=>BOARDS.flatMap(b=>b.contracts).find(c=>c.id===id);
-const ensure=campaign=>{campaign.quests||={accepted:{},completed:{},claimed:{},inventory:[],receipts:[],lastReward:null};return campaign.quests};
-const stableRare=id=>{let h=2166136261;for(const c of id)h=Math.imul(h^c.charCodeAt(0),16777619)>>>0;return h%50===0}; // 2% deterministic, only elite
+const ensure=campaign=>{
+ if(!campaign||typeof campaign!=="object")return null;
+ if(!campaign.quests||typeof campaign.quests!=="object"||Array.isArray(campaign.quests))campaign.quests={};
+ const q=campaign.quests;
+ for(const key of ["accepted","completed","claimed","missions"]){if(!q[key]||typeof q[key]!=="object"||Array.isArray(q[key]))q[key]={}}
+ for(const key of ["accepted","completed","claimed","missions"])for(const [id,value] of Object.entries(q[key]))if(!value||typeof value!=="object"||Array.isArray(value))delete q[key][id];
+ if(!Array.isArray(q.inventory))q.inventory=[];
+ q.inventory=q.inventory.filter(item=>item&&typeof item==="object"&&typeof item.name==="string").map(item=>({name:item.name.slice(0,80),source:typeof item.source==="string"?item.source.slice(0,90):"Unknown",rarity:typeof item.rarity==="string"?item.rarity:"common"})).slice(-200);
+ if(!Array.isArray(q.receipts))q.receipts=[];
+ q.receipts=q.receipts.filter(receipt=>typeof receipt==="string").slice(-500);
+ if(!Array.isArray(q.rewardHistory))q.rewardHistory=[];
+ q.rewardHistory=q.rewardHistory.filter(reward=>reward&&typeof reward.title==="string"&&Number.isSafeInteger(reward.copper)&&reward.copper>=0&&Array.isArray(reward.items)&&reward.items.every(item=>typeof item==="string")).slice(-60);
+ if(!q.lastReward||typeof q.lastReward!=="object"||typeof q.lastReward.title!=="string"||!Number.isSafeInteger(q.lastReward.copper)||q.lastReward.copper<0||!Array.isArray(q.lastReward.items)||!q.lastReward.items.every(item=>typeof item==="string"))q.lastReward=null;
+ return q;
+};
+const stableRare=(characterId,id)=>{let h=2166136261;for(const c of String(characterId)+"|"+id)h=Math.imul(h^c.charCodeAt(0),16777619)>>>0;return h%50===0}; // 2% per character and elite contract; stable across retries
 function accept(campaign,id,location){
  const b=boardAt(location),contract=b?.contracts.find(c=>c.id===id);
  if(!contract)return {error:"Find this contract at its local bounty board."};
@@ -35,7 +49,8 @@ function claim(campaign,id,location,wallet){
  const q=ensure(campaign);
  if(!contract||!q.accepted[id]||!q.completed[id]||q.claimed[id])return {error:"Return to the issuing board after defeating the tracked target."};
  if(!Number.isSafeInteger(wallet)||wallet<0||wallet+contract.copper>Number.MAX_SAFE_INTEGER)return {error:"Wallet value invalid. Payment not issued."};
- const rare=contract.rarity==="elite"&&stableRare(id)?"Rare Bounty Relic":null;
+ const characterId=window.soaCharacters?.profile?.()?.id||"snacky";
+ const rare=contract.rarity==="elite"&&stableRare(characterId,id)?"Rare Bounty Relic":null;
  const items=[...contract.items,...(rare?[rare]:[])];
  const receipt="bounty:"+id;
  if(q.receipts.includes(receipt))return {error:"Already paid."};
@@ -137,5 +152,5 @@ function panel(campaign,location,wallet,onChange){
  if(q.inventory.length){const bag=document.createElement("details");const head=document.createElement("summary");head.textContent="Reward inventory · "+q.inventory.length+" items";bag.append(head);for(const item of q.inventory){const p=document.createElement("p");p.textContent=item.name+" ("+item.rarity+") · "+item.source;bag.append(p)}wrapper.append(bag)}
  return wrapper;
 }
-window.soaQuests={boardAt,definition,ensure,accept,onDefeat,claim,grantStormwindMission,panel,missionPanel,startMission,claimMission,missionDefeat,journal,format};
+window.soaQuests={boardAt,definition,ensure,accept,onDefeat,claim,grantStormwindMission,panel,missionPanel,startMission,claimMission,missionDefeat,journal,format,stableRare};
 })();

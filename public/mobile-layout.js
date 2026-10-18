@@ -1,7 +1,9 @@
 (()=>{"use strict";
 const KEY="soa-layout-v1";
 const tabs=[["adventure","Adventure","campaign-box"],["character","Character","soa-profession-panel"],["journal","Journal","soa-chronicle"],["companions","Companions","companion-panel"],["settings","Settings","ai-enabled"]];
-let active=localStorage.getItem(KEY)||"adventure";
+const validTab=name=>tabs.some(([id])=>id===name);
+let active="adventure";
+try{const saved=localStorage.getItem(KEY);if(validTab(saved))active=saved}catch{window.soaReportStorageFailure?.("Tab preference could not be read; Adventure is selected for this session.")}
 const shell=document.createElement("nav");shell.id="soa-mobile-nav";shell.setAttribute("aria-label","Game sections");
 const summary=document.createElement("div");summary.id="soa-mobile-summary";
 document.body.append(shell);
@@ -31,7 +33,7 @@ function render(){
  const hp=get("hp")?.textContent||"",en=get("energy")?.textContent||"",money=get("gold")?.textContent||"";
  summary.textContent=hp?"HP "+hp+"  ·  Energy "+en+"  ·  "+money:"Shadows of Azeroth";
 }
-function select(name){active=name;localStorage.setItem(KEY,name);render();window.scrollTo({top:0,behavior:"instant"})}
+function select(name){if(!validTab(name))return;active=name;try{localStorage.setItem(KEY,name)}catch{window.soaReportStorageFailure?.("Tab preference could not be saved; the selected tab remains active for this session.")}render();window.scrollTo({top:0,behavior:"instant"})}
 for(const [id,label] of tabs){const b=document.createElement("button");b.type="button";b.textContent=label;b.dataset.tab=id;b.onclick=()=>select(id);shell.append(b)}
 document.body.classList.add("soa-tabbed");document.querySelector("main")?.prepend(summary);
 const observer=new MutationObserver(()=>{if(!document.body.classList.contains("soa-tabbed"))return;render()});
