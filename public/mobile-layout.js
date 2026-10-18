@@ -1,43 +1,50 @@
 (()=>{"use strict";
 const KEY="soa-layout-v1";
-const tabs=[["adventure","Adventure","campaign-box"],["character","Character","soa-profession-panel"],["journal","Journal","soa-chronicle"],["companions","Companions","companion-panel"],["settings","Settings","ai-enabled"]];
+const tabs=[
+ ["adventure","Adventure"],
+ ["quest","Quest"],
+ ["character","Character"],
+ ["reputation","Reputation"],
+ ["settings","Settings"],
+];
+const legacyTabs={journal:"quest",companions:"reputation"};
+const normalize=name=>legacyTabs[name]||name;
 const validTab=name=>tabs.some(([id])=>id===name);
 let active="adventure";
-try{const saved=localStorage.getItem(KEY);if(validTab(saved))active=saved}catch{window.soaReportStorageFailure?.("Tab preference could not be read; Adventure is selected for this session.")}
-const shell=document.createElement("nav");shell.id="soa-mobile-nav";shell.setAttribute("aria-label","Game sections");
-const summary=document.createElement("div");summary.id="soa-mobile-summary";
-document.body.append(shell);
+try{const saved=normalize(localStorage.getItem(KEY));if(validTab(saved))active=saved}catch{window.soaReportStorageFailure?.("Tab preference could not be read; Adventure is selected for this session.")}
 const get=id=>document.getElementById(id);
-function target(tab){
- if(tab==="settings")return get("ai-enabled")?.closest("section.panel");
- if(tab==="journal")return get("soa-chronicle")||document.querySelector("#journal")?.closest("section.panel");
- if(tab==="character")return get("soa-profession-panel");
- if(tab==="companions")return get("companion-panel")||get("soa-standalone-reputation");
- return get("campaign-box")||get("choices")?.closest("section.panel");
-}
-function topLevel(section){let e=section;while(e&&e.parentElement&&e.parentElement.tagName!=="MAIN")e=e.parentElement;return e?.parentElement?.tagName==="MAIN"?e:null}
-function sections(){return [...document.querySelectorAll("main > section.panel")]}
+function sections(){return [...document.querySelectorAll("main > section.panel, main > section.soa-game-screen")]}
 function group(section){
- if(section.id==="campaign-box"||section.querySelector("#choices"))return "adventure";
- if(section.id==="soa-profession-panel"||section.querySelector("#hpbar"))return "character";
- if(section.id==="soa-chronicle"||section.querySelector("#soa-chronicle")||section.querySelector("#journal"))return "journal";
- if(section.id==="companion-panel"||section.id==="soa-standalone-reputation"||section.querySelector("#soa-companions-content"))return "companions";
- if(section.querySelector("#ai-enabled")||section.querySelector("#export"))return "settings";
+ if(["campaign-box","soa-adventure-story"].includes(section.id)||section.querySelector?.("#choices"))return "adventure";
+ if(["soa-chronicle","soa-party-evidence"].includes(section.id))return "quest";
+ if(["soa-character-screen","soa-character-status","soa-profession-panel"].includes(section.id)||section.querySelector?.("#hpbar"))return "character";
+ if(["companion-panel","soa-standalone-reputation"].includes(section.id)||section.querySelector?.("#soa-companions-content"))return "reputation";
+ if(["soa-legacy-ai","soa-save-settings"].includes(section.id)||section.querySelector?.("#ai-enabled,#export"))return "settings";
  return "adventure";
 }
-function render(){
- const enabled=document.body.classList.contains("soa-tabbed");
- if(!enabled)return;
- for(const s of sections()){const belongs=group(s);s.classList.toggle("soa-tab-hidden",belongs!==active)}
- for(const b of shell.querySelectorAll("button")){const on=b.dataset.tab===active;b.setAttribute("aria-current",on?"page":"false");b.classList.toggle("active",on)}
- const hp=get("hp")?.textContent||"",en=get("energy")?.textContent||"",money=get("gold")?.textContent||"";
- summary.textContent=hp?"HP "+hp+"  ·  Energy "+en+"  ·  "+money:"Shadows of Azeroth";
+function init(){
+ window.soaCharacters?.organizeSections?.();
+ const nav=document.querySelector(".soa-quick-nav");if(!nav)return;
+ const buttons=[...nav.querySelectorAll("button.soa-quick-link")];
+ for(const button of buttons){const tab=button.dataset.gameTab;if(validTab(tab))button.onclick=()=>select(tab)}
+ document.body.classList.add("soa-tabbed");
+ function render(){
+  if(!document.body.classList.contains("soa-tabbed"))return;
+  for(const section of sections())section.hidden=group(section)!==active||section.dataset.soaUnavailable==="true";
+  for(const button of buttons){const selected=button.dataset.gameTab===active;button.setAttribute("aria-current",selected?"page":"false");button.classList.toggle("active",selected)}
+ }
+ function select(name){
+  const selected=normalize(name);if(!validTab(selected))return;
+  active=selected;
+  try{localStorage.setItem(KEY,active)}catch{window.soaReportStorageFailure?.("Tab preference could not be saved; the selected section remains open for this session.")}
+  render();window.scrollTo?.({top:0,behavior:"auto"});
+ }
+ window.soaLayout={
+  select,refresh:render,
+  disable:()=>{document.body.classList.remove("soa-tabbed");sections().forEach(section=>{section.hidden=section.dataset.soaUnavailable==="true"})},
+  enable:()=>{document.body.classList.add("soa-tabbed");render()},
+ };
+ render();
 }
-function select(name){if(!validTab(name))return;active=name;try{localStorage.setItem(KEY,name)}catch{window.soaReportStorageFailure?.("Tab preference could not be saved; the selected tab remains active for this session.")}render();window.scrollTo({top:0,behavior:"instant"})}
-for(const [id,label] of tabs){const b=document.createElement("button");b.type="button";b.textContent=label;b.dataset.tab=id;b.onclick=()=>select(id);shell.append(b)}
-document.body.classList.add("soa-tabbed");document.querySelector("main")?.prepend(summary);
-const observer=new MutationObserver(()=>{if(!document.body.classList.contains("soa-tabbed"))return;render()});
-observer.observe(document.querySelector("main")||document.body,{childList:true,subtree:false});
-window.soaLayout={select,refresh:render,disable:()=>{document.body.classList.remove("soa-tabbed");sections().forEach(s=>s.classList.remove("soa-tab-hidden"));shell.hidden=true;summary.hidden=true},enable:()=>{document.body.classList.add("soa-tabbed");shell.hidden=false;summary.hidden=false;render()}};
-render();
+if(document.readyState==="loading"||document.readyState==="interactive")document.addEventListener("DOMContentLoaded",init,{once:true});else init();
 })();

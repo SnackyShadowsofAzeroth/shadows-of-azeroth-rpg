@@ -1,12 +1,24 @@
-@media(max-width:850px){
- body.soa-tabbed{padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
- body.soa-tabbed main{padding-bottom:24px}
- body.soa-tabbed main>section.panel.soa-tab-hidden{display:none!important}
- #soa-mobile-summary{background:rgba(22,33,41,.88);color:#e4d0a1;font:600 12px/1.5 system-ui;text-align:center;border:1px solid #9b7b48;border-radius:10px;padding:9px 6px;margin:8px 5px 12px;position:sticky;top:env(safe-area-inset-top,0px);z-index:15;backdrop-filter:blur(12px)}
- #soa-mobile-nav{position:fixed;z-index:999;bottom:0;left:0;right:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:3px;padding:8px 7px calc(8px + env(safe-area-inset-bottom,0px));background:rgba(24,30,35,.97);border-top:1px solid #9c845b;box-shadow:0 -6px 20px #0003;backdrop-filter:blur(12px)}
- #soa-mobile-nav button{font:600 11px system-ui;color:#e5d8b7;white-space:normal;overflow-wrap:anywhere;text-align:center;border:1px solid transparent;border-radius:8px;background:transparent;min-height:45px;margin:0;padding:6px 1px}
- #soa-mobile-nav button.active{background:#6e5534;border-color:#e0c68b;color:#fff5da}
- body.soa-tabbed main>section.panel{margin-block:10px;padding:14px}
- body.soa-tabbed main>section.panel h2{font-size:clamp(20px,5vw,26px)}
+/* Section switching lives in the existing top navigation at every viewport. */
+body.soa-tabbed main>section.panel[hidden],
+body.soa-tabbed main>section.soa-game-screen[hidden],
+body.soa-tabbed .soa-character-screen[hidden]{display:none!important}
+
+.soa-quick-nav{grid-template-columns:repeat(5,minmax(0,1fr))!important;max-width:600px}
+.soa-quick-nav button.soa-quick-link{min-width:0;min-height:48px;padding:8px 4px;line-height:1.25;overflow-wrap:anywhere}
+.soa-quick-nav button.soa-quick-link[aria-current="page"]{border-color:#efcf87;background:linear-gradient(#896b40,#57402a);color:#fff5dc;box-shadow:inset 0 0 0 1px #f4dfb4}
+.soa-quick-nav button.soa-quick-link:focus-visible,
+.soa-character-tabs button:focus-visible{outline:3px solid #efd18a;outline-offset:2px}
+
+.soa-character-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;max-width:600px;margin:10px auto 12px}
+.soa-character-tabs button{min-width:0;min-height:48px;margin:0;padding:9px 8px;text-align:center;font:700 13px/1.3 system-ui;overflow-wrap:anywhere}
+.soa-character-tabs button[aria-pressed="true"]{border-color:#efcf87;background:linear-gradient(#896b40,#57402a);color:#fff5dc;box-shadow:inset 0 0 0 1px #f4dfb4}
+.soa-game-screen{min-width:0}
+
+@media(max-width:430px){
+ .soa-quick-nav{gap:4px;padding:5px}
+ .soa-quick-nav button.soa-quick-link{min-height:48px;padding:7px 2px;font-size:11px}
+ .soa-character-tabs{gap:6px}
+ .soa-character-tabs button{font-size:12px}
 }
-@media(min-width:851px){#soa-mobile-nav,#soa-mobile-summary{display:none!important}}
+
+@media(prefers-reduced-motion:reduce){.soa-quick-nav button,.soa-character-tabs button{scroll-behavior:auto;transition:none}}

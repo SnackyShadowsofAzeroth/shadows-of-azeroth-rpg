@@ -178,7 +178,9 @@ document.addEventListener("DOMContentLoaded",()=>{
  const section=el("section",undefined,"panel soa-chronicle-panel");section.id="soa-chronicle";
  const adventure=get("campaign-box"),header=document.querySelector("header");
  if(adventure)adventure.after(section);else header?.after(section);
- const saved=window.soaLivingCampaign?.getState?.();if(saved){attach(saved);render(saved)}
+ const saved=window.soaLivingCampaign?.getState?.();
+ if(saved){attach(saved);render(saved)}
+ else{section.append(el("div","QUEST JOURNAL · "+(window.soaCharacters?.profile?.()?.name||"Adventurer"),"soa-chronicle-kicker"),el("h2","The Campaign Chronicle"),el("p","Quest, journal, and discovery records will appear here when an adventure begins. Existing saved data remains untouched.","muted"))}
 });
 window.addEventListener("soa-chronicle-display",()=>render());
 window.soaChronicleSetSave=fn=>{if(typeof fn==="function")save=fn};
