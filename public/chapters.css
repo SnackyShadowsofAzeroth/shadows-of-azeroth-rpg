@@ -48,8 +48,6 @@ body.theme-alternative .soa-chapter-banner h3{font:700 27px/1.3 Georgia,serif;co
 body.theme-alternative .soa-chapter-banner h4{font:700 19px/1.4 Georgia,serif;color:#edcf99;margin:0}
 body.theme-alternative .soa-chapter-banner p{font:14px/1.7 Georgia,serif;color:#eee0c9;margin:13px 0}
 body.theme-alternative .soa-chapter-banner button{background:#6a4d2f;border:1px solid #bea273;color:#fff0cc;margin:9px auto 0;max-width:240px}
-body.theme-alternative .soa-quick-nav{grid-template-columns:repeat(5,minmax(0,1fr))}
-body.theme-alternative .soa-quick-nav button.soa-quick-link{font-size:11px;padding:9px 3px}
 @media(max-width:380px){body.theme-alternative .soa-quest-objective{align-items:flex-start;flex-direction:column}body.theme-alternative .soa-quest-objective button{align-self:flex-end}body.theme-alternative .soa-journal-tabs button{font-size:11px}}
 
 body.theme-alternative #campaign-scene>.soa-chapter-review{margin:13px 0;padding:12px 14px;min-height:45px;border:1px solid #a98249;border-left:4px solid #d5aa61;border-radius:8px;background:linear-gradient(100deg,#ead4a2,#c8a778);color:#53351e;text-align:left;font:700 13px/1.5 system-ui;box-shadow:0 3px 9px #3b281829}

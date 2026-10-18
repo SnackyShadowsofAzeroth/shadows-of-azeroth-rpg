@@ -34,21 +34,21 @@ function element(tagName, id = "", tab = "") {
     setAttribute(name, value) { attributes[name] = value; },
     getAttribute(name) { return attributes[name] ?? null; },
     querySelectorAll(selector) {
-      if (selector === "button.soa-quick-link") return children.filter(child => child.tagName === "BUTTON");
+      if (selector === "button" || selector === "button.soa-quick-link") return children.filter(child => child.tagName === "BUTTON");
       return [];
     },
+    remove() { this.removed = true; },
   };
 }
 
 function startLayout({ getItem = () => null, setItem = () => {}, readyState = "loading" } = {}) {
   const classes = new Set();
   const body = element("body");
+  body.appended = [];
+  body.append = (...nodes) => body.appended.push(...nodes);
   body.classList.add = name => classes.add(name);
   body.classList.remove = name => classes.delete(name);
   body.classList.contains = name => classes.has(name);
-  const nav = element("nav");
-  const tabs = new Map(tabIds.map(id => [id, element("button", "", id)]));
-  nav.append(...tabs.values());
   const sections = [
     "campaign-box", "soa-adventure-story", "soa-chronicle", "soa-party-evidence",
     "soa-character-screen", "companion-panel", "soa-standalone-reputation",
@@ -64,7 +64,8 @@ function startLayout({ getItem = () => null, setItem = () => {}, readyState = "l
   let organizationCalls = 0;
   const document = {
     body, readyState,
-    querySelector: selector => selector === ".soa-quick-nav" ? nav : null,
+    createElement: tagName => element(tagName),
+    querySelector: () => null,
     querySelectorAll: selector => selector.startsWith("main > section") ? sections : [],
     getElementById: id => legacyElements[id] || null,
     addEventListener(name, callback) { listeners[name] = callback; },
@@ -79,25 +80,29 @@ function startLayout({ getItem = () => null, setItem = () => {}, readyState = "l
   };
   vm.runInNewContext(source, context, { filename: "mobile-layout.js" });
   if (listeners.DOMContentLoaded) listeners.DOMContentLoaded();
+  const nav = body.appended[0];
+  const tabs = new Map(nav.children.map(button => [button.dataset.gameTab, button]));
   return { layout: context.window.soaLayout, nav, tabs, sections, reports, body, legacyRemoved, get scrollCalls() { return scrollCalls; }, organizationCalls };
 }
 
-test("one five-destination top navigation is loaded and cached for offline play", () => {
+test("one five-destination bottom navigation is loaded and cached for offline play", () => {
   assert.match(html, /href="\.\/mobile-layout\.css"/);
   assert.match(html, /src="\.\/mobile-layout\.js" defer/);
   assert.match(serviceWorker, /"\.\/mobile-layout\.js"/);
   assert.match(serviceWorker, /"\.\/mobile-layout\.css"/);
-  assert.match(characters, /\[\["adventure","Adventure","campaign-box"\],\["quest","Quest","soa-chronicle"\],\["character","Character","soa-character-screen"\],\["reputation","Reputation"/);
-  assert.match(serviceWorker, /shadows-of-azeroth-v53/);
-  assert.match(layoutCss, /#soa-mobile-nav,#soa-mobile-summary\{display:none!important\}/);
-  assert.doesNotMatch(source, /createElement\(["']nav["']\)/);
-  assert.match(characters, /layout\?\.version===2/);
-  assert.match(characters, /quest:"journal",reputation:"companions"/);
+  assert.match(source, /\["adventure","Adventure","campaign-box"\],\s*\["quest","Quest","soa-chronicle"\],\s*\["character","Character","soa-character-screen"\]/);
+  assert.match(serviceWorker, /shadows-of-azeroth-v54/);
+  assert.match(layoutCss, /#soa-mobile-nav\{position:fixed;z-index:999;bottom:0/);
+  assert.match(source, /function createNavigation\(\)/);
+  assert.doesNotMatch(characters, /soa-quick-nav/);
 });
 
-test("new layout removes the cached legacy bottom menu", () => {
-  const { legacyRemoved, layout } = startLayout();
+test("new layout replaces legacy controls with one bottom menu", () => {
+  const { legacyRemoved, layout, nav, body } = startLayout();
   assert.deepEqual([...legacyRemoved].sort(), ["soa-mobile-nav", "soa-mobile-summary"]);
+  assert.equal(body.appended.length, 1);
+  assert.equal(body.appended[0].id, "soa-mobile-nav");
+  assert.equal(nav.children.length, 5);
   assert.equal(layout.version, 2);
 });
 

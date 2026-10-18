@@ -103,12 +103,6 @@ body.theme-alternative #campaign-status{
   font:600 12px/1.6 system-ui,sans-serif;
   padding:6px 0;overflow-wrap:anywhere;
 }
-body.theme-alternative .soa-quick-nav{
-  max-width:540px;
-}
-body.theme-alternative .soa-quick-nav button{
-  border-radius:9px;
-}
 @media(max-width:430px){
   body.theme-alternative #campaign-scene>.soa-story-prose{line-height:1.73}
   body.theme-alternative #campaign-scene>form{padding:11px}

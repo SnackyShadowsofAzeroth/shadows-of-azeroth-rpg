@@ -1,11 +1,11 @@
 (()=>{"use strict";
 const KEY="soa-layout-v1";
 const tabs=[
- ["adventure","Adventure"],
- ["quest","Quest"],
- ["character","Character"],
- ["reputation","Reputation"],
- ["settings","Settings"],
+ ["adventure","Adventure","campaign-box"],
+ ["quest","Quest","soa-chronicle"],
+ ["character","Character","soa-character-screen"],
+ ["reputation","Reputation","companion-panel"],
+ ["settings","Settings","soa-save-settings"],
 ];
 const legacyTabs={journal:"quest",companions:"reputation"};
 const normalize=name=>legacyTabs[name]||name;
@@ -25,12 +25,21 @@ function group(section){
 function removeLegacyNavigation(){
  document.getElementById("soa-mobile-nav")?.remove();
  document.getElementById("soa-mobile-summary")?.remove();
+ document.querySelector(".soa-quick-nav")?.remove();
+}
+function createNavigation(){
+ const nav=document.createElement("nav");nav.id="soa-mobile-nav";nav.setAttribute("aria-label","Game sections");
+ for(const [tab,label,target] of tabs){
+  const button=document.createElement("button");button.type="button";button.textContent=label;button.dataset.gameTab=tab;button.setAttribute("aria-controls",target);button.setAttribute("aria-current","false");
+  nav.append(button);
+ }
+ document.body.append(nav);return nav;
 }
 function init(){
  removeLegacyNavigation();
  window.soaCharacters?.organizeSections?.();
- const nav=document.querySelector(".soa-quick-nav");if(!nav)return;
- const buttons=[...nav.querySelectorAll("button.soa-quick-link")];
+ const nav=createNavigation();
+ const buttons=[...nav.querySelectorAll("button")];
  for(const button of buttons){const tab=button.dataset.gameTab;if(validTab(tab))button.onclick=()=>select(tab)}
  document.body.classList.add("soa-tabbed");
  function render(){

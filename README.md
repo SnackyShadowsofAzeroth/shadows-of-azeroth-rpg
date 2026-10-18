@@ -192,7 +192,7 @@ Mock DOM tests verified both Reputation tabs, selected-tab retention after a fac
 
 1. Refresh while online once the new build is deployed. Confirm the main story choices still advance normally and all character stats stay the same.
 2. Open Reputation: switch tabs; verify Companions & Romance retains prior trust/affection/respect, and Factions & Enemies retains faction standings and enemies. Expand and close romance/conflict groups.
-3. Use top navigation to jump between Adventure, Professions and Reputation; no reload or turn advance should occur.
+3. Use the fixed bottom navigation to switch between Adventure, Quest, Character, Reputation and Settings; no reload or turn advance should occur.
 4. In Characters, choose Download All Character Saves; keep the resulting JSON private and somewhere safe. Use **Restore All Character Saves** only when you intend to replace the local roster with that backup.
 5. Verify Classic / Alternative parchment switching and individual-character saves still work.
 
