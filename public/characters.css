@@ -43,11 +43,6 @@ body.theme-alternative .soa-profession-panel h3{color:#523416}
 #campaign-box,#companion-panel,#soa-profession-panel,#soa-standalone-reputation,#soa-save-settings{scroll-margin-top:calc(env(safe-area-inset-top,0px) + 82px)}
 
 /* Compact return-to-top shortcut on each main game panel. */
-.soa-panel-topline{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:24px;margin:0 0 8px}
-.soa-panel-topline>.soa-roster-kicker,.soa-panel-topline>.soa-chronicle-kicker,.soa-panel-topline>.eyebrow{min-width:0;margin:0}
-.soa-panel-topline>.soa-back-to-top{flex:0 0 auto;width:auto;min-height:30px;margin:0 0 0 auto;padding:4px 9px;border:1px solid #a58a5d;border-radius:7px;background:linear-gradient(#574638,#342a23);color:#f4e3bf;font:700 11px/1.2 system-ui;text-align:center;white-space:nowrap}
-.soa-back-to-top:focus-visible{outline:2px solid #efd18a;outline-offset:3px}
-body.theme-alternative .soa-panel-topline>.soa-back-to-top{background:linear-gradient(#695238,#392b23);border-color:#ad915e;color:#f5e5c5}
 
 /* Keep the new-scene anchor comfortably within the viewport on mobile. */
 #campaign-status{scroll-margin-top:20px}
