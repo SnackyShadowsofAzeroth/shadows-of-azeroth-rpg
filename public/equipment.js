@@ -29,7 +29,8 @@ const SNACKY_LOADOUT=[
  ["Main hand","Ruby-Adorned Blade"],
  ["Off hand","Bloody Brass Knuckles"],
  ["Sidearm","Toxic Revenger"],
- ["Ranged","Golemsight Long Gun"]
+ ["Ranged","Golemsight Long Gun"],
+ ["Trinket","Empty"]
 ];
 const SLOT_KEY={"Head":"head","Back":"back","Shoulders":"shoulders","Chest":"chest","Wrists":"wrists","Hands":"hands","Waist":"waist","Legs":"legs","Feet":"feet","Neck":"neck","Ring 1":"finger1","Ring 2":"finger2","Main hand":"mainhand","Off hand":"offhand","Sidearm":"sidearm","Ranged":"ranged"};
 function canonicalSlots(){return SNACKY_LOADOUT.map(([slot,name])=>({slot:SLOT_KEY[slot]||slot.toLowerCase(),name,display:slot}));}
@@ -95,7 +96,7 @@ function renderStatus(){
  const wasOpen=sessionStorage.getItem("soa-character-gear-open")==="1";
  const details=document.createElement("details");details.className="soa-character-gear";details.open=wasOpen;
  details.addEventListener("toggle",()=>sessionStorage.setItem("soa-character-gear-open",details.open?"1":"0"));
- const summary=document.createElement("summary");summary.textContent="Equipped Gear · "+gathered.length+" items";details.append(summary);
+ const summary=document.createElement("summary");summary.textContent="Equipped Gear · "+gathered.filter(item=>item.name!=="Empty").length+" items";details.append(summary);
  const grid=document.createElement("div");grid.className="soa-character-gear-grid";
  if(!gathered.length){const none=document.createElement("p");none.textContent="No tracked equipped items yet.";grid.append(none)}
  for(const {label,name} of gathered){
