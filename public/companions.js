@@ -6,10 +6,14 @@ const KEY="soa-companions-v1", PEOPLE={
 };
 const ACTIONS=[
  {id:"talk",label:"Catch up",detail:"A brief conversation"},
+ {id:"past",label:"Ask about their past",detail:"Learn what shaped them · build trust"},
  {id:"encourage",label:"Encourage",detail:"Raise their spirits"},
  {id:"advice",label:"Ask advice",detail:"Get their perspective"},
  {id:"flirt",label:"Show interest",detail:"A respectful compliment"},
  {id:"bond",label:"Deepen friendship",detail:"Build trust together"},
+ {id:"plan",label:"Plan our next move",detail:"Bring their role into the current scene"},
+ {id:"reflect",label:"Reflect on the journey",detail:"Talk through the latest story events"},
+ {id:"quiet",label:"Share a quiet moment",detail:"Build closeness somewhere safe"},
  {id:"apologize",label:"Make amends",detail:"Repair a damaged bond"},
  {id:"confess",label:"Confess feelings",detail:"Ask about mutual romance"},
  {id:"commit",label:"Become partners",detail:"Discuss a future together"},
@@ -18,7 +22,7 @@ const ACTIONS=[
  {id:"argue",label:"Challenge values",detail:"Risk a disagreement"},
  {id:"betray",label:"Betray their trust",detail:"Potentially become enemies"}
 ];
-let selected="pippa", activeReputationView="companions", romanceExpanded=false, conflictExpanded=false, data={rapport:{pippa:0,bromli:0,lethariel:0},entries:[],relations:{},dialogueIds:[]}, last="";
+let selected="pippa", activeReputationView="companions", everydayExpanded=true, sharedExpanded=false, romanceExpanded=false, conflictExpanded=false, data={rapport:{pippa:0,bromli:0,lethariel:0},entries:[],relations:{},dialogueIds:[]}, last="";
 let storageBlocked=false;
 const blank=()=>({trust:0,affection:0,respect:0,status:"Acquaintance",romance:"none",grievances:0,interactions:0,memories:[],nights:0,lastNightDay:null});
 const clamp=(v,min=-100,max=100)=>Math.max(min,Math.min(max,Number(v)||0));
@@ -49,6 +53,7 @@ function encounter(id,kind){
  const danger=/charge|powder|explosiv|sabot|trap|fuse/i.test(String(scene.title||"")+" "+String(scene.story||"").slice(0,450));
  const pool={
   pippa:{
+   past:['Pippa says, "My first engineering kit was three bent tools and a clockwork bird that only flew into walls. I kept fixing it anyway."'],
    talk:[
     'Pippa readjusts her satchel. "Every mystery has a loose wire somewhere. The trick is spotting it before it sparks."',
     'Pippa lowers her voice. "I used to think being clever meant knowing the answer. Now I think it means asking a better question."',
@@ -58,11 +63,13 @@ function encounter(id,kind){
    advice:['Pippa warns, "Find the weakest connection before touching the mechanism. Someone may have planned for the obvious solution."','She sketches in the dust. "Follow the power. That is where the clever tricks hide."','Pippa says, "Secure our way back before we commit to the next room."'],
    flirt:['Pippa arches a brow. "Was that a compliment, or are you distracting me from work? Because it is working."','A blush crosses Pippa’s cheeks. "You could give a girl some warning before saying things like that, Snacky."','Pippa squeezes your wrist. "Spending this much time with you has become rather inconvenient for my concentration."']},
   bromli:{
+   past:['Bromli smiles. "My da taught me to repair a shield before I was tall enough to carry one. Said a good defender fixes what keeps folk safe."'],
    talk:['Bromli adjusts his warhammer. "After this, first round is on me. Dwarven orders, lad."','Bromli strokes his beard. "Marched with folk twice your size. Few had half your nerve."','He chuckles softly. "My old captain called me the loudest scout he ever met. Still promoted me."','Bromli says, "Courage is showing up when your knees would rather go home."'],
    encourage:['Bromli nods. "Aye, little brother. I needed that. I have your back."','He rolls his shoulders. "We make it home together, and I will tell the story twice as loud as it deserves."','Bromli pats his breastplate. "Still standing. That counts for something."'],
    advice:['Bromli advises, "Keep an escape route. There is no shame in living to win the next fight."','He lowers his voice. "When a room is too quiet, check the corners."','Bromli says, "Never split the party without a plan to bring it together again."'],
    flirt:['Bromli snorts. "Careful, lad. Keep that up and I will think you fancy me warhammer collection."','He grins. "Flattery? Buy me a decent ale and I might hear you out."']},
   lethariel:{
+   past:['Lethariel says, "I spent years tending a quiet sanctuary. I never expected the wider world to ask so much of me—or teach me so much in return."'],
    talk:['Lethariel reflects, "Some journeys change us quietly. Only later do we notice what we have become."','She folds her hands. "I have learned much about courage from this company."','Lethariel smiles. "There are things worth protecting beyond the mission itself."'],
    encourage:['Lethariel bows her head. "Your confidence in me is appreciated. I will conserve my strength for those who need it."','She touches your shoulder. "Kind words are never wasted in difficult places."'],
    advice:['Lethariel counsels, "Do not spend your last strength on a danger that patience could avoid."','She replies, "Watch the frightened and wounded. They sometimes notice a danger first."','Lethariel says, "Patience is not surrender."'],
@@ -133,10 +140,26 @@ function interact(kind){
  if(!locationAllows(selected)){last="That companion is stationed elsewhere. Regroup before speaking in person.";draw();return}
  const r=rel(selected),person=PEOPLE[selected].name;let message="",change={},valid=true;
  if(kind==="talk"){change={trust:5,respect:2};message=encounter(selected,"talk")}
+ if(kind==="past"){change={trust:3,respect:2};message=encounter(selected,"past")}
  if(kind==="encourage"){change={trust:7,respect:5};message=encounter(selected,"encourage")}
  if(kind==="advice"){change={trust:2,respect:4};message=encounter(selected,"advice")}
  if(kind==="flirt"){if(r.trust<0){valid=false;message=person+" doesn't welcome this right now. Respect the boundary."}else{change={affection:r.trust>=20?8:3,trust:2};message=encounter(selected,"flirt")}}
  if(kind==="bond"){if(r.trust<18){valid=false;message="Get to know one another better before sharing a deeper bond."}else{change={trust:9,respect:4,affection:3};message=person+" shares a private hope and appreciates Snacky's attention."}}
+ if(kind==="plan"){
+  const scene=window.soaLivingCampaign?.getState?.()?.scene||{};
+  const title=String(scene.title||"the next challenge").slice(0,100),place=String(scene.location||"here").slice(0,100);
+  change={trust:2,respect:4};message=person+" considers "+title+" with you. Their "+PEOPLE[selected].role.toLowerCase()+" could help shape your next move at "+place+".";
+ }
+ if(kind==="reflect"){
+  const scene=window.soaLivingCampaign?.getState?.()?.scene||{};
+  const title=String(scene.title||"the journey so far").slice(0,100);
+  change={trust:3,respect:3};message=person+" reflects with you on "+title+". You compare what went well and what still weighs on the party.";
+ }
+ if(kind==="quiet"){
+  const adventure=window.soaLivingCampaign?.getState?.()||{},place=String(adventure.scene?.location||"");
+  if(adventure.enemies?.some(e=>e.hp>0)||!/tavern|inn|safehouse|home|quarters|lodging|camp|rest area|sanctuary|checkpoint/i.test(place)){valid=false;message="Find a peaceful, safe place before sharing a quiet moment."}
+  else{change={trust:2,affection:3,respect:1};message="You and "+person+" take a quiet moment at "+place+", letting the pressure of the adventure ease."}
+ }
  if(kind==="apologize"){if(r.trust>=10&&r.grievances===0){valid=false;message="There is no outstanding disagreement to settle."}else{change={trust:9,respect:3};r.grievances=Math.max(0,r.grievances-1);message=person+" hears the apology. Trust will take further effort to rebuild."}}
  if(kind==="confess"){if(r.trust<45||r.affection<35||r.interactions<5){valid=false;message="A mutual romance requires more trust, affection, and shared history."}else if(r.romance!=="none"){valid=false;message="That conversation has already happened; nurture your existing relationship."}else{r.romance="dating";change={trust:4,affection:8};message=person+" reciprocates Snacky's feelings and agrees to explore romance at a comfortable pace."}}
  if(kind==="commit"){if(r.romance!=="dating"||r.trust<65||r.affection<60){valid=false;message="A lasting partnership requires an established romance and deeper trust."}else{r.romance="committed";change={trust:5,affection:6};message=person+" agrees to build a future with Snacky."}}
@@ -245,18 +268,26 @@ function draw(){
   const nights=add("button","Spend the night together · restful morning XP");nights.type="button";nights.className="soa-social-action";nights.onclick=overnightRest;companionGroup.append(nights);
  }
  const categories=[
-  {label:"Everyday interactions",ids:["talk","encourage","advice","flirt","bond"],expanded:true},
+  {label:"Everyday interactions",ids:["talk","past","encourage","advice","flirt","bond"],expanded:everydayExpanded,key:"everyday"},
+  {label:"Shared moments & planning",ids:["plan","reflect","quiet"],expanded:sharedExpanded,key:"shared"},
   {label:"Romance & commitments",ids:["confess","commit","propose","wedding"],expanded:romanceExpanded,key:"romance"},
   {label:"Disagreements & reconciliation",ids:["apologize","argue","betray"],expanded:conflictExpanded,key:"conflict"}
  ];
  for(const category of categories){
-  const wrapper=category.key?document.createElement("details"):add("div","");
+  const wrapper=document.createElement("details");
   wrapper.className="soa-relation-action-group";
-  if(category.key){wrapper.open=category.expanded;wrapper.ontoggle=()=>{if(category.key==="romance")romanceExpanded=wrapper.open;else conflictExpanded=wrapper.open};wrapper.append(add("summary",category.label))}
-  else wrapper.append(add("h4",category.label));
+  wrapper.open=category.expanded;
+  wrapper.ontoggle=()=>{if(category.key==="everyday")everydayExpanded=wrapper.open;else if(category.key==="shared")sharedExpanded=wrapper.open;else if(category.key==="romance")romanceExpanded=wrapper.open;else conflictExpanded=wrapper.open};
+  wrapper.append(add("summary",category.label));
   const grid=add("div","");grid.className="soa-interactions";
   for(const a of ACTIONS.filter(a=>category.ids.includes(a.id))){
    const b=document.createElement("button");b.type="button";b.className="soa-social-action";b.disabled=!locationAllows(selected);
+   if(a.id==="quiet"){
+    const adventure=window.soaLivingCampaign?.getState?.()||{},place=String(adventure.scene?.location||"");
+    const safe=!adventure.enemies?.some(e=>e.hp>0)&&/tavern|inn|safehouse|home|quarters|lodging|camp|rest area|sanctuary|checkpoint/i.test(place);
+    b.disabled=b.disabled||!safe;
+    if(!safe)b.setAttribute("aria-label",a.label+" — requires a peaceful, safe location");
+   }
    b.append(add("strong",a.label),add("small",a.detail));b.onclick=()=>interact(a.id);grid.append(b);
   }
   wrapper.append(grid);companionGroup.append(wrapper);
