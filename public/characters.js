@@ -29,25 +29,6 @@ function keepGameSectionsExpanded(root=document){
  document.addEventListener("toggle",event=>{if(event.target instanceof HTMLDetailsElement&&!event.target.open&&!event.target.classList.contains("soa-collapsible-quests"))event.target.open=true},true);
 }
 keepGameSectionsExpanded();
-// Give long panels a consistent, keyboard-accessible shortcut back to the page header.
-function addPanelTopButtons(root=document){
- const panels=root.matches?.("main > section.panel")?[root]:root.querySelectorAll?.("main > section.panel")||[];
- panels.forEach(panel=>{
-  if(panel.querySelector(":scope > .soa-panel-topline"))return;
-  const heading=panel.querySelector(":scope > .soa-roster-kicker, :scope > .soa-chronicle-kicker, :scope > .eyebrow, :scope > h2");
-  const line=document.createElement("div");line.className="soa-panel-topline";
-  const button=document.createElement("button");button.type="button";button.className="soa-back-to-top";button.textContent="↑ Top";button.setAttribute("aria-label","Back to top");button.title="Back to top";
-  button.addEventListener("click",()=>window.scrollTo({top:0,behavior:window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches?"auto":"smooth"}));
-  if(heading){heading.before(line);line.append(heading)}
-  else if(panel.querySelector(":scope > details")){panel.prepend(line)}
-  else return;
-  line.append(button);
- });
-}
-addPanelTopButtons();
-new MutationObserver(records=>records.forEach(record=>record.addedNodes.forEach(node=>{
- if(node.nodeType===1)addPanelTopButtons(node.closest?.("main > section.panel")||node);
-}))).observe(document.querySelector("main")||document.documentElement,{childList:true,subtree:true});
 const read=(key)=>{const result=window.soaSaveRules.readStoredJSON(key);if(!result.ok&&result.unavailable)window.soaReportStorageFailure?.("Character save could not be read because device storage is unavailable.");return result.ok?result.value:null};
 const write=(key,val)=>{if(window.soaSaveRules.isIntegrityBlocked()||(key===ROSTER_KEY&&rosterLoadBlocked))return false;try{localStorage.setItem(key,JSON.stringify(val));return true}catch{window.soaReportStorageFailure?.("Character data could not be saved. Check available browser storage.");return false}};
 function defaults(){
