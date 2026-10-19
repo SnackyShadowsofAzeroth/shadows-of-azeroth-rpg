@@ -786,6 +786,6 @@ function migrateCompanionDisplayNames(){
 const savedCampaign=localGet(KEY);if(campaignStorageReadFailed)campaignSaveFailed=true;
 if(savedCampaign!==null){try{campaign=normalizeCampaignState(JSON.parse(savedCampaign));if(!campaign)campaignLoadBlocked=true}catch{campaign=null;campaignLoadBlocked=true;window.soaSaveRules.reportCorruption(KEY)}}
 migrateCompanionDisplayNames();
-enabled=localGet("soa-campaign-enabled")==="1"&&!campaignLoadBlocked&&!campaignStorageReadFailed;let campaignReady=true;if(campaign){window.soaChronicle?.attach?.(campaign);campaignReady=store()}window.soaChronicleSetSave?.(store);interfaceUI();get("campaign-mode").checked=enabled;
+enabled=localGet("soa-campaign-enabled")==="1"&&!campaignLoadBlocked&&!campaignStorageReadFailed;let campaignReady=true;if(campaign){window.soaChronicle?.attach?.(campaign);campaignReady=store();window.soaChronicle?.render?.(campaign)}window.soaChronicleSetSave?.(store);interfaceUI();get("campaign-mode").checked=enabled;
 if(campaignLoadBlocked||campaignStorageReadFailed){status("")}else if(enabled){if(!campaign){campaign=make();campaignReady=store()}draw();if(campaignReady&&!campaign.scene&&navigator.onLine)advance(campaign.lastAction,campaign.lastResult,true)}
 window.soaLivingCampaign={getState:()=>campaign,enabled:()=>enabled,persist:store,refreshUI:()=>{draw();window.soaCharacters?.refreshProfessions?.()}};})();

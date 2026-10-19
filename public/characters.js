@@ -312,13 +312,6 @@ function profilePanel(){
  const title=get("soa-player-name"),tag=get("soa-player-class");if(title)title.textContent=active.name;if(tag)tag.textContent=active.id==="snacky"?"SI:7 · Combat Swords":factionDisplay(active)+" · "+active.race+" "+active.className;
  if(typeof render==="function")render();
  const menu=make("button","☰ Characters");menu.id="soa-characters-button";menu.type="button";menu.onclick=drawMenu;head.append(menu);
- const nav=make("nav",undefined,"soa-quick-nav");nav.setAttribute("aria-label","Game sections");
- for(const [label,targetId] of [["Adventure","campaign-box"],["Quest","soa-chronicle"],["Character","soa-profession-panel"],["Reputation",active.origin==="custom"?"soa-standalone-reputation":"companion-panel"],["Settings","soa-save-settings"]]){
-  const jump=make("button",label);jump.type="button";jump.className="soa-quick-link";
-  jump.onclick=()=>{const dest=get(targetId);if(dest){dest.scrollIntoView({behavior:"smooth",block:"start"})}};
-  nav.append(jump);
- }
- head.append(nav);
  const pane=make("section");pane.className="panel soa-profession-panel";pane.id="soa-profession-panel";
  head.after(pane);drawProfessions();window.soaPortraits?.refresh?.();
 }
@@ -327,17 +320,26 @@ function profilePanel(){
 // must not decide which section players encounter first.
 function organizeGameSections(){
  const main=document.querySelector("main");if(!main)return;
+ const status=get("soa-character-status"),profession=get("soa-profession-panel");
+ if(status&&profession&&!get("soa-character-screen")){
+  const screen=make("section");screen.id="soa-character-screen";screen.className="soa-game-screen";screen.setAttribute("aria-label","Character");
+  const tabs=make("div",undefined,"soa-character-tabs");tabs.setAttribute("role","group");tabs.setAttribute("aria-label","Character views");
+  const overview=make("button","Overview");overview.type="button";overview.className="soa-character-view-button";overview.setAttribute("aria-controls","soa-character-status");overview.setAttribute("aria-pressed","true");
+  const skills=make("button","Skills & Professions");skills.type="button";skills.className="soa-character-view-button";skills.setAttribute("aria-controls","soa-profession-panel");skills.setAttribute("aria-pressed","false");
+  const showView=name=>{const overviewActive=name==="overview";status.hidden=!overviewActive;profession.hidden=overviewActive;overview.setAttribute("aria-pressed",String(overviewActive));skills.setAttribute("aria-pressed",String(!overviewActive));overview.classList.toggle("active",overviewActive);skills.classList.toggle("active",!overviewActive)};
+  overview.onclick=()=>showView("overview");skills.onclick=()=>showView("skills");tabs.append(overview,skills);
+  screen.append(tabs);status.parentElement.insertBefore(screen,status);screen.append(status,profession);showView("overview");
+  const abilitySheet=profession.querySelector(".soa-ability-sheet");const legacyAbilities=get("abilities");if(abilitySheet&&legacyAbilities)status.insertBefore(abilitySheet,legacyAbilities);
+ }
  const reputationId=active.origin==="custom"?"soa-standalone-reputation":"companion-panel";
- const ordered=["campaign-box","soa-chronicle","soa-profession-panel",reputationId,"soa-save-settings"]
+ const ordered=["campaign-box","soa-adventure-story","soa-chronicle","soa-party-evidence","soa-character-screen",reputationId,"soa-legacy-ai","soa-save-settings"]
   .map(get).filter(panel=>panel?.parentElement===main);
  if(!ordered.length)return;
- const selected=new Set(ordered);
- const anchor=[...main.children].find(node=>node.matches?.("section.panel")&&!selected.has(node))||main.querySelector(":scope > footer");
- if(!anchor)return;
- ordered.forEach(panel=>main.insertBefore(panel,anchor));
+ const footer=main.querySelector(":scope > footer");
+ ordered.forEach(panel=>main.insertBefore(panel,footer||null));
 }
 function drawProfessions(){
- const root=get("soa-profession-panel");if(!root)return;root.replaceChildren();
+ const root=get("soa-profession-panel");if(!root)return;get("soa-character-status")?.querySelectorAll(".soa-ability-sheet").forEach(sheet=>sheet.remove());root.replaceChildren();
  root.append(make("div","CHARACTER RECORD","soa-roster-kicker"),make("h2",active.name+" · "+active.race+" "+active.className));
  const abilityCard=window.soaAbilities?.card?.("hero");if(abilityCard)root.append(abilityCard);
  window.soaProgression?.refresh?.();
@@ -363,6 +365,7 @@ function drawProfessions(){
   const r=make("div",undefined,"soa-profession-row");r.append(make("span",name+" · "+skill.skill+"/300"));const b=make("button","Practice");b.onclick=()=>prefill(name);r.append(b);secondary.append(r)
  }root.append(secondary);
  const recents=active.professionLog||[];if(recents.length)root.append(make("p",recents.slice(-2).join(" · "),"muted"));
+ const status=get("soa-character-status"),sheet=root.querySelector(".soa-ability-sheet"),abilities=get("abilities");if(status&&sheet&&abilities)status.insertBefore(sheet,abilities);
 }
 function prefill(prof){
  const action=get("campaign-custom-action"),type=get("campaign-custom-type");
@@ -443,13 +446,13 @@ function retrainPrimaryProfession(dropName,newName){
  drawProfessions();return {message:"Unlearned "+dropName+" and trained "+newName+" at skill 1. Previous profession progress is lost."};
 }
 init();
-window.soaCharacters={retrainPrimaryProfession,updateCraftSkill,profile:selectedProfile,startingEquipment:()=>[...(active.startingEquipment||[])],isNewCharacter:()=>active.origin==="custom",initialLocalState:baseState,applyProfession,showMenu:drawMenu,refreshProfessions:drawProfessions,exportRosterBackup,getSocialSkills:socialSkills};
+window.soaCharacters={retrainPrimaryProfession,updateCraftSkill,profile:selectedProfile,startingEquipment:()=>[...(active.startingEquipment||[])],isNewCharacter:()=>active.origin==="custom",initialLocalState:baseState,applyProfession,showMenu:drawMenu,refreshProfessions:drawProfessions,organizeSections:organizeGameSections,exportRosterBackup,getSocialSkills:socialSkills};
 window.addEventListener("pagehide",()=>snapshot(active.id));
 document.addEventListener("DOMContentLoaded",()=>{
  profilePanel();
  try{if(rosterLoadBlocked||window.soaSaveRules.isIntegrityBlocked()||sessionStorage.getItem(ENTER_KEY)!=="1")drawMenu()}catch(e){drawMenu()}
  // New-character adventures need their own future companions. Snacky's fixed party should not be shown as theirs.
- if(active.origin==="custom"){const pane=get("companion-panel");if(pane)pane.hidden=true;const rep=document.createElement("section");rep.className="panel soa-standalone-reputation";rep.id="soa-standalone-reputation";rep.append(document.createElement("h2"));rep.firstChild.textContent="Reputation";get("soa-profession-panel")?.after(rep);window.soaReputation?.renderInto?.(rep);const journal=get("journal");if(journal?.closest){const legacy=journal.closest("section.panel");if(legacy)legacy.hidden=true}}
+ if(active.origin==="custom"){const pane=get("companion-panel");if(pane){pane.hidden=true;pane.dataset.soaUnavailable="true"}const rep=document.createElement("section");rep.className="panel soa-standalone-reputation";rep.id="soa-standalone-reputation";rep.append(document.createElement("h2"));rep.firstChild.textContent="Reputation";get("soa-profession-panel")?.after(rep);window.soaReputation?.renderInto?.(rep);const journal=get("journal");if(journal?.closest){const legacy=journal.closest("section.panel");if(legacy)legacy.hidden=true;legacy.dataset.soaUnavailable="true"}}
  organizeGameSections();
 });
 })();
