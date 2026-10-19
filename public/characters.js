@@ -271,8 +271,8 @@ function drawMenu(){
   item.append(description,button);list.append(item);
  }
  shell.append(list);
- const expand=make("details");expand.className="soa-create-new";
- const summary=make("summary","＋ Create New Character");expand.append(summary);
+ const createToggle=make("button","＋ Create New Character");createToggle.type="button";createToggle.className="soa-roster-backup";createToggle.setAttribute("aria-expanded","false");createToggle.setAttribute("aria-controls","soa-character-creation");shell.append(createToggle);
+ const expand=make("section");expand.id="soa-character-creation";expand.className="soa-create-new";expand.hidden=true;expand.setAttribute("aria-label","Create a new character");
  const form=make("form");form.className="soa-create-form";
  const name=make("input");name.type="text";name.maxLength=36;name.minLength=2;name.required=true;name.placeholder="Character name";
  const nameLabel=make("label","Character name");nameLabel.append(name);
@@ -300,6 +300,11 @@ function drawMenu(){
  const submit=make("button","Create Character & Start Story");submit.type="submit";form.append(submit);
  form.onsubmit=e=>{e.preventDefault();const n=name.value.trim();if(n.length<2||n.length>36){warning.textContent="Enter a name between 2 and 36 characters.";return}if(!validCharacterChoice({race:race.value,faction:faction.value,className:className.value})){warning.textContent="Choose a faction and class allowed for that race.";return}if(prof1.value===prof2.value){warning.textContent="Choose two different primary professions.";return}if(roster.characters.some(x=>x.name.toLowerCase()===n.toLowerCase())){warning.textContent="That character name is already in your roster.";return}create({name:n,gender:gender.value,race:race.value,faction:faction.value,className:className.value,professionNames:[prof1.value,prof2.value]})};
  expand.append(form);shell.append(expand);
+ createToggle.onclick=()=>{
+  const opening=expand.hidden;expand.hidden=!opening;createToggle.setAttribute("aria-expanded",String(opening));
+  createToggle.textContent=opening?"Close Character Creation":"＋ Create New Character";
+  if(opening){name.focus({preventScroll:true});expand.scrollIntoView({behavior:"smooth",block:"nearest"})}
+ };
  const backup=make("button","Download All Character Saves");backup.type="button";backup.className="soa-roster-backup";backup.onclick=exportRosterBackup;shell.append(backup);
  const restore=make("button","Restore All Character Saves");restore.type="button";restore.className="soa-roster-backup";restore.onclick=()=>get("soa-roster-restore-file").click();shell.append(restore);
  const restoreInput=make("input");restoreInput.type="file";restoreInput.id="soa-roster-restore-file";restoreInput.accept="application/json,.json";restoreInput.hidden=true;restoreInput.onchange=importRosterBackupFile;shell.append(restoreInput);

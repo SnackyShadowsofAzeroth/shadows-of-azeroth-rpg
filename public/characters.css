@@ -11,6 +11,7 @@
 .soa-character-item span{font:12px/1.5 system-ui;color:#e1d1b5}
 .soa-character-item button,.soa-create-form button,.soa-menu-back{width:auto;min-width:108px;margin:0;border:1px solid #ddbd79;background:linear-gradient(#77613d,#493726);color:#fff2d1;text-align:center;font:600 13px system-ui;padding:10px}
 .soa-create-new{margin:15px 0;border-top:1px solid #987b50;padding:12px 0}
+.soa-create-new[hidden]{display:none!important}
 .soa-create-new summary{font:700 17px Georgia,serif;color:#58391d;cursor:pointer;padding:6px}
 .soa-create-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:12px 0}
 .soa-create-form label{display:grid;gap:5px;font:600 12px system-ui;color:#493521}
