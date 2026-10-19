@@ -671,13 +671,7 @@ function draw(){
   box.append(dialogue);
  }
  if(pending()){const note=document.createElement("p");note.className="soa-pending";note.textContent="Your last decision is saved. The next story scene has not arrived. Retry safely without repeating the action.";box.append(note);const retry=document.createElement("button");retry.className="med";retry.textContent="Retry generating next scene";retry.disabled=busy;retry.onclick=()=>{returnToAdventure("status");advance(campaign.lastAction,campaign.lastResult,true)};box.append(retry)}
- if(campaign.journal.length){
-  const notes=document.createElement("details");notes.className="soa-field-notes";
-  const summary=document.createElement("summary");summary.textContent="Field notes · "+campaign.journal.length+" discoveries";notes.append(summary);
-  const list=document.createElement("ul");
-  for(const fact of campaign.journal.slice(-8).reverse()){const item=document.createElement("li");item.textContent=fact;list.append(item)}
-  notes.append(list);box.append(notes);
- }
+
  drawEnemyStatus(box);
  if(campaign?.chronicle?.pendingMilestone){
   const notice=document.createElement("button");notice.type="button";notice.className="soa-chapter-review";
