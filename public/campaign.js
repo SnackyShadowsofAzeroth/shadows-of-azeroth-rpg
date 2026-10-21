@@ -134,17 +134,19 @@ function dicePreview(action){
  // Combat takes priority over social keyword detection, matching the resolver.
  if(action.type==="combat"&&livingEnemies().length){
   const ability=resolvedCombatAbility(action);
-  if(ability==="evasion")return {primary:"🎲 No attack roll",secondary:"Defensive exchange · 0 "+resourceName()+" cost · up to +10 "+resourceName()+" recovery"};
+  const profile=window.soaCharacters?.profile?.(),level=window.soaProgression?.level?.()||profile?.startLevel||1;
+  const cost=window.soaClassAbilities?.costOf?.(ability,profile?.className,level)??25;
+  if(ability==="evasion")return {primary:"🎲 No attack roll",secondary:"Defensive exchange · "+cost+" "+resourceName()+" cost · up to +10 "+resourceName()+" recovery"};
   const attacker=window.soaAbilities?.get?.("hero");
   const gear=window.soaEquipment?.modifiers?.()||{};
-  if(ability==="riposte")return {primary:"🎲 Automatic hit after parry",secondary:(24+(attacker?.modifiers?.DEX||0)+(gear.damage||0))+" raw damage on a valid Riposte · 10 "+resourceName()+" cost · up to +10 recovery"};
+  if(ability==="riposte")return {primary:"🎲 Automatic hit after parry",secondary:(24+(attacker?.modifiers?.DEX||0)+(gear.damage||0))+" raw damage on a valid Riposte · "+cost+" "+resourceName()+" cost · up to +10 recovery"};
   const attackAbility=attacker?.className==="Warrior"||attacker?.className==="Paladin"?"STR":"DEX";
   const attackModifier=attacker?.modifiers?.[attackAbility]??2;
   const bonus=(attacker?.proficiency??2)+attackModifier+(gear.attack||0);
   const targets=livingEnemies(),selected=targets.find(e=>e.name===selectedCombatTarget)||targets[0];
   const ac=window.soaCombatRules?.statBlock?.(selected)?.ac||12;
   const weapon=window.soaCombatRules?.weapon?.(attacker,ability)||{die:ability==="kick"?6:10,flat:ability==="kick"?4+(attacker?.modifiers?.DEX||0):10+(attacker?.modifiers?.DEX||0)};
-  const cost={strike:35,kick:25}[ability]??35;
+  
   const rollLabel=campaign?.flags?.advantage?"d20 with advantage + ":"d20 + ";
   return {primary:"🎲 "+rollLabel+bonus+" vs AC "+ac+" · natural 20 critical",secondary:"1d"+weapon.die+" + "+(weapon.flat+(gear.damage||0))+" raw damage · "+cost+" "+resourceName()+" cost · up to +10 recovery"+(ability==="kick"?" · interrupt on hit":"")};
  }
@@ -323,7 +325,7 @@ function fightExchange(action){
  const classAbility=window.soaClassAbilities?.get?.(action.ability,heroProfile?.className,heroLevel);
  if(classAbility)return classAbilityExchange(action,classAbility,targets);
  const ability=resolvedCombatAbility(action);
- const price={strike:35,kick:25,evasion:0,riposte:10}[ability];
+ const price=window.soaClassAbilities?.costOf?.(ability,heroProfile?.className,heroLevel)??25;
  if(ability==="riposte"&&!campaign.parryReady){status("Riposte requires a parry in the previous exchange. No action spent.");return null}
  if(s.en<price){status("Not enough "+resourceName()+" for "+ability+" ("+price+" required). No action spent.");return null}
  const requested=String(action.text||"").toLowerCase();
@@ -602,7 +604,7 @@ function drawEnemyStatus(box){
  if(enemies.length)section.append(picker);
  const skills=document.createElement("div");skills.className="soa-combat-abilities";
  const abilitiesLabel=document.createElement("strong");abilitiesLabel.className="soa-class-combat-heading";abilitiesLabel.textContent="Combat abilities · Level "+(window.soaProgression?.level?.()||1);skills.append(abilitiesLabel);
- const available=[{id:"strike",name:"Weapon Strike",cost:35,effect:"damage",description:"A standard weapon attack."},...(window.soaClassAbilities?.available?.(window.soaCharacters?.profile?.()?.className,window.soaProgression?.level?.()||1)||[])];
+ const available=[{id:"strike",name:"Weapon Strike",cost:25,effect:"damage",description:"A standard weapon attack."},...(window.soaClassAbilities?.available?.(window.soaCharacters?.profile?.()?.className,window.soaProgression?.level?.()||1)||[])];
  for(const ability of available){
   const {id,name,cost,effect}=ability;
   const button=document.createElement("button");button.type="button";button.className="soa-ability-button";
