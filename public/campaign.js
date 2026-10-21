@@ -433,7 +433,14 @@ function updateLivingEnemies(scene){
   if(!name||defeated.includes(id)||next.some(x=>x.name.toLowerCase()===name.toLowerCase()))continue;
   const existing=previous.find(x=>x.name.toLowerCase()===name.toLowerCase());
   const maxHp=Math.min(500,item.maxHp);
-  next.push(existing||{name,maxHp,hp:Math.max(1,Math.min(maxHp,Math.round(Number(item.hp)||maxHp)))});
+  const classes=new Set(["Warrior","Paladin","Hunter","Rogue","Priest","Mage","Warlock","Druid","Shaman"]);
+  const nameClass=/\bwarrior|fighter\b/i.test(name)?"Warrior":/\bpaladin\b/i.test(name)?"Paladin":/\bhunter|ranger\b/i.test(name)?"Hunter":/\brogue|assassin|cutthroat\b/i.test(name)?"Rogue":/\bpriest\b/i.test(name)?"Priest":/\bmage|wizard\b/i.test(name)?"Mage":/\bwarlock\b/i.test(name)?"Warlock":/\bdruid\b/i.test(name)?"Druid":/\bshaman\b/i.test(name)?"Shaman":null;
+  const className=classes.has(item.className)?item.className:existing?.className||nameClass;
+  const maxResource=Number.isInteger(item.maxResource)?Math.max(1,Math.min(100,item.maxResource)):Number.isInteger(existing?.maxResource)?existing.maxResource:100;
+  const resource=Number.isInteger(item.resource)?Math.max(0,Math.min(maxResource,item.resource)):Number.isInteger(existing?.resource)?Math.min(maxResource,existing.resource):className?maxResource:null;
+  const form=["cat","bear"].includes(item.form)?item.form:existing?.form||null;
+  const armorClass=Number.isInteger(item.armorClass)?Math.max(8,Math.min(25,item.armorClass)):existing?.armorClass;
+  next.push({...existing,name,maxHp,hp:existing?Math.max(0,Math.min(maxHp,existing.hp)):Math.max(1,Math.min(maxHp,Math.round(Number(item.hp)||maxHp))),className,form,armorClass,resource,maxResource});
  }
  // If Gemini omits surviving enemies right after a strike, keep their locally tracked HP.
  // Deliberate movement or noncombat disengagement can clear the previous encounter.
@@ -561,7 +568,20 @@ function drawEnemyStatus(box){
   header.append(name,hp);
   const rail=document.createElement("div");rail.className="soa-foe-track";rail.setAttribute("role","progressbar");
   rail.setAttribute("aria-label",enemy.name+" health");rail.setAttribute("aria-valuemin","0");rail.setAttribute("aria-valuemax",String(enemy.maxHp));rail.setAttribute("aria-valuenow",String(enemy.hp));
-  const fill=document.createElement("div");fill.className="soa-foe-fill";fill.style.width=Math.max(0,Math.min(100,enemy.hp/enemy.maxHp*100))+"%";rail.append(fill);item.append(header,rail);section.append(item);
+  const fill=document.createElement("div");fill.className="soa-foe-fill";fill.style.width=Math.max(0,Math.min(100,enemy.hp/enemy.maxHp*100))+"%";rail.append(fill);item.append(header,rail);
+  const block=window.soaCombatRules?.statBlock?.(enemy),enemyClass=enemy.className||null;
+  const stats=document.createElement("p");stats.className="soa-foe-stats";stats.textContent="Armor Class "+(block?.ac??"unknown")+(enemyClass?" · "+enemyClass:" · "+(block?.type||"hostile"));item.append(stats);
+  const resource=enemyClass?window.soaResources?.forClass?.(enemyClass,enemy.form):null;
+  if(resource&&Number.isFinite(enemy.resource)&&Number.isFinite(enemy.maxResource)&&enemy.maxResource>0){
+   const current=Math.max(0,Math.min(enemy.maxResource,enemy.resource)),meter=document.createElement("div");meter.className="soa-foe-resource";
+   const label=document.createElement("div");label.className="soa-foe-resource-heading";
+   const resourceName=document.createElement("strong");resourceName.textContent=resource.label;
+   const resourceValue=document.createElement("span");resourceValue.textContent=current+" / "+enemy.maxResource;
+   label.append(resourceName,resourceValue);
+   const resourceRail=document.createElement("div");resourceRail.className="soa-combat-resource-rail soa-foe-resource-rail";resourceRail.dataset.resource=resource.key;resourceRail.setAttribute("role","progressbar");resourceRail.setAttribute("aria-label",enemy.name+" "+resource.label);resourceRail.setAttribute("aria-valuemin","0");resourceRail.setAttribute("aria-valuemax",String(enemy.maxResource));resourceRail.setAttribute("aria-valuenow",String(current));
+   const resourceFill=document.createElement("div");resourceFill.className="soa-combat-resource-fill";resourceFill.style.width=Math.max(0,Math.min(100,current/enemy.maxResource*100))+"%";resourceRail.append(resourceFill);meter.append(label,resourceRail);item.append(meter);
+  }
+  section.append(item);
  }
  if(exchange?.defeated&&!enemies.some(e=>e.name===exchange.target)){
   const fallen=document.createElement("div");fallen.className="soa-foe soa-foe-defeated";
