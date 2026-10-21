@@ -11,6 +11,7 @@ const html = fs.readFileSync(path.join(__dirname, "..", "public", "index.html"),
 const characters = fs.readFileSync(path.join(__dirname, "..", "public", "characters.js"), "utf8");
 const serviceWorker = fs.readFileSync(path.join(__dirname, "..", "public", "sw.js"), "utf8");
 const layoutCss = fs.readFileSync(path.join(__dirname, "..", "public", "mobile-layout.css"), "utf8");
+const characterCss = fs.readFileSync(path.join(__dirname, "..", "public", "characters.css"), "utf8");
 const tabIds = ["adventure", "quest", "character", "reputation", "settings"];
 
 function element(tagName, id = "", tab = "") {
@@ -91,10 +92,15 @@ test("one five-destination bottom navigation is loaded and cached for offline pl
   assert.match(serviceWorker, /"\.\/mobile-layout\.js"/);
   assert.match(serviceWorker, /"\.\/mobile-layout\.css"/);
   assert.match(source, /\["adventure","Adventure","campaign-box"\],\s*\["quest","Quest","soa-chronicle"\],\s*\["character","Character","soa-character-screen"\]/);
-  assert.match(serviceWorker, /shadows-of-azeroth-v56/);
+  assert.match(serviceWorker, /shadows-of-azeroth-v57/);
   assert.match(layoutCss, /#soa-mobile-nav\{position:fixed;z-index:999;bottom:0/);
   assert.match(source, /function createNavigation\(\)/);
   assert.doesNotMatch(characters, /soa-quick-nav/);
+});
+
+test("mobile character actions fit in a two-column row without forcing buttons to overlap", () => {
+  assert.match(characterCss, /\.soa-character-item \.soa-character-actions\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\);width:100%/);
+  assert.match(characterCss, /\.soa-character-item button\{box-sizing:border-box;width:100%;min-width:0;min-height:48px/);
 });
 
 test("new layout replaces legacy controls with one bottom menu", () => {

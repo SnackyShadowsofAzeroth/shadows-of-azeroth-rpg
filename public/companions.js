@@ -42,6 +42,14 @@ function load(){
   for(const id of Object.keys(PEOPLE)){const old=v.relations[id]||{};if(!old||typeof old!=="object"||Array.isArray(old)){storageBlocked=true;window.soaSaveRules.reportCorruption(KEY);return}const r=blank();for(const k of ["trust","affection","respect"])r[k]=clamp(old[k]);r.interactions=clamp(old.interactions,0,999);r.grievances=clamp(old.grievances,0,999);r.romance=["none","dating","committed","engaged","married"].includes(old.romance)?old.romance:"none";r.memories=Array.isArray(old.memories)?old.memories.slice(-15):[];r.nights=Math.max(0,Number(old.nights)||0);r.lastNightDay=old.lastNightDay??null;r.status=status(r);data.relations[id]=r}
  }else for(const id of Object.keys(PEOPLE)){const r=rel(id),n=data.rapport[id]||0;r.trust=n*9;r.affection=n*5;r.respect=n*6;r.interactions=n;r.status=status(r)}
 }
+function establishedPeople(){
+ const profile=window.soaCharacters?.profile?.();
+ if(!profile||profile.id==="snacky")return Object.keys(PEOPLE);
+ const allies=window.soaLivingCampaign?.getState?.()?.combatAllies;
+ const names=new Set(Array.isArray(allies)?allies.map(ally=>String(ally?.name||"")):[]);
+ return Object.keys(PEOPLE).filter(id=>names.has(PEOPLE[id].name)||data.entries.some(entry=>entry.person===PEOPLE[id].name&&["interaction","story"].includes(entry.source)));
+}
+function isEstablished(id){return Object.hasOwn(PEOPLE,id)&&establishedPeople().includes(id)}
 function save(){if(storageBlocked||window.soaSaveRules.isIntegrityBlocked())return false;try{localStorage.setItem(KEY,JSON.stringify(data));return true}catch{window.soaReportStorageFailure?.("Relationship save failed. Check available browser storage.");return false}}
 function add(tag,text){const e=document.createElement(tag);e.textContent=text;return e}
 function locationAllows(id){if(id!=="lethariel")return true;let mode=false;try{mode=localStorage.getItem("soa-campaign-enabled")==="1"}catch{}if(!mode)return false;const scene=window.soaLivingCampaign?.getState?.()?.scene;return /checkpoint|tavern|regroup/i.test(String(scene?.location||""))}
@@ -137,6 +145,7 @@ function overnightRest(){
 }
 function interact(kind){
  if(storageBlocked||window.soaSaveRules.isIntegrityBlocked()){last="Relationship changes are paused until saved data has been recovered.";draw();return}
+ if(!isEstablished(selected)){last="This relationship will be available after you meet and travel with this character.";draw();return}
  if(!locationAllows(selected)){last="That companion is stationed elsewhere. Regroup before speaking in person.";draw();return}
  const r=rel(selected),person=PEOPLE[selected].name;let message="",change={},valid=true;
  if(kind==="talk"){change={trust:5,respect:2};message=encounter(selected,"talk")}
@@ -178,12 +187,12 @@ function interact(kind){
 }
 function applyStoryConsequence(id,kind){
  if(storageBlocked||window.soaSaveRules.isIntegrityBlocked())return false;
- if(!PEOPLE[id])return false;
+ if(!PEOPLE[id]||!isEstablished(id))return false;
  const impacts={protect:{trust:12,respect:9,affection:4},honor:{trust:10,respect:10},deceive:{trust:-18,respect:-12},cruelty:{trust:-25,respect:-25,affection:-12},betray:{trust:-45,respect:-30,affection:-25}};
  if(!impacts[kind])return false;const r=rel(id);adjust(r,impacts[kind]);
  if(["deceive","cruelty","betray"].includes(kind))r.grievances++;r.interactions++;
  const text=PEOPLE[id].name+" reacts to "+kind+"; relationship: "+status(r)+".";
- data.entries.push({person:PEOPLE[id].name,text,at:new Date().toISOString()});data.entries=data.entries.slice(-40);save();draw();return true;
+ data.entries.push({person:PEOPLE[id].name,text,at:new Date().toISOString(),source:"story"});data.entries=data.entries.slice(-40);save();draw();return true;
 }
 // Story dialogue adjusts relationships only after its scene is confirmed and saved.
 // The unique action ID makes reloads and retries idempotent.
@@ -192,7 +201,7 @@ function applyDialogueOutcome(event){
  if(!event||typeof event!=="object")return false;
  const id=String(event.id||""),target=String(event.target||"");
  const tone=String(event.tone||"neutral"),success=event.success===true;
- if(!id||!PEOPLE[target]||!["friendly","support","flirt","honest","disagree","insult","betray","apologize","neutral"].includes(tone))return false;
+ if(!id||!PEOPLE[target]||!isEstablished(target)||!["friendly","support","flirt","honest","disagree","insult","betray","apologize","neutral"].includes(tone))return false;
  if(data.dialogueIds.includes(id))return false;
  const changes={
   friendly:{trust:4,respect:1},
@@ -217,7 +226,7 @@ function applyDialogueOutcome(event){
  data.dialogueIds.push(id);data.dialogueIds=data.dialogueIds.slice(-100);
  const summary=Object.entries(delta).map(([k,v])=>k+" "+(v>0?"+":"")+v).join(", ");
  const description="Custom dialogue ("+tone+"): "+(summary||"no change")+"; "+status(r)+".";
- data.entries.push({person:PEOPLE[target].name,text:description,at:new Date().toISOString()});
+ data.entries.push({person:PEOPLE[target].name,text:description,at:new Date().toISOString(),source:"story"});
  data.entries=data.entries.slice(-40);save();draw();return true;
 }
 function draw(){
@@ -244,9 +253,7 @@ function draw(){
  showView(activeReputationView);
  // Fresh heroes must not inherit Snacky's named companions or relationship actions.
  const soloHero=window.soaCharacters?.isNewCharacter?.()===true;
- const present=window.soaLivingCampaign?.getState?.()?.combatAllies||[];
- const hasKnownCompanion=Array.isArray(present)&&present.some(ally=>Object.values(PEOPLE).some(p=>p.name===ally?.name));
- if(soloHero&&!hasKnownCompanion){
+ if(soloHero&&!establishedPeople().length){
   const empty=add("p","Your adventurer is traveling alone. Companions and relationships will become available when you meet someone and they actually join your adventure.");
   empty.className="muted";companionGroup.append(empty);
   showView("factions");window.soaReputation?.renderInto?.(factionGroup);
@@ -299,5 +306,5 @@ load();
 const el=document.createElement("section");el.className="panel soa-companion-panel";el.id="companion-panel";
 const campaign=$("campaign-box");if(campaign)campaign.after(el);else document.querySelector("header")?.after(el);
 draw();
-window.soaCompanions={getProfiles:()=>Object.fromEntries(Object.entries(PEOPLE).map(([id,p])=>[id,{name:p.name,race:p.race,className:p.className,specialization:p.specialization,level:window.soaProgression?.level?.(id)||10,role:p.role}])),getRecent:()=>{const seen=new Set();return data.entries.slice().reverse().filter(x=>{const key=(x.person+"|"+x.text).toLowerCase().replace(/\s+/g," ").trim();if(seen.has(key))return false;seen.add(key);return true}).slice(0,4).reverse().map(x=>x.person+": "+x.text.slice(0,150))},getAdventureMoments:()=>{const turn=window.soaLivingCampaign?.getState?.()?.turn;return data.entries.filter(x=>x.source==="interaction"&&typeof x.dialogue==="string"&&x.sceneTurn===turn).slice(-3)},getRapport:()=>({...data.rapport}),getConversationContext:()=>Object.fromEntries(Object.keys(PEOPLE).map(id=>{const r=rel(id);return [id,{stage:status(r),romance:r.romance,trust:r.trust,affection:r.affection,respect:r.respect,interactions:r.interactions,grievances:r.grievances,nights:r.nights||0,memories:(r.memories||[]).slice(-8).map(m=>m.text),recentMoments:data.entries.filter(x=>x.person===PEOPLE[id].name).slice(-4).map(x=>x.text.slice(0,150))}]})),getRelationships:()=>Object.fromEntries(Object.keys(PEOPLE).map(id=>{const r=rel(id);return [id,{trust:r.trust,affection:r.affection,respect:r.respect,status:status(r),romance:r.romance,grievances:r.grievances}]})),applyStoryConsequence,applyDialogueOutcome,refresh:draw,refreshProgress:draw};
+window.soaCompanions={getProfiles:()=>Object.fromEntries(establishedPeople().map(id=>{const p=PEOPLE[id];return [id,{name:p.name,race:p.race,className:p.className,specialization:p.specialization,level:window.soaProgression?.level?.(id)||10,role:p.role}]})),getRecent:()=>{const allowed=new Set(establishedPeople().map(id=>PEOPLE[id].name)),seen=new Set();return data.entries.slice().reverse().filter(x=>allowed.has(x.person)).filter(x=>{const key=(x.person+"|"+x.text).toLowerCase().replace(/\s+/g," ").trim();if(seen.has(key))return false;seen.add(key);return true}).slice(0,4).reverse().map(x=>x.person+": "+x.text.slice(0,150))},getAdventureMoments:()=>{const turn=window.soaLivingCampaign?.getState?.()?.turn,allowed=new Set(establishedPeople().map(id=>PEOPLE[id].name));return data.entries.filter(x=>allowed.has(x.person)&&x.source==="interaction"&&typeof x.dialogue==="string"&&x.sceneTurn===turn).slice(-3)},getRapport:()=>Object.fromEntries(establishedPeople().map(id=>[id,data.rapport[id]||0])),getConversationContext:()=>Object.fromEntries(establishedPeople().map(id=>{const r=rel(id);return [id,{stage:status(r),romance:r.romance,trust:r.trust,affection:r.affection,respect:r.respect,interactions:r.interactions,grievances:r.grievances,nights:r.nights||0,memories:(r.memories||[]).slice(-8).map(m=>m.text),recentMoments:data.entries.filter(x=>x.person===PEOPLE[id].name).slice(-4).map(x=>x.text.slice(0,150))}]})),getRelationships:()=>Object.fromEntries(establishedPeople().map(id=>{const r=rel(id);return [id,{trust:r.trust,affection:r.affection,respect:r.respect,status:status(r),romance:r.romance,grievances:r.grievances}]})),applyStoryConsequence,applyDialogueOutcome,refresh:draw,refreshProgress:draw};
 })();
