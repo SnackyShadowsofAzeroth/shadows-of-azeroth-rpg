@@ -59,6 +59,7 @@ function validateChronicle(value){
  if(!Array.isArray(quests)||quests.length>200)fail("Backup journal quests are invalid.");
  if(!Array.isArray(archives)||archives.length>75)fail("Backup chapter archive is invalid.");
  if(!Array.isArray(entries)||entries.length>100)fail("Backup journal entries are invalid.");
+ if(value.primaryQuest!==undefined&&value.primaryQuest!==null&&(!object(value.primaryQuest)||typeof value.primaryQuest.title!=="string"||!value.primaryQuest.title.trim()||value.primaryQuest.title.length>120||typeof value.primaryQuest.objective!=="string"||!value.primaryQuest.objective.trim()||value.primaryQuest.objective.length>240||(value.primaryQuest.updatedAtTurn!==undefined&&!finite(value.primaryQuest.updatedAtTurn,0,Number.MAX_SAFE_INTEGER))))fail("Backup current quest focus is invalid.");
  for(const quest of quests){
   if(!object(quest)||typeof quest.id!=="string"||!quest.id.trim()||quest.id.length>120||typeof quest.title!=="string"||!quest.title.trim()||quest.title.length>180||!['active','completed'].includes(quest.status)||!Array.isArray(quest.objectives)||quest.objectives.length>40)fail("Backup contains an invalid quest record.");
   for(const objective of quest.objectives)if(!object(objective)||typeof objective.id!=="string"||!objective.id.trim()||objective.id.length>140||typeof objective.label!=="string"||!objective.label.trim()||objective.label.length>280||typeof objective.done!=="boolean")fail("Backup contains an invalid quest objective.");

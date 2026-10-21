@@ -33,6 +33,14 @@ function attach(c){
  if(!Array.isArray(d.archives))d.archives=[];
  if(!Array.isArray(d.quests))d.quests=[];
  if(!Array.isArray(d.entries))d.entries=[];
+ if(d.primaryQuest&&typeof d.primaryQuest==="object"){
+  const title=clean(d.primaryQuest.title,120),objective=clean(d.primaryQuest.objective,240);
+  d.primaryQuest=title&&objective?{title,objective,updatedAtTurn:Math.max(0,Math.floor(Number(d.primaryQuest.updatedAtTurn)||0))}:null;
+ }else{
+  const quest=d.quests.find(q=>q&&q.status==="active"&&Array.isArray(q.objectives)&&!(q.id==="personal-quest"&&q.title==="The First Adventure"));
+  const objective=quest?.objectives.find(o=>o&&o.done!==true);
+  d.primaryQuest=quest&&objective?{title:clean(quest.title,120),objective:clean(objective.label,240),updatedAtTurn:0}:null;
+ }
  trimCompletedQuests(d);
  current=c;
  return d;
@@ -52,7 +60,7 @@ function trimCompletedQuests(d){
 }
 function context(c){
  const d=attach(c);if(!d)return null;
- return {act:d.act,actTitle:d.actTitle,chapter:d.chapter,chapterTitle:d.chapterTitle,activeQuests:d.quests.filter(q=>q&&q.status==="active"&&Array.isArray(q.objectives)).slice(0,8).map(q=>({title:clean(q.title),objectives:q.objectives.filter(o=>o&&o.done!==true).map(o=>clean(o.label))})),completedQuests:d.quests.filter(q=>q&&q.status==="completed").sort((a,b)=>completedTime(b)-completedTime(a)).slice(0,6).map(q=>clean(q.title)),recentArchives:d.archives.slice(-4).map(x=>({act:x.act,chapter:x.chapter,title:clean(x.chapterTitle),summary:clean(x.summary,180)}))};
+ return {act:d.act,actTitle:d.actTitle,chapter:d.chapter,chapterTitle:d.chapterTitle,primaryQuest:d.primaryQuest?{title:clean(d.primaryQuest.title,120),objective:clean(d.primaryQuest.objective,240)}:null,activeQuests:d.quests.filter(q=>q&&q.status==="active"&&Array.isArray(q.objectives)).slice(0,8).map(q=>({title:clean(q.title),objectives:q.objectives.filter(o=>o&&o.done!==true).map(o=>clean(o.label))})),completedQuests:d.quests.filter(q=>q&&q.status==="completed").sort((a,b)=>completedTime(b)-completedTime(a)).slice(0,6).map(q=>clean(q.title)),recentArchives:d.archives.slice(-4).map(x=>({act:x.act,chapter:x.chapter,title:clean(x.chapterTitle),summary:clean(x.summary,180)}))};
 }
 function receive(c,scene){
  if(integrityBlocked())return;
@@ -114,8 +122,30 @@ function journalPanel(c,d){
  }
  return panel;
 }
-function questPanel(d){
+function setPrimaryQuest(c,title,objective){
+ if(integrityBlocked())return false;
+ const d=attach(c),cleanTitle=clean(title,120),cleanObjective=clean(objective,240);
+ if(!d||!cleanTitle||!cleanObjective)return false;
+ d.primaryQuest={title:cleanTitle,objective:cleanObjective,updatedAtTurn:Math.max(0,Number(c.turn)||0)};
+ if(!save())return false;
+ return true;
+}
+function storyFocusPanel(c,d){
+ const panel=el("section",undefined,"soa-story-focus");
+ panel.append(el("h4","Pinned current quest"),el("p","This player-chosen quest and objective are carried into every new scene. They stay in focus until you change them; new leads won’t replace them on their own.","soa-story-focus-hint"));
+ const form=document.createElement("form");form.className="soa-story-focus-form";
+ const titleLabel=el("label","Quest title");titleLabel.htmlFor="soa-primary-quest-title";
+ const title=document.createElement("input");title.id="soa-primary-quest-title";title.type="text";title.maxLength=120;title.required=true;title.placeholder="Explore the crypt";title.value=d.primaryQuest?.title||"";
+ const objectiveLabel=el("label","Current objective");objectiveLabel.htmlFor="soa-primary-quest-objective";
+ const objective=document.createElement("input");objective.id="soa-primary-quest-objective";objective.type="text";objective.maxLength=240;objective.required=true;objective.placeholder="Search the lower chambers and identify the source of the disturbance";objective.value=d.primaryQuest?.objective||"";
+ const status=el("p",undefined,"soa-story-focus-status");status.setAttribute("aria-live","polite");
+ const submit=el("button","Save quest focus");submit.type="submit";
+ form.onsubmit=e=>{e.preventDefault();if(setPrimaryQuest(c,title.value,objective.value)){status.textContent="Quest focus saved and will guide future scenes."}else status.textContent="Enter both a quest and its current objective. If saving failed, check browser storage before continuing."};
+ form.append(titleLabel,title,objectiveLabel,objective,submit,status);panel.append(form);return panel;
+}
+function questPanel(c,d){
  const area=el("div",undefined,"soa-quest-list");
+ area.append(storyFocusPanel(c,d));
  const active=d.quests.filter(q=>q.status==="active");
  if(!active.length)area.append(el("p","No active objectives recorded. You can add a new lead.","muted"));
  for(const q of active){
@@ -144,7 +174,7 @@ function render(c=current){
  const tabs=el("div",undefined,"soa-journal-tabs");const quest=el("button","Quests"),archive=el("button","Journal"),notes=el("button","Discoveries");
  const body=el("div",undefined,"soa-journal-body");
  let selected=root.dataset.view||"quests";
- function view(name){selected=name;root.dataset.view=name;body.replaceChildren();if(name==="quests")body.append(questPanel(d));else if(name==="archive")body.append(journalPanel(c,d));else{const journals=Array.isArray(c?.journal)?c.journal:[];for(const note of journals.slice(-30).reverse())body.append(el("p",note,"soa-journal-record"));if(!journals.length)body.append(el("p","No discoveries recorded yet.","muted"))}
+ function view(name){selected=name;root.dataset.view=name;body.replaceChildren();if(name==="quests")body.append(questPanel(c,d));else if(name==="archive")body.append(journalPanel(c,d));else{const journals=Array.isArray(c?.journal)?c.journal:[];for(const note of journals.slice(-30).reverse())body.append(el("p",note,"soa-journal-record"));if(!journals.length)body.append(el("p","No discoveries recorded yet.","muted"))}
   for(const [b,n] of [[quest,"quests"],[archive,"archive"],[notes,"notes"]])b.setAttribute("aria-pressed",String(name===n))}
  for(const [b,n] of [[quest,"quests"],[archive,"archive"],[notes,"notes"]]){b.type="button";b.onclick=()=>view(n);tabs.append(b)}
  root.append(tabs,body);view(selected);
@@ -172,7 +202,7 @@ function banner(c){
 function progress(c){
  const d=attach(c);return d?{act:d.act,actRoman:roman(d.act),actTitle:d.actTitle,chapter:d.chapter,chapterRoman:roman(d.chapter),chapterTitle:d.chapterTitle,scene:Number(c.turn)||0}:null;
 }
-window.soaChronicle={attach,context,receive,render,banner,progress};
+window.soaChronicle={attach,context,receive,render,banner,progress,setPrimaryQuest};
 document.addEventListener("DOMContentLoaded",()=>{
  if(get("soa-chronicle"))return;
  const section=el("section",undefined,"panel soa-chronicle-panel");section.id="soa-chronicle";
