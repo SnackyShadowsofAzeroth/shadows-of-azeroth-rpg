@@ -94,10 +94,10 @@ test("combat preview includes the same equipment attack and damage bonuses as re
 
   const strike = context.testPreview({ type: "combat", ability: "strike", text: "Strike the Guard" });
   assert.match(strike.primary, /d20 \+ 9 vs AC 14/);
-  assert.match(strike.secondary, /1d10 \+ 17 raw damage · 35 Energy/);
+  assert.match(strike.secondary, /1d10 \+ 17 raw damage · 25 Energy/);
 
   const kick = context.testPreview({ type: "combat", ability: "kick", text: "Kick the Guard" });
-  assert.match(kick.secondary, /1d6 \+ 11 raw damage · 25 Energy cost · up to \+10 recovery · interrupt on hit/);
+  assert.match(kick.secondary, /1d6 \+ 11 raw damage · 20 Energy cost · up to \+10 recovery · interrupt on hit/);
 
   const riposte = context.testPreview({ type: "combat", ability: "riposte", text: "Riposte" });
   assert.match(riposte.secondary, /31 raw damage on a valid Riposte/);
@@ -108,13 +108,25 @@ test("combat preview includes the same equipment attack and damage bonuses as re
   context.campaign.flags.advantage = false;
 
   context.window.soaAbilities.get = () => ({ className: "Warrior", proficiency: 3, modifiers: { DEX: 4, STR: 2 } });
+  context.window.soaClassAbilities = {
+    get: id => id === "sinister_strike" ? { id } : null,
+    costOf: id => ({ sinister_strike: 15, evasion: 15, riposte: 20, strike: 25, kick: 20 })[id] ?? null,
+  };
+  context.window.soaCharacters.profile = () => ({ className: "Rogue" });
+  const sinister = context.testPreview({ type: "combat", ability: "sinister_strike", text: "Sinister Strike the Guard" });
+  assert.match(sinister.secondary, /15 Energy cost/);
+  const evasive = context.testPreview({ type: "combat", ability: "evasion", text: "Evade the Guard" });
+  assert.match(evasive.secondary, /15 Energy cost/);
+  const ripostePreview = context.testPreview({ type: "combat", ability: "riposte", text: "Riposte" });
+  assert.match(ripostePreview.secondary, /20 Energy cost/);
+
   context.window.soaCharacters.profile = () => ({ className: "Warrior" });
   const warriorStrike = context.testPreview({ type: "combat", ability: "strike", text: "Strike the Guard" });
   assert.match(warriorStrike.primary, /d20 \+ 7 vs AC 14/);
-  assert.match(warriorStrike.secondary, /35 Rage cost/);
+  assert.match(warriorStrike.secondary, /25 Rage cost/);
   context.window.soaCharacters.profile = () => ({ className: "Paladin" });
   const paladinStrike = context.testPreview({ type: "combat", ability: "strike", text: "Holy strike" });
-  assert.match(paladinStrike.secondary, /35 Mana cost/);
+  assert.match(paladinStrike.secondary, /25 Mana cost/);
   assert.match(warriorStrike.secondary, /1d8 \+ 10 raw damage/);
 });
 
@@ -142,29 +154,30 @@ test("class combat abilities charge the class resource and resolve attacks and h
   vm.runInContext(`${functionBlock("classAbilityExchange", "fightExchange")}\nglobalThis.runClassAbility = classAbilityExchange;`, context);
 
   const strike = context.runClassAbility({ text: "Test Paladin uses Crusader Strike against Guard" }, {
-    id: "crusader_strike", name: "Crusader Strike", cost: 18, effect: "damage", stat: "STR", die: 8, flat: 5, damageType: "radiant",
+    id: "crusader_strike", name: "Crusader Strike", cost: 15, effect: "damage", stat: "STR", die: 8, flat: 5, damageType: "radiant",
   }, [enemy]);
   assert.match(strike, /uses Crusader Strike/);
   assert.equal(enemy.hp, 25, "spell damage includes ability and equipped damage modifiers");
-  assert.equal(context.s.en, 92, "Mana cost is charged before the standard 10-point round recovery");
+  assert.equal(context.s.en, 95, "Mana cost is charged before the standard 10-point round recovery");
   assert.equal(context.campaign.combatRound, 1);
 
   context.s.hp = 60;
   context.campaign.enemies = [enemy];
   const heal = context.runClassAbility({ text: "Test Paladin uses Flash of Light" }, {
-    id: "flash_of_light", name: "Flash of Light", cost: 24, effect: "heal", stat: "WIS", die: 8, flat: 5, damageType: "radiant",
+    id: "flash_of_light", name: "Flash of Light", cost: 20, effect: "heal", stat: "WIS", die: 8, flat: 5, damageType: "radiant",
   }, [enemy]);
   assert.match(heal, /restores 11 HP/);
   assert.equal(context.s.hp, 67, "healing applies before the enemy's retaliation");
-  assert.equal(context.s.en, 78);
+  assert.equal(context.s.en, 85);
 
   context.s.en = 100;
   context.window.soaCharacters.profile = () => ({ name: "Test Rogue", className: "Rogue" });
   const evasion = context.runClassAbility({ text: "Test Rogue uses Evasion" }, {
-    id: "evasion", name: "Evasion", cost: 0, effect: "guard", stat: "DEX", die: 0, flat: 0, damageType: "physical",
+    id: "evasion", name: "Evasion", cost: 15, effect: "guard", stat: "DEX", die: 0, flat: 0, damageType: "physical",
   }, [enemy]);
   assert.match(evasion, /evades the incoming attack/);
   assert.equal(capturedAdvantage, -1, "defensive abilities give the incoming attack disadvantage");
+  assert.equal(context.s.en, 95, "Evasion pays its cost before exchange recovery");
 });
 
 test("campaign save normalization repairs partial state and drops malformed scene data", () => {
