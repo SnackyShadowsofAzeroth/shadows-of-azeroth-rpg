@@ -15,6 +15,7 @@ try{const saved=normalize(localStorage.getItem(KEY));if(validTab(saved))active=s
 const get=id=>document.getElementById(id);
 function sections(){return [...document.querySelectorAll("main > section.panel, main > section.soa-game-screen")]}
 function group(section){
+ if(section.id==="soa-contract-board")return "quest";
  if(["campaign-box","soa-adventure-story"].includes(section.id)||section.querySelector?.("#choices"))return "adventure";
  if(["soa-chronicle","soa-party-evidence"].includes(section.id))return "quest";
  if(["soa-character-screen","soa-character-status","soa-profession-panel"].includes(section.id)||section.querySelector?.("#hpbar"))return "character";
