@@ -29,12 +29,12 @@ const $=id=>document.getElementById(id);
 const node=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e};
 const character=()=>window.soaCharacters?.profile?.()?.id||"snacky";
 function baseline(id){
- const r={};for(const [key,f] of Object.entries(FACTIONS))r[key]={value:f.base};
- // Historical alignments are inferred from character affiliation; no unearned money/items.
- const p=window.soaCharacters?.profile?.();
- if(p?.id==="snacky"){r.si7.value=40;r.stormwind.value=25;r["night-watch"].value=20;r.defias.value=-15;r.scarlet.value=-20}
- else if(p?.faction==="Alliance"){r.stormwind.value=15;r.horde.value=-15}
- else if(p?.faction==="Horde"){r.horde.value=15;r.stormwind.value=-15}
+ // Faction choice is identity, not earned standing. Seed only Snacky's established history.
+ const r={},p=window.soaCharacters?.profile?.();
+ if(p?.id==="snacky"){
+  for(const [key,f] of Object.entries(FACTIONS))r[key]={value:f.base};
+  r.si7.value=40;r.stormwind.value=25;r["night-watch"].value=20;r.defias.value=-15;r.scarlet.value=-20;
+ }
  return r;
 }
 function load(){
@@ -45,9 +45,10 @@ function load(){
  if(saved){
   if((saved.individuals!==undefined&&(!saved.individuals||typeof saved.individuals!=="object"||Array.isArray(saved.individuals)))||(saved.events!==undefined&&!Array.isArray(saved.events))||(saved.handled!==undefined&&!Array.isArray(saved.handled))||(saved.notices!==undefined&&!Array.isArray(saved.notices))){storageBlocked=true;window.soaSaveRules.reportCorruption(KEY);return}
   if(saved&&saved.factions&&typeof saved.factions==="object"){
-    for(const [key,entry] of Object.entries(saved.factions)){if(FACTIONS[key])data.factions[key]={value:clamp(entry?.value)}}
-    if(saved.individuals&&typeof saved.individuals==="object")for(const [key,entry] of Object.entries(saved.individuals)){if(FIGURES[key])data.individuals[key]={value:clamp(entry?.value)}};
     data.events=Array.isArray(saved.events)?saved.events.slice(-50):[];
+    const establishedFactions=new Set(data.events.map(event=>event?.faction).filter(key=>FACTIONS[key]));
+    for(const [key,entry] of Object.entries(saved.factions)){if(FACTIONS[key]&&(character()==="snacky"||establishedFactions.has(key)))data.factions[key]={value:clamp(entry?.value)}}
+    if(character()==="snacky"&&saved.individuals&&typeof saved.individuals==="object")for(const [key,entry] of Object.entries(saved.individuals)){if(FIGURES[key])data.individuals[key]={value:clamp(entry?.value)}};
     data.handled=Array.isArray(saved.handled)?saved.handled.filter(x=>typeof x==="string").slice(-200):[];
     data.notices=Array.isArray(saved.notices)?saved.notices.slice(-30):[];
   }
@@ -63,7 +64,7 @@ function pendingNotices(){return data.notices.slice(-6).map(e=>({faction:FACTION
 function applyChange({id,faction,delta,source}){
  if(storageBlocked||window.soaSaveRules.isIntegrityBlocked())return false;
  if(!id||!FACTIONS[faction]||!Number.isFinite(delta)||data.handled.includes(id))return false;
- const record=data.factions[faction],before=record.value,after=clamp(before+Math.max(-20,Math.min(20,delta)));
+ const record=data.factions[faction]||(data.factions[faction]={value:0}),before=record.value,after=clamp(before+Math.max(-20,Math.min(20,delta)));
  record.value=after;data.handled.push(id);data.handled=data.handled.slice(-200);
  data.events.push({faction,delta:after-before,source:String(source||"Adventure event").slice(0,115),at:new Date().toISOString()});data.events=data.events.slice(-50);
  // Issue ONE hook at a threshold crossing; this is narrative only, NEVER coins, items or damage.
@@ -115,6 +116,7 @@ function renderInto(target){
  const section=node("section",undefined,"soa-reputation-ledger");section.id="soa-faction-ledger";
  const title=node("h3","Faction standings");title.className="soa-section-title";section.append(title);
  section.append(node("p","Actions influence factions. Friendly powers may offer support; hostile groups may pursue you. Offers and threats become story opportunities, never automatic inventory or combat changes.","muted"));
+ if(!Object.keys(data.factions).length){section.append(node("p","No faction standing has been established yet. Your choices will shape relations as the story unfolds.","muted"));target.append(section);return}
  const tabs=node("div",undefined,"soa-reputation-tabs");
  const all=["All","Allies","Hostiles"];let filter="All";
  const records=node("div",undefined,"soa-faction-list");
