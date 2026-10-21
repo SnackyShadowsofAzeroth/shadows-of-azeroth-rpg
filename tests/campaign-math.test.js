@@ -98,14 +98,14 @@ test("combat preview includes the same equipment attack and damage bonuses as re
   assert.match(strike.primary, /d20 \+ 9 vs AC 14 · 80% hit/);
   assert.equal(context.testChance(5, 12), 70, "+5 vs AC 12 hits on rolls 7–20");
   assert.equal(context.testChance(5, 12, 1), 91, "advantage hits unless both dice are 1–6");
-  assert.match(strike.secondary, /1d10 \+ 17 raw damage · 25 Energy/);
+  assert.match(strike.secondary, /1d10 \+ 17 raw damage · 0 Energy cost · up to \+25 recovery/);
 
   context.window.soaClassAbilities = {
     get: id => id === "sinister_strike" ? { id } : null,
     costOf: id => ({ sinister_strike: 30, evasion: 35, riposte: 30, strike: 0, kick: 35 })[id] ?? null,
   };
   const kick = context.testPreview({ type: "combat", ability: "kick", text: "Kick the Guard" });
-  assert.match(kick.secondary, /1d6 \+ 11 raw damage · 15 Energy cost · up to \+25 recovery · interrupt on hit/);
+  assert.match(kick.secondary, /1d6 \+ 11 raw damage · 35 Energy cost · up to \+25 recovery · interrupt on hit/);
 
   const riposte = context.testPreview({ type: "combat", ability: "riposte", text: "Riposte" });
   assert.match(riposte.secondary, /31 raw damage on a valid Riposte/);
@@ -126,12 +126,12 @@ test("combat preview includes the same equipment attack and damage bonuses as re
   const evasive = context.testPreview({ type: "combat", ability: "evasion", text: "Evade the Guard" });
   assert.match(evasive.secondary, /35 Energy cost/);
   const ripostePreview = context.testPreview({ type: "combat", ability: "riposte", text: "Riposte" });
-  assert.match(ripostePreview.secondary, /15 Energy cost · up to \+25 recovery/);
+  assert.match(ripostePreview.secondary, /30 Energy cost · up to \+25 recovery/);
 
   context.window.soaCharacters.profile = () => ({ className: "Warrior" });
   const warriorStrike = context.testPreview({ type: "combat", ability: "strike", text: "Strike the Guard" });
   assert.match(warriorStrike.primary, /d20 \+ 7 vs AC 14/);
-  assert.match(warriorStrike.secondary, /20 Rage cost · up to \+25 recovery/);
+  assert.match(warriorStrike.secondary, /0 Rage cost · up to \+25 recovery/);
   context.window.soaCharacters.profile = () => ({ className: "Paladin" });
   context.socialSkill = () => "bluff";
   context.socialTarget = () => ({ bonus: 5, dc: 12 });
@@ -139,7 +139,7 @@ test("combat preview includes the same equipment attack and damage bonuses as re
   assert.match(social.primary, /d20 \+ 5 vs DC 12 · 70% success/);
   context.socialSkill = () => null;
   const paladinStrike = context.testPreview({ type: "combat", ability: "strike", text: "Holy strike" });
-  assert.match(paladinStrike.secondary, /20 Mana cost · up to \+25 recovery/);
+  assert.match(paladinStrike.secondary, /0 Mana cost · up to \+25 recovery/);
   assert.match(warriorStrike.secondary, /1d8 \+ 10 raw damage/);
 });
 
@@ -268,7 +268,7 @@ test("choice resource forecasts show current reserve, cost, and post-exchange re
   const combat = context.forecast({ type: "combat", ability: "strike", text: "Strike the Guard" });
   assert.equal(combat.cost, 30);
   assert.equal(combat.after, 40);
-  assert.match(combat.text, /Energy 45 → 55\/100 · 15 cost · \+25 recovery/);
+  assert.match(combat.text, /Energy 45 → 40\/100 · 30 cost · \+25 recovery/);
 
   context.window.soaCharacters.profile = () => ({ className: "Warrior" });
   assert.equal(context.forecast({ type: "investigate", difficulty: "medium" }).label, "Rage");
