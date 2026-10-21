@@ -359,7 +359,7 @@ function drawProfessions(){
  const root=get("soa-profession-panel");if(!root)return;get("soa-character-status")?.querySelectorAll(".soa-ability-sheet").forEach(sheet=>sheet.remove());root.replaceChildren();
  root.append(make("div","CHARACTER RECORD","soa-roster-kicker"),make("h2",active.name+" · "+active.race+" "+active.className));
  const abilityCard=window.soaAbilities?.card?.("hero");if(abilityCard)root.append(abilityCard);
- const classAbilities=window.soaClassAbilities?.card?.(active.className,window.soaProgression?.level?.()||active.startLevel||10);if(classAbilities)root.append(classAbilities);
+ const classAbilities=window.soaClassAbilities?.card?.(active.className,window.soaProgression?.level?.()||active.startLevel||10);if(classAbilities)root.append(classAbilities);const racialAbilities=window.soaRacialAbilities?.card?.(active.race);if(racialAbilities)root.append(racialAbilities);
  window.soaProgression?.refresh?.();
  window.soaPortraits?.refresh?.();
  const meta=make("p",factionDisplay(active)+" · "+(active.specialization||"Unchosen"),"muted");root.append(meta);
