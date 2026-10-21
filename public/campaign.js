@@ -394,6 +394,7 @@ function fightExchange(action){
    s.hp=Math.max(1,s.hp-taken);recipientAfter=s.hp;
   }
  }
+ if(!allyRecipient&&racialRegeneration())s.hp=Math.min(heroHealthCap(),s.hp+racialRegeneration());
  const parry=!!enemyAttack&&!enemyAttack.hit&&!defeated&&ability!=="evasion"&&enemyAttack.total<defenderAC&&enemyAttack.die>1&&defendingAlly===null&&Math.random()<.5;
  campaign.parryReady=parry;
  s.en=Math.min(100,s.en-price+10);s.time++;
