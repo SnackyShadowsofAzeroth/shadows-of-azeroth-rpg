@@ -11,7 +11,34 @@ const BOARDS=[
   {id:"dw-wraith",title:"Wraith of the Blackwood",target:"Wraith of the Blackwood",description:"Extremely dangerous spectral bounty.",copper:54000,level:15,rarity:"elite",items:["Wraithbound Trinket"]}]},
  {region:/ironforge|dun morogh/i,place:"Ironforge Bounty Board",contracts:[
   {id:"if-bandit",title:"Mountain Pass Bandit",target:"Mountain Pass Bandit",description:"A robber attacking supply caravans.",copper:9400,level:7,rarity:"standard",items:[]},
-  {id:"if-golem",title:"Runaway War Golem",target:"Runaway War Golem",description:"A lethal machine loose in the mountain passes.",copper:57000,level:15,rarity:"elite",items:["Reinforced Gear","Ironforge Warhammer"]}]}
+  {id:"if-golem",title:"Runaway War Golem",target:"Runaway War Golem",description:"A lethal machine loose in the mountain passes.",copper:57000,level:15,rarity:"elite",items:["Reinforced Gear","Ironforge Warhammer"]}]},
+ {region:/darnassus|teldrassil/i,place:"Darnassus Bounty Board",contracts:[
+  {id:"da-poacher",title:"Ashenvale Poacher",target:"Ashenvale Poacher",description:"A poacher has been taking protected wildlife near the forest paths.",copper:10200,level:7,rarity:"standard",items:[]},
+  {id:"da-satyr",title:"Satyr Corruptor",target:"Satyr Corruptor",description:"A satyr is threatening travelers at the edge of the forest.",copper:28500,level:11,rarity:"standard",items:["Moonwell Salve"]}]},
+ {region:/exodar|azuremyst|bloodmyst/i,place:"The Exodar Bounty Board",contracts:[
+  {id:"ex-raider",title:"Azuremyst Raider",target:"Azuremyst Raider",description:"A raider has been ambushing supply runners on Azuremyst Isle.",copper:9800,level:7,rarity:"standard",items:[]},
+  {id:"ex-crystal",title:"Corrupted Crystal Stalker",target:"Corrupted Crystal Stalker",description:"A dangerous creature is drawn to unstable crystal fragments.",copper:26000,level:10,rarity:"standard",items:["Stabilized Crystal Shard"]}]},
+ {region:/orgrimmar|durotar/i,place:"Orgrimmar Bounty Board",contracts:[
+  {id:"og-scrapper",title:"Valley Scrapper",target:"Valley Scrapper",description:"A scavenger gang is stealing tools from the Valley of Honor.",copper:9200,level:6,rarity:"standard",items:[]},
+  {id:"og-raider",title:"Drygulch Raider Captain",target:"Drygulch Raider Captain",description:"A raider captain has been attacking caravans outside the city.",copper:27500,level:11,rarity:"standard",items:["Caravan Guard's Token"]}]},
+ {region:/thunder bluff|mulgore/i,place:"Thunder Bluff Bounty Board",contracts:[
+  {id:"tb-poacher",title:"Mulgore Poacher",target:"Mulgore Poacher",description:"A poacher is hunting on the rolling plains without regard for the local herds.",copper:9000,level:6,rarity:"standard",items:[]},
+  {id:"tb-bristleback",title:"Bristleback Ravager",target:"Bristleback Ravager",description:"A Bristleback raider has been threatening travelers near the bluffs.",copper:25500,level:10,rarity:"standard",items:["Kodo-Leather Bracers"]}]},
+ {region:/undercity|tirisfal/i,place:"Undercity Bounty Board",contracts:[
+  {id:"uc-graverobber",title:"Tirisfal Graverobber",target:"Tirisfal Graverobber",description:"A grave robber is disturbing burial sites north of the city.",copper:9400,level:6,rarity:"standard",items:[]},
+  {id:"uc-scourge",title:"Scourge Remnant",target:"Scourge Remnant",description:"A lingering Scourge threat has been seen among the ruins of Tirisfal.",copper:29000,level:11,rarity:"standard",items:["Forsaken Field Dressing"]}]},
+ {region:/brill/i,place:"Brill Bounty Board",contracts:[
+  {id:"brill-ghoul",title:"Brill Cemetery Ghoul",target:"Brill Cemetery Ghoul",description:"A ghoul has been prowling the cemetery beyond the town's lanterns.",copper:8200,level:5,rarity:"standard",items:[]},
+  {id:"brill-scavenger",title:"Tirisfal Grave Scavenger",target:"Tirisfal Grave Scavenger",description:"A scavenger is looting fresh graves outside Brill.",copper:15000,level:8,rarity:"standard",items:["Forsaken Grave Dust"]}]},
+ {region:/silvermoon|eversong|ghostlands/i,place:"Silvermoon City Bounty Board",contracts:[
+  {id:"sm-thief",title:"Eversong Relic Thief",target:"Eversong Relic Thief",description:"A relic thief has been targeting homes along the Eversong roads.",copper:11000,level:7,rarity:"standard",items:[]},
+  {id:"sm-felstalker",title:"Fel-Touched Stalker",target:"Fel-Touched Stalker",description:"A fel-touched beast has been sighted beyond the city patrols.",copper:30000,level:12,rarity:"standard",items:["Sunfury Warding Charm"]}]},
+ {region:/crossroads|barrens/i,place:"The Crossroads Bounty Board",contracts:[
+  {id:"cr-harpy",title:"Windfury Harpy",target:"Windfury Harpy",description:"Harpy raiders have been harassing caravans on the Barrens road.",copper:8500,level:6,rarity:"standard",items:[]},
+  {id:"cr-kolkar",title:"Kolkar Outrider",target:"Kolkar Outrider",description:"A Kolkar outrider has been scouting the Crossroads approaches.",copper:18500,level:9,rarity:"standard",items:["Barrens Trail Rations"]}]},
+ {region:/razor hill|echo isles/i,place:"Razor Hill Bounty Board",contracts:[
+  {id:"rh-quilboar",title:"Dreadmaul Quilboar",target:"Dreadmaul Quilboar",description:"A quilboar raider has been threatening the roads south of Durotar.",copper:7800,level:5,rarity:"standard",items:[]},
+  {id:"rh-scout",title:"Dustwind Scout",target:"Dustwind Scout",description:"A hostile scout has been watching the settlement's supply route.",copper:16000,level:8,rarity:"standard",items:["Durotar Scout's Band"]}]}
 ];
 const format=n=>{const c=Math.max(0,Math.floor(n));return [Math.floor(c/10000)+"g",Math.floor(c%10000/100)+"s",c%100+"c"].join(" ")};
 const boardAt=location=>BOARDS.find(b=>b.region.test(String(location||"")));
@@ -135,7 +162,7 @@ function missionPanel(campaign,location,wallet,onChange){
 function panel(campaign,location,wallet,onChange){
  const q=ensure(campaign),board=boardAt(location),wrapper=document.createElement("details");
  wrapper.className="soa-bounty-board";const summary=document.createElement("summary");summary.textContent="Contracts & Bounties"+(board?" · "+board.place:"");wrapper.append(summary);
- const intro=document.createElement("p");intro.textContent=board?"The posted rewards are fixed before acceptance. Defeat the named target, then return here to claim.":"Bounty boards are posted in Stormwind, Darkshire, and Ironforge. Active contracts travel with you.";wrapper.append(intro);
+ const intro=document.createElement("p");intro.textContent=board?"The posted rewards are fixed before acceptance. Defeat the named target, then return to this issuing board to claim.":"Bounty boards are posted in Stormwind, Ironforge, Darnassus, the Exodar, Orgrimmar, Thunder Bluff, Undercity, Silvermoon City, Darkshire, Brill, the Crossroads, and Razor Hill. Accepted contracts travel with you.";wrapper.append(intro);
  const makeText=txt=>{const p=document.createElement("p");p.textContent=txt;wrapper.append(p)};
  for(const id of Object.keys(q.accepted)){const c=definition(id);if(c&&!board?.contracts.includes(c))makeText(c.title+" · "+(q.claimed[id]?"Paid":q.completed[id]?"Ready to claim at issuing board":"Active"))}
  if(board)for(const c of board.contracts){

@@ -33,3 +33,30 @@ test("rare elite rewards are deterministic per character with roughly two percen
   for (let index = 0; index < 1000; index++) if (quests.stableRare("hero-" + index, "sw-master")) eligible++;
   assert.ok(eligible >= 10 && eligible <= 30, `expected ~20 eligible characters; got ${eligible}`);
 });
+
+test("bounty boards are available in faction capitals and named Horde hubs", () => {
+  const expected = [
+    ["Stormwind", "Stormwind Bounty Board"], ["Ironforge", "Ironforge Bounty Board"],
+    ["Darnassus", "Darnassus Bounty Board"], ["The Exodar", "The Exodar Bounty Board"],
+    ["Orgrimmar", "Orgrimmar Bounty Board"], ["Thunder Bluff", "Thunder Bluff Bounty Board"],
+    ["Undercity", "Undercity Bounty Board"], ["Silvermoon City", "Silvermoon City Bounty Board"],
+    ["Darkshire", "Darkshire Bounty Board"], ["The Crossroads", "The Crossroads Bounty Board"],
+    ["Razor Hill", "Razor Hill Bounty Board"], ["Brill", "Brill Bounty Board"],
+  ];
+  for (const [location, place] of expected) assert.equal(quests.boardAt(location)?.place, place, location);
+  assert.equal(quests.boardAt("The Barrens")?.place, "The Crossroads Bounty Board");
+  assert.equal(quests.boardAt("Somewhere else"), undefined);
+});
+
+test("Horde hub contracts accept, track defeats, and pay at their local board", () => {
+  const campaign = { turn: 4, quests: {} };
+  const accepted = quests.accept(campaign, "cr-harpy", "The Crossroads");
+  assert.match(accepted.message, /Windfury Harpy/);
+  quests.onDefeat(campaign, "Windfury Harpy");
+  assert.equal(campaign.quests.completed["cr-harpy"].target, "Windfury Harpy");
+  const paid = quests.claim(campaign, "cr-harpy", "The Crossroads", 1000);
+  assert.equal(paid.copper, 8500);
+  assert.equal(paid.wallet, 9500);
+  assert.ok(campaign.quests.claimed["cr-harpy"]);
+  assert.equal(quests.claim(campaign, "cr-harpy", "Orgrimmar", paid.wallet).error, "Return to the issuing board after defeating the tracked target.");
+});
