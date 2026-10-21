@@ -96,6 +96,10 @@ test("combat preview includes the same equipment attack and damage bonuses as re
   assert.match(strike.primary, /d20 \+ 9 vs AC 14/);
   assert.match(strike.secondary, /1d10 \+ 17 raw damage · 25 Energy/);
 
+  context.window.soaClassAbilities = {
+    get: id => id === "sinister_strike" ? { id } : null,
+    costOf: id => ({ sinister_strike: 15, evasion: 15, riposte: 20, strike: 25, kick: 20 })[id] ?? null,
+  };
   const kick = context.testPreview({ type: "combat", ability: "kick", text: "Kick the Guard" });
   assert.match(kick.secondary, /1d6 \+ 11 raw damage · 20 Energy cost · up to \+10 recovery · interrupt on hit/);
 
