@@ -32,7 +32,7 @@ test("an existing active objective is promoted into the player-facing continuity
 });
 
 test("new campaigns do not treat the vague opening placeholder as a pinned quest",()=>{
- const chronicle=makeChronicle();
+ const {chronicle}=makeChronicle();
  const save={chronicle:{quests:[{id:"personal-quest",title:"The First Adventure",status:"active",objectives:[{id:"first",label:"Follow the opening lead",done:false}]}]}};
  assert.equal(chronicle.context(save).primaryQuest,null);
 });
