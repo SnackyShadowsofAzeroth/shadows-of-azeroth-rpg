@@ -34,3 +34,8 @@ body.theme-alternative .soa-specialization-card h3{font:700 19px/1.4 Georgia,ser
 .soa-combat-resource-rail[data-resource="rage"] .soa-combat-resource-fill{background:linear-gradient(90deg,#a84435,#db7058)}
 .soa-combat-resource-rail[data-resource="focus"] .soa-combat-resource-fill{background:linear-gradient(90deg,#b57a2a,#e6bb55)}
 .soa-combat-resource-rail[data-resource="mana"] .soa-combat-resource-fill{background:linear-gradient(90deg,#397ea8,#70b6da)}
+
+.soa-foe-stats{margin:8px 0 0;font:600 12px/1.5 system-ui;color:#664b31}
+.soa-foe-resource{margin-top:9px}
+.soa-foe-resource-heading{display:flex;justify-content:space-between;gap:8px;margin-bottom:5px;font:700 12px/1.4 system-ui;color:#664b31}
+.soa-foe-resource-rail{margin-bottom:2px}
