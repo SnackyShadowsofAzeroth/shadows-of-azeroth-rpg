@@ -91,11 +91,13 @@ test("combat preview includes the same equipment attack and damage bonuses as re
     functionBlock("resourceName", "resolvedCombatAbility"),
     functionBlock("resolvedCombatAbility", "dicePreview"),
     functionBlock("dicePreview", "socialCheck"),
-    "globalThis.testPreview = dicePreview;",
+    "globalThis.testPreview = dicePreview; globalThis.testChance = d20SuccessChance;",
   ].join("\n"), context);
 
   const strike = context.testPreview({ type: "combat", ability: "strike", text: "Strike the Guard" });
-  assert.match(strike.primary, /d20 \+ 9 vs AC 14/);
+  assert.match(strike.primary, /d20 \+ 9 vs AC 14 · 80% hit/);
+  assert.equal(context.testChance(5, 12), 70, "+5 vs AC 12 hits on rolls 7–20");
+  assert.equal(context.testChance(5, 12, 1), 91, "advantage hits unless both dice are 1–6");
   assert.match(strike.secondary, /1d10 \+ 17 raw damage · 25 Energy/);
 
   context.window.soaClassAbilities = {
@@ -110,7 +112,7 @@ test("combat preview includes the same equipment attack and damage bonuses as re
 
   context.campaign.flags.advantage = true;
   const advantaged = context.testPreview({ type: "combat", ability: "strike", text: "Strike the Guard" });
-  assert.match(advantaged.primary, /d20 with advantage \+ 9 vs AC 14/);
+  assert.match(advantaged.primary, /d20 with advantage \+ 9 vs AC 14 · 96% hit/);
   context.campaign.flags.advantage = false;
 
   context.window.soaAbilities.get = () => ({ className: "Warrior", proficiency: 3, modifiers: { DEX: 4, STR: 2 } });
@@ -131,6 +133,11 @@ test("combat preview includes the same equipment attack and damage bonuses as re
   assert.match(warriorStrike.primary, /d20 \+ 7 vs AC 14/);
   assert.match(warriorStrike.secondary, /20 Rage cost · up to \+25 recovery/);
   context.window.soaCharacters.profile = () => ({ className: "Paladin" });
+  context.socialSkill = () => "bluff";
+  context.socialTarget = () => ({ bonus: 5, dc: 12 });
+  const social = context.testPreview({ type: "social", text: "Bluff the guard" });
+  assert.match(social.primary, /d20 \+ 5 vs DC 12 · 70% success/);
+  context.socialSkill = () => null;
   const paladinStrike = context.testPreview({ type: "combat", ability: "strike", text: "Holy strike" });
   assert.match(paladinStrike.secondary, /20 Mana cost · up to \+25 recovery/);
   assert.match(warriorStrike.secondary, /1d8 \+ 10 raw damage/);

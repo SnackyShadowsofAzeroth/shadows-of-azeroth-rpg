@@ -134,13 +134,21 @@ function resolvedCombatAbility(action){
  const inferred=rogue&&/\briposte\b/i.test(description)?"riposte":rogue&&/\b(?:evasion|evade)\b/i.test(description)?"evasion":rogue&&/\bkick\b/i.test(description)?"kick":"strike";
  return ["strike","kick","evasion","riposte"].includes(action.ability)?action.ability:inferred;
 }
+function d20SuccessChance(bonus,dc,advantage=0){
+ let hits=0,rolls=0;
+ const succeeds=die=>die===20||die!==1&&die+bonus>=dc;
+ if(advantage){for(let a=1;a<=20;a++)for(let b=1;b<=20;b++){rolls++;if(succeeds(advantage>0?Math.max(a,b):Math.min(a,b)))hits++}}
+ else{for(let die=1;die<=20;die++){rolls++;if(succeeds(die))hits++}}
+ return hits*100/rolls;
+}
+function chanceLabel(value){const rounded=Math.round(value*10)/10;return (Number.isInteger(rounded)?String(rounded):rounded.toFixed(1))+"%"}
 function dicePreview(action){
  // Combat takes priority over social keyword detection, matching the resolver.
  if(action.type==="combat"&&livingEnemies().length){
   const ability=resolvedCombatAbility(action);
   const profile=window.soaCharacters?.profile?.(),level=window.soaProgression?.level?.()||profile?.startLevel||1;
   const cost=window.soaClassAbilities?.costOf?.(ability,profile?.className,level)??25;
-  if(ability==="evasion")return {primary:"🎲 No attack roll",secondary:"Defensive exchange · "+cost+" "+resourceName()+" cost · up to +25 "+resourceName()+" recovery"};
+  if(ability==="evasion")return {primary:"🎲 No attack roll",secondary:"Incoming attack at disadvantage · "+cost+" "+resourceName()+" cost · up to +25 "+resourceName()+" recovery"};
   const attacker=window.soaAbilities?.get?.("hero");
   const gear=window.soaEquipment?.modifiers?.()||{};
   if(ability==="riposte")return {primary:"🎲 Automatic hit after parry",secondary:(24+(attacker?.modifiers?.DEX||0)+(gear.damage||0))+" raw damage on a valid Riposte · "+cost+" "+resourceName()+" cost · up to +25 recovery"};
@@ -151,13 +159,13 @@ function dicePreview(action){
   const ac=window.soaCombatRules?.statBlock?.(selected)?.ac||12;
   const weapon=window.soaCombatRules?.weapon?.(attacker,ability)||{die:ability==="kick"?6:10,flat:ability==="kick"?4+(attacker?.modifiers?.DEX||0):10+(attacker?.modifiers?.DEX||0)};
   
-  const rollLabel=campaign?.flags?.advantage?"d20 with advantage + ":"d20 + ";
-  return {primary:"🎲 "+rollLabel+bonus+" vs AC "+ac+" · natural 20 critical",secondary:"1d"+weapon.die+" + "+(weapon.flat+(gear.damage||0))+" raw damage · "+cost+" "+resourceName()+" cost · up to +25 recovery"+(ability==="kick"?" · interrupt on hit":"")};
+  const advantage=campaign?.flags?.advantage?1:0,rollLabel=advantage?"d20 with advantage + ":"d20 + ",chance=chanceLabel(d20SuccessChance(bonus,ac,advantage));
+  return {primary:"🎲 "+rollLabel+bonus+" vs AC "+ac+" · "+chance+" hit · natural 20 critical",secondary:"1d"+weapon.die+" + "+(weapon.flat+(gear.damage||0))+" raw damage · "+cost+" "+resourceName()+" cost · up to +25 recovery"+(ability==="kick"?" · interrupt on hit":"")};
  }
  const skill=socialSkill(action);
  if(skill){
   const {bonus,dc}=socialTarget(action,skill);
-  return {primary:"🎲 d20 "+(bonus>=0?"+ "+bonus:"− "+Math.abs(bonus))+" vs DC "+dc,secondary:"CHA-based "+skill+" check · Natural 1 fails, 20 succeeds"};
+  return {primary:"🎲 d20 "+(bonus>=0?"+ "+bonus:"− "+Math.abs(bonus))+" vs DC "+dc+" · "+chanceLabel(d20SuccessChance(bonus,dc))+" success",secondary:"CHA-based "+skill+" check · Natural 1 fails, 20 succeeds"};
  }
  const odds=actionOdds(action);
  const {cost,target}=odds;return {primary:"🎲 "+odds.skill+" · d100 ≤ "+target+" ("+target+"%)",secondary:cost+" "+resourceName()+" cost · up to +10 recovery · ability modifier "+(odds.modifier>=0?"+":"")+odds.modifier+" · training +"+odds.trained};
