@@ -43,7 +43,8 @@ test("signature ability data uses supported combat effects and deliberate resour
  for(const name of classes)for(const choice of specs.choices(name)){
   const a=choice.ability;
   assert.ok(supported.has(a.effect),name+" "+choice.name);
-  assert.ok([15,20,25].includes(a.cost),name+" "+choice.name);
+  assert.ok([35,40,45].includes(a.cost),name+" "+choice.name);
+  assert.equal(a.cooldown,2,name+" "+choice.name+" should be a tactical signature move");
   assert.ok(a.description.length>8);
  }
 });
