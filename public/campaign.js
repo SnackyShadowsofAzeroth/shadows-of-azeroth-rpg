@@ -285,6 +285,7 @@ function companionExchange(action){
  return "Success: Round "+campaign.combatRound+". "+description+" "+retaliation+" "+resourceName()+" "+previous+" → "+s.en+". Exactly one exchange resolved.";
 }
 function classAbilityExchange(action,ability,targets){
+ function touchOfTheGrave(target,hit,damageType){const hero=window.soaCharacters?.profile?.();const passive=window.soaRacialAbilities?.passives?.(hero?.race)?.touchOfTheGrave;if(!passive||!hit||!["physical","slashing","piercing","bludgeoning"].includes(damageType)||Math.random()>=passive.chance)return null;const level=window.soaProgression?.level?.()||hero?.startLevel||1,rules=window.soaCombatRules,rolled=rules.damage(passive.die,Math.floor(Math.max(0,level-1)/passive.levelScaling)),dealt=Math.min(target.hp,rules.mitigate(rolled,"shadow",rules.statBlock(target)));target.hp=Math.max(0,target.hp-dealt);const before=s.hp,cap=100+(window.soaRacialAbilities?.passives?.(hero.race)?.maxHp||0);s.hp=Math.min(cap,s.hp+dealt);return{damage:dealt,healing:s.hp-before};}
  const name=window.soaCharacters?.profile?.()?.name||"Your hero",resource=resourceName();
  const heroHealthCap=()=>100+(window.soaRacialAbilities?.passives?.(window.soaCharacters?.profile?.()?.race)?.maxHp||0);
  const racialRegeneration=()=>window.soaRacialAbilities?.passives?.(window.soaCharacters?.profile?.()?.race)?.regeneration||0;
@@ -325,6 +326,7 @@ function classAbilityExchange(action,ability,targets){
  return (hit||guarding||healed?"Success":"Complication")+": "+name+" uses "+ability.name+" and "+effect+". "+(racialProc?"Touch of the Grave deals "+racialProc.damage+" Shadow damage and restores "+racialProc.healing+" HP. ":"")+(roll?"Attack d20 "+roll.die+" + "+(proficiency+stat+(gear.attack||0))+" vs AC "+block.ac+". ":"")+ (retaliates?target.name+" retaliates for "+taken+" HP.":"No damage received.")+" "+resource+" "+oldResource+" → "+s.en+". Player HP "+heroHP+" → "+s.hp+". Exactly one combat exchange resolved.";
 }
 function fightExchange(action){
+ function touchOfTheGrave(target,hit,damageType){const hero=window.soaCharacters?.profile?.();const passive=window.soaRacialAbilities?.passives?.(hero?.race)?.touchOfTheGrave;if(!passive||!hit||!["physical","slashing","piercing","bludgeoning"].includes(damageType)||Math.random()>=passive.chance)return null;const level=window.soaProgression?.level?.()||hero?.startLevel||1,rules=window.soaCombatRules,rolled=rules.damage(passive.die,Math.floor(Math.max(0,level-1)/passive.levelScaling)),dealt=Math.min(target.hp,rules.mitigate(rolled,"shadow",rules.statBlock(target)));target.hp=Math.max(0,target.hp-dealt);const before=s.hp,cap=100+(window.soaRacialAbilities?.passives?.(hero.race)?.maxHp||0);s.hp=Math.min(cap,s.hp+dealt);return{damage:dealt,healing:s.hp-before};}
  if(["bromli_guard","pippa_snare","lethariel_heal"].includes(action.ability))return companionExchange(action);
  const targets=livingEnemies();
  if(!targets.length)return null;
@@ -510,7 +512,6 @@ function reconcileCombatAllies(scene){
  campaign.combatAllies=incoming;campaign.allyLocation=String(scene.location||"");
  hydrateKnownAllyHP();
 }
-function touchOfTheGrave(target,hit,damageType){const hero=window.soaCharacters?.profile?.();const passive=window.soaRacialAbilities?.passives?.(hero?.race)?.touchOfTheGrave;if(!passive||!hit||!["physical","slashing","piercing","bludgeoning"].includes(damageType)||Math.random()>=passive.chance)return null;const level=window.soaProgression?.level?.()||hero?.startLevel||1,rules=window.soaCombatRules,rolled=rules.damage(passive.die,Math.floor(Math.max(0,level-1)/passive.levelScaling)),dealt=Math.min(target.hp,rules.mitigate(rolled,"shadow",rules.statBlock(target)));target.hp=Math.max(0,target.hp-dealt);const before=s.hp,cap=100+(window.soaRacialAbilities?.passives?.(hero.race)?.maxHp||0);s.hp=Math.min(cap,s.hp+dealt);return{damage:dealt,healing:s.hp-before};}
 function recordCombatDelta(enemy,dealt,taken,recipient,recipientBefore,recipientAfter){
  const log=Array.isArray(campaign.combatLog)?campaign.combatLog:[];
  log.push({round:campaign.combatRound,events:[
