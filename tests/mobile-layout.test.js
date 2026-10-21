@@ -52,7 +52,7 @@ function startLayout({ getItem = () => null, setItem = () => {}, readyState = "l
   body.classList.remove = name => classes.delete(name);
   body.classList.contains = name => classes.has(name);
   const sections = [
-    "campaign-box", "soa-adventure-story", "soa-legacy-ai", "soa-ai-narration", "soa-chronicle", "soa-party-evidence",
+    "campaign-box", "soa-adventure-story", "soa-legacy-ai", "soa-ai-narration", "soa-chronicle", "soa-contract-board", "soa-party-evidence",
     "soa-character-screen", "companion-panel", "soa-standalone-reputation",
     "soa-save-settings",
   ].map(id => element("section", id));
@@ -103,6 +103,13 @@ test("one five-destination bottom navigation is loaded and cached for offline pl
   assert.doesNotMatch(characters, /soa-quick-nav/);
 });
 
+test("contract and bounty board belongs to the Quest tab",()=>{
+ const {layout,tabs,sections}=startLayout();
+ layout.select("quest");
+ assert.equal(sections.find(section=>section.id==="soa-contract-board").hidden,false);
+ layout.select("adventure");
+ assert.equal(sections.find(section=>section.id==="soa-contract-board").hidden,true);
+});
 test("mobile roster keeps square portraits and Play/Delete actions within the card", () => {
   assert.match(portraitCss, /\.soa-character-item\{box-sizing:border-box;display:grid;grid-template-columns:58px minmax\(0,1fr\) 122px/);
   assert.match(portraitCss, /\.soa-character-item>\.soa-character-avatar\{box-sizing:border-box;width:58px;height:58px/);

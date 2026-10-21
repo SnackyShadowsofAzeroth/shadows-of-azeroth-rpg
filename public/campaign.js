@@ -740,7 +740,15 @@ function draw(){
  const kicker=document.createElement("div");kicker.className="soa-scene-kicker";const position=window.soaChronicle?.progress?.(campaign);kicker.textContent=position?"ACT "+position.actRoman+" · CHAPTER "+position.chapterRoman+" · SCENE "+position.scene:"FIELD CHRONICLE · SCENE "+campaign.turn;box.append(kicker);head.textContent=sc.title||"The Hollow Raven";where.className="muted";where.textContent=sc.location||"Raven Hill";text.className="soa-story-prose";text.style.whiteSpace="pre-line";text.textContent=readableStory(sc.story);box.append(head,where,text);
  const sceneReward=window.soaQuests?.rewardForScene?.(campaign);
  if(sceneReward?.receipt==="mission:stormwind-explosives-defused:v1"){const receipt=document.createElement("p");receipt.className="soa-level-toast";receipt.textContent="MISSION PAID · Stormwind explosives defused · Total party reward: +5g 00s 00c · Credited to shared wallet once.";box.append(receipt)}
- if(questPanel)box.append(questPanel);
+ if(questPanel){
+  let board=get("soa-contract-board");
+  if(!board){
+   board=document.createElement("section");board.id="soa-contract-board";board.className="panel";
+   const chronicle=get("soa-chronicle"),main=document.querySelector("main");
+   if(chronicle)chronicle.after(board);else if(main)main.append(board);
+  }
+  board.replaceChildren(questPanel);
+ }else get("soa-contract-board")?.remove();
  const missions=window.soaQuests?.missionPanel?.(campaign,sc.location,()=>s.money,(result)=>{if(result?.error){status(result.error);return}if(Number.isSafeInteger(result?.wallet)){s.money=result.wallet;save()}store();render();draw();status(result?.description||result?.message||"Mission updated.");});if(missions)box.append(missions);
  window.soaEquipment?.renderStatus?.();
  const gear=window.soaEquipment?.panel?.();if(gear){const wrap=document.createElement("div");wrap.id="soa-equipment-shortcut";wrap.append(gear);box.prepend(wrap)}
