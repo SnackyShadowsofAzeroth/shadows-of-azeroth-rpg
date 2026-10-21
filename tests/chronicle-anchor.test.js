@@ -10,7 +10,7 @@ const chronicleSource=fs.readFileSync(path.join(root,"public","chronicle.js"),"u
 const apiSource=fs.readFileSync(path.join(root,"functions","api","campaign.js"),"utf8");
 function makeChronicle(){
  const context={
-  window:{soaSaveRules:{isIntegrityBlocked:()=>false},soaCharacters:{profile:()=>null}},
+  window:{soaSaveRules:{isIntegrityBlocked:()=>false},soaCharacters:{profile:()=>null},addEventListener(){}},
   document:{addEventListener(){},getElementById(){return null}}
  };
  vm.createContext(context);
