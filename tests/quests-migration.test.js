@@ -52,11 +52,12 @@ test("Horde hub contracts accept, track defeats, and pay at their local board", 
   const campaign = { turn: 4, quests: {} };
   const accepted = quests.accept(campaign, "cr-harpy", "The Crossroads");
   assert.match(accepted.message, /Windfury Harpy/);
+  assert.match(accepted.message, /Easy/);
   quests.onDefeat(campaign, "Windfury Harpy");
   assert.equal(campaign.quests.completed["cr-harpy"].target, "Windfury Harpy");
   const paid = quests.claim(campaign, "cr-harpy", "The Crossroads", 1000);
-  assert.equal(paid.copper, 8500);
-  assert.equal(paid.wallet, 9500);
+  assert.equal(paid.copper, 2000);
+  assert.equal(paid.wallet, 3000);
   assert.ok(campaign.quests.claimed["cr-harpy"]);
   assert.equal(quests.claim(campaign, "cr-harpy", "Orgrimmar", paid.wallet).error, "Return to the issuing board after defeating the tracked target.");
 });
