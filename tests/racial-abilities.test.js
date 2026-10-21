@@ -22,6 +22,8 @@ for(const race of expected){
  }
 }
 assert.ok(racial.get("cannibalize","Undead").requiresCorpse);
+assert.equal(racial.passives("Undead").touchOfTheGrave.chance,0.1,"Touch of the Grave has a small 10% melee proc chance");
+assert.equal(racial.passives("Undead").touchOfTheGrave.damageType,"shadow","Touch of the Grave deals Shadow damage");
 assert.equal(racial.get("war_stomp","Tauren").effect,"interrupt");
 assert.ok(racial.get("escape_artist","Gnome"));
 assert.ok(racial.get("eureka","Gnome"));
