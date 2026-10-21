@@ -22,6 +22,10 @@ for(const race of expected){
  }
 }
 assert.ok(racial.get("cannibalize","Undead").requiresCorpse);
+assert.equal(racial.hasNearbyHumanoidCorpse("The Docks", ["The Docks|syndicate lookout"]), true, "a humanoid defeated at the current location is available");
+assert.equal(racial.hasNearbyHumanoidCorpse("The Docks", ["Old Mill|syndicate lookout"]), false, "a corpse from another location is not nearby");
+assert.equal(racial.hasNearbyHumanoidCorpse("The Docks", ["The Docks|wolf"]), false, "a beast corpse does not satisfy Cannibalize");
+assert.equal(racial.hasNearbyHumanoidCorpse("", ["The Docks|syndicate lookout"]), false, "a missing current location cannot expose Cannibalize");
 assert.equal(racial.passives("Undead").touchOfTheGrave.chance,0.1,"Touch of the Grave has a small 10% melee proc chance");
 assert.equal(racial.passives("Undead").touchOfTheGrave.damageType,"shadow","Touch of the Grave deals Shadow damage");
 assert.equal(racial.get("war_stomp","Tauren").effect,"interrupt");
