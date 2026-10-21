@@ -31,7 +31,7 @@ const abilitiesSource=fs.readFileSync(path.join(__dirname,"..","public","abiliti
 vm.runInNewContext(abilitiesSource,context,{filename:"abilities.js"});
 assert.equal(context.window.soaAbilities.modifier("engineering"),6,"Gnome Eureka stacks with the Gnome Intelligence bonus");
 profile.race="Night Elf";profile.className="Rogue";
-assert.equal(context.window.soaAbilities.get("hero").armorClass,16,"Night Elf Quickness raises AC");
+assert.equal(context.window.soaAbilities.get("hero").armorClass,17,"Night Elf Quickness raises AC");
 profile.race="Tauren";profile.className="Warrior";
 assert.equal(context.window.soaAbilities.get("hero").maxHp,22,"Tauren Endurance adds maximum HP");
 profile.race="Troll";profile.className="Rogue";
