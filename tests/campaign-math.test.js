@@ -223,3 +223,35 @@ test("campaign save normalization repairs partial state and drops malformed scen
   assert.equal(bounded.pending.dialogue, null);
   assert.equal(bounded.scene.choices[0].text.length, 170);
 });
+
+test("choice resource forecasts show current reserve, cost, and post-exchange recovery", () => {
+  const context = makeContext();
+  vm.runInContext([
+    functionBlock("socialSkill", "bribeCopper"),
+    functionBlock("actionOdds", "heroHealthCap"),
+    functionBlock("resourceName", "resolvedCombatAbility"),
+    functionBlock("resolvedCombatAbility", "dicePreview"),
+    functionBlock("resourceForecast", "socialCheck"),
+    "globalThis.forecast = resourceForecast;",
+  ].join("\n"), context);
+  context.s.en = 45;
+  context.window.soaClassAbilities = {
+    get: () => null,
+    costOf: () => 15,
+  };
+  const investigate = context.forecast({ type: "investigate", difficulty: "medium" });
+  assert.equal(investigate.current, 45);
+  assert.equal(investigate.cost, 10);
+  assert.equal(investigate.after, 45);
+  assert.match(investigate.text, /Energy cost 10 · \+10 recovered → 45\/100/);
+
+  const combat = context.forecast({ type: "combat", ability: "strike", text: "Strike the Guard" });
+  assert.equal(combat.cost, 15);
+  assert.equal(combat.after, 40);
+  assert.match(combat.text, /Energy cost 15 · \+10 recovered → 40\/100/);
+
+  context.s.en = 8;
+  const unavailable = context.forecast({ type: "investigate", difficulty: "medium" });
+  assert.equal(unavailable.affordable, false);
+  assert.match(unavailable.text, /Need 10 Energy · current 8\/100/);
+});
