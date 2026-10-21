@@ -230,3 +230,11 @@ body.theme-alternative textarea:focus-visible {
 @media (hover:none) and (pointer:coarse){
   body.theme-alternative{background-attachment:scroll}
 }
+
+/* The compact combat state is the main view; rolls and optional party actions stay on demand. */
+body.theme-alternative .soa-enemy-status>h4{font-size:18px;margin-bottom:10px}
+body.theme-alternative .soa-combat-roster h4{font-size:13px}
+body.theme-alternative .soa-exchange{padding:10px 12px;margin-top:9px}
+body.theme-alternative .soa-exchange>strong{display:block;font:700 13px/1.4 system-ui;color:#4b2f1c}
+body.theme-alternative .soa-combat-abilities{margin:8px 0;padding-top:9px}
+body.theme-alternative .soa-combat-abilities .soa-ability-button{font:700 12px/1.4 system-ui}
