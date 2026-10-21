@@ -75,7 +75,8 @@ test("all ability effects, costs, and level ranges are valid", () => {
       assert.ok(effects.has(ability.effect), `${name} ${ability.name} has a supported effect`);
       assert.ok(Number.isInteger(ability.cost) && ability.cost >= 30 && ability.cost <= 45);
       assert.ok(Number.isInteger(ability.level) && ability.level >= 1 && ability.level <= 60);
-      assert.ok(Number.isInteger(ability.die) && ability.die >= 0);\n      assert.ok(Number.isInteger(ability.cooldown) && ability.cooldown >= 0 && ability.cooldown <= 3);
+      assert.ok(Number.isInteger(ability.die) && ability.die >= 0);
+      assert.ok(Number.isInteger(ability.cooldown) && ability.cooldown >= 0 && ability.cooldown <= 3);
       assert.ok(typeof ability.description === "string" && ability.description.length > 5);
     }
   }
