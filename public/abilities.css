@@ -8,4 +8,12 @@ body.theme-alternative .soa-ability-stat strong{font:700 11px/1.4 system-ui;lett
 body.theme-alternative .soa-ability-stat span{font:700 24px/1.2 Georgia,serif;color:#3f2919;font-variant-numeric:tabular-nums}
 body.theme-alternative .soa-ability-stat em{font:700 14px/1.4 system-ui;color:#6b4924;font-style:normal}
 body.theme-alternative .soa-ability-special{padding:9px 11px;border:1px solid #c09b5c;border-radius:7px;background:#ead6aa;color:#69512c;font:700 12px/1.5 system-ui}
+body.theme-alternative .soa-class-abilities{margin:15px 0;padding:13px;border:1px solid #a88856;border-radius:10px;background:#f1ddb0;color:#4d311a}
+body.theme-alternative .soa-class-abilities h3{font:700 19px/1.4 Georgia,serif;color:#51321a;margin:0 0 4px}
+body.theme-alternative .soa-class-ability{display:grid;grid-template-columns:minmax(105px,.8fr) minmax(0,1.6fr);gap:8px;padding:9px 0;border-top:1px solid #aa8d6373;font:12px/1.5 system-ui}
+body.theme-alternative .soa-class-ability strong{color:#50351f}.soa-class-ability span{color:#664b31}
+body.theme-alternative .soa-next-ability{margin:10px 0 0;padding:9px;background:#ead3a0;border-radius:7px;font:700 12px/1.5 system-ui;color:#684721}
+.soa-class-combat-heading{display:block;margin:14px 0 7px;font:700 13px/1.5 system-ui}
+.soa-class-combat-button{border-left:4px solid #d6b568!important}
+@media(max-width:390px){body.theme-alternative .soa-class-ability{grid-template-columns:1fr;gap:2px}}
 @media(min-width:490px){body.theme-alternative .soa-ability-grid{grid-template-columns:repeat(6,minmax(0,1fr))}}

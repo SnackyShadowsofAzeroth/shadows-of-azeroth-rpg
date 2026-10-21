@@ -1,0 +1,57 @@
+"use strict";
+
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const test = require("node:test");
+const vm = require("node:vm");
+
+const context = { window: { soaResources: { forClass: name => ({ label: name === "Rogue" ? "Energy" : name === "Warrior" ? "Rage" : name === "Hunter" ? "Focus" : "Mana" }) } }, document: { createElement: () => ({ append() {}, className: "", textContent: "" }) } };
+vm.runInNewContext(fs.readFileSync(path.join(__dirname, "..", "public", "class-abilities.js"), "utf8"), context, { filename: "class-abilities.js" });
+const kits = context.window.soaClassAbilities;
+
+test("every selectable class has a distinct level-one starter kit", () => {
+  for (const name of ["Warrior", "Paladin", "Hunter", "Rogue", "Priest", "Mage", "Warlock", "Druid", "Shaman"]) {
+    const starter = kits.available(name, 1);
+    assert.ok(starter.length >= 2, `${name} should start with multiple abilities`);
+    assert.ok(starter.some(x => ["damage", "interrupt", "riposte"].includes(x.effect)), `${name} needs an offensive ability`);
+    assert.ok(starter.every(x => x.level === 1), `${name} should not have future unlocks at level 1`);
+  }
+});
+
+test("abilities unlock at their defined levels and remain unavailable before them", () => {
+  for (const name of ["Warrior", "Paladin", "Hunter", "Rogue", "Priest", "Mage", "Warlock", "Druid", "Shaman"]) {
+    const all = kits.all(name);
+    assert.equal(new Set(all.map(x => x.id)).size, all.length, `${name} ability IDs should be unique`);
+    for (const ability of all) {
+      assert.equal(kits.get(ability.id, name, ability.level)?.id, ability.id);
+      if (ability.level > 1) assert.equal(kits.get(ability.id, name, ability.level - 1), null);
+    }
+  }
+  assert.equal(kits.get("mortal_strike", "Warrior", 9), null);
+  assert.equal(kits.get("mortal_strike", "Warrior", 10).name, "Mortal Strike");
+});
+
+test("the established Rogue kit and level gates are preserved", () => {
+  const atLevelOne = kits.available("Rogue", 1).map(x => x.name);
+  assert.ok(atLevelOne.includes("Evasion"));
+  assert.ok(atLevelOne.includes("Kick"));
+  assert.equal(kits.get("riposte", "Rogue", 4), null);
+  for (const name of ["Sprint", "Blade Flurry", "Vanish", "Riposte"]) {
+    assert.ok(kits.available("Rogue", 10).some(x => x.name === name), `${name} should be available to level-10 Snacky`);
+  }
+  assert.equal(kits.get("riposte", "Rogue", 5).effect, "riposte");
+});
+
+test("all ability effects, costs, and level ranges are valid", () => {
+  const effects = new Set(["damage", "interrupt", "heal", "drain", "guard", "riposte"]);
+  for (const name of ["Warrior", "Paladin", "Hunter", "Rogue", "Priest", "Mage", "Warlock", "Druid", "Shaman"]) {
+    for (const ability of kits.all(name)) {
+      assert.ok(effects.has(ability.effect), `${name} ${ability.name} has a supported effect`);
+      assert.ok(Number.isInteger(ability.cost) && ability.cost >= 0 && ability.cost <= 40);
+      assert.ok(Number.isInteger(ability.level) && ability.level >= 1 && ability.level <= 60);
+      assert.ok(Number.isInteger(ability.die) && ability.die >= 0);
+      assert.ok(typeof ability.description === "string" && ability.description.length > 5);
+    }
+  }
+});

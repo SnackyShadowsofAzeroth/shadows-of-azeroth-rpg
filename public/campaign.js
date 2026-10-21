@@ -123,6 +123,8 @@ function actionOdds(action){
 }
 function resourceName(){const hero=window.soaCharacters?.profile?.();return window.soaResources?.forClass?.(hero?.className,hero?.form)?.label||"Energy"}
 function resolvedCombatAbility(action){
+ const hero=window.soaCharacters?.profile?.(),level=window.soaProgression?.level?.()||hero?.startLevel||1;
+ if(window.soaClassAbilities?.get?.(action.ability,hero?.className,level))return action.ability;
  const description=String(action.text||"");
  const rogue=window.soaCharacters?.profile?.()?.className==="Rogue";
  const inferred=rogue&&/\briposte\b/i.test(description)?"riposte":rogue&&/\b(?:evasion|evade)\b/i.test(description)?"evasion":rogue&&/\bkick\b/i.test(description)?"kick":"strike";
@@ -277,10 +279,49 @@ function companionExchange(action){
  campaign.lastSupport={round:campaign.combatRound,actor:spec.name,description,retaliation};
  return "Success: Round "+campaign.combatRound+". "+description+" "+retaliation+" "+resourceName()+" "+previous+" → "+s.en+". Exactly one exchange resolved.";
 }
+function classAbilityExchange(action,ability,targets){
+ const name=window.soaCharacters?.profile?.()?.name||"Your hero",resource=resourceName();
+ if(ability.effect==="riposte"&&!campaign.parryReady){status("Riposte requires a parry in the previous exchange. No action spent.");return null}
+ if(s.en<ability.cost){status("Not enough "+resource+" for "+ability.name+" ("+ability.cost+" required). No action spent.");return null}
+ const requested=String(action.text||"").toLowerCase(),matches=targets.filter(e=>requested.includes(e.name.toLowerCase()));
+ const chosen=targets.find(e=>e.name===selectedCombatTarget),target=matches.length===1?matches[0]:matches.length>1?null:chosen||targets[0];
+ if(!target){status("Select a specific enemy before using that ability. No action spent.");return null}
+ if(ability.effect==="heal"&&s.hp>=100){status("Your health is already full. No action spent.");return null}
+ const encounter=startProgressionEncounter();for(const id of partyExperienceIds())if(!encounter.party.includes(id))encounter.party.push(id);
+ const rules=window.soaCombatRules,actor=window.soaAbilities?.get?.("hero"),stat=actor?.modifiers?.[ability.stat]||0,proficiency=actor?.proficiency||2;
+ const block=rules.statBlock(target),gear=window.soaEquipment?.modifiers?.()||{},heroHP=s.hp,oldResource=s.en,oldHP=target.hp;
+ if(!campaign.initiativeFor||campaign.initiativeFor!==campaign.enemyLocation){campaign.initiativeFor=campaign.enemyLocation;campaign.initiativeRoll=rules.initiative(actor?.initiative||0);campaign.enemyInitiative=rules.initiative(block.initiative)}
+ let roll=null,hit=false,dealt=0,healed=0,damageType=ability.damageType||"physical",interrupted=false,guarding=ability.effect==="guard";
+ if(["damage","interrupt","drain","riposte"].includes(ability.effect)){
+  roll=ability.effect==="riposte"?null:rules.attack(proficiency+stat+(gear.attack||0),block.ac,{advantage:campaign.flags?.advantage?1:0});
+  hit=ability.effect==="riposte"?true:!!roll?.hit;
+  const rolled=ability.effect==="riposte"?rules.damage(ability.die,ability.flat+stat+(gear.damage||0)):rules.damage(ability.die,ability.flat+stat+(gear.damage||0),!!roll?.critical);
+  dealt=hit?Math.min(target.hp,rules.mitigate(rolled,damageType,block)):0;target.hp=Math.max(0,target.hp-dealt);
+  if(ability.effect==="drain"&&dealt){const before=s.hp;s.hp=Math.min(100,s.hp+Math.max(1,Math.floor(dealt/2)));healed=s.hp-before}
+  interrupted=ability.effect==="interrupt"&&hit;
+ }else if(ability.effect==="heal"){
+  const before=s.hp;s.hp=Math.min(100,s.hp+rules.damage(ability.die,ability.flat+stat));healed=s.hp-before;
+ }
+ const defeated=target.hp===0,enemyActsFirst=(campaign.enemyInitiative||0)>(campaign.initiativeRoll||0);
+ const retaliationAttempt=enemyActsFirst||(!defeated&&!interrupted),heroAC=actor?.armorClass||12;
+ const enemyAttack=retaliationAttempt?rules.attack(block.bonus,heroAC,{advantage:guarding||ability.id==="evasion"?-1:campaign.guardUntil>=(Number(campaign.combatRound)||0)+1?-1:0}):null;
+ const retaliates=!!enemyAttack?.hit,amount=retaliates?rules.damage(block.die,2,enemyAttack.critical):0;
+ const taken=retaliates?Math.min(Math.max(0,s.hp-1),amount):0;s.hp=Math.max(1,s.hp-taken);
+ const parry=!!enemyAttack&&!enemyAttack.hit&&!defeated&&!guarding&&enemyAttack.total<heroAC&&enemyAttack.die>1&&Math.random()<.5;
+ campaign.parryReady=parry;s.en=Math.min(100,s.en-ability.cost+10);s.time++;campaign.combatRound=(Number(campaign.combatRound)||0)+1;
+ const event={round:campaign.combatRound,ability:ability.id,attackRoll:roll?.die??null,targetAC:block.ac,enemyType:block.type,damageType,initiative:campaign.initiativeRoll,enemyInitiative:campaign.enemyInitiative,attackTotal:roll?.total??null,critical:!!roll?.critical,enemyRoll:enemyAttack?.die??null,enemyTotal:enemyAttack?.total??null,defenderAC:heroAC,target:target.name,dealt,taken,hit,defeated,enemyBefore:oldHP,enemyAfter:target.hp,enemyMax:target.maxHp,heroBefore:heroHP,heroAfter:s.hp,energyBefore:oldResource,energyAfter:s.en,recipient:name,recipientBefore:heroHP,recipientAfter:s.hp,healed,parry};
+ campaign.lastExchange=event;recordCombatDelta(target,dealt,taken,name,heroHP,s.hp);
+ if(defeated){window.soaQuests?.onDefeat?.(campaign,target.name);if(!encounter.defeated.some(x=>x.name===target.name))encounter.defeated.push({name:target.name,maxHp:target.maxHp});if(!livingEnemies().length)encounter.pendingVictory=true;if(selectedCombatTarget===target.name)selectedCombatTarget=null;campaign.defeatedEnemies||=[];campaign.defeatedEnemies.push(String(campaign.enemyLocation||campaign.scene?.location||"")+"|"+target.name.toLowerCase());campaign.defeatedEnemies=campaign.defeatedEnemies.slice(-80)}
+ const effect=guarding?"evades the incoming attack":healed?"restores "+healed+" HP":hit?"hits "+target.name+" for "+dealt+" damage":ability.effect==="heal"?"restores no health":"misses "+target.name;
+ return (hit||guarding||healed?"Success":"Complication")+": "+name+" uses "+ability.name+" and "+effect+". "+(roll?"Attack d20 "+roll.die+" + "+(proficiency+stat+(gear.attack||0))+" vs AC "+block.ac+". ":"")+ (retaliates?target.name+" retaliates for "+taken+" HP.":"No damage received.")+" "+resource+" "+oldResource+" → "+s.en+". Player HP "+heroHP+" → "+s.hp+". Exactly one combat exchange resolved.";
+}
 function fightExchange(action){
  if(["bromli_guard","pippa_snare","lethariel_heal"].includes(action.ability))return companionExchange(action);
  const targets=livingEnemies();
  if(!targets.length)return null;
+ const heroProfile=window.soaCharacters?.profile?.(),heroLevel=window.soaProgression?.level?.()||heroProfile?.startLevel||1;
+ const classAbility=window.soaClassAbilities?.get?.(action.ability,heroProfile?.className,heroLevel);
+ if(classAbility)return classAbilityExchange(action,classAbility,targets);
  const ability=resolvedCombatAbility(action);
  const price={strike:35,kick:25,evasion:0,riposte:10}[ability];
  if(ability==="riposte"&&!campaign.parryReady){status("Riposte requires a parry in the previous exchange. No action spent.");return null}
@@ -487,7 +528,7 @@ function drawEnemyStatus(box){
  if(exchange){
   const summary=document.createElement("div");summary.className="soa-exchange";
   const title=document.createElement("strong");title.textContent="Last exchange · Round "+exchange.round;
-  const dealt=document.createElement("p");dealt.textContent=exchange.hit?"Damage dealt: "+exchange.dealt+" HP to "+exchange.target+" ("+exchange.enemyBefore+" → "+exchange.enemyAfter+"/"+exchange.enemyMax+").":"Missed "+exchange.target+" · 0 damage.";
+  const dealt=document.createElement("p");dealt.textContent=exchange.healed?"Used "+String(exchange.ability||"ability").replaceAll("_"," ")+" · restored "+exchange.healed+" HP.":exchange.ability==="evasion"||["shield_block","divine_protection","power_word_shield","blink","sprint","vanish"].includes(exchange.ability)?"Used "+String(exchange.ability).replaceAll("_"," ")+" · incoming attack disadvantaged.":exchange.hit?"Damage dealt: "+exchange.dealt+" HP to "+exchange.target+" ("+exchange.enemyBefore+" → "+exchange.enemyAfter+"/"+exchange.enemyMax+").":"Missed "+exchange.target+" · 0 damage.";
   const taken=document.createElement("p");taken.textContent="Damage received by "+(exchange.recipient||"your hero")+": "+exchange.taken+" HP · "+(exchange.recipientBefore??exchange.heroBefore)+" → "+(exchange.recipientAfter??exchange.heroAfter)+" HP.";
   summary.append(title,dealt,taken);if(Number.isInteger(exchange.attackRoll)){const roll=document.createElement("p");roll.textContent="Your attack: d20 "+exchange.attackRoll+" + modifier = "+exchange.attackTotal+" vs AC "+exchange.targetAC+(exchange.critical?" · CRITICAL HIT":"");summary.append(roll)}if(Number.isInteger(exchange.initiative)){const init=document.createElement("p");init.textContent="Initiative: Hero "+exchange.initiative+" · Foe "+exchange.enemyInitiative+" · "+exchange.enemyType+" · "+exchange.damageType+" damage";summary.append(init)}if(Number.isInteger(exchange.enemyRoll)){const defense=document.createElement("p");defense.textContent="Enemy attack: d20 "+exchange.enemyRoll+" = "+exchange.enemyTotal+" vs defender AC "+exchange.defenderAC;summary.append(defense)}if(exchange.defeated){const note=document.createElement("p");note.textContent=exchange.target+" defeated; no loot collected automatically.";summary.append(note)}section.append(summary);
  }
@@ -560,15 +601,16 @@ function drawEnemyStatus(box){
  }
  if(enemies.length)section.append(picker);
  const skills=document.createElement("div");skills.className="soa-combat-abilities";
- const abilitiesLabel=document.createElement("strong");abilitiesLabel.textContent="Combat abilities";skills.append(abilitiesLabel);
- const rogue=window.soaCharacters?.profile?.()?.className==="Rogue";
- const available=rogue?[["strike","Strike",35],["kick","Kick · interrupt",25],["evasion","Evasion",0],["riposte","Riposte · after parry",10]]:[["strike","Attack",35],["evasion","Defend",0]];
- for(const [id,label,cost] of available){
+ const abilitiesLabel=document.createElement("strong");abilitiesLabel.className="soa-class-combat-heading";abilitiesLabel.textContent="Combat abilities · Level "+(window.soaProgression?.level?.()||1);skills.append(abilitiesLabel);
+ const available=[{id:"strike",name:"Weapon Strike",cost:35,effect:"damage",description:"A standard weapon attack."},...(window.soaClassAbilities?.available?.(window.soaCharacters?.profile?.()?.className,window.soaProgression?.level?.()||1)||[])];
+ for(const ability of available){
+  const {id,name,cost,effect}=ability;
   const button=document.createElement("button");button.type="button";button.className="soa-ability-button";
-  button.textContent=label+" · "+cost+" "+resourceName();
-  button.disabled=busy||!!pending()||s.en<cost||(id==="riposte"&&!campaign.parryReady)||(id!=="evasion"&&!enemies.some(e=>e.name===selectedCombatTarget)&&enemies.length>1);
+  button.classList.add("soa-class-combat-button");button.textContent=name+" · "+(cost?cost+" "+resourceName():"No cost");button.title=ability.description||name;
+  const needsTarget=!(["guard","heal"].includes(effect));
+  button.disabled=busy||!!pending()||s.en<cost||(effect==="riposte"&&!campaign.parryReady)||(needsTarget&&!enemies.some(e=>e.name===selectedCombatTarget)&&enemies.length>1);
   button.onclick=()=>{const target=enemies.find(e=>e.name===selectedCombatTarget)||enemies[0];if(!target)return;
-   choose({text:(window.soaCharacters?.profile?.()?.name||"Hero")+" uses "+label+" against "+target.name,type:"combat",difficulty:"medium",ability:id});
+   choose({text:(window.soaCharacters?.profile?.()?.name||"Hero")+" uses "+name+(needsTarget?" against "+target.name:""),type:"combat",difficulty:"medium",ability:id});
   };
   skills.append(button);
  }

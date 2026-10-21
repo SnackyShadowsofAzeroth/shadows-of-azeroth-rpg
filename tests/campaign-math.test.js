@@ -118,6 +118,55 @@ test("combat preview includes the same equipment attack and damage bonuses as re
   assert.match(warriorStrike.secondary, /1d8 \+ 10 raw damage/);
 });
 
+test("class combat abilities charge the class resource and resolve attacks and healing locally", () => {
+  const context = makeContext();
+  const enemy = { name: "Guard", hp: 40, maxHp: 40 };
+  let capturedAdvantage = null;
+  context.campaign = { flags: {}, enemies: [enemy], combatRound: 0, encounterSerial: 0, defeatedEnemies: [] };
+  context.selectedCombatTarget = "Guard";
+  context.livingEnemies = () => context.campaign.enemies.filter(x => x.hp > 0);
+  context.startProgressionEncounter = () => context.encounter = { id: "test", defeated: [], party: [] };
+  context.partyExperienceIds = () => [];
+  context.recordCombatDelta = () => {};
+  context.status = message => { context.statusMessage = message; };
+  context.resourceName = () => "Mana";
+  context.window.soaCharacters.profile = () => ({ name: "Test Paladin", className: "Paladin" });
+  context.window.soaAbilities.get = () => ({ name: "Test Paladin", className: "Paladin", proficiency: 2, modifiers: { STR: 3, WIS: 2 }, armorClass: 16, initiative: 1 });
+  context.window.soaCombatRules = {
+    statBlock: () => ({ ac: 12, type: "guard", bonus: 0, die: 4 }),
+    attack: (bonus, ac, options = {}) => { capturedAdvantage = options.advantage ?? 0; return { die: 15, total: bonus + 15, bonus, ac, critical: false, hit: capturedAdvantage !== -1 }; },
+    damage: (die, flat) => Math.ceil(die / 2) + flat,
+    mitigate: amount => amount,
+    initiative: () => 10,
+  };
+  vm.runInContext(`${functionBlock("classAbilityExchange", "fightExchange")}\nglobalThis.runClassAbility = classAbilityExchange;`, context);
+
+  const strike = context.runClassAbility({ text: "Test Paladin uses Crusader Strike against Guard" }, {
+    id: "crusader_strike", name: "Crusader Strike", cost: 18, effect: "damage", stat: "STR", die: 8, flat: 5, damageType: "radiant",
+  }, [enemy]);
+  assert.match(strike, /uses Crusader Strike/);
+  assert.equal(enemy.hp, 25, "spell damage includes ability and equipped damage modifiers");
+  assert.equal(context.s.en, 92, "Mana cost is charged before the standard 10-point round recovery");
+  assert.equal(context.campaign.combatRound, 1);
+
+  context.s.hp = 60;
+  context.campaign.enemies = [enemy];
+  const heal = context.runClassAbility({ text: "Test Paladin uses Flash of Light" }, {
+    id: "flash_of_light", name: "Flash of Light", cost: 24, effect: "heal", stat: "WIS", die: 8, flat: 5, damageType: "radiant",
+  }, [enemy]);
+  assert.match(heal, /restores 11 HP/);
+  assert.equal(context.s.hp, 67, "healing applies before the enemy's retaliation");
+  assert.equal(context.s.en, 78);
+
+  context.s.en = 100;
+  context.window.soaCharacters.profile = () => ({ name: "Test Rogue", className: "Rogue" });
+  const evasion = context.runClassAbility({ text: "Test Rogue uses Evasion" }, {
+    id: "evasion", name: "Evasion", cost: 0, effect: "guard", stat: "DEX", die: 0, flat: 0, damageType: "physical",
+  }, [enemy]);
+  assert.match(evasion, /evades the incoming attack/);
+  assert.equal(capturedAdvantage, -1, "defensive abilities give the incoming attack disadvantage");
+});
+
 test("campaign save normalization repairs partial state and drops malformed scene data", () => {
   const context = makeContext();
   context.MAX = 24;
