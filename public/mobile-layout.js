@@ -1,11 +1,11 @@
 (()=>{"use strict";
 const KEY="soa-layout-v1";
 const tabs=[
- ["adventure","Adventure","campaign-box"],
- ["quest","Quest","soa-chronicle"],
- ["character","Character","soa-character-screen"],
- ["reputation","Reputation","companion-panel"],
- ["settings","Settings","soa-save-settings"],
+ ["adventure","Adventure","campaign-box","Current scene and available actions"],
+ ["quest","Quest","soa-chronicle","Objectives, contracts, rewards, and discoveries"],
+ ["character","Character","soa-character-screen","Health, abilities, resources, and equipment"],
+ ["reputation","Reputation","companion-panel","Allies, factions, and relationships"],
+ ["settings","Settings","soa-save-settings","Saves and optional online features"],
 ];
 const legacyTabs={journal:"quest",companions:"reputation"};
 const normalize=name=>legacyTabs[name]||name;
@@ -18,10 +18,9 @@ function group(section){
  if(section.id==="soa-contract-board")return "quest";
  if(["campaign-box","soa-adventure-story"].includes(section.id)||section.querySelector?.("#choices"))return "adventure";
  if(["soa-chronicle","soa-party-evidence"].includes(section.id))return "quest";
- if(["soa-character-screen","soa-character-status","soa-profession-panel"].includes(section.id)||section.querySelector?.("#hpbar"))return "character";
+ if(["soa-character-screen","soa-character-tools","soa-character-status","soa-profession-panel"].includes(section.id)||section.querySelector?.("#hpbar"))return "character";
  if(["companion-panel","soa-standalone-reputation"].includes(section.id)||section.querySelector?.("#soa-companions-content"))return "reputation";
- if(["soa-legacy-ai","soa-ai-narration"].includes(section.id))return "adventure";
- if(section.id==="soa-save-settings"||section.querySelector?.("#export"))return "settings";
+ if(["soa-save-settings","soa-legacy-ai","soa-ai-narration"].includes(section.id)||section.querySelector?.("#export"))return "settings";
  return "adventure";
 }
 function removeLegacyNavigation(){
@@ -31,8 +30,8 @@ function removeLegacyNavigation(){
 }
 function createNavigation(){
  const nav=document.createElement("nav");nav.id="soa-mobile-nav";nav.setAttribute("aria-label","Game sections");
- for(const [tab,label,target] of tabs){
-  const button=document.createElement("button");button.type="button";button.textContent=label;button.dataset.gameTab=tab;button.setAttribute("aria-controls",target);button.setAttribute("aria-current","false");
+ for(const [tab,label,target,description] of tabs){
+  const button=document.createElement("button");button.type="button";button.textContent=label;button.dataset.gameTab=tab;button.title=description;button.setAttribute("aria-label",label+". "+description);button.setAttribute("aria-controls",target);button.setAttribute("aria-current","false");
   nav.append(button);
  }
  document.body.append(nav);return nav;
@@ -46,6 +45,7 @@ function init(){
  document.body.classList.add("soa-tabbed");
  function render(){
   if(!document.body.classList.contains("soa-tabbed"))return;
+  document.body.dataset.activeGameTab=active;
   for(const section of sections())section.hidden=group(section)!==active||section.dataset.soaUnavailable==="true"||(section.id==="soa-legacy-ai"&&window.soaAiDirector?.isConnected?.()===true);
   for(const button of buttons){const selected=button.dataset.gameTab===active;button.setAttribute("aria-current",selected?"page":"false");button.classList.toggle("active",selected)}
  }
