@@ -15,7 +15,7 @@ const campaign=fs.readFileSync(path.join(root,"campaign.js"),"utf8");
 test("hostile cards show the same AC used by combat resolution",()=>{
  assert.equal(rules.statBlock({name:"Restless Ghoul"}).ac,13);
  assert.equal(rules.statBlock({name:"Forsaken Mage",armorClass:16}).ac,16);
- assert.match(campaign,/Armor Class \+"\+\(block\?\.ac\?\?"unknown"\)/);
+ assert.ok(campaign.includes(`stats.textContent="Armor Class "+(block?.ac??"unknown")`));
 });
 
 test("recognizable classed enemies get the matching resource meter",()=>{
