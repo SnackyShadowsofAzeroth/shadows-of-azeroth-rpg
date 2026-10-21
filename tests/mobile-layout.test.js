@@ -98,7 +98,7 @@ test("one five-destination bottom navigation is loaded and cached for offline pl
   assert.match(serviceWorker, /"\.\/class-abilities\.js"/);
   assert.match(serviceWorker, /"\.\/racial-abilities\.js"/);
   assert.match(source, /\["adventure","Adventure","campaign-box"\],\s*\["quest","Quest","soa-chronicle"\],\s*\["character","Character","soa-character-screen"\]/);
-  assert.match(serviceWorker, /shadows-of-azeroth-v64/);
+  assert.match(serviceWorker, /shadows-of-azeroth-v65/);
   assert.match(layoutCss, /#soa-mobile-nav\{position:fixed;z-index:999;bottom:0/);
   assert.match(source, /function createNavigation\(\)/);
   assert.doesNotMatch(characters, /soa-quick-nav/);
