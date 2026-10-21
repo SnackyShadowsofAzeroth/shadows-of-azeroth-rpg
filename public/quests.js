@@ -2,44 +2,47 @@
 // Offline-deterministic bounty ledger. No AI text can pay currency or manufacture loot.
 const BOARDS=[
  {region:/stormwind|old town|elwynn/i,place:"Stormwind Bounty Board",contracts:[
-  {id:"sw-defias",title:"Defias Saboteur",target:"Defias Saboteur",description:"A wanted Defias explosives specialist operating near Old Town.",copper:12500,level:8,rarity:"standard",items:["SI:7 Supply Voucher"]},
-  {id:"sw-smuggler",title:"Dockside Smuggler",target:"Dockside Smuggler",description:"Wanted for trafficking stolen military supplies.",copper:8700,level:6,rarity:"standard",items:[]},
-  {id:"sw-master",title:"The Masked Defias Captain",target:"Masked Defias Captain",description:"Dangerous veteran commander. High-risk bounty.",copper:50000,level:14,rarity:"elite",items:["Captain's Signet","Defias Shadowblade"]}]},
+  {id:"sw-defias",title:"Defias Saboteur",target:"Defias Saboteur",description:"A wanted Defias explosives specialist operating near Old Town.",level:8,rarity:"standard",items:["SI:7 Supply Voucher"]},
+  {id:"sw-smuggler",title:"Dockside Smuggler",target:"Dockside Smuggler",description:"Wanted for trafficking stolen military supplies.",level:6,rarity:"standard",items:[]},
+  {id:"sw-master",title:"The Masked Defias Captain",target:"Masked Defias Captain",description:"Dangerous veteran commander. High-risk bounty.",level:14,rarity:"elite",items:["Captain's Signet","Defias Shadowblade"]}]},
  {region:/darkshire|duskwood|raven hill/i,place:"Darkshire Bounty Board",contracts:[
-  {id:"dw-grave",title:"Raven Hill Grave-Robber",target:"Raven Hill Grave-Robber",description:"A grave robber supplying a necromantic circle.",copper:7800,level:6,rarity:"standard",items:[]},
-  {id:"dw-ghoul",title:"The Rotting Ghoul",target:"Rotting Ghoul",description:"An undead predator stalking the cemetery.",copper:14600,level:9,rarity:"standard",items:["Purified Bone Charm"]},
-  {id:"dw-wraith",title:"Wraith of the Blackwood",target:"Wraith of the Blackwood",description:"Extremely dangerous spectral bounty.",copper:54000,level:15,rarity:"elite",items:["Wraithbound Trinket"]}]},
+  {id:"dw-grave",title:"Raven Hill Grave-Robber",target:"Raven Hill Grave-Robber",description:"A grave robber supplying a necromantic circle.",level:6,rarity:"standard",items:[]},
+  {id:"dw-ghoul",title:"The Rotting Ghoul",target:"Rotting Ghoul",description:"An undead predator stalking the cemetery.",level:9,rarity:"standard",items:["Purified Bone Charm"]},
+  {id:"dw-wraith",title:"Wraith of the Blackwood",target:"Wraith of the Blackwood",description:"Extremely dangerous spectral bounty.",level:15,rarity:"elite",items:["Wraithbound Trinket"]}]},
  {region:/ironforge|dun morogh/i,place:"Ironforge Bounty Board",contracts:[
-  {id:"if-bandit",title:"Mountain Pass Bandit",target:"Mountain Pass Bandit",description:"A robber attacking supply caravans.",copper:9400,level:7,rarity:"standard",items:[]},
-  {id:"if-golem",title:"Runaway War Golem",target:"Runaway War Golem",description:"A lethal machine loose in the mountain passes.",copper:57000,level:15,rarity:"elite",items:["Reinforced Gear","Ironforge Warhammer"]}]},
+  {id:"if-bandit",title:"Mountain Pass Bandit",target:"Mountain Pass Bandit",description:"A robber attacking supply caravans.",level:7,rarity:"standard",items:[]},
+  {id:"if-golem",title:"Runaway War Golem",target:"Runaway War Golem",description:"A lethal machine loose in the mountain passes.",level:15,rarity:"elite",items:["Reinforced Gear","Ironforge Warhammer"]}]},
  {region:/darnassus|teldrassil/i,place:"Darnassus Bounty Board",contracts:[
-  {id:"da-poacher",title:"Ashenvale Poacher",target:"Ashenvale Poacher",description:"A poacher has been taking protected wildlife near the forest paths.",copper:10200,level:7,rarity:"standard",items:[]},
-  {id:"da-satyr",title:"Satyr Corruptor",target:"Satyr Corruptor",description:"A satyr is threatening travelers at the edge of the forest.",copper:28500,level:11,rarity:"standard",items:["Moonwell Salve"]}]},
+  {id:"da-poacher",title:"Ashenvale Poacher",target:"Ashenvale Poacher",description:"A poacher has been taking protected wildlife near the forest paths.",level:7,rarity:"standard",items:[]},
+  {id:"da-satyr",title:"Satyr Corruptor",target:"Satyr Corruptor",description:"A satyr is threatening travelers at the edge of the forest.",level:11,rarity:"standard",items:["Moonwell Salve"]}]},
  {region:/exodar|azuremyst|bloodmyst/i,place:"The Exodar Bounty Board",contracts:[
-  {id:"ex-raider",title:"Azuremyst Raider",target:"Azuremyst Raider",description:"A raider has been ambushing supply runners on Azuremyst Isle.",copper:9800,level:7,rarity:"standard",items:[]},
-  {id:"ex-crystal",title:"Corrupted Crystal Stalker",target:"Corrupted Crystal Stalker",description:"A dangerous creature is drawn to unstable crystal fragments.",copper:26000,level:10,rarity:"standard",items:["Stabilized Crystal Shard"]}]},
+  {id:"ex-raider",title:"Azuremyst Raider",target:"Azuremyst Raider",description:"A raider has been ambushing supply runners on Azuremyst Isle.",level:7,rarity:"standard",items:[]},
+  {id:"ex-crystal",title:"Corrupted Crystal Stalker",target:"Corrupted Crystal Stalker",description:"A dangerous creature is drawn to unstable crystal fragments.",level:10,rarity:"standard",items:["Stabilized Crystal Shard"]}]},
  {region:/orgrimmar|durotar/i,place:"Orgrimmar Bounty Board",contracts:[
-  {id:"og-scrapper",title:"Valley Scrapper",target:"Valley Scrapper",description:"A scavenger gang is stealing tools from the Valley of Honor.",copper:9200,level:6,rarity:"standard",items:[]},
-  {id:"og-raider",title:"Drygulch Raider Captain",target:"Drygulch Raider Captain",description:"A raider captain has been attacking caravans outside the city.",copper:27500,level:11,rarity:"standard",items:["Caravan Guard's Token"]}]},
+  {id:"og-scrapper",title:"Valley Scrapper",target:"Valley Scrapper",description:"A scavenger gang is stealing tools from the Valley of Honor.",level:6,rarity:"standard",items:[]},
+  {id:"og-raider",title:"Drygulch Raider Captain",target:"Drygulch Raider Captain",description:"A raider captain has been attacking caravans outside the city.",level:11,rarity:"standard",items:["Caravan Guard's Token"]}]},
  {region:/thunder bluff|mulgore/i,place:"Thunder Bluff Bounty Board",contracts:[
-  {id:"tb-poacher",title:"Mulgore Poacher",target:"Mulgore Poacher",description:"A poacher is hunting on the rolling plains without regard for the local herds.",copper:9000,level:6,rarity:"standard",items:[]},
-  {id:"tb-bristleback",title:"Bristleback Ravager",target:"Bristleback Ravager",description:"A Bristleback raider has been threatening travelers near the bluffs.",copper:25500,level:10,rarity:"standard",items:["Kodo-Leather Bracers"]}]},
+  {id:"tb-poacher",title:"Mulgore Poacher",target:"Mulgore Poacher",description:"A poacher is hunting on the rolling plains without regard for the local herds.",level:6,rarity:"standard",items:[]},
+  {id:"tb-bristleback",title:"Bristleback Ravager",target:"Bristleback Ravager",description:"A Bristleback raider has been threatening travelers near the bluffs.",level:10,rarity:"standard",items:["Kodo-Leather Bracers"]}]},
  {region:/undercity|tirisfal/i,place:"Undercity Bounty Board",contracts:[
-  {id:"uc-graverobber",title:"Tirisfal Graverobber",target:"Tirisfal Graverobber",description:"A grave robber is disturbing burial sites north of the city.",copper:9400,level:6,rarity:"standard",items:[]},
-  {id:"uc-scourge",title:"Scourge Remnant",target:"Scourge Remnant",description:"A lingering Scourge threat has been seen among the ruins of Tirisfal.",copper:29000,level:11,rarity:"standard",items:["Forsaken Field Dressing"]}]},
+  {id:"uc-graverobber",title:"Tirisfal Graverobber",target:"Tirisfal Graverobber",description:"A grave robber is disturbing burial sites north of the city.",level:6,rarity:"standard",items:[]},
+  {id:"uc-scourge",title:"Scourge Remnant",target:"Scourge Remnant",description:"A lingering Scourge threat has been seen among the ruins of Tirisfal.",level:11,rarity:"standard",items:["Forsaken Field Dressing"]}]},
  {region:/brill/i,place:"Brill Bounty Board",contracts:[
-  {id:"brill-ghoul",title:"Brill Cemetery Ghoul",target:"Brill Cemetery Ghoul",description:"A ghoul has been prowling the cemetery beyond the town's lanterns.",copper:8200,level:5,rarity:"standard",items:[]},
-  {id:"brill-scavenger",title:"Tirisfal Grave Scavenger",target:"Tirisfal Grave Scavenger",description:"A scavenger is looting fresh graves outside Brill.",copper:15000,level:8,rarity:"standard",items:["Forsaken Grave Dust"]}]},
+  {id:"brill-ghoul",title:"Brill Cemetery Ghoul",target:"Brill Cemetery Ghoul",description:"A ghoul has been prowling the cemetery beyond the town's lanterns.",level:5,rarity:"standard",items:[]},
+  {id:"brill-scavenger",title:"Tirisfal Grave Scavenger",target:"Tirisfal Grave Scavenger",description:"A scavenger is looting fresh graves outside Brill.",level:8,rarity:"standard",items:["Forsaken Grave Dust"]}]},
  {region:/silvermoon|eversong|ghostlands/i,place:"Silvermoon City Bounty Board",contracts:[
-  {id:"sm-thief",title:"Eversong Relic Thief",target:"Eversong Relic Thief",description:"A relic thief has been targeting homes along the Eversong roads.",copper:11000,level:7,rarity:"standard",items:[]},
-  {id:"sm-felstalker",title:"Fel-Touched Stalker",target:"Fel-Touched Stalker",description:"A fel-touched beast has been sighted beyond the city patrols.",copper:30000,level:12,rarity:"standard",items:["Sunfury Warding Charm"]}]},
+  {id:"sm-thief",title:"Eversong Relic Thief",target:"Eversong Relic Thief",description:"A relic thief has been targeting homes along the Eversong roads.",level:7,rarity:"standard",items:[]},
+  {id:"sm-felstalker",title:"Fel-Touched Stalker",target:"Fel-Touched Stalker",description:"A fel-touched beast has been sighted beyond the city patrols.",level:12,rarity:"standard",items:["Sunfury Warding Charm"]}]},
  {region:/crossroads|barrens/i,place:"The Crossroads Bounty Board",contracts:[
-  {id:"cr-harpy",title:"Windfury Harpy",target:"Windfury Harpy",description:"Harpy raiders have been harassing caravans on the Barrens road.",copper:8500,level:6,rarity:"standard",items:[]},
-  {id:"cr-kolkar",title:"Kolkar Outrider",target:"Kolkar Outrider",description:"A Kolkar outrider has been scouting the Crossroads approaches.",copper:18500,level:9,rarity:"standard",items:["Barrens Trail Rations"]}]},
+  {id:"cr-harpy",title:"Windfury Harpy",target:"Windfury Harpy",description:"Harpy raiders have been harassing caravans on the Barrens road.",level:6,rarity:"standard",items:[]},
+  {id:"cr-kolkar",title:"Kolkar Outrider",target:"Kolkar Outrider",description:"A Kolkar outrider has been scouting the Crossroads approaches.",level:9,rarity:"standard",items:["Barrens Trail Rations"]}]},
  {region:/razor hill|echo isles/i,place:"Razor Hill Bounty Board",contracts:[
-  {id:"rh-quilboar",title:"Dreadmaul Quilboar",target:"Dreadmaul Quilboar",description:"A quilboar raider has been threatening the roads south of Durotar.",copper:7800,level:5,rarity:"standard",items:[]},
-  {id:"rh-scout",title:"Dustwind Scout",target:"Dustwind Scout",description:"A hostile scout has been watching the settlement's supply route.",copper:16000,level:8,rarity:"standard",items:["Durotar Scout's Band"]}]}
+  {id:"rh-quilboar",title:"Dreadmaul Quilboar",target:"Dreadmaul Quilboar",description:"A quilboar raider has been threatening the roads south of Durotar.",level:5,rarity:"standard",items:[]},
+  {id:"rh-scout",title:"Dustwind Scout",target:"Dustwind Scout",description:"A hostile scout has been watching the settlement's supply route.",level:8,rarity:"standard",items:["Durotar Scout's Band"]}]}
 ];
+const difficultyOf=c=>c.rarity==="elite"?"elite":c.level<=6?"easy":c.level<=8?"medium":"hard";
+const bountyCopper=c=>c.difficulty==="elite"?40000+Math.max(0,c.level-14)*5000:({easy:2000,medium:4000,hard:7500}[c.difficulty]||0);
+for(const board of BOARDS)for(const contract of board.contracts){contract.difficulty=difficultyOf(contract);contract.copper=bountyCopper(contract)}
 const format=n=>{const c=Math.max(0,Math.floor(n));return [Math.floor(c/10000)+"g",Math.floor(c%10000/100)+"s",c%100+"c"].join(" ")};
 const boardAt=location=>BOARDS.find(b=>b.region.test(String(location||"")));
 const definition=id=>BOARDS.flatMap(b=>b.contracts).find(c=>c.id===id);
@@ -64,7 +67,7 @@ function accept(campaign,id,location){
  if(!contract)return {error:"Find this contract at its local bounty board."};
  const q=ensure(campaign);if(q.accepted[id]||q.claimed[id])return {error:"Contract already accepted or claimed."};
  q.accepted[id]={started:campaign.turn||0,location:String(location).slice(0,90)};
- return {message:"Accepted: "+contract.title+". Reward on verified completion: "+format(contract.copper)+(contract.items.length?" + "+contract.items.join(", "):"")};
+ return {message:"Accepted: "+contract.title+" · "+contract.difficulty[0].toUpperCase()+contract.difficulty.slice(1)+". Reward on verified completion: "+format(contract.copper)+(contract.items.length?" + "+contract.items.join(", "):"")};
 }
 function onDefeat(campaign,enemy){
  const q=ensure(campaign),name=String(enemy||"").trim().toLowerCase();
@@ -83,7 +86,7 @@ function claim(campaign,id,location,wallet){
  if(q.receipts.includes(receipt))return {error:"Already paid."};
  q.receipts.push(receipt);q.receipts=q.receipts.slice(-500);
  q.claimed[id]={turn:campaign.turn||0,amount:contract.copper,items};
- q.inventory.push(...items.map(name=>({name,source:contract.title,rarity:name===rare?"rare":"common"})));
+ q.inventory.push(...items.map(name=>({name,source:contract.title,rarity:name===rare?"rare":contract.rarity==="elite"?"epic":"common"})));
  q.lastReward={title:contract.title,copper:contract.copper,items,receipt,atTurn:campaign.turn||0};
  q.rewardHistory||=[];q.rewardHistory.push(q.lastReward);q.rewardHistory=q.rewardHistory.slice(-60);
  return {copper:contract.copper,items,wallet:wallet+contract.copper,description:"The bounty clerk counts "+format(contract.copper)+" into your purse"+(items.length?" and issues "+items.join(", "):"")+". Verified payout."};
@@ -106,9 +109,9 @@ function grantStormwindMission(campaign,wallet){
 
 // Engine-authored mission contracts: AI cannot invent payout values or complete objectives.
 const MISSIONS=[
- {id:"si7-intelligence",title:"SI:7 Intelligence Courier",issuer:"SI:7 Handler",region:/stormwind|old town/i,objective:{kind:"defeat",target:"Defias Intelligence Courier"},reward:{copper:18000,items:[{name:"Sealed SI:7 Field Kit",rarity:"uncommon",slot:"trinket"}]},description:"Intercept the named Defias courier and return to the SI:7 handler."},
- {id:"duskwood-necromancer",title:"Raven Hill Necromancer",issuer:"Darkshire Watch",region:/darkshire|duskwood|raven hill/i,objective:{kind:"defeat",target:"Raven Hill Necromancer"},reward:{copper:24500,items:[{name:"Consecrated Silver Pendant",rarity:"uncommon",slot:"trinket"}]},description:"Defeat the named necromancer and return to the Darkshire Watch."},
- {id:"ironforge-saboteur",title:"Ironforge Supply Sabotage",issuer:"Ironforge Quartermaster",region:/ironforge|dun morogh/i,objective:{kind:"defeat",target:"Mountain Saboteur"},reward:{copper:21000,items:[{name:"Reinforced Explorer's Gloves",rarity:"uncommon",slot:"armor"}]},description:"Defeat the wanted saboteur and return to the quartermaster."}
+ {id:"si7-intelligence",title:"SI:7 Intelligence Courier",issuer:"SI:7 Handler",region:/stormwind|old town/i,objective:{kind:"defeat",target:"Defias Intelligence Courier"},difficulty:"medium",reward:{copper:4000,items:[{name:"Sealed SI:7 Field Kit",rarity:"uncommon",slot:"trinket"}]},description:"Intercept the named Defias courier and return to the SI:7 handler."},
+ {id:"duskwood-necromancer",title:"Raven Hill Necromancer",issuer:"Darkshire Watch",region:/darkshire|duskwood|raven hill/i,objective:{kind:"defeat",target:"Raven Hill Necromancer"},difficulty:"elite",reward:{copper:40000,items:[{name:"Consecrated Silver Pendant",rarity:"rare",slot:"trinket"}]},description:"Defeat the named necromancer and return to the Darkshire Watch."},
+ {id:"ironforge-saboteur",title:"Ironforge Supply Sabotage",issuer:"Ironforge Quartermaster",region:/ironforge|dun morogh/i,objective:{kind:"defeat",target:"Mountain Saboteur"},difficulty:"hard",reward:{copper:7500,items:[{name:"Reinforced Explorer's Gloves",rarity:"uncommon",slot:"armor"}]},description:"Defeat the wanted saboteur and return to the quartermaster."}
 ];
 function journal(campaign){const q=ensure(campaign);q.missions||={};q.rewardHistory||=[];return q}
 function rewardForScene(campaign){
@@ -121,7 +124,7 @@ function startMission(campaign,id,location){
  if(!mission||!mission.region.test(String(location||"")))return {error:"This mission is not offered here."};
  if(q.missions[id])return {error:"Mission already recorded."};
  q.missions[id]={state:"active",started:campaign.turn||0};
- return {message:"Mission accepted: "+mission.title+" · "+format(mission.reward.copper)+(mission.reward.items.length?" + "+mission.reward.items.map(x=>x.name).join(", "):"")+". Objective: "+mission.description};
+ return {message:"Mission accepted: "+mission.title+" · "+mission.difficulty[0].toUpperCase()+mission.difficulty.slice(1)+" · "+format(mission.reward.copper)+(mission.reward.items.length?" + "+mission.reward.items.map(x=>x.name).join(", "):"")+". Objective: "+mission.description};
 }
 function missionDefeat(campaign,name){
  const q=journal(campaign);
@@ -153,7 +156,7 @@ function missionPanel(campaign,location,wallet,onChange){
   if(!record&&!m.region.test(String(location||"")))continue;
   const row=document.createElement("div");row.style.cssText="border-top:1px solid #a48b68;padding:9px 0";
   const title=document.createElement("strong");title.textContent=m.title;row.append(title);
-  const desc=document.createElement("p");desc.textContent=m.description+" · Reward "+format(m.reward.copper)+(m.reward.items.length?" + "+m.reward.items.map(x=>x.name).join(", "):"");row.append(desc);
+  const desc=document.createElement("p");desc.textContent=m.description+" · "+m.difficulty[0].toUpperCase()+m.difficulty.slice(1)+" · Reward "+format(m.reward.copper)+(m.reward.items.length?" + "+m.reward.items.map(x=>x.name).join(", "):"");row.append(desc);
   const button=document.createElement("button");button.type="button";
   button.textContent=record?.state==="claimed"?"Paid":record?.state==="completed"?"Claim verified mission reward":record?"In progress":"Accept mission";
   button.disabled=record?.state==="claimed"||record?.state==="active"||!m.region.test(String(location||""));
@@ -172,7 +175,7 @@ function panel(campaign,location,wallet,onChange){
  if(board)for(const c of board.contracts){
  const card=document.createElement("div");card.style.cssText="padding:12px 0;border-top:1px solid #a38b67";
  const title=document.createElement("strong");title.textContent=c.title+(c.rarity==="elite"?" · Elite":"");card.append(title);
- const info=document.createElement("p");info.textContent=c.description+" Reward: "+format(c.copper)+(c.items.length?" + "+c.items.join(", "):"")+".";card.append(info);
+ const info=document.createElement("p");info.textContent=c.description+" · "+c.difficulty[0].toUpperCase()+c.difficulty.slice(1)+" · Reward: "+format(c.copper)+(c.items.length?" + "+c.items.join(", "):"")+".";card.append(info);
  const button=document.createElement("button");button.type="button";
  button.textContent=q.claimed[c.id]?"Paid":q.completed[c.id]?"Claim verified reward":q.accepted[c.id]?"Active · target not defeated":"Accept contract";
  button.disabled=Boolean(q.claimed[c.id]||(q.accepted[c.id]&&!q.completed[c.id]));
@@ -183,5 +186,7 @@ function panel(campaign,location,wallet,onChange){
  if(q.inventory.length){const bag=document.createElement("details");const head=document.createElement("summary");head.textContent="Reward inventory · "+q.inventory.length+" items";bag.append(head);for(const item of q.inventory){const p=document.createElement("p");p.textContent=item.name+" ("+item.rarity+") · "+item.source;bag.append(p)}wrapper.append(bag)}
  return wrapper;
 }
-window.soaQuests={boardAt,definition,ensure,accept,onDefeat,claim,grantStormwindMission,panel,missionPanel,startMission,claimMission,missionDefeat,journal,format,stableRare,rewardForScene};
+function contracts(){return BOARDS.flatMap(board=>board.contracts.map(contract=>({...contract,items:[...contract.items]})))}
+function missions(){return MISSIONS.map(mission=>({...mission,objective:{...mission.objective},reward:{...mission.reward,items:mission.reward.items.map(item=>({...item}))}}))}
+window.soaQuests={boardAt,definition,contracts,missions,ensure,accept,onDefeat,claim,grantStormwindMission,panel,missionPanel,startMission,claimMission,missionDefeat,journal,format,stableRare,rewardForScene};
 })();
