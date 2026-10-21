@@ -26,3 +26,11 @@ body.theme-alternative .soa-specialization-card h3{font:700 19px/1.4 Georgia,ser
 .soa-specialization-choice span{font:12px/1.5 system-ui;color:#664b31}
 .soa-specialization-choice em{font:700 11px/1.5 system-ui;color:#684721;font-style:normal}
 @media(min-width:600px){.soa-specialization-choices{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+.soa-combat-resource{margin-top:10px}
+.soa-combat-resource-heading{display:flex;justify-content:space-between;gap:8px;margin-bottom:5px;font:700 12px/1.4 system-ui;color:#664b31}
+.soa-combat-resource-rail{height:12px;overflow:hidden;border-radius:999px;background:#907c6066;border:1px solid #8a7455}
+.soa-combat-resource-fill{height:100%;border-radius:inherit;background:linear-gradient(90deg,#d4a82d,#f2d45a);transition:width .25s ease}
+.soa-combat-resource-rail[data-resource="rage"] .soa-combat-resource-fill{background:linear-gradient(90deg,#a84435,#db7058)}
+.soa-combat-resource-rail[data-resource="focus"] .soa-combat-resource-fill{background:linear-gradient(90deg,#b57a2a,#e6bb55)}
+.soa-combat-resource-rail[data-resource="mana"] .soa-combat-resource-fill{background:linear-gradient(90deg,#397ea8,#70b6da)}
