@@ -39,3 +39,21 @@ body.theme-alternative .soa-specialization-card h3{font:700 19px/1.4 Georgia,ser
 .soa-foe-resource{margin-top:9px}
 .soa-foe-resource-heading{display:flex;justify-content:space-between;gap:8px;margin-bottom:5px;font:700 12px/1.4 system-ui;color:#664b31}
 .soa-foe-resource-rail{margin-bottom:2px}
+
+.soa-combat-move-panel{margin:10px 0 14px;padding:12px;border:1px solid #a98b58;border-radius:10px;background:linear-gradient(145deg,#f4e2b8,#e8d1a0);color:#4d311a}
+.soa-combat-move-heading{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:9px;font:700 15px/1.35 Georgia,serif;color:#51321a}
+.soa-combat-move-heading span{font:600 11px/1.4 system-ui;color:#664b31}
+.soa-combat-target-label{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:8px;margin:0 0 9px;font:700 12px/1.4 system-ui;color:#664b31}
+.soa-combat-target-select{width:100%;min-width:0;padding:8px 10px;border:1px solid #a98b58;border-radius:7px;background:#fff0cdd6;color:#50351f;font:600 13px/1.4 system-ui}
+.soa-combat-basic-wrap{display:grid;gap:4px}
+.soa-combat-basic{width:100%;min-height:44px}
+.soa-combat-basic-note{font:500 11px/1.45 system-ui;color:#664b31}
+.soa-combat-special-drawer{margin-top:9px;border-top:1px solid #aa8d6373;padding-top:8px}
+.soa-combat-special-drawer>summary{cursor:pointer;list-style:none;font:700 12px/1.45 system-ui;color:#684721}
+.soa-combat-special-drawer>summary::-webkit-details-marker{display:none}
+.soa-combat-special-drawer>summary:after{content:"＋";float:right}
+.soa-combat-special-drawer[open]>summary:after{content:"−"}
+.soa-combat-special-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:8px}
+.soa-combat-special-button{min-width:0;min-height:48px;padding:8px!important;font-size:12px!important;line-height:1.3!important}
+.soa-combat-special-button small{display:block;margin-top:3px;font:500 10px/1.35 system-ui;color:#f0ddb5}
+@media(max-width:360px){.soa-combat-move-panel{padding:9px}.soa-combat-special-grid{grid-template-columns:1fr}.soa-combat-target-label{grid-template-columns:1fr;gap:4px}}
