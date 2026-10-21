@@ -17,3 +17,12 @@ body.theme-alternative .soa-next-ability{margin:10px 0 0;padding:9px;background:
 .soa-class-combat-button{border-left:4px solid #d6b568!important}
 @media(max-width:390px){body.theme-alternative .soa-class-ability{grid-template-columns:1fr;gap:2px}}
 @media(min-width:490px){body.theme-alternative .soa-ability-grid{grid-template-columns:repeat(6,minmax(0,1fr))}}
+
+body.theme-alternative .soa-specialization-card{margin:15px 0;padding:13px;border:1px solid #a88856;border-radius:10px;background:#f1ddb0;color:#4d311a}
+body.theme-alternative .soa-specialization-card h3{font:700 19px/1.4 Georgia,serif;color:#51321a;margin:0 0 6px}
+.soa-specialization-choices{display:grid;grid-template-columns:1fr;gap:8px;margin-top:10px}
+.soa-specialization-choice{display:grid;gap:4px;text-align:left;padding:11px;border:1px solid #a98b58;border-radius:8px;background:#fff0cdd6;color:#50351f;cursor:pointer}
+.soa-specialization-choice:hover,.soa-specialization-choice:focus-visible{outline:2px solid #79521f;outline-offset:2px}
+.soa-specialization-choice span{font:12px/1.5 system-ui;color:#664b31}
+.soa-specialization-choice em{font:700 11px/1.5 system-ui;color:#684721;font-style:normal}
+@media(min-width:600px){.soa-specialization-choices{grid-template-columns:repeat(3,minmax(0,1fr))}}
