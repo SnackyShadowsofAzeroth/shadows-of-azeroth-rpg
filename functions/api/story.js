@@ -28,4 +28,10 @@ export async function onRequestPost({request,env}){
   return respond({story:story.slice(0,2400),model:model,usage:output.usageMetadata?{inputTokens:output.usageMetadata.promptTokenCount||0,outputTokens:output.usageMetadata.candidatesTokenCount||0}:undefined});
  }catch(e){return respond({error:e.name==="AbortError"?"AI request timed out.":"AI service temporarily unavailable."},502)}finally{clearTimeout(timeout)}
 }
-export function onRequestGet(){return respond({status:"Story Director endpoint available; POST requires an access code. AI may still require configuration."})}
+export function onRequestGet({request,env}){
+ if(!env.GEMINI_API_KEY||!env.AI_ACCESS_CODE)return respond({error:"AI Story Director is not configured."},503);
+ const origin=request.headers.get("origin");
+ if(origin&&origin!==new URL(request.url).origin)return respond({error:"Origin not allowed"},403);
+ if(request.headers.get("x-story-access")!==env.AI_ACCESS_CODE)return respond({error:"Incorrect story access code"},401);
+ return respond({status:"Cloudflare connection and AI access code verified."});
+}

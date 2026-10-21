@@ -17,13 +17,13 @@ test("Wrangler preview config points at the game assets and has a previews block
 
 test("Workers preview serves assets and reuses both Pages API handlers", async () => {
   const { default: worker } = await workerPromise;
-  const env = { ASSETS: { fetch: async () => new Response("game asset") } };
+  const env = { ASSETS: { fetch: async () => new Response("game asset") }, GEMINI_API_KEY: "test-key", AI_ACCESS_CODE: "test-code" };
   const asset = await worker.fetch(new Request("https://game.example/"), env, {});
   assert.equal(await asset.text(), "game asset");
 
-  const story = await worker.fetch(new Request("https://game.example/api/story"), env, {});
+  const story = await worker.fetch(new Request("https://game.example/api/story", { headers: { "X-Story-Access": "test-code" } }), env, {});
   assert.equal(story.status, 200);
-  assert.match((await story.json()).status, /endpoint available/i);
+  assert.match((await story.json()).status, /connection and AI access code verified/i);
 
   const campaign = await worker.fetch(new Request("https://game.example/api/campaign"), env, {});
   assert.equal(campaign.status, 200);

@@ -19,7 +19,8 @@ function group(section){
  if(["soa-chronicle","soa-party-evidence"].includes(section.id))return "quest";
  if(["soa-character-screen","soa-character-status","soa-profession-panel"].includes(section.id)||section.querySelector?.("#hpbar"))return "character";
  if(["companion-panel","soa-standalone-reputation"].includes(section.id)||section.querySelector?.("#soa-companions-content"))return "reputation";
- if(["soa-legacy-ai","soa-save-settings"].includes(section.id)||section.querySelector?.("#ai-enabled,#export"))return "settings";
+ if(["soa-legacy-ai","soa-ai-narration"].includes(section.id))return "adventure";
+ if(section.id==="soa-save-settings"||section.querySelector?.("#export"))return "settings";
  return "adventure";
 }
 function removeLegacyNavigation(){
@@ -44,7 +45,7 @@ function init(){
  document.body.classList.add("soa-tabbed");
  function render(){
   if(!document.body.classList.contains("soa-tabbed"))return;
-  for(const section of sections())section.hidden=group(section)!==active||section.dataset.soaUnavailable==="true";
+  for(const section of sections())section.hidden=group(section)!==active||section.dataset.soaUnavailable==="true"||(section.id==="soa-legacy-ai"&&window.soaAiDirector?.isConnected?.()===true);
   for(const button of buttons){const selected=button.dataset.gameTab===active;button.setAttribute("aria-current",selected?"page":"false");button.classList.toggle("active",selected)}
  }
  function select(name){

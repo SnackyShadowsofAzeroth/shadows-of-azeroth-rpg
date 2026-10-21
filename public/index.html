@@ -51,7 +51,7 @@ button.soa-social-action{margin:0;border:1px solid #54657b;background:#233248;pa
 <section class="panel" id="soa-character-status" aria-label="Character status"><div style="display:flex;justify-content:space-between;align-items:center"><h2 id="soa-player-name">Snacky Lugnuts</h2><span id="soa-player-class" class="tag">SI:7 · Combat Swords</span></div><div class="stats"><div class="stat">Health <div class="num" id="hp"></div><div class="bar"><i id="hpbar"></i></div></div><div class="stat">Energy <div class="num" id="energy"></div><div class="bar energy"><i id="enbar"></i></div></div><div class="stat wide">Gold <strong id="gold"></strong></div><div class="stat">Time <strong id="time"></strong></div><div class="stat">Alert <strong id="alert"></strong></div></div><div class="abilities" id="abilities"></div><div id="soa-equipped-slot"></div></section>
 <section class="panel" id="soa-adventure-story"><div class="eyebrow" id="chapter"></div><h2 id="title"></h2><div id="scene"></div><div id="choices"></div></section>
 <section class="panel" id="soa-party-evidence"><h2 id="soa-party-heading">Party & Evidence</h2><div id="journal" class="muted"></div></section>
-<section class="panel" id="soa-legacy-ai"><h2>AI Story Director <span class="tag">Optional · Online only</span></h2><p class="muted">Game rules and consequences remain controlled locally. The AI adds atmosphere to the current confirmed scene, never changes your save or determines outcomes.</p><label class="ai-toggle"><input type="checkbox" id="ai-enabled"> Enable AI narration</label><label class="muted" for="ai-code">Private access code (not your OpenAI API key)</label><input id="ai-code" class="ai-input" type="password" placeholder="Cloudflare AI_ACCESS_CODE" autocomplete="off"><button class="sub" id="ai-test">Test Cloudflare connection</button><label class="muted soa-legacy-narration" for="ai-prompt">Narration focus (optional)</label><input id="ai-prompt" class="ai-input soa-legacy-narration" maxlength="300" placeholder="e.g. Describe the laboratory's eerie sounds"><button id="ai-generate" class="soa-legacy-narration">Generate narration for current scene</button><div id="ai-spinner" class="ai-status soa-legacy-narration">Contacting AI Story Director…</div><p id="ai-error" class="soa-legacy-narration"></p><div id="ai-output" aria-live="polite" class="soa-legacy-narration"></div><p class="muted">Each request uses your API account's credits. An access code reduces casual misuse but is not strong user authentication. Don't share it. AI responses require internet; all existing scripted story remains offline.</p></section><section class="panel" id="soa-save-settings"><h2>Save & Settings</h2><button class="sub" id="export">Export save file</button><button class="sub" id="import">Import save file</button><input id="importfile" type="file" accept="application/json,.json" hidden><button class="sub" id="reset">Restart this prototype</button><p id="save-status" class="muted" role="status" aria-live="polite">Saved on this device.</p><button class="sub" id="save-retry" hidden>Retry save</button><p class="muted">Autosaved locally after every decision. On iPhone, use Safari → Share → Add to Home Screen. Visit while online once before playing offline.</p></section>
+<section class="panel" id="soa-legacy-ai"><h2>AI Story Director · Connection <span class="tag">Optional · Online only</span></h2><p class="muted">Game rules and consequences remain controlled locally. The AI adds atmosphere to the current confirmed scene, never changes your save or determines outcomes.</p><label class="muted" for="ai-code">Private access code (not your OpenAI API key)</label><input id="ai-code" class="ai-input" type="password" placeholder="Cloudflare AI_ACCESS_CODE" autocomplete="off"><button class="sub" id="ai-test">Test Cloudflare connection</button><p class="muted">Each request uses your API account's credits. An access code reduces casual misuse but is not strong user authentication. Don't share it. AI responses require internet; all existing scripted story remains offline.</p></section><section class="panel" id="soa-ai-narration"><h2>AI Narration <span class="tag">Optional</span></h2><label class="ai-toggle"><input type="checkbox" id="ai-enabled"> Enable AI narration</label><label class="muted" for="ai-prompt">Narration focus (optional)</label><input id="ai-prompt" class="ai-input" maxlength="300" placeholder="e.g. Describe the laboratory's eerie sounds"><button id="ai-generate">Generate narration for current scene</button><div id="ai-spinner" class="ai-status">Contacting AI Story Director…</div><p id="ai-error" role="status" aria-live="polite"></p><div id="ai-output" aria-live="polite"></div></section><section class="panel" id="soa-save-settings"><h2>Save & Settings</h2><button class="sub" id="export">Export save file</button><button class="sub" id="import">Import save file</button><input id="importfile" type="file" accept="application/json,.json" hidden><button class="sub" id="reset">Restart this prototype</button><p id="save-status" class="muted" role="status" aria-live="polite">Saved on this device.</p><button class="sub" id="save-retry" hidden>Retry save</button><p class="muted">Autosaved locally after every decision. On iPhone, use Safari → Share → Add to Home Screen. Visit while online once before playing offline.</p></section>
 <footer>Fan-made prototype · No affiliation with Blizzard Entertainment</footer>
 </main><script src="./save-rules.js"></script><script>
 "use strict";
@@ -155,6 +155,15 @@ function queueAiNarration(action){
 }
 let aiBusy=false;
 function aiStatus(message,isError=false){document.querySelector("#ai-error").textContent=message;document.querySelector("#ai-error").style.color=isError?"#d6a4a4":"#aac5b6";}
+let aiConnectionVerified=false;
+function showAiSetup(message="",focus=false){
+ aiConnectionVerified=false;
+ const panel=document.querySelector("#soa-legacy-ai");if(panel)panel.hidden=false;
+ if(message)aiStatus(message,true);
+ window.soaLayout?.select?.("adventure");window.soaLayout?.refresh?.();
+ if(focus)document.querySelector("#ai-code")?.focus();
+}
+window.soaAiDirector={isConnected:()=>aiConnectionVerified,markConnected:()=>{aiConnectionVerified=true;window.soaLayout?.refresh?.()},showSetup:showAiSetup};
 async function aiCall(test=false){
  if(aiBusy)return;
  if(!navigator.onLine){aiStatus("Offline: scripted gameplay remains available.",true);return}
@@ -164,10 +173,10 @@ async function aiCall(test=false){
  aiBusy=true;document.querySelector("#ai-spinner").style.display="block";document.querySelector("#ai-test").disabled=true;document.querySelector("#ai-generate").disabled=true;aiStatus("");
  try{
    if(test){
-    const r=await fetch("./api/story",{cache:"no-store"});
+    const r=await fetch("./api/story",{cache:"no-store",headers:{"X-Story-Access":code}});
     if(!r.ok)throw Error("Cloudflare endpoint returned "+r.status);
     const j=await r.json();
-    aiStatus((j.status||"Endpoint reachable")+" Opening Adventure.");
+    aiStatus((j.status||"Endpoint reachable")+" Setup panel hidden until the connection needs attention.");window.soaAiDirector?.markConnected?.();
     // Return to the same Adventure section as the header's Adventure navigation.
     const adventure=document.getElementById("campaign-box")||document.getElementById("scene");
     if(adventure?.scrollIntoView){
@@ -180,10 +189,10 @@ async function aiCall(test=false){
    const state={hp:s.hp,energy:s.en,money:fmtMoney(s.money),location:scene.title,alert:s.alert,notes:s.log.slice(0,10)};
    const r=await fetch("./api/story",{method:"POST",headers:{"Content-Type":"application/json","X-Story-Access":code},body:JSON.stringify({scene:scene.text,action:document.querySelector("#ai-prompt").value,state}),cache:"no-store"});
    const data=await r.json().catch(()=>({error:"Unexpected server response"}));
-   if(!r.ok)throw Error(data.error||"Server returned "+r.status);
+   if(!r.ok){if(r.status===401||r.status===403||r.status>=500)showAiSetup(data.error||"AI connection needs attention.");throw Error(data.error||"Server returned "+r.status)}
    document.querySelector("#ai-output").textContent=data.story;
    aiStatus("Narration added. Your game state was not modified.");
- }catch(err){aiStatus(err.message,true)}
+ }catch(err){aiStatus(err.message,true);if(test||err instanceof TypeError||/\b(?:401|403|5\d\d)\b/.test(err.message))showAiSetup(err.message)}
  finally{aiBusy=false;document.querySelector("#ai-spinner").style.display="none";document.querySelector("#ai-test").disabled=false;document.querySelector("#ai-generate").disabled=false}
 }
 document.querySelector("#ai-enabled").onchange=e=>{try{localStorage.setItem("soa-ai-enabled",e.target.checked?"1":"0")}catch{setSaveStatus("AI preference could not be stored; game progress is unchanged.")}};
