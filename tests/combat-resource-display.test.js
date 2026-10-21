@@ -24,3 +24,12 @@ test("the allied player combat card displays the class resource as a live progre
  assert.match(campaign,/aria-valuenow/);
  assert.match(campaign,/current\/maximum\*100/);
 });
+
+test("combat actions are integrated above story choices with a free baseline strike",()=>{
+ const draw=campaign.indexOf("drawCombatActions(box);");
+ const choices=campaign.indexOf("for(const [index,choice] of sc.choices.entries())");
+ assert.ok(draw>0&&draw<choices,"combat actions should appear inside the next-move flow before story options");
+ assert.match(campaign,/Weapon Strike · Free/);
+ assert.match(campaign,/Always available · combat exchange restores up to/);
+ assert.match(campaign,/classCooldownLeft\(ability\)/);
+});
