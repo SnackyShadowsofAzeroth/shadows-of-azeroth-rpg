@@ -243,15 +243,21 @@ test("choice resource forecasts show current reserve, cost, and post-exchange re
   assert.equal(investigate.current, 45);
   assert.equal(investigate.cost, 10);
   assert.equal(investigate.after, 45);
-  assert.match(investigate.text, /Energy cost 10 · \+10 recovered → 45\/100/);
+  assert.match(investigate.text, /Energy 45 → 45\/100 · 10 cost · \+10 recovery/);
 
   const combat = context.forecast({ type: "combat", ability: "strike", text: "Strike the Guard" });
   assert.equal(combat.cost, 15);
   assert.equal(combat.after, 40);
-  assert.match(combat.text, /Energy cost 15 · \+10 recovered → 40\/100/);
+  assert.match(combat.text, /Energy 45 → 40\/100 · 15 cost · \+10 recovery/);
+
+  context.window.soaCharacters.profile = () => ({ className: "Warrior" });
+  assert.equal(context.forecast({ type: "investigate", difficulty: "medium" }).label, "Rage");
+  context.window.soaCharacters.profile = () => ({ className: "Paladin" });
+  assert.equal(context.forecast({ type: "investigate", difficulty: "medium" }).label, "Mana");
 
   context.s.en = 8;
+  context.window.soaCharacters.profile = () => ({ className: "Rogue" });
   const unavailable = context.forecast({ type: "investigate", difficulty: "medium" });
   assert.equal(unavailable.affordable, false);
-  assert.match(unavailable.text, /Need 10 Energy · current 8\/100/);
+  assert.match(unavailable.text, /Need 10 Energy · have 8\/100/);
 });
