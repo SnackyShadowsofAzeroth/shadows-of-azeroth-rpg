@@ -60,3 +60,14 @@ test("Horde hub contracts accept, track defeats, and pay at their local board", 
   assert.ok(campaign.quests.claimed["cr-harpy"]);
   assert.equal(quests.claim(campaign, "cr-harpy", "Orgrimmar", paid.wallet).error, "Return to the issuing board after defeating the tracked target.");
 });
+
+test("verified reward notices are visible only in the scene where payment was recorded", () => {
+  const campaign = { turn: 12, quests: {} };
+  const result = quests.grantStormwindMission(campaign, 1500);
+  assert.equal(result.wallet, 51500);
+  assert.equal(quests.rewardForScene(campaign)?.receipt, "mission:stormwind-explosives-defused:v1");
+  campaign.turn++;
+  assert.equal(quests.rewardForScene(campaign), null);
+  assert.ok(campaign.quests.claimed["mission:stormwind-explosives-defused:v1"], "the permanent payment record remains saved");
+  assert.equal(campaign.quests.rewardHistory.length, 1, "the payment remains available in history");
+});

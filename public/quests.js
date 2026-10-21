@@ -111,6 +111,10 @@ const MISSIONS=[
  {id:"ironforge-saboteur",title:"Ironforge Supply Sabotage",issuer:"Ironforge Quartermaster",region:/ironforge|dun morogh/i,objective:{kind:"defeat",target:"Mountain Saboteur"},reward:{copper:21000,items:[{name:"Reinforced Explorer's Gloves",rarity:"uncommon",slot:"armor"}]},description:"Defeat the wanted saboteur and return to the quartermaster."}
 ];
 function journal(campaign){const q=ensure(campaign);q.missions||={};q.rewardHistory||=[];return q}
+function rewardForScene(campaign){
+ const q=ensure(campaign),reward=q?.lastReward;
+ return reward&&Number.isSafeInteger(reward.atTurn)&&reward.atTurn===campaign.turn?reward:null;
+}
 function missionById(id){return MISSIONS.find(m=>m.id===id)}
 function startMission(campaign,id,location){
  const mission=missionById(id),q=journal(campaign);
@@ -175,9 +179,9 @@ function panel(campaign,location,wallet,onChange){
  button.onclick=()=>{const result=q.completed[c.id]?claim(campaign,c.id,location,wallet()):accept(campaign,c.id,location);onChange(result);};
  card.append(button);wrapper.append(card);
  }
- if(q.lastReward)makeText("Latest verified payout: "+q.lastReward.title+" · +"+format(q.lastReward.copper)+(q.lastReward.items.length?" · Items: "+q.lastReward.items.join(", "):""));
+ const sceneReward=rewardForScene(campaign);if(sceneReward)makeText("Latest verified payout: "+sceneReward.title+" · +"+format(sceneReward.copper)+(sceneReward.items.length?" · Items: "+sceneReward.items.join(", "):""));
  if(q.inventory.length){const bag=document.createElement("details");const head=document.createElement("summary");head.textContent="Reward inventory · "+q.inventory.length+" items";bag.append(head);for(const item of q.inventory){const p=document.createElement("p");p.textContent=item.name+" ("+item.rarity+") · "+item.source;bag.append(p)}wrapper.append(bag)}
  return wrapper;
 }
-window.soaQuests={boardAt,definition,ensure,accept,onDefeat,claim,grantStormwindMission,panel,missionPanel,startMission,claimMission,missionDefeat,journal,format,stableRare};
+window.soaQuests={boardAt,definition,ensure,accept,onDefeat,claim,grantStormwindMission,panel,missionPanel,startMission,claimMission,missionDefeat,journal,format,stableRare,rewardForScene};
 })();
