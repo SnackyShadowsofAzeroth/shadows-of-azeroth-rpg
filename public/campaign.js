@@ -300,13 +300,13 @@ function classAbilityExchange(action,ability,targets){
  const rules=window.soaCombatRules,actor=window.soaAbilities?.get?.("hero"),stat=actor?.modifiers?.[ability.stat]||0,proficiency=actor?.proficiency||2;
  const block=rules.statBlock(target),gear=window.soaEquipment?.modifiers?.()||{},heroHP=s.hp,oldResource=s.en,oldHP=target.hp;
  if(!campaign.initiativeFor||campaign.initiativeFor!==campaign.enemyLocation){campaign.initiativeFor=campaign.enemyLocation;campaign.initiativeRoll=rules.initiative(actor?.initiative||0);campaign.enemyInitiative=rules.initiative(block.initiative)}
- let roll=null,hit=false,dealt=0,healed=0,damageType=ability.damageType||"physical",interrupted=false,guarding=ability.effect==="guard";
+ let roll=null,hit=false,dealt=0,healed=0,racialProc=null,damageType=ability.damageType||"physical",interrupted=false,guarding=ability.effect==="guard";
  if(["damage","interrupt","drain","riposte"].includes(ability.effect)){
   roll=ability.effect==="riposte"?null:rules.attack(proficiency+stat+(gear.attack||0),block.ac,{advantage:campaign.flags?.advantage?1:0});
   hit=ability.effect==="riposte"?true:!!roll?.hit;
   const rolled=ability.effect==="riposte"?rules.damage(ability.die,ability.flat+stat+(gear.damage||0)):rules.damage(ability.die,ability.flat+stat+(gear.damage||0)+(ability.bonusDamage||0),!!roll?.critical);
   dealt=hit?Math.min(target.hp,rules.mitigate(rolled,damageType,block)):0;target.hp=Math.max(0,target.hp-dealt);
-  const racialProc=touchOfTheGrave(target,hit,damageType);if(racialProc){dealt+=racialProc.damage;healed+=racialProc.healing}
+  racialProc=touchOfTheGrave(target,hit,damageType);if(racialProc){dealt+=racialProc.damage;healed+=racialProc.healing}
   if(ability.effect==="drain"&&dealt){const before=s.hp;s.hp=Math.min(heroHealthCap(),s.hp+Math.max(1,Math.floor(dealt/2)));healed=s.hp-before}
   interrupted=ability.effect==="interrupt"&&hit;
  }else if(ability.effect==="heal"){
