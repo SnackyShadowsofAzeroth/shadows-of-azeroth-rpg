@@ -355,11 +355,28 @@ function organizeGameSections(){
  const footer=main.querySelector(":scope > footer");
  ordered.forEach(panel=>main.insertBefore(panel,footer||null));
 }
+function specializationCard(){
+ const level=window.soaProgression?.level?.()||active.startLevel||10;
+ const box=make("section",undefined,"soa-specialization-card");box.append(make("h3","Specialization"));
+ const api=window.soaSpecializations;if(!api){box.append(make("p","Specializations are unavailable right now.","muted"));return box}
+ const chosen=api.selected(active),choices=api.choices(active.className);
+ if(level<10){box.append(make("p","Unlocks at level 10. Choose a talent tree to shape your "+active.className+" and learn its signature ability.","muted"));return box}
+ if(choices.some(x=>x.name===chosen)){
+  const spec=choices.find(x=>x.name===chosen);
+  box.append(make("p",chosen+" · "+spec.description));
+  const signature=spec.ability,row=make("div",undefined,"soa-class-ability");row.append(make("strong",signature.name),make("span",signature.description+" · "+signature.cost+" "+(window.soaResources?.forClass?.(active.className)?.label||"Resource")+" · signature ability"));box.append(row);
+  return box
+ }
+ box.append(make("p","Choose a talent tree. Your choice unlocks its signature ability and is saved to this character."));
+ const list=make("div",undefined,"soa-specialization-choices");
+ for(const spec of choices){const button=make("button");button.type="button";button.className="soa-specialization-choice";button.append(make("strong",spec.name),make("span",spec.description),make("em","Signature · "+spec.ability.name+" · "+spec.ability.cost+" "+(window.soaResources?.forClass?.(active.className)?.label||"Resource")));button.onclick=()=>{const old=active.specialization;active.specialization=spec.name;if(!commitRoster()){active.specialization=old;window.alert?.("Could not save specialization. Check available device storage.");return}drawProfessions()};list.append(button)}
+ box.append(list);return box
+}
 function drawProfessions(){
  const root=get("soa-profession-panel");if(!root)return;get("soa-character-status")?.querySelectorAll(".soa-ability-sheet").forEach(sheet=>sheet.remove());root.replaceChildren();
  root.append(make("div","CHARACTER RECORD","soa-roster-kicker"),make("h2",active.name+" · "+active.race+" "+active.className));
  const abilityCard=window.soaAbilities?.card?.("hero");if(abilityCard)root.append(abilityCard);
- const classAbilities=window.soaClassAbilities?.card?.(active.className,window.soaProgression?.level?.()||active.startLevel||10);if(classAbilities)root.append(classAbilities);const racialAbilities=window.soaRacialAbilities?.card?.(active.race);if(racialAbilities)root.append(racialAbilities);
+ const level=window.soaProgression?.level?.()||active.startLevel||10;root.append(specializationCard());const classAbilities=window.soaClassAbilities?.card?.(active.className,level);if(classAbilities)root.append(classAbilities);const racialAbilities=window.soaRacialAbilities?.card?.(active.race);if(racialAbilities)root.append(racialAbilities);
  window.soaProgression?.refresh?.();
  window.soaPortraits?.refresh?.();
  const meta=make("p",factionDisplay(active)+" · "+(active.specialization||"Unchosen"),"muted");root.append(meta);
