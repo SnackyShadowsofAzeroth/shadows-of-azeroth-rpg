@@ -469,8 +469,9 @@ function hydrateKnownAllyHP(){
 function combatParty(){
  hydrateKnownAllyHP();
  const list=Array.isArray(campaign?.combatAllies)?campaign.combatAllies:[];
- const isSn=window.soaCharacters?.profile?.()?.id==="snacky";
- return [{name:window.soaCharacters?.profile?.()?.name||"Your hero",hp:s.hp,maxHp:100,player:true},...list.filter(e=>e&&typeof e.name==="string").slice(0,6).filter(e=>!isSn||!/^Snacky Lugnuts$/i.test(e.name)).map(e=>({...e,player:false}))];
+ const profile=window.soaCharacters?.profile?.();
+ const isSn=profile?.id==="snacky";
+ return [{name:profile?.name||"Your hero",hp:s.hp,maxHp:100,player:true,className:profile?.className,form:profile?.form,resource:s.en,maxResource:100},...list.filter(e=>e&&typeof e.name==="string").slice(0,6).filter(e=>!isSn||!/^Snacky Lugnuts$/i.test(e.name)).map(e=>({...e,player:false}))];
 }
 function reconcileCombatAllies(scene){
  if(!Array.isArray(scene?.allies))return;
@@ -594,6 +595,20 @@ function drawEnemyStatus(box){
   if(Number.isFinite(ally.hp)&&Number.isFinite(ally.maxHp)&&ally.maxHp>0){
    const bar=document.createElement("div");bar.className="soa-combat-ally-rail";bar.setAttribute("role","progressbar");bar.setAttribute("aria-label",ally.name+" health");bar.setAttribute("aria-valuemin","0");bar.setAttribute("aria-valuemax",String(ally.maxHp));bar.setAttribute("aria-valuenow",String(ally.hp));
    const fill=document.createElement("div");fill.className="soa-combat-ally-fill";fill.style.width=Math.max(0,Math.min(100,ally.hp/ally.maxHp*100))+"%";bar.append(fill);item.append(bar);
+  }
+  if(ally.player){
+   const resource=window.soaResources?.forClass?.(ally.className,ally.form);
+   if(resource){
+    const current=Math.max(0,Math.min(100,Number(ally.resource)||0));
+    const maximum=Math.max(1,Number(ally.maxResource)||100);
+    const meter=document.createElement("div");meter.className="soa-combat-resource";
+    const label=document.createElement("div");label.className="soa-combat-resource-heading";
+    const labelName=document.createElement("strong");labelName.textContent=resource.label;
+    const value=document.createElement("span");value.textContent=current+" / "+maximum;
+    label.append(labelName,value);
+    const rail=document.createElement("div");rail.className="soa-combat-resource-rail";rail.dataset.resource=resource.key;rail.setAttribute("role","progressbar");rail.setAttribute("aria-label",ally.name+" "+resource.label);rail.setAttribute("aria-valuemin","0");rail.setAttribute("aria-valuemax",String(maximum));rail.setAttribute("aria-valuenow",String(current));
+    const fill=document.createElement("div");fill.className="soa-combat-resource-fill";fill.style.width=Math.max(0,Math.min(100,current/maximum*100))+"%";rail.append(fill);meter.append(label,rail);item.append(meter);
+   }
   }
   const statId=ally.player?"hero":({"Pippa Sparkwhistle":"pippa","Bromli Ironkeg":"bromli","Lethariel Moonguard":"lethariel"})[ally.name];
   const ac=statId?window.soaAbilities?.get?.(statId)?.armorClass:null;
