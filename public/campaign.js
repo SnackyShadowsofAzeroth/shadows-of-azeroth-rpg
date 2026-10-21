@@ -1,5 +1,5 @@
 (()=>{"use strict";
-const KEY="soa-campaign-v1", MAX=24;
+const KEY="soa-campaign-v1", MAX=24, COMBAT_RESOURCE_RECOVERY=25, ACTION_RESOURCE_RECOVERY=10;
 let campaign=null,busy=false,enabled=false,customDraft="",customType="investigate",customSocialSkill="auto",statusMessage="",campaignSaveFailed=false,campaignLoadBlocked=false,campaignStorageReadFailed=false,selectedCombatTarget=null,selectedAllyTarget=null;
 const get=id=>document.getElementById(id);
 function localGet(key){try{return localStorage.getItem(key)}catch{campaignStorageReadFailed=true;return null}}
@@ -111,7 +111,7 @@ function socialTarget(action,skill){
 }
 function actionOdds(action){
  const t=action.type, text=String(action.text||"").toLowerCase();
- const costs={stealth:20,engineering:10,social:0,combat:35,investigate:10,move:0,rest:0};
+ const costs={stealth:20,engineering:10,social:0,combat:20,investigate:10,move:0,rest:0};
  const relevant=/\b(?:pick|lock|tinker|wire|mechanism|repair|device|engineer|disable trap)\b/.test(text)?"engineering":/\b(?:hide|sneak|stealth|shadow|slip past|ambush|conceal|pickpocket)\b/.test(text)?"stealth":/\b(?:search|inspect|investigate|examine|study|track|deduce|analyze|observe)\b/.test(text)?"investigate":/\b(?:climb|leap|jump|sprint|run|swim|dodge|balance)\b/.test(text)?"move":/\b(?:persuade|convince|negotiate|discuss|appeal|talk)\b/.test(text)?"social":/\b(?:rest|sleep|recover)\b/.test(text)?"rest":t;
  const base={stealth:68,engineering:64,social:65,combat:55,investigate:70,move:76,rest:83}[relevant]??65;
  const modifier=window.soaAbilities?.modifier?.(relevant)||0;
@@ -140,10 +140,10 @@ function dicePreview(action){
   const ability=resolvedCombatAbility(action);
   const profile=window.soaCharacters?.profile?.(),level=window.soaProgression?.level?.()||profile?.startLevel||1;
   const cost=window.soaClassAbilities?.costOf?.(ability,profile?.className,level)??25;
-  if(ability==="evasion")return {primary:"🎲 No attack roll",secondary:"Defensive exchange · "+cost+" "+resourceName()+" cost · up to +10 "+resourceName()+" recovery"};
+  if(ability==="evasion")return {primary:"🎲 No attack roll",secondary:"Defensive exchange · "+cost+" "+resourceName()+" cost · up to +25 "+resourceName()+" recovery"};
   const attacker=window.soaAbilities?.get?.("hero");
   const gear=window.soaEquipment?.modifiers?.()||{};
-  if(ability==="riposte")return {primary:"🎲 Automatic hit after parry",secondary:(24+(attacker?.modifiers?.DEX||0)+(gear.damage||0))+" raw damage on a valid Riposte · "+cost+" "+resourceName()+" cost · up to +10 recovery"};
+  if(ability==="riposte")return {primary:"🎲 Automatic hit after parry",secondary:(24+(attacker?.modifiers?.DEX||0)+(gear.damage||0))+" raw damage on a valid Riposte · "+cost+" "+resourceName()+" cost · up to +25 recovery"};
   const attackAbility=attacker?.className==="Warrior"||attacker?.className==="Paladin"?"STR":"DEX";
   const attackModifier=attacker?.modifiers?.[attackAbility]??2;
   const bonus=(attacker?.proficiency??2)+attackModifier+(gear.attack||0);
@@ -152,7 +152,7 @@ function dicePreview(action){
   const weapon=window.soaCombatRules?.weapon?.(attacker,ability)||{die:ability==="kick"?6:10,flat:ability==="kick"?4+(attacker?.modifiers?.DEX||0):10+(attacker?.modifiers?.DEX||0)};
   
   const rollLabel=campaign?.flags?.advantage?"d20 with advantage + ":"d20 + ";
-  return {primary:"🎲 "+rollLabel+bonus+" vs AC "+ac+" · natural 20 critical",secondary:"1d"+weapon.die+" + "+(weapon.flat+(gear.damage||0))+" raw damage · "+cost+" "+resourceName()+" cost · up to +10 recovery"+(ability==="kick"?" · interrupt on hit":"")};
+  return {primary:"🎲 "+rollLabel+bonus+" vs AC "+ac+" · natural 20 critical",secondary:"1d"+weapon.die+" + "+(weapon.flat+(gear.damage||0))+" raw damage · "+cost+" "+resourceName()+" cost · up to +25 recovery"+(ability==="kick"?" · interrupt on hit":"")};
  }
  const skill=socialSkill(action);
  if(skill){
@@ -168,8 +168,8 @@ function resourceForecast(action){
  let cost=0;
  if(action.type==="combat"&&livingEnemies().length){const ability=resolvedCombatAbility(action),level=window.soaProgression?.level?.()||profile?.startLevel||1;cost=window.soaClassAbilities?.costOf?.(ability,profile?.className,level)??25}
  else if(!socialSkill(action))cost=actionOdds(action).cost;
- const affordable=current>=cost,after=affordable?Math.min(100,current-cost+10):current;
- const text=affordable?(label+" "+current+" → "+after+"/100 · "+(cost?cost+" cost":"no cost")+" · +10 recovery"):"Need "+cost+" "+label+" · have "+current+"/100";
+ const recovery=action.type==="combat"&&livingEnemies().length?COMBAT_RESOURCE_RECOVERY:ACTION_RESOURCE_RECOVERY,affordable=current>=cost,after=affordable?Math.min(100,current-cost+recovery):current;
+ const text=affordable?(label+" "+current+" → "+after+"/100 · "+(cost?cost+" cost":"no cost")+" · +"+recovery+" recovery"):"Need "+cost+" "+label+" · have "+current+"/100";
  return{label,current,max:100,cost,after,affordable,text};
 }
 function socialCheck(action,skill){
@@ -277,7 +277,7 @@ function companionExchange(action){
  }
  campaign.supportCooldowns[id]=round+spec.cooldown+1;
  campaign.combatRound=round+1;
- s.time++;s.en=Math.min(100,s.en+10);
+ s.time++;s.en=Math.min(100,s.en+COMBAT_RESOURCE_RECOVERY);
  const enemy=foes.find(e=>e.hp>0);
  let retaliation="";
  if(enemy){
@@ -328,7 +328,7 @@ function classAbilityExchange(action,ability,targets){
  const retaliates=!!enemyAttack?.hit,amount=retaliates?rules.damage(block.die,2,enemyAttack.critical):0;
  const taken=retaliates?Math.min(Math.max(0,s.hp-1),amount):0;s.hp=Math.min(heroHealthCap(),Math.max(1,s.hp-taken)+racialRegeneration());
  const parry=!!enemyAttack&&!enemyAttack.hit&&!defeated&&!guarding&&enemyAttack.total<heroAC&&enemyAttack.die>1&&Math.random()<.5;
- campaign.parryReady=parry;s.en=Math.min(100,s.en-ability.cost+10);s.time++;campaign.combatRound=(Number(campaign.combatRound)||0)+1;
+ campaign.parryReady=parry;s.en=Math.min(100,s.en-ability.cost+COMBAT_RESOURCE_RECOVERY);s.time++;campaign.combatRound=(Number(campaign.combatRound)||0)+1;
  const event={round:campaign.combatRound,ability:ability.id,racialProc,attackRoll:roll?.die??null,targetAC:block.ac,enemyType:block.type,damageType,initiative:campaign.initiativeRoll,enemyInitiative:campaign.enemyInitiative,attackTotal:roll?.total??null,critical:!!roll?.critical,enemyRoll:enemyAttack?.die??null,enemyTotal:enemyAttack?.total??null,defenderAC:heroAC,target:target.name,dealt,taken,hit,defeated,enemyBefore:oldHP,enemyAfter:target.hp,enemyMax:target.maxHp,heroBefore:heroHP,heroAfter:s.hp,energyBefore:oldResource,energyAfter:s.en,recipient:name,recipientBefore:heroHP,recipientAfter:s.hp,healed,parry};
  campaign.lastExchange=event;recordCombatDelta(target,dealt,taken,name,heroHP,s.hp);
  if(defeated){window.soaQuests?.onDefeat?.(campaign,target.name);if(!encounter.defeated.some(x=>x.name===target.name))encounter.defeated.push({name:target.name,maxHp:target.maxHp});if(!livingEnemies().length)encounter.pendingVictory=true;if(selectedCombatTarget===target.name)selectedCombatTarget=null;campaign.defeatedEnemies||=[];campaign.defeatedEnemies.push(String(campaign.enemyLocation||campaign.scene?.location||"")+"|"+target.name.toLowerCase());campaign.defeatedEnemies=campaign.defeatedEnemies.slice(-80)}
@@ -413,7 +413,7 @@ function fightExchange(action){
  if(!allyRecipient&&racialRegeneration())s.hp=Math.min(heroHealthCap(),s.hp+racialRegeneration());
  const parry=!!enemyAttack&&!enemyAttack.hit&&!defeated&&ability!=="evasion"&&enemyAttack.total<defenderAC&&enemyAttack.die>1&&defendingAlly===null&&Math.random()<.5;
  campaign.parryReady=parry;
- s.en=Math.min(100,s.en-price+10);s.time++;
+ s.en=Math.min(100,s.en-price+COMBAT_RESOURCE_RECOVERY);s.time++;
  campaign.combatRound=(Number(campaign.combatRound)||0)+1;
  const event={round:campaign.combatRound,ability,racialProc,healed:racialProc?.healing||0,attackRoll,hitTarget,targetAC,enemyType:block.type,damageType:arm.type,initiative:campaign.initiativeRoll,enemyInitiative:campaign.enemyInitiative,attackTotal:playerAttack?.total??null,critical:!!playerAttack?.critical,enemyRoll:enemyAttack?.die??null,enemyTotal:enemyAttack?.total??null,defenderAC,target:target.name,dealt,taken,hit,defeated,enemyBefore:oldHP,enemyAfter:target.hp,enemyMax:target.maxHp,heroBefore:heroHP,heroAfter:s.hp,energyBefore:oldEnergy,energyAfter:s.en,recipient:receivedName,recipientBefore,recipientAfter,parry};
  campaign.lastExchange=event;
@@ -701,7 +701,7 @@ function drawEnemyStatus(box){
  }
  const skills=document.createElement("div");skills.className="soa-combat-abilities";
  const abilitiesLabel=document.createElement("strong");abilitiesLabel.className="soa-class-combat-heading";abilitiesLabel.textContent="Actions · Level "+(window.soaProgression?.level?.()||1);skills.append(abilitiesLabel);const currentTarget=document.createElement("p");currentTarget.className="soa-combat-current-target";currentTarget.textContent="Target · "+(enemies.find(e=>e.name===selectedCombatTarget)?.name||enemies[0]?.name||"none selected");skills.append(currentTarget);
- const available=[{id:"strike",name:"Weapon Strike",cost:25,effect:"damage",description:"A standard weapon attack."},...(window.soaClassAbilities?.available?.(window.soaCharacters?.profile?.()?.className,window.soaProgression?.level?.()||1)||[])];
+ const available=[{id:"strike",name:"Weapon Strike",cost:15,effect:"damage",description:"A standard weapon attack."},...(window.soaClassAbilities?.available?.(window.soaCharacters?.profile?.()?.className,window.soaProgression?.level?.()||1)||[])];
  for(const ability of available){
   const {id,name,cost,effect}=ability;
   const button=document.createElement("button");button.type="button";button.className="soa-ability-button";
@@ -846,7 +846,7 @@ function draw(){
   notice.onclick=()=>get("soa-chronicle")?.scrollIntoView({behavior:window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches?"auto":"smooth",block:"start"});
   box.append(notice);
  }
- const reserve=document.createElement("section");reserve.className="soa-choice-resource";reserve.dataset.resource=resourceKey();reserve.setAttribute("aria-label","Current "+resourceName());const reserveHeading=document.createElement("div");reserveHeading.className="soa-choice-resource-heading";const reserveLabel=document.createElement("strong");reserveLabel.textContent="CURRENT "+resourceName().toUpperCase();const reserveValue=document.createElement("span");const reserveCurrent=Math.max(0,Math.min(100,Number(s.en)||0));reserveValue.textContent=reserveCurrent+" / 100";reserveHeading.append(reserveLabel,reserveValue);const reserveTrack=document.createElement("div");reserveTrack.className="soa-choice-resource-track";reserveTrack.dataset.resource=resourceKey();reserveTrack.setAttribute("role","progressbar");reserveTrack.setAttribute("aria-label",resourceName()+" reserve");reserveTrack.setAttribute("aria-valuemin","0");reserveTrack.setAttribute("aria-valuemax","100");reserveTrack.setAttribute("aria-valuenow",String(reserveCurrent));const reserveFill=document.createElement("div");reserveFill.className="soa-choice-resource-fill";reserveFill.style.width=reserveCurrent+"%";reserveTrack.append(reserveFill);const reserveHint=document.createElement("small");reserveHint.textContent="+10 "+resourceName()+" returns after each completed exchange; the costs below show your projected balance.";reserve.append(reserveHeading,reserveTrack,reserveHint);box.append(reserve);
+ const reserve=document.createElement("section");reserve.className="soa-choice-resource";reserve.dataset.resource=resourceKey();reserve.setAttribute("aria-label","Current "+resourceName());const reserveHeading=document.createElement("div");reserveHeading.className="soa-choice-resource-heading";const reserveLabel=document.createElement("strong");reserveLabel.textContent="CURRENT "+resourceName().toUpperCase();const reserveValue=document.createElement("span");const reserveCurrent=Math.max(0,Math.min(100,Number(s.en)||0));reserveValue.textContent=reserveCurrent+" / 100";reserveHeading.append(reserveLabel,reserveValue);const reserveTrack=document.createElement("div");reserveTrack.className="soa-choice-resource-track";reserveTrack.dataset.resource=resourceKey();reserveTrack.setAttribute("role","progressbar");reserveTrack.setAttribute("aria-label",resourceName()+" reserve");reserveTrack.setAttribute("aria-valuemin","0");reserveTrack.setAttribute("aria-valuemax","100");reserveTrack.setAttribute("aria-valuenow",String(reserveCurrent));const reserveFill=document.createElement("div");reserveFill.className="soa-choice-resource-fill";reserveFill.style.width=reserveCurrent+"%";reserveTrack.append(reserveFill);const reserveHint=document.createElement("small");reserveHint.textContent="Combat restores +25 "+resourceName()+" after each completed exchange; other actions restore +10. Costs below show your projected balance.";reserve.append(reserveHeading,reserveTrack,reserveHint);box.append(reserve);
  const choicesHeader=document.createElement("div");choicesHeader.className="soa-choices-heading";
  const title=document.createElement("strong");title.textContent="Choose your next move";
  const count=document.createElement("span");count.textContent=sc.choices.length+" paths + resources + custom";
