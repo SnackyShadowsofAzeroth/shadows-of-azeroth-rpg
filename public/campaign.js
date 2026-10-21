@@ -305,6 +305,7 @@ function classAbilityExchange(action,ability,targets){
   hit=ability.effect==="riposte"?true:!!roll?.hit;
   const rolled=ability.effect==="riposte"?rules.damage(ability.die,ability.flat+stat+(gear.damage||0)):rules.damage(ability.die,ability.flat+stat+(gear.damage||0)+(ability.bonusDamage||0),!!roll?.critical);
   dealt=hit?Math.min(target.hp,rules.mitigate(rolled,damageType,block)):0;target.hp=Math.max(0,target.hp-dealt);
+  const racialProc=touchOfTheGrave(target,hit,damageType);if(racialProc){dealt+=racialProc.damage;healed+=racialProc.healing}
   if(ability.effect==="drain"&&dealt){const before=s.hp;s.hp=Math.min(heroHealthCap(),s.hp+Math.max(1,Math.floor(dealt/2)));healed=s.hp-before}
   interrupted=ability.effect==="interrupt"&&hit;
  }else if(ability.effect==="heal"){
@@ -317,11 +318,11 @@ function classAbilityExchange(action,ability,targets){
  const taken=retaliates?Math.min(Math.max(0,s.hp-1),amount):0;s.hp=Math.min(heroHealthCap(),Math.max(1,s.hp-taken)+racialRegeneration());
  const parry=!!enemyAttack&&!enemyAttack.hit&&!defeated&&!guarding&&enemyAttack.total<heroAC&&enemyAttack.die>1&&Math.random()<.5;
  campaign.parryReady=parry;s.en=Math.min(100,s.en-ability.cost+10);s.time++;campaign.combatRound=(Number(campaign.combatRound)||0)+1;
- const event={round:campaign.combatRound,ability:ability.id,attackRoll:roll?.die??null,targetAC:block.ac,enemyType:block.type,damageType,initiative:campaign.initiativeRoll,enemyInitiative:campaign.enemyInitiative,attackTotal:roll?.total??null,critical:!!roll?.critical,enemyRoll:enemyAttack?.die??null,enemyTotal:enemyAttack?.total??null,defenderAC:heroAC,target:target.name,dealt,taken,hit,defeated,enemyBefore:oldHP,enemyAfter:target.hp,enemyMax:target.maxHp,heroBefore:heroHP,heroAfter:s.hp,energyBefore:oldResource,energyAfter:s.en,recipient:name,recipientBefore:heroHP,recipientAfter:s.hp,healed,parry};
+ const event={round:campaign.combatRound,ability:ability.id,racialProc,attackRoll:roll?.die??null,targetAC:block.ac,enemyType:block.type,damageType,initiative:campaign.initiativeRoll,enemyInitiative:campaign.enemyInitiative,attackTotal:roll?.total??null,critical:!!roll?.critical,enemyRoll:enemyAttack?.die??null,enemyTotal:enemyAttack?.total??null,defenderAC:heroAC,target:target.name,dealt,taken,hit,defeated,enemyBefore:oldHP,enemyAfter:target.hp,enemyMax:target.maxHp,heroBefore:heroHP,heroAfter:s.hp,energyBefore:oldResource,energyAfter:s.en,recipient:name,recipientBefore:heroHP,recipientAfter:s.hp,healed,parry};
  campaign.lastExchange=event;recordCombatDelta(target,dealt,taken,name,heroHP,s.hp);
  if(defeated){window.soaQuests?.onDefeat?.(campaign,target.name);if(!encounter.defeated.some(x=>x.name===target.name))encounter.defeated.push({name:target.name,maxHp:target.maxHp});if(!livingEnemies().length)encounter.pendingVictory=true;if(selectedCombatTarget===target.name)selectedCombatTarget=null;campaign.defeatedEnemies||=[];campaign.defeatedEnemies.push(String(campaign.enemyLocation||campaign.scene?.location||"")+"|"+target.name.toLowerCase());campaign.defeatedEnemies=campaign.defeatedEnemies.slice(-80)}
  const effect=guarding?"evades the incoming attack":healed?"restores "+healed+" HP":hit?"hits "+target.name+" for "+dealt+" damage":ability.effect==="heal"?"restores no health":"misses "+target.name;
- return (hit||guarding||healed?"Success":"Complication")+": "+name+" uses "+ability.name+" and "+effect+". "+(roll?"Attack d20 "+roll.die+" + "+(proficiency+stat+(gear.attack||0))+" vs AC "+block.ac+". ":"")+ (retaliates?target.name+" retaliates for "+taken+" HP.":"No damage received.")+" "+resource+" "+oldResource+" → "+s.en+". Player HP "+heroHP+" → "+s.hp+". Exactly one combat exchange resolved.";
+ return (hit||guarding||healed?"Success":"Complication")+": "+name+" uses "+ability.name+" and "+effect+". "+(racialProc?"Touch of the Grave deals "+racialProc.damage+" Shadow damage and restores "+racialProc.healing+" HP. ":"")+(roll?"Attack d20 "+roll.die+" + "+(proficiency+stat+(gear.attack||0))+" vs AC "+block.ac+". ":"")+ (retaliates?target.name+" retaliates for "+taken+" HP.":"No damage received.")+" "+resource+" "+oldResource+" → "+s.en+". Player HP "+heroHP+" → "+s.hp+". Exactly one combat exchange resolved.";
 }
 function fightExchange(action){
  if(["bromli_guard","pippa_snare","lethariel_heal"].includes(action.ability))return companionExchange(action);
@@ -366,8 +367,9 @@ function fightExchange(action){
  const damageModifier=dex;
  const arm=rules.weapon(actor,ability);
  const rolled=ability==="riposte"?24+damageModifier+(gearBonus.damage||0):ability==="evasion"?0:rules.damage(arm.die,arm.flat+(gearBonus.damage||0),!!playerAttack?.critical);
- const dealt=hit?Math.min(target.hp,rules.mitigate(rolled,arm.type,block)):0;
+ let dealt=hit?Math.min(target.hp,rules.mitigate(rolled,arm.type,block)):0;
  target.hp=Math.max(0,target.hp-dealt);
+ const racialProc=touchOfTheGrave(target,hit,arm.type);if(racialProc)dealt+=racialProc.damage;
  const defeated=target.hp===0;
  const interrupted=ability==="kick"&&hit;
  const heroAC=actor?.armorClass||12;
@@ -401,7 +403,7 @@ function fightExchange(action){
  campaign.parryReady=parry;
  s.en=Math.min(100,s.en-price+10);s.time++;
  campaign.combatRound=(Number(campaign.combatRound)||0)+1;
- const event={round:campaign.combatRound,ability,attackRoll,hitTarget,targetAC,enemyType:block.type,damageType:arm.type,initiative:campaign.initiativeRoll,enemyInitiative:campaign.enemyInitiative,attackTotal:playerAttack?.total??null,critical:!!playerAttack?.critical,enemyRoll:enemyAttack?.die??null,enemyTotal:enemyAttack?.total??null,defenderAC,target:target.name,dealt,taken,hit,defeated,enemyBefore:oldHP,enemyAfter:target.hp,enemyMax:target.maxHp,heroBefore:heroHP,heroAfter:s.hp,energyBefore:oldEnergy,energyAfter:s.en,recipient:receivedName,recipientBefore,recipientAfter,parry};
+ const event={round:campaign.combatRound,ability,racialProc,healed:racialProc?.healing||0,attackRoll,hitTarget,targetAC,enemyType:block.type,damageType:arm.type,initiative:campaign.initiativeRoll,enemyInitiative:campaign.enemyInitiative,attackTotal:playerAttack?.total??null,critical:!!playerAttack?.critical,enemyRoll:enemyAttack?.die??null,enemyTotal:enemyAttack?.total??null,defenderAC,target:target.name,dealt,taken,hit,defeated,enemyBefore:oldHP,enemyAfter:target.hp,enemyMax:target.maxHp,heroBefore:heroHP,heroAfter:s.hp,energyBefore:oldEnergy,energyAfter:s.en,recipient:receivedName,recipientBefore,recipientAfter,parry};
  campaign.lastExchange=event;
  recordCombatDelta(target,dealt,taken,receivedName,recipientBefore,recipientAfter);
  if(defeated){
@@ -418,7 +420,7 @@ function fightExchange(action){
   " Enemy "+target.name+" HP "+oldHP+"/"+target.maxHp+" → "+target.hp+"/"+target.maxHp+". "+
   (retaliates?target.name+" retaliates against "+receivedName+" for "+taken+" HP ("+recipientBefore+" → "+recipientAfter+").":"No damage received.")+
   " Player HP "+heroHP+" → "+s.hp+"; "+resourceName()+" "+oldEnergy+" → "+s.en+"."+
-  (defeated?" Opponent defeated.":"")+" Exactly ONE consequential combat exchange resolved. No automatic loot, extra turns, or unconfirmed healing.";
+  (racialProc?" Touch of the Grave erupts for "+racialProc.damage+" Shadow damage and restores "+racialProc.healing+" HP.":"")+(defeated?" Opponent defeated.":"")+" Exactly ONE consequential combat exchange resolved. No automatic loot, extra turns, or unconfirmed healing.";
  return (hit||ability==="evasion"?"Success":"Complication")+": Combat exchange "+campaign.combatRound+": "+report;
 }
 function updateLivingEnemies(scene){
@@ -508,6 +510,7 @@ function reconcileCombatAllies(scene){
  campaign.combatAllies=incoming;campaign.allyLocation=String(scene.location||"");
  hydrateKnownAllyHP();
 }
+function touchOfTheGrave(target,hit,damageType){const hero=window.soaCharacters?.profile?.();const passive=window.soaRacialAbilities?.passives?.(hero?.race)?.touchOfTheGrave;if(!passive||!hit||!["physical","slashing","piercing","bludgeoning"].includes(damageType)||Math.random()>=passive.chance)return null;const level=window.soaProgression?.level?.()||hero?.startLevel||1,rules=window.soaCombatRules,rolled=rules.damage(passive.die,Math.floor(Math.max(0,level-1)/passive.levelScaling)),dealt=Math.min(target.hp,rules.mitigate(rolled,"shadow",rules.statBlock(target)));target.hp=Math.max(0,target.hp-dealt);const before=s.hp,cap=100+(window.soaRacialAbilities?.passives?.(hero.race)?.maxHp||0);s.hp=Math.min(cap,s.hp+dealt);return{damage:dealt,healing:s.hp-before};}
 function recordCombatDelta(enemy,dealt,taken,recipient,recipientBefore,recipientAfter){
  const log=Array.isArray(campaign.combatLog)?campaign.combatLog:[];
  log.push({round:campaign.combatRound,events:[
