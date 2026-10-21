@@ -140,7 +140,7 @@ function render(){save();window.soaEquipment?.renderStatus?.();const resource=cu
    const text=document.createElement("p");text.textContent=last.enemy+": "+last.before+" → "+last.after+"/"+last.max+" HP · Damage dealt "+last.dealt+". Damage received "+last.received+" · Your HP "+last.heroBefore+" → "+last.heroAfter+".";report.append(text);combatPane.append(report);
   }
  }
- const root=document.querySelector("#choices");root.replaceChildren();for(const [index,c] of n.opts.entries()){const b=document.createElement("button");b.className=c.level||"low";b.textContent=String.fromCharCode(65+index)+") "+c.label;b.onclick=()=>doChoice(c);root.append(b)}document.querySelector("#soa-party-heading").textContent=s.id==="new-hero-start"?"Solo Journey & Supplies":"Party & Evidence";document.querySelector("#journal").textContent="Recent findings: "+s.log.join(" · ")}
+ const root=document.querySelector("#choices");root.replaceChildren();for(const [index,c] of n.opts.entries()){const b=document.createElement("button");b.className=c.level||"low";b.textContent=String.fromCharCode(65+index)+") "+c.label;b.onclick=()=>doChoice(c);root.append(b)}document.querySelector("#soa-party-heading").textContent=s.id==="new-hero-start"?"Solo Journey & Supplies":"Evidence & Discoveries";document.querySelector("#journal").textContent="Recent findings: "+s.log.join(" · ")}
 document.querySelector("#export").onclick=()=>{if(saveBlocked){alert("The existing save could not be validated. Import a known good backup before exporting.");return}const blob=new Blob([JSON.stringify(s,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="shadows-of-azeroth-save.json";a.click();setTimeout(()=>URL.revokeObjectURL(url),3000)};
 document.querySelector("#import").onclick=()=>document.querySelector("#importfile").click();
 document.querySelector("#importfile").onchange=async e=>{const f=e.target.files[0];if(!f)return;try{if(f.size>1024*1024)throw Error("Save file is larger than 1 MB.");const data=window.soaSaveRules.validateOfflineSave(JSON.parse(await f.text()));if(!confirm("Replace the current offline adventure with this save?"))return;if(!replaceSave(data))throw Error("The current device could not store the imported save.");render();alert("Save imported successfully.")}catch(err){alert("Cannot load save: "+err.message)}finally{e.target.value=""}};
@@ -162,7 +162,7 @@ function showAiSetup(message="",focus=false){
  aiConnectionVerified=false;
  const panel=document.querySelector("#soa-legacy-ai");if(panel)panel.hidden=false;
  if(message)aiStatus(message,true);
- window.soaLayout?.select?.("adventure");window.soaLayout?.refresh?.();
+ window.soaLayout?.select?.("settings");window.soaLayout?.refresh?.();
  if(focus)document.querySelector("#ai-code")?.focus();
 }
 window.soaAiDirector={isConnected:()=>aiConnectionVerified,markConnected:()=>{aiConnectionVerified=true;window.soaLayout?.refresh?.()},showSetup:showAiSetup};
@@ -179,7 +179,8 @@ async function aiCall(test=false){
     if(!r.ok)throw Error("Cloudflare endpoint returned "+r.status);
     const j=await r.json();
     aiStatus((j.status||"Endpoint reachable")+" Setup panel hidden until the connection needs attention.");window.soaAiDirector?.markConnected?.();
-    // Return to the same Adventure section as the header's Adventure navigation.
+    // Return to the active story after the optional connection check.
+    window.soaLayout?.select?.("adventure");
     const adventure=document.getElementById("campaign-box")||document.getElementById("scene");
     if(adventure?.scrollIntoView){
       const reduced=window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches===true;

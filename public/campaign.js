@@ -572,10 +572,10 @@ function drawEnemyStatus(box){
  const exchange=activeContext?campaign?.lastExchange:null;
  if(!activeContext)return;
  const section=document.createElement("section");section.className="soa-enemy-status";
- const heading=document.createElement("h4");heading.textContent="Battle Overview";section.append(heading);
+ const heading=document.createElement("h4");heading.textContent="Combat · Round "+(exchange?.round||campaign?.combatRound||1);section.append(heading);
  if(!enemies.length){const hint=document.createElement("p");hint.className="soa-combat-hint";hint.textContent=exchange?.defeated?"The last opponent has been defeated.":"No enemy HP has been confirmed for this scene yet. The story will reveal enemy health when combatants are identified.";section.append(hint)}
  for(const enemy of enemies){
-  const item=document.createElement("div");item.className="soa-foe";
+  const item=document.createElement("button");item.type="button";item.className="soa-foe soa-foe-target";item.setAttribute("aria-pressed",String(selectedCombatTarget===enemy.name));item.setAttribute("aria-label",enemy.name+" · "+enemy.hp+" / "+enemy.maxHp+" HP · select target");item.disabled=busy||!!pending();item.onclick=()=>{selectedCombatTarget=enemy.name;draw()};
   const header=document.createElement("div");header.className="soa-foe-heading";
   const name=document.createElement("strong");name.textContent=enemy.name;
   const hp=document.createElement("span");hp.textContent=enemy.hp+" / "+enemy.maxHp+" HP";
@@ -611,9 +611,16 @@ function drawEnemyStatus(box){
  if(exchange){
   const summary=document.createElement("div");summary.className="soa-exchange";
   const title=document.createElement("strong");title.textContent="Last exchange · Round "+exchange.round;
-  const dealt=document.createElement("p");dealt.textContent=exchange.healed?"Used "+String(exchange.ability||"ability").replaceAll("_"," ")+" · restored "+exchange.healed+" HP.":exchange.ability==="evasion"||["shield_block","divine_protection","power_word_shield","blink","sprint","vanish"].includes(exchange.ability)?"Used "+String(exchange.ability).replaceAll("_"," ")+" · incoming attack disadvantaged.":exchange.hit?"Damage dealt: "+exchange.dealt+" HP to "+exchange.target+" ("+exchange.enemyBefore+" → "+exchange.enemyAfter+"/"+exchange.enemyMax+").":"Missed "+exchange.target+" · 0 damage.";
-  const taken=document.createElement("p");taken.textContent="Damage received by "+(exchange.recipient||"your hero")+": "+exchange.taken+" HP · "+(exchange.recipientBefore??exchange.heroBefore)+" → "+(exchange.recipientAfter??exchange.heroAfter)+" HP.";
-  summary.append(title,dealt,taken);if(Number.isInteger(exchange.attackRoll)){const roll=document.createElement("p");roll.textContent="Your attack: d20 "+exchange.attackRoll+" + modifier = "+exchange.attackTotal+" vs AC "+exchange.targetAC+(exchange.critical?" · CRITICAL HIT":"");summary.append(roll)}if(Number.isInteger(exchange.initiative)){const init=document.createElement("p");init.textContent="Initiative: Hero "+exchange.initiative+" · Foe "+exchange.enemyInitiative+" · "+exchange.enemyType+" · "+exchange.damageType+" damage";summary.append(init)}if(Number.isInteger(exchange.enemyRoll)){const defense=document.createElement("p");defense.textContent="Enemy attack: d20 "+exchange.enemyRoll+" = "+exchange.enemyTotal+" vs defender AC "+exchange.defenderAC;summary.append(defense)}if(exchange.defeated){const note=document.createElement("p");note.textContent=exchange.target+" defeated; no loot collected automatically.";summary.append(note)}section.append(summary);
+  const dealt=document.createElement("p");dealt.textContent=exchange.healed?"Used "+String(exchange.ability||"ability").replaceAll("_"," ")+" · restored "+exchange.healed+" HP.":exchange.ability==="evasion"||["shield_block","divine_protection","power_word_shield","blink","sprint","vanish"].includes(exchange.ability)?"Used "+String(exchange.ability).replaceAll("_"," ")+" · incoming attack disadvantaged.":exchange.hit?"Hit · "+exchange.dealt+" damage to "+exchange.target+" ("+exchange.enemyBefore+" → "+exchange.enemyAfter+"/"+exchange.enemyMax+" HP).":"Miss · 0 damage to "+exchange.target+".";
+  const taken=document.createElement("p");taken.textContent="Damage received · "+(exchange.recipient||"you")+" "+exchange.taken+" HP ("+(exchange.recipientBefore??exchange.heroBefore)+" → "+(exchange.recipientAfter??exchange.heroAfter)+" HP).";
+  summary.append(title,dealt,taken);
+  const details=document.createElement("details");details.className="soa-exchange-details";
+  const detailsLabel=document.createElement("summary");detailsLabel.textContent="Roll & event details";details.append(detailsLabel);
+  if(Number.isInteger(exchange.attackRoll)){const roll=document.createElement("p");roll.textContent="Attack roll: d20 "+exchange.attackRoll+" + modifier = "+exchange.attackTotal+" vs AC "+exchange.targetAC+(exchange.critical?" · Critical hit":"");details.append(roll)}
+  if(Number.isInteger(exchange.initiative)){const init=document.createElement("p");init.textContent="Initiative: Hero "+exchange.initiative+" · Foe "+exchange.enemyInitiative+" · "+exchange.enemyType+" · "+exchange.damageType+" damage";details.append(init)}
+  if(Number.isInteger(exchange.enemyRoll)){const defense=document.createElement("p");defense.textContent="Enemy attack: d20 "+exchange.enemyRoll+" = "+exchange.enemyTotal+" vs defender AC "+exchange.defenderAC;details.append(defense)}
+  if(exchange.defeated){const note=document.createElement("p");note.textContent=exchange.target+" defeated; loot is collected through a separate search action.";details.append(note)}
+  summary.append(details);section.append(summary);
  }
  const roster=document.createElement("section");roster.className="soa-combat-roster";
  const caption=document.createElement("h4");caption.textContent="Allied combatants";roster.append(caption);
@@ -664,18 +671,20 @@ function drawEnemyStatus(box){
   allyTargets.append(b);
  }
  if(allyTargets.children.length>1){
-  const info=document.createElement("p");info.className="soa-combat-hint";info.textContent="Selecting an ally drafts a support action. It never heals or spends a turn by itself; health changes require a confirmed action.";roster.append(info);
+  const info=document.createElement("p");info.className="soa-combat-hint";info.textContent="Selecting an ally drafts a support action. It never heals or spends a turn by itself; health changes require a confirmed action.";
   const assist=document.createElement("button");assist.type="button";assist.className="soa-assist-button";
   assist.textContent="Coordinate with selected ally · 1 action";
   assist.disabled=busy||!!pending()||!combatParty().some(a=>!a.player&&a.name===selectedAllyTarget);
   assist.onclick=()=>{const target=combatParty().find(a=>!a.player&&a.name===selectedAllyTarget);if(!target)return;
    choose({text:"Coordinate defensively with "+target.name+" to assist their next move without inventing healing, supplies, damage or extra turns.",type:"investigate",difficulty:"medium"});
   };
-  allyTargets.append(assist);roster.after(allyTargets);
+  const allyDetails=document.createElement("details");allyDetails.className="soa-combat-optional soa-ally-coordination";
+  const allySummary=document.createElement("summary");allySummary.textContent="Coordinate an ally";
+  allyDetails.append(allySummary,allyTargets,info,assist);section.append(allyDetails);
  }
  if(enemies.length){
-  const support=document.createElement("section");support.className="soa-combat-abilities";
-  const heading=document.createElement("strong");heading.textContent="Companion combat actions · one exchange each";support.append(heading);
+  const support=document.createElement("details");support.className="soa-combat-optional soa-companion-combat-actions";
+  const heading=document.createElement("summary");heading.textContent="Companion actions · one exchange each";support.append(heading);
   const options=[["bromli_guard","Bromli · Shield Wall (disadvantage)","Bromli Ironkeg"],["pippa_snare","Pippa · Engineering Snare","Pippa Sparkwhistle"],["lethariel_heal","Lethariel · Healing Prayer","Lethariel Moonguard"]];
   for(const [ability,title,name] of options){
    const member=combatParty().find(a=>a.name===name&&a.hp>0);
@@ -687,18 +696,11 @@ function drawEnemyStatus(box){
    btn.onclick=()=>choose({text:title+" supports the party",type:"combat",difficulty:"medium",ability});
    support.append(btn);
   }
-  section.append(support);
-  if(campaign.lastSupport){const note=document.createElement("p");note.className="soa-combat-hint";note.textContent="Support round "+campaign.lastSupport.round+": "+campaign.lastSupport.description+" "+campaign.lastSupport.retaliation;section.append(note)}
+  if(support.children.length>1)section.append(support);
+  if(campaign.lastSupport){const note=document.createElement("p");note.className="soa-combat-hint";note.textContent="Support round "+campaign.lastSupport.round+": "+campaign.lastSupport.description+" "+campaign.lastSupport.retaliation;support.append(note)}
  }
- const picker=document.createElement("div");picker.className="soa-combat-targets";const label=document.createElement("strong");label.textContent="Choose an enemy target";picker.append(label);
- for(const foe of enemies){
-  const button=document.createElement("button");button.type="button";button.className="soa-target-button";button.textContent=foe.name+" · "+foe.hp+"/"+foe.maxHp+" HP";button.setAttribute("aria-pressed",String(selectedCombatTarget===foe.name));
-  button.disabled=busy||!!pending();button.onclick=()=>{selectedCombatTarget=foe.name;draw()};
-  picker.append(button);
- }
- if(enemies.length)section.append(picker);
  const skills=document.createElement("div");skills.className="soa-combat-abilities";
- const abilitiesLabel=document.createElement("strong");abilitiesLabel.className="soa-class-combat-heading";abilitiesLabel.textContent="Combat abilities · Level "+(window.soaProgression?.level?.()||1);skills.append(abilitiesLabel);
+ const abilitiesLabel=document.createElement("strong");abilitiesLabel.className="soa-class-combat-heading";abilitiesLabel.textContent="Actions · Level "+(window.soaProgression?.level?.()||1);skills.append(abilitiesLabel);const currentTarget=document.createElement("p");currentTarget.className="soa-combat-current-target";currentTarget.textContent="Target · "+(enemies.find(e=>e.name===selectedCombatTarget)?.name||enemies[0]?.name||"none selected");skills.append(currentTarget);
  const available=[{id:"strike",name:"Weapon Strike",cost:25,effect:"damage",description:"A standard weapon attack."},...(window.soaClassAbilities?.available?.(window.soaCharacters?.profile?.()?.className,window.soaProgression?.level?.()||1)||[])];
  for(const ability of available){
   const {id,name,cost,effect}=ability;
@@ -789,19 +791,31 @@ function draw(){
  const kicker=document.createElement("div");kicker.className="soa-scene-kicker";const position=window.soaChronicle?.progress?.(campaign);kicker.textContent=position?"ACT "+position.actRoman+" · CHAPTER "+position.chapterRoman+" · SCENE "+position.scene:"FIELD CHRONICLE · SCENE "+campaign.turn;box.append(kicker);head.textContent=sc.title||"The Hollow Raven";where.className="muted";where.textContent=sc.location||"Raven Hill";text.className="soa-story-prose";text.style.whiteSpace="pre-line";text.textContent=readableStory(sc.story);box.append(head,where,text);
  const sceneReward=window.soaQuests?.rewardForScene?.(campaign);
  if(sceneReward?.receipt==="mission:stormwind-explosives-defused:v1"){const receipt=document.createElement("p");receipt.className="soa-level-toast";receipt.textContent="MISSION PAID · Stormwind explosives defused · Total party reward: +5g 00s 00c · Credited to shared wallet once.";box.append(receipt)}
- if(questPanel){
-  let board=get("soa-contract-board");
+ const missions=window.soaQuests?.missionPanel?.(campaign,sc.location,()=>s.money,(result)=>{if(result?.error){status(result.error);return}if(Number.isSafeInteger(result?.wallet)){s.money=result.wallet;save()}store();render();draw();status(result?.description||result?.message||"Mission updated.");});
+ let board=get("soa-contract-board");
+ if(questPanel||missions){
   if(!board){
    board=document.createElement("section");board.id="soa-contract-board";board.className="panel";
    const chronicle=get("soa-chronicle"),main=document.querySelector("main");
-   if(chronicle)chronicle.after(board);else if(main)main.append(board);
+   if(chronicle)chronicle.before(board);else if(main)main.append(board);
   }
-  board.replaceChildren(questPanel);
- }else get("soa-contract-board")?.remove();
- const missions=window.soaQuests?.missionPanel?.(campaign,sc.location,()=>s.money,(result)=>{if(result?.error){status(result.error);return}if(Number.isSafeInteger(result?.wallet)){s.money=result.wallet;save()}store();render();draw();status(result?.description||result?.message||"Mission updated.");});if(missions)box.append(missions);
+  board.replaceChildren();
+  const questHeading=document.createElement("h2");questHeading.textContent="Quests & Rewards";board.append(questHeading);
+  if(questPanel)board.append(questPanel);
+  if(missions)board.append(missions);
+ }else board?.remove();
  window.soaEquipment?.renderStatus?.();
- const gear=window.soaEquipment?.panel?.();if(gear){const wrap=document.createElement("div");wrap.id="soa-equipment-shortcut";wrap.append(gear);box.prepend(wrap)}
- const enchanting=window.soaEnchanting?.panel?.(campaign,sc.location,()=>s.money,(result)=>{if(Number.isSafeInteger(result?.wallet)){s.money=result.wallet;save()}store();render();draw();status(result?.message||"Enchanting updated.")});if(enchanting)box.append(enchanting);
+ const gear=window.soaEquipment?.panel?.();
+ const enchanting=window.soaEnchanting?.panel?.(campaign,sc.location,()=>s.money,(result)=>{if(Number.isSafeInteger(result?.wallet)){s.money=result.wallet;save()}store();render();draw();status(result?.message||"Enchanting updated.")});
+ let toolsPanel=get("soa-character-tools");
+ if(gear||enchanting){
+  if(!toolsPanel){toolsPanel=document.createElement("section");toolsPanel.id="soa-character-tools";toolsPanel.className="panel"}
+  toolsPanel.replaceChildren();const toolsHeading=document.createElement("h2");toolsHeading.textContent="Loadout & Equipment";toolsPanel.append(toolsHeading);
+  if(gear)toolsPanel.append(gear);if(enchanting)toolsPanel.append(enchanting);
+  const characterScreen=get("soa-character-screen"),main=document.querySelector("main");
+  if(characterScreen)characterScreen.after(toolsPanel);else if(main)main.append(toolsPanel);
+ }else toolsPanel?.remove();
+ window.soaLayout?.refresh?.();
  if(/\\b(?:coins?|silver|gold|copper|retainer|payment|payout|reward|stipend|wages)\\b/i.test(sc.story||"")&&/\\b(?:hands? (?:over|you)|slides? (?:an? |the )?(?:iron-bound )?(?:lockbox|coins?)|paid|pays|receiv(?:e|ed)|collect(?:ed)?|claim(?:ed)?|authorized|rewarded)\\b/i.test(sc.story||"")&&!campaign.lastPayment){
   const notice=document.createElement("p");notice.className="soa-level-toast";
   notice.textContent="Payment mentioned in narration · Amount not verified · No currency credited by the game engine.";
