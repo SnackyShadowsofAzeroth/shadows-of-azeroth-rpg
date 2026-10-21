@@ -9,6 +9,8 @@ const vm = require("node:vm");
 const source = fs.readFileSync(path.join(__dirname, "..", "public", "mobile-layout.js"), "utf8");
 const html = fs.readFileSync(path.join(__dirname, "..", "public", "index.html"), "utf8");
 const characters = fs.readFileSync(path.join(__dirname, "..", "public", "characters.js"), "utf8");
+const campaign = fs.readFileSync(path.join(__dirname, "..", "public", "campaign.js"), "utf8");
+const chronicleStyles = fs.readFileSync(path.join(__dirname, "..", "public", "chronicle.css"), "utf8");
 const serviceWorker = fs.readFileSync(path.join(__dirname, "..", "public", "sw.js"), "utf8");
 const layoutCss = fs.readFileSync(path.join(__dirname, "..", "public", "mobile-layout.css"), "utf8");
 const characterCss = fs.readFileSync(path.join(__dirname, "..", "public", "characters.css"), "utf8");
@@ -53,7 +55,7 @@ function startLayout({ getItem = () => null, setItem = () => {}, readyState = "l
   body.classList.contains = name => classes.has(name);
   const sections = [
     "campaign-box", "soa-adventure-story", "soa-legacy-ai", "soa-ai-narration", "soa-chronicle", "soa-contract-board", "soa-party-evidence",
-    "soa-character-screen", "companion-panel", "soa-standalone-reputation",
+    "soa-character-screen", "soa-character-tools", "companion-panel", "soa-standalone-reputation",
     "soa-save-settings",
   ].map(id => element("section", id));
   sections.find(section => section.id === "companion-panel").dataset.soaUnavailable = "true";
@@ -97,8 +99,8 @@ test("one five-destination bottom navigation is loaded and cached for offline pl
   assert.match(serviceWorker, /"\.\/resource-rules\.js"/);
   assert.match(serviceWorker, /"\.\/class-abilities\.js"/);
   assert.match(serviceWorker, /"\.\/racial-abilities\.js"/);
-  assert.match(source, /\["adventure","Adventure","campaign-box"\],\s*\["quest","Quest","soa-chronicle"\],\s*\["character","Character","soa-character-screen"\]/);
-  assert.match(serviceWorker, /shadows-of-azeroth-v66/);
+  assert.match(source, /\["adventure","Adventure","campaign-box","Current scene and available actions"\],\s*\["quest","Quest","soa-chronicle"/);
+  assert.match(serviceWorker, /shadows-of-azeroth-v67/);
   assert.match(layoutCss, /#soa-mobile-nav\{position:fixed;z-index:999;bottom:0/);
   assert.match(source, /function createNavigation\(\)/);
   assert.doesNotMatch(characters, /soa-quick-nav/);
@@ -145,17 +147,18 @@ test("tab selection displays only its screen and maps old saved tab names", () =
   assert.equal(state.scrollCalls, 2);
 });
 
-test("AI Story Director belongs to Adventure and hides only while its connection is verified", () => {
+test("AI connection and narration controls belong to Settings", () => {
   const { layout, sections, connection } = startLayout();
   const director = sections.find(section => section.id === "soa-legacy-ai");
   const narration = sections.find(section => section.id === "soa-ai-narration");
+  layout.select("adventure");
+  assert.equal(director.hidden, true);
+  assert.equal(narration.hidden, true);
+  layout.select("settings");
   assert.equal(director.hidden, false);
   assert.equal(narration.hidden, false);
   connection.connected = true;
   layout.refresh();
-  assert.equal(director.hidden, true);
-  layout.select("settings");
-  layout.select("adventure");
   assert.equal(director.hidden, true);
   assert.equal(narration.hidden, false);
   connection.connected = false;
@@ -188,4 +191,19 @@ test("the character view separates overview from skills without changing game st
   assert.match(characters, /soa-character-status/);
   assert.match(characters, /Skills & Professions/);
   assert.match(characters, /organizeSections:organizeGameSections/);
+});
+
+test("combat and records follow the action-first tab hierarchy", () => {
+  const { layout, sections } = startLayout();
+  layout.select("quest");
+  assert.equal(sections.find(section => section.id === "soa-contract-board").hidden, false);
+  assert.equal(sections.find(section => section.id === "soa-party-evidence").hidden, false);
+  layout.select("character");
+  assert.equal(sections.find(section => section.id === "soa-character-tools").hidden, false);
+  assert.match(campaign, /soa-foe-target/);
+  assert.doesNotMatch(campaign, /Choose an enemy target/);
+  assert.match(campaign, /Roll & event details/);
+  assert.match(campaign, /Quests & Rewards/);
+  assert.match(campaign, /Loadout & Equipment/);
+  assert.match(layoutCss, /soa-exchange-details>summary/);
 });
