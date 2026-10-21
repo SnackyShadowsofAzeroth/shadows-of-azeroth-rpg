@@ -48,7 +48,7 @@ details.soa-collapsible-quests>summary::-webkit-details-marker{display:inline-bl
 #save-retry[hidden],#importfile[hidden],#soa-roster-restore-file[hidden]{display:none!important}
 
 /* Keep the character's resource visible while choosing a move. */
-.soa-choice-resource{position:sticky;top:env(safe-area-inset-top,8px);z-index:30;margin:12px 0 14px;padding:12px 14px;border:2px solid #d8ad43;border-radius:12px;background:linear-gradient(115deg,#20251f,#342d23);color:#fff0c6;box-shadow:0 5px 16px #0005;backdrop-filter:blur(10px)}
+.soa-choice-resource{position:relative;z-index:1;margin:12px 0 14px;padding:12px 14px;border:2px solid #d8ad43;border-radius:12px;background:linear-gradient(115deg,#20251f,#342d23);color:#fff0c6;box-shadow:0 5px 16px #0005;backdrop-filter:blur(10px)}
 .soa-choice-resource-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;font:700 15px/1.3 system-ui,sans-serif;letter-spacing:.035em}
 .soa-choice-resource-heading strong{color:#f2ca55}
 .soa-choice-resource-track{height:13px;margin:8px 0 6px;overflow:hidden;border:1px solid #796644;border-radius:99px;background:#171a16;box-shadow:inset 0 1px 3px #0008}
@@ -57,3 +57,10 @@ details.soa-collapsible-quests>summary::-webkit-details-marker{display:inline-bl
 .soa-choice-resource-transaction{display:block;margin-top:8px;padding:7px 9px;border:1px solid #c69f4e;border-radius:7px;background:#18191599;color:#fff0bd;font:700 12px/1.4 system-ui,sans-serif;text-align:left}
 .soa-custom-resource-transaction{margin:0 0 10px}
 @media(prefers-reduced-motion:reduce){.soa-choice-resource-fill{transition:none}}
+
+.soa-choice-resource[data-resource="rage"] .soa-choice-resource-heading strong{color:#ff9582}
+.soa-choice-resource[data-resource="rage"] .soa-choice-resource-fill{background:linear-gradient(90deg,#c94336,#f48a75);box-shadow:0 0 9px #eb625599}
+.soa-choice-resource[data-resource="mana"] .soa-choice-resource-heading strong{color:#9bcfff}
+.soa-choice-resource[data-resource="mana"] .soa-choice-resource-fill{background:linear-gradient(90deg,#397fc8,#8ac9ff);box-shadow:0 0 9px #69b9ff99}
+.soa-choice-resource[data-resource="focus"] .soa-choice-resource-heading strong{color:#8fe1b7}
+.soa-choice-resource[data-resource="focus"] .soa-choice-resource-fill{background:linear-gradient(90deg,#388b67,#8ad8ae);box-shadow:0 0 9px #62d39c99}
