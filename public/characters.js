@@ -349,7 +349,7 @@ function organizeGameSections(){
   const abilitySheet=profession.querySelector(".soa-ability-sheet");const legacyAbilities=get("abilities");if(abilitySheet&&legacyAbilities)status.insertBefore(abilitySheet,legacyAbilities);
  }
  const reputationId=active.origin==="custom"?"soa-standalone-reputation":"companion-panel";
- const ordered=["campaign-box","soa-adventure-story","soa-legacy-ai","soa-ai-narration","soa-chronicle","soa-party-evidence","soa-character-screen",reputationId,"soa-save-settings"]
+ const ordered=["soa-adventure-story","campaign-box","soa-contract-board","soa-chronicle","soa-party-evidence","soa-character-screen","soa-character-tools",reputationId,"soa-save-settings","soa-legacy-ai","soa-ai-narration"]
   .map(get).filter(panel=>panel?.parentElement===main);
  if(!ordered.length)return;
  const footer=main.querySelector(":scope > footer");
