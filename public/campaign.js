@@ -287,6 +287,7 @@ function companionExchange(action){
 function classAbilityExchange(action,ability,targets){
  const name=window.soaCharacters?.profile?.()?.name||"Your hero",resource=resourceName();
  const heroHealthCap=()=>100+(window.soaRacialAbilities?.passives?.(window.soaCharacters?.profile?.()?.race)?.maxHp||0);
+ const racialRegeneration=()=>window.soaRacialAbilities?.passives?.(window.soaCharacters?.profile?.()?.race)?.regeneration||0;
  if(ability.effect==="riposte"&&!campaign.parryReady){status("Riposte requires a parry in the previous exchange. No action spent.");return null}
  if(s.en<ability.cost){status("Not enough "+resource+" for "+ability.name+" ("+ability.cost+" required). No action spent.");return null}
  const requested=String(action.text||"").toLowerCase(),matches=targets.filter(e=>requested.includes(e.name.toLowerCase()));
