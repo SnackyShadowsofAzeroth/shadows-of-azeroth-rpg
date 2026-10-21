@@ -26,6 +26,7 @@ test("a stalled story request releases the UI and preserves the selected action 
     window: {
       soaSaveRules: { isIntegrityBlocked: () => false },
       soaCharacters: { isNewCharacter: () => false, profile: () => null },
+      soaResources: { forClass: () => ({ label: "Energy" }) },
       soaCompanions: { getRecent: () => [], getProfiles: () => ({}), getRelationships: () => ({}), getConversationContext: () => ({}) },
       soaAbilities: { get: () => null }, soaReputation: { getStandings: () => ({}), getDevelopments: () => [] },
       soaChronicle: { context: () => null },
@@ -41,7 +42,9 @@ test("a stalled story request releases the UI and preserves the selected action 
     livingEnemies: () => [], combatParty: () => [], refreshDisplay: () => { refreshCalls++; },
     returnToAdventure: mode => { context.returnMode = mode; },
   });
-  vm.runInContext(source.slice(start, end), context);
+  const resourceStart = source.indexOf("function resourceName(");
+  const resourceEnd = source.indexOf("\nfunction resolvedCombatAbility(", resourceStart);
+  vm.runInContext(source.slice(resourceStart, resourceEnd) + "\n" + source.slice(start, end), context);
 
   await context.advance(pending.action, pending.resolution, false);
 

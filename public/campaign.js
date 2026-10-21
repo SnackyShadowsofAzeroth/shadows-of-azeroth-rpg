@@ -121,6 +121,7 @@ function actionOdds(action){
  const target=Math.max(10,Math.min(95,Math.round(base+modifier*3+trained*2+Math.max(0,level-1)*.2+difficulty-(s.alert||0)*5)));
  return {cost:costs[relevant]??costs[t]??0,target,skill:relevant,modifier,trained};
 }
+function resourceName(){const hero=window.soaCharacters?.profile?.();return window.soaResources?.forClass?.(hero?.className,hero?.form)?.label||"Energy"}
 function resolvedCombatAbility(action){
  const description=String(action.text||"");
  const rogue=window.soaCharacters?.profile?.()?.className==="Rogue";
@@ -131,10 +132,10 @@ function dicePreview(action){
  // Combat takes priority over social keyword detection, matching the resolver.
  if(action.type==="combat"&&livingEnemies().length){
   const ability=resolvedCombatAbility(action);
-  if(ability==="evasion")return {primary:"🎲 No attack roll",secondary:"Defensive exchange · 0 Energy cost · up to +10 Energy recovery"};
+  if(ability==="evasion")return {primary:"🎲 No attack roll",secondary:"Defensive exchange · 0 "+resourceName()+" cost · up to +10 "+resourceName()+" recovery"};
   const attacker=window.soaAbilities?.get?.("hero");
   const gear=window.soaEquipment?.modifiers?.()||{};
-  if(ability==="riposte")return {primary:"🎲 Automatic hit after parry",secondary:(24+(attacker?.modifiers?.DEX||0)+(gear.damage||0))+" raw damage on a valid Riposte · 10 Energy cost · up to +10 recovery"};
+  if(ability==="riposte")return {primary:"🎲 Automatic hit after parry",secondary:(24+(attacker?.modifiers?.DEX||0)+(gear.damage||0))+" raw damage on a valid Riposte · 10 "+resourceName()+" cost · up to +10 recovery"};
   const attackAbility=attacker?.className==="Warrior"||attacker?.className==="Paladin"?"STR":"DEX";
   const attackModifier=attacker?.modifiers?.[attackAbility]??2;
   const bonus=(attacker?.proficiency??2)+attackModifier+(gear.attack||0);
@@ -143,7 +144,7 @@ function dicePreview(action){
   const weapon=window.soaCombatRules?.weapon?.(attacker,ability)||{die:ability==="kick"?6:10,flat:ability==="kick"?4+(attacker?.modifiers?.DEX||0):10+(attacker?.modifiers?.DEX||0)};
   const cost={strike:35,kick:25}[ability]??35;
   const rollLabel=campaign?.flags?.advantage?"d20 with advantage + ":"d20 + ";
-  return {primary:"🎲 "+rollLabel+bonus+" vs AC "+ac+" · natural 20 critical",secondary:"1d"+weapon.die+" + "+(weapon.flat+(gear.damage||0))+" raw damage · "+cost+" Energy cost · up to +10 recovery"+(ability==="kick"?" · interrupt on hit":"")};
+  return {primary:"🎲 "+rollLabel+bonus+" vs AC "+ac+" · natural 20 critical",secondary:"1d"+weapon.die+" + "+(weapon.flat+(gear.damage||0))+" raw damage · "+cost+" "+resourceName()+" cost · up to +10 recovery"+(ability==="kick"?" · interrupt on hit":"")};
  }
  const skill=socialSkill(action);
  if(skill){
@@ -151,7 +152,7 @@ function dicePreview(action){
   return {primary:"🎲 d20 "+(bonus>=0?"+ "+bonus:"− "+Math.abs(bonus))+" vs DC "+dc,secondary:"CHA-based "+skill+" check · Natural 1 fails, 20 succeeds"};
  }
  const odds=actionOdds(action);
- const {cost,target}=odds;return {primary:"🎲 "+odds.skill+" · d100 ≤ "+target+" ("+target+"%)",secondary:cost+" Energy cost · up to +10 recovery · ability modifier "+(odds.modifier>=0?"+":"")+odds.modifier+" · training +"+odds.trained};
+ const {cost,target}=odds;return {primary:"🎲 "+odds.skill+" · d100 ≤ "+target+" ("+target+"%)",secondary:cost+" "+resourceName()+" cost · up to +10 recovery · ability modifier "+(odds.modifier>=0?"+":"")+odds.modifier+" · training +"+odds.trained};
 }
 
 function socialCheck(action,skill){
@@ -274,7 +275,7 @@ function companionExchange(action){
  }
  campaign.parryReady=false;
  campaign.lastSupport={round:campaign.combatRound,actor:spec.name,description,retaliation};
- return "Success: Round "+campaign.combatRound+". "+description+" "+retaliation+" Energy "+previous+" → "+s.en+". Exactly one exchange resolved.";
+ return "Success: Round "+campaign.combatRound+". "+description+" "+retaliation+" "+resourceName()+" "+previous+" → "+s.en+". Exactly one exchange resolved.";
 }
 function fightExchange(action){
  if(["bromli_guard","pippa_snare","lethariel_heal"].includes(action.ability))return companionExchange(action);
@@ -283,7 +284,7 @@ function fightExchange(action){
  const ability=resolvedCombatAbility(action);
  const price={strike:35,kick:25,evasion:0,riposte:10}[ability];
  if(ability==="riposte"&&!campaign.parryReady){status("Riposte requires a parry in the previous exchange. No action spent.");return null}
- if(s.en<price){status("Not enough Energy for "+ability+" ("+price+" required). No action spent.");return null}
+ if(s.en<price){status("Not enough "+resourceName()+" for "+ability+" ("+price+" required). No action spent.");return null}
  const requested=String(action.text||"").toLowerCase();
  const matches=targets.filter(e=>requested.includes(e.name.toLowerCase()));
  const selected=targets.find(e=>e.name===selectedCombatTarget);
@@ -364,7 +365,7 @@ function fightExchange(action){
   (attackRoll!==null?" d20 attack "+attackRoll+" + "+playerAttack.bonus+" vs AC "+targetAC+".":"")+
   " Enemy "+target.name+" HP "+oldHP+"/"+target.maxHp+" → "+target.hp+"/"+target.maxHp+". "+
   (retaliates?target.name+" retaliates against "+receivedName+" for "+taken+" HP ("+recipientBefore+" → "+recipientAfter+").":"No damage received.")+
-  " Player HP "+heroHP+" → "+s.hp+"; Energy "+oldEnergy+" → "+s.en+"."+
+  " Player HP "+heroHP+" → "+s.hp+"; "+resourceName()+" "+oldEnergy+" → "+s.en+"."+
   (defeated?" Opponent defeated.":"")+" Exactly ONE consequential combat exchange resolved. No automatic loot, extra turns, or unconfirmed healing.";
  return (hit||ability==="evasion"?"Success":"Complication")+": Combat exchange "+campaign.combatRound+": "+report;
 }
@@ -564,7 +565,7 @@ function drawEnemyStatus(box){
  const available=rogue?[["strike","Strike",35],["kick","Kick · interrupt",25],["evasion","Evasion",0],["riposte","Riposte · after parry",10]]:[["strike","Attack",35],["evasion","Defend",0]];
  for(const [id,label,cost] of available){
   const button=document.createElement("button");button.type="button";button.className="soa-ability-button";
-  button.textContent=label+" · "+cost+" Energy";
+  button.textContent=label+" · "+cost+" "+resourceName();
   button.disabled=busy||!!pending()||s.en<cost||(id==="riposte"&&!campaign.parryReady)||(id!=="evasion"&&!enemies.some(e=>e.name===selectedCombatTarget)&&enemies.length>1);
   button.onclick=()=>{const target=enemies.find(e=>e.name===selectedCombatTarget)||enemies[0];if(!target)return;
    choose({text:(window.soaCharacters?.profile?.()?.name||"Hero")+" uses "+label+" against "+target.name,type:"combat",difficulty:"medium",ability:id});
@@ -730,7 +731,7 @@ async function choose(choice){
  if(!accessCode()){focusAccess();return}
  const detected=dialogueFromCustom(choice);if((detected||socialSkill(choice))&&choice.custom&&choice.type==="investigate")choice={...choice,type:"social"};
  const resolution=result(choice);
- if(!resolution){if(!socialSkill(choice)&&choice.type!=="combat")status("Not enough Energy for that action.");return}
+ if(!resolution){if(!socialSkill(choice)&&choice.type!=="combat")status("Not enough "+resourceName()+" for that action.");return}
  campaign.lastProgression="";
  campaign.actionSerial=(Number(campaign.actionSerial)||0)+1;
  const actionReceipt="turn-"+campaign.turn+"-action-"+campaign.actionSerial;
@@ -753,7 +754,7 @@ async function advance(action,resolution,retry){
  let requestTimeout;
  try{
  const controller=new AbortController();requestTimeout=setTimeout(()=>controller.abort(),28000);
- const response=await fetch("./api/campaign",{method:"POST",headers:{"content-type":"application/json","x-story-access":code},signal:controller.signal,body:JSON.stringify({context:{location:campaign.scene?.location||(window.soaCharacters?.isNewCharacter?.()?(window.soaCharacters?.profile?.()?.startingZone||"New adventurer starting zone"):"Hollow Raven laboratory"),previousTitle:campaign.scene?.title||"",previousScene:campaign.scene?.story||"",campaignOrigin:originOfCampaign(),startingZone:window.soaCharacters?.profile?.()?.startingZone||null,recentDiscoveries:campaign.journal.slice(-12),action,resolution,hp:s.hp,energy:s.en,gold:fmtMoney(s.money),alarm:s.alert,turn:campaign.turn,history:campaign.history.slice(-20),flags:Object.keys(s.flags||{}),companionMoments:window.soaCompanions?.getRecent?.()||[],companionProfiles:window.soaCompanions?.getProfiles?.()||{},relationships:window.soaCompanions?.getRelationships?.()||{},conversationContext:window.soaCompanions?.getConversationContext?.()||{},character:window.soaCharacters?.profile?.()||null,abilityScores:window.soaAbilities?.get?.("hero")?.stats||null,reputation:window.soaReputation?.getStandings?.()||{},reputationDevelopments:window.soaReputation?.getDevelopments?.()||[],enemies:livingEnemies().map(e=>({name:e.name,hp:e.hp,maxHp:e.maxHp})),allies:combatParty().map(e=>({name:e.name,hp:e.hp,maxHp:e.maxHp})),questRewards:{last:campaign.quests?.lastReward||null,activeMissions:Object.entries(campaign.quests?.missions||{}).filter(([,v])=>v.state!=="claimed").map(([id,v])=>({id,state:v.state}))},combatLog:(campaign.combatLog||[]).slice(-3),lastExchange:campaign.lastExchange||null,chronicle:window.soaChronicle?.context?.(campaign)||null,resourceSurvey:campaign.pending?.survey===true}})});
+ const response=await fetch("./api/campaign",{method:"POST",headers:{"content-type":"application/json","x-story-access":code},signal:controller.signal,body:JSON.stringify({context:{location:campaign.scene?.location||(window.soaCharacters?.isNewCharacter?.()?(window.soaCharacters?.profile?.()?.startingZone||"New adventurer starting zone"):"Hollow Raven laboratory"),previousTitle:campaign.scene?.title||"",previousScene:campaign.scene?.story||"",campaignOrigin:originOfCampaign(),startingZone:window.soaCharacters?.profile?.()?.startingZone||null,recentDiscoveries:campaign.journal.slice(-12),action,resolution,hp:s.hp,energy:s.en,resourceLabel:resourceName(),gold:fmtMoney(s.money),alarm:s.alert,turn:campaign.turn,history:campaign.history.slice(-20),flags:Object.keys(s.flags||{}),companionMoments:window.soaCompanions?.getRecent?.()||[],companionProfiles:window.soaCompanions?.getProfiles?.()||{},relationships:window.soaCompanions?.getRelationships?.()||{},conversationContext:window.soaCompanions?.getConversationContext?.()||{},character:window.soaCharacters?.profile?.()||null,abilityScores:window.soaAbilities?.get?.("hero")?.stats||null,reputation:window.soaReputation?.getStandings?.()||{},reputationDevelopments:window.soaReputation?.getDevelopments?.()||[],enemies:livingEnemies().map(e=>({name:e.name,hp:e.hp,maxHp:e.maxHp})),allies:combatParty().map(e=>({name:e.name,hp:e.hp,maxHp:e.maxHp})),questRewards:{last:campaign.quests?.lastReward||null,activeMissions:Object.entries(campaign.quests?.missions||{}).filter(([,v])=>v.state!=="claimed").map(([id,v])=>({id,state:v.state}))},combatLog:(campaign.combatLog||[]).slice(-3),lastExchange:campaign.lastExchange||null,chronicle:window.soaChronicle?.context?.(campaign)||null,resourceSurvey:campaign.pending?.survey===true}})});
  const data=await response.json().catch(()=>({error:"Invalid server response"}));if(window.soaSaveRules.isIntegrityBlocked()){status("Saved data could not be read. The pending scene was not applied; restore a valid backup before continuing.");return}if(!response.ok){if(response.status===401||response.status===403||response.status>=500)window.soaAiDirector?.showSetup?.(data.error||"AI connection needs attention.");throw Error(data.error||"Request failed")};
  if(!Array.isArray(data.choices)||!data.story)throw Error("Incomplete generated scene");
  const completedDialogue=campaign.pending?.dialogue?{...campaign.pending.dialogue,id:"campaign-dialogue-"+campaign.pending.startedAt+"-"+campaign.turn,success:/^Success:/i.test(campaign.pending.resolution)}:null;
@@ -766,7 +767,7 @@ async function advance(action,resolution,retry){
   if(campaign.xpEncounter.pendingVictory)concludeProgressionEncounter();
  }
  campaign.scene=data;campaign.turn++;window.soaChronicle?.receive?.(campaign,data);campaign.pending=null;customDraft="";customSocialSkill="auto";campaign.history.push("Scene: "+safe(data.title)+" @ "+safe(data.location)+" — "+safe(data.story).slice(0,380));campaign.history=campaign.history.slice(-MAX);if(data.journal)campaign.journal.push(safe(data.journal).slice(0,200));campaign.journal=campaign.journal.slice(-100);window.soaChronicle?.render?.(campaign);campaign.lastError="";if(completedDialogue)window.soaCompanions?.applyDialogueOutcome?.(completedDialogue);if(completedProfession)window.soaCharacters?.applyProfession?.(completedProfession.action,completedProfession.resolution,completedProfession.id);if(completedFaction)window.soaReputation?.fromAction?.(completedFaction);store();status("Scene generated and saved. Choose your next action.");
- }catch(e){if(e.name==="AbortError"||e instanceof TypeError)window.soaAiDirector?.showSetup?.("AI connection needs attention. Your selection is saved and can be retried.");campaign.lastError=e.name==="AbortError"?"Story request timed out":"AI request failed";store();status(e.name==="AbortError"?"The story request timed out. Your selection is saved; tap Retry generating next scene. It will not spend Energy twice.":"AI unavailable: "+e.message+". Your last action is preserved. Tap Retry generating next scene; it will not spend Energy twice.")}finally{clearTimeout(requestTimeout);busy=false;refreshDisplay();returnToAdventure(campaign?.lastError?"status":"scene")}
+ }catch(e){if(e.name==="AbortError"||e instanceof TypeError)window.soaAiDirector?.showSetup?.("AI connection needs attention. Your selection is saved and can be retried.");campaign.lastError=e.name==="AbortError"?"Story request timed out":"AI request failed";store();status(e.name==="AbortError"?"The story request timed out. Your selection is saved; tap Retry generating next scene. It will not spend "+resourceName()+" twice.":"AI unavailable: "+e.message+". Your last action is preserved. Tap Retry generating next scene; it will not spend "+resourceName()+" twice.")}finally{clearTimeout(requestTimeout);busy=false;refreshDisplay();returnToAdventure(campaign?.lastError?"status":"scene")}
 }
 function migrateCompanionDisplayNames(){
  if(!campaign)return;

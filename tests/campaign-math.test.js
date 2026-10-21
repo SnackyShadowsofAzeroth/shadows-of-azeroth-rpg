@@ -32,6 +32,7 @@ function makeContext({ random = () => 0.5 } = {}) {
         level: () => 13,
       },
       soaCharacters: { profile: () => ({ className: "Rogue" }) },
+      soaResources: { forClass: className => ({ label: className === "Paladin" ? "Mana" : className === "Warrior" ? "Rage" : className === "Hunter" ? "Focus" : "Energy" }) },
       soaEquipment: { modifiers: () => ({ attack: 2, damage: 3 }) },
       soaCombatRules: {
         weapon: (actor, ability) => ability === "kick"
@@ -85,6 +86,7 @@ test("inferred skill drives preview, energy cost, effects, and practice", () => 
 test("combat preview includes the same equipment attack and damage bonuses as resolution", () => {
   const context = makeContext();
   vm.runInContext([
+    functionBlock("resourceName", "resolvedCombatAbility"),
     functionBlock("resolvedCombatAbility", "dicePreview"),
     functionBlock("dicePreview", "socialCheck"),
     "globalThis.testPreview = dicePreview;",
@@ -106,8 +108,13 @@ test("combat preview includes the same equipment attack and damage bonuses as re
   context.campaign.flags.advantage = false;
 
   context.window.soaAbilities.get = () => ({ className: "Warrior", proficiency: 3, modifiers: { DEX: 4, STR: 2 } });
+  context.window.soaCharacters.profile = () => ({ className: "Warrior" });
   const warriorStrike = context.testPreview({ type: "combat", ability: "strike", text: "Strike the Guard" });
   assert.match(warriorStrike.primary, /d20 \+ 7 vs AC 14/);
+  assert.match(warriorStrike.secondary, /35 Rage cost/);
+  context.window.soaCharacters.profile = () => ({ className: "Paladin" });
+  const paladinStrike = context.testPreview({ type: "combat", ability: "strike", text: "Holy strike" });
+  assert.match(paladinStrike.secondary, /35 Mana cost/);
   assert.match(warriorStrike.secondary, /1d8 \+ 10 raw damage/);
 });
 
