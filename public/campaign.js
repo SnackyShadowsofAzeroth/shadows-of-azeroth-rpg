@@ -118,7 +118,8 @@ function actionOdds(action){
  const trained=window.soaProgression?.bonus?.(relevant)||0;
  const level=window.soaProgression?.level?.()||1;
  const difficulty=action.difficulty==="easy"?12:action.difficulty==="hard"?-22:0;
- const target=Math.max(10,Math.min(95,Math.round(base+modifier*3+trained*2+Math.max(0,level-1)*.2+difficulty-(s.alert||0)*5)));
+ const racialFocus=campaign?.racialFocus?.skill===relevant?Math.max(0,Number(campaign.racialFocus.bonus)||0):0;
+ const target=Math.max(10,Math.min(95,Math.round(base+modifier*3+trained*2+Math.max(0,level-1)*.2+difficulty-(s.alert||0)*5+racialFocus)));
  return {cost:costs[relevant]??costs[t]??0,target,skill:relevant,modifier,trained};
 }
 function resourceName(){const hero=window.soaCharacters?.profile?.();return window.soaResources?.forClass?.(hero?.className,hero?.form)?.label||"Energy"}
@@ -288,6 +289,7 @@ function classAbilityExchange(action,ability,targets){
  const requested=String(action.text||"").toLowerCase(),matches=targets.filter(e=>requested.includes(e.name.toLowerCase()));
  const chosen=targets.find(e=>e.name===selectedCombatTarget),target=matches.length===1?matches[0]:matches.length>1?null:chosen||targets[0];
  if(!target){status("Select a specific enemy before using that ability. No action spent.");return null}
+ if(ability.requiresCorpse&&!hasRecentCorpse()){status("Cannibalize requires a nearby defeated humanoid. No action spent.");return null}
  if(ability.effect==="heal"&&s.hp>=100){status("Your health is already full. No action spent.");return null}
  const encounter=startProgressionEncounter();for(const id of partyExperienceIds())if(!encounter.party.includes(id))encounter.party.push(id);
  const rules=window.soaCombatRules,actor=window.soaAbilities?.get?.("hero"),stat=actor?.modifiers?.[ability.stat]||0,proficiency=actor?.proficiency||2;
@@ -297,7 +299,7 @@ function classAbilityExchange(action,ability,targets){
  if(["damage","interrupt","drain","riposte"].includes(ability.effect)){
   roll=ability.effect==="riposte"?null:rules.attack(proficiency+stat+(gear.attack||0),block.ac,{advantage:campaign.flags?.advantage?1:0});
   hit=ability.effect==="riposte"?true:!!roll?.hit;
-  const rolled=ability.effect==="riposte"?rules.damage(ability.die,ability.flat+stat+(gear.damage||0)):rules.damage(ability.die,ability.flat+stat+(gear.damage||0),!!roll?.critical);
+  const rolled=ability.effect==="riposte"?rules.damage(ability.die,ability.flat+stat+(gear.damage||0)):rules.damage(ability.die,ability.flat+stat+(gear.damage||0)+(ability.bonusDamage||0),!!roll?.critical);
   dealt=hit?Math.min(target.hp,rules.mitigate(rolled,damageType,block)):0;target.hp=Math.max(0,target.hp-dealt);
   if(ability.effect==="drain"&&dealt){const before=s.hp;s.hp=Math.min(100,s.hp+Math.max(1,Math.floor(dealt/2)));healed=s.hp-before}
   interrupted=ability.effect==="interrupt"&&hit;
@@ -324,6 +326,8 @@ function fightExchange(action){
  const heroProfile=window.soaCharacters?.profile?.(),heroLevel=window.soaProgression?.level?.()||heroProfile?.startLevel||1;
  const classAbility=window.soaClassAbilities?.get?.(action.ability,heroProfile?.className,heroLevel);
  if(classAbility)return classAbilityExchange(action,classAbility,targets);
+ const racialAbility=window.soaRacialAbilities?.get?.(action.ability,heroProfile?.race);
+ if(racialAbility?.mode==="combat")return racialCombatExchange(action,racialAbility,targets);
  const ability=resolvedCombatAbility(action);
  const price=window.soaClassAbilities?.costOf?.(ability,heroProfile?.className,heroLevel)??25;
  if(ability==="riposte"&&!campaign.parryReady){status("Riposte requires a parry in the previous exchange. No action spent.");return null}
@@ -499,6 +503,43 @@ function recordCombatDelta(enemy,dealt,taken,recipient,recipientBefore,recipient
  ]});
  campaign.combatLog=log.slice(-12);
 }
+function racialCooldownLeft(ability){return Math.max(0,(campaign?.racialCooldowns?.[ability.id]||0)-(Number(campaign?.actionSerial)||0))}
+function hasRecentCorpse(){const location=String(campaign?.enemyLocation||campaign?.scene?.location||"").toLowerCase();return !!(campaign?.xpEncounter?.defeated?.length||(campaign?.defeatedEnemies||[]).some(x=>String(x).toLowerCase().startsWith(location+"|")))}
+function racialCombatExchange(action,ability,targets){
+ const left=racialCooldownLeft(ability);if(left){status(ability.name+" is cooling down for "+left+" more actions. No action spent.");return null}
+ const resolution=classAbilityExchange(action,{...ability,cost:0,stat:ability.stat||"DEX"},targets);
+ if(resolution)campaign.racialCooldowns={...(campaign.racialCooldowns||{}),[ability.id]:(Number(campaign.actionSerial)||0)+ability.cooldown+1};
+ return resolution;
+}
+function useRacialAbility(action){
+ const hero=window.soaCharacters?.profile?.(),ability=window.soaRacialAbilities?.get?.(action.ability,hero?.race);
+ if(!ability){status("That racial ability is unavailable to this character.");return null}
+ const left=racialCooldownLeft(ability);if(left){status(ability.name+" is cooling down for "+left+" more actions. No action spent.");return null}
+ if(ability.mode==="focus"){
+  campaign.racialFocus={skill:ability.skill,bonus:ability.bonus,source:ability.id};
+  campaign.racialCooldowns={...(campaign.racialCooldowns||{}),[ability.id]:(Number(campaign.actionSerial)||0)+ability.cooldown+1};
+  s.en=Math.min(100,s.en+10);s.time++;
+  return "Success: "+(hero?.name||"Your hero")+" uses "+ability.name+". The next "+ability.skill+" check gains +"+ability.bonus+" percentage points. "+resourceName()+" recovers by up to 10. No resource cost.";
+ }
+ if(ability.mode==="combat"&&livingEnemies().length)return fightExchange(action);
+ if(ability.id==="cannibalize"){
+  if(!hasRecentCorpse()){status("Cannibalize requires a nearby defeated humanoid. No action spent.");return null}
+  if(s.hp>=100){status("Your health is already full. No action spent.");return null}
+  const actor=window.soaAbilities?.get?.("hero"),heal=window.soaCombatRules.roll(ability.die)+(ability.flat||0)+(actor?.modifiers?.CON||0),before=s.hp;
+  s.hp=Math.min(100,s.hp+heal);s.en=Math.min(100,s.en+10);s.time++;
+  campaign.racialCooldowns={...(campaign.racialCooldowns||{}),[ability.id]:(Number(campaign.actionSerial)||0)+ability.cooldown+1};
+  return "Success: "+(hero?.name||"Your hero")+" uses Cannibalize on a defeated humanoid, restoring "+(s.hp-before)+" HP. "+resourceName()+" recovers by up to 10.";
+ }
+ status(ability.name+" can only be used during combat. No action spent.");return null;
+}
+function drawRacialActions(box){
+ const hero=window.soaCharacters?.profile?.(),abilities=window.soaRacialAbilities?.list?.(hero?.race)||[];
+ const usable=abilities.filter(a=>a.mode==="focus"||(a.id==="cannibalize"&&!livingEnemies().length&&hasRecentCorpse()));
+ if(!usable.length)return;
+ const section=document.createElement("section");section.className="soa-racial-action-panel";const title=document.createElement("strong");title.textContent="Racial abilities";section.append(title);
+ for(const ability of usable){const button=document.createElement("button");button.type="button";button.className="soa-ability-button";const left=racialCooldownLeft(ability);button.textContent=ability.name+" · "+(left?"Cooldown "+left:"Ready");button.title=ability.description;button.disabled=busy||!!pending()||!!left||(ability.id==="cannibalize"&&s.hp>=100);button.onclick=()=>choose({text:(hero?.name||"Your hero")+" uses "+ability.name,type:"racial",difficulty:"medium",ability:ability.id});section.append(button)}
+ box.append(section);
+}
 function drawEnemyStatus(box){
  const enemies=livingEnemies(),activeContext=enemies.length||(campaign?.combatAllies||[]).length||campaign?.scene?.choices?.some(x=>x.type==="combat");
  const exchange=activeContext?campaign?.lastExchange:null;
@@ -616,6 +657,8 @@ function drawEnemyStatus(box){
   };
   skills.append(button);
  }
+ const racialCombat=(window.soaRacialAbilities?.list?.(window.soaCharacters?.profile?.()?.race)||[]).filter(a=>a.mode==="combat");
+ for(const ability of racialCombat){const button=document.createElement("button");button.type="button";button.className="soa-ability-button soa-racial-combat-button";const left=racialCooldownLeft(ability);button.textContent=ability.name+" · No resource cost"+(left?" · cooldown "+left:" · Ready");button.title=ability.description;button.disabled=busy||!!pending()||!!left||s.hp>=100&&ability.effect==="heal"||ability.requiresCorpse&&!hasRecentCorpse();button.onclick=()=>choose({text:(window.soaCharacters?.profile?.()?.name||"Hero")+" uses "+ability.name+" against "+(targets[0]?.name||"the nearby foe"),type:"combat",difficulty:"medium",ability:ability.id});skills.append(button)}
  if(enemies.length)section.append(skills);
  if(Array.isArray(campaign.combatLog)&&campaign.combatLog.length){
   const history=document.createElement("details");history.className="soa-battle-history";const head=document.createElement("summary");head.textContent="Damage log · "+campaign.combatLog.length+" exchanges";history.append(head);
@@ -624,9 +667,11 @@ function drawEnemyStatus(box){
  box.append(section);
 }
 function result(action){
+ if(action.type==="racial")return useRacialAbility(action);
  if(action.type==="combat"&&livingEnemies().length)return fightExchange(action);
  const skill=socialSkill(action);if(skill)return socialCheck(action,skill);
  const {cost,target,skill:t}=actionOdds(action);let damage=0;
+ if(campaign.racialFocus?.skill===t)campaign.racialFocus=null;
  if(s.en<cost)return null;
  const rolled=1+Math.floor(Math.random()*100),ok=rolled<=target;
  s.en=Math.min(100,s.en-cost+10);s.time++; if(!ok&&["stealth","engineering","combat"].includes(t)){s.alert=Math.min(3,s.alert+1);damage=t==="combat"?8:t==="stealth"?3:0;s.hp=Math.max(1,s.hp-damage)}
@@ -718,6 +763,7 @@ function draw(){
  if(pending()){const note=document.createElement("p");note.className="soa-pending";note.textContent="Your last decision is saved. The next story scene has not arrived. Retry safely without repeating the action.";box.append(note);const retry=document.createElement("button");retry.className="med";retry.textContent="Retry generating next scene";retry.disabled=busy;retry.onclick=()=>{returnToAdventure("status");advance(campaign.lastAction,campaign.lastResult,true)};box.append(retry)}
 
  drawEnemyStatus(box);
+ drawRacialActions(box);
  if(campaign?.chronicle?.pendingMilestone){
   const notice=document.createElement("button");notice.type="button";notice.className="soa-chapter-review";
   notice.textContent="✦ A chapter milestone is ready for your review · Open Journal";
