@@ -128,7 +128,7 @@ function setPrimaryQuest(c,title,objective){
  if(!d||!cleanTitle||!cleanObjective)return false;
  d.primaryQuest={title:cleanTitle,objective:cleanObjective,updatedAtTurn:Math.max(0,Number(c.turn)||0)};
  if(!save())return false;
- render(c);return true;
+ return true;
 }
 function storyFocusPanel(c,d){
  const panel=el("section",undefined,"soa-story-focus");
