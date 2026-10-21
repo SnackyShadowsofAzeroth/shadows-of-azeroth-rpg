@@ -88,6 +88,7 @@ function renderStatus(){
  const isSnacky=profile?.id==="snacky";
  const gathered=[];
  if(isSnacky)for(const [label,name] of SNACKY_LOADOUT)gathered.push({label,name,source:"baseline"});
+ if(profile?.origin==="custom")for(const name of window.soaCharacters?.startingEquipment?.()||[])gathered.push({label:"Starter gear",name,source:"starter"});
  const q=holder(),eq=q?.equipped||{};
  for(const [slot,index] of Object.entries(eq)){
   const item=q?.inventory?.[index];if(!item)continue;
@@ -96,9 +97,10 @@ function renderStatus(){
  const wasOpen=sessionStorage.getItem("soa-character-gear-open")==="1";
  const details=document.createElement("details");details.className="soa-character-gear";details.open=wasOpen;
  details.addEventListener("toggle",()=>sessionStorage.setItem("soa-character-gear-open",details.open?"1":"0"));
- const summary=document.createElement("summary");summary.textContent="Equipped Gear · "+gathered.filter(item=>item.name!=="Empty").length+" items";details.append(summary);
+ const summary=document.createElement("summary");summary.textContent=(profile?.origin==="custom"?"Gear":"Equipped Gear")+" · "+gathered.filter(item=>item.name!=="Empty").length+" items";details.append(summary);
  const grid=document.createElement("div");grid.className="soa-character-gear-grid";
  if(!gathered.length){const none=document.createElement("p");none.textContent="No tracked equipped items yet.";grid.append(none)}
+ if(profile?.origin==="custom"&&gathered.some(item=>item.source==="starter")){const note=document.createElement("p");note.className="soa-character-gear-note";note.textContent="Class starter kit · basic level 1 gear";grid.append(note)}
  for(const {label,name} of gathered){
   const row=document.createElement("div");row.className="soa-character-gear-item";
   const tag=document.createElement("small");tag.textContent=label;

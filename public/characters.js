@@ -145,6 +145,34 @@ function enter(id){
  try{sessionStorage.setItem(ENTER_KEY,"1")}catch(e){}
  location.reload();
 }
+function deleteCharacter(id){
+ if(window.soaSaveRules.isIntegrityBlocked()){alert("Character deletion is paused until the saved data has been recovered.");return}
+ const target=roster.characters.find(x=>x.id===id);
+ if(!target)return;
+ if(roster.characters.length<=1){alert("Keep at least one character in your roster. Create another hero before deleting this one.");return}
+ if(!window.confirm("Permanently delete "+target.name+" and this character's local story, progression, inventory and portrait? This cannot be undone unless you have a backup."))return;
+ const previousCharacters=roster.characters.slice(),previousActive=active,previousId=active.id;
+ // Save the live character before changing the active slot or roster.
+ if(!snapshot(previousId)){alert("Unable to secure the current adventure. Nothing was deleted.");return}
+ if(id===previousId){
+  const replacement=roster.characters.find(x=>x.id!==id);
+  if(!replacement||!restore(replacement.id))return;
+  active=replacement;
+ }
+ roster.characters=roster.characters.filter(x=>x.id!==id);
+ roster.active=active.id;
+ if(!commitRoster()){
+  roster.characters=previousCharacters;roster.active=previousId;active=previousActive;
+  if(id===previousId)restore(id);
+  alert("Unable to save the roster change. Your character and save were restored; nothing was deleted.");
+  return;
+ }
+ try{localStorage.removeItem(SLOT_PREFIX+id);localStorage.removeItem("soa-portrait-v1-"+id)}catch{}
+ if(id===previousId){
+  try{sessionStorage.setItem(ENTER_KEY,"1")}catch{}
+  location.reload();
+ }else drawMenu();
+}
 function create(profile){
  if(window.soaSaveRules.isIntegrityBlocked()){alert("Character creation is paused until the saved data has been recovered.");return}
  if(!validCharacterChoice(profile)){alert("That faction and class combination is not available for the selected race.");return}
@@ -249,7 +277,9 @@ function drawMenu(){
   const item=make("div",undefined,"soa-character-item");
   const description=make("div");description.append(make("strong",p.name),make("span",factionDisplay(p)+" · "+p.race+" "+p.className+" · Level "+(p.id===active.id?(window.soaProgression?.level?.()||p.startLevel||10):(()=>{const slot=read(SLOT_PREFIX+p.id);try{return Number(JSON.parse(slot?.["soa-progression-v1"]||"null")?.actors?.hero?.level)||p.startLevel||10}catch{return p.startLevel||10}})())+" · "+Object.keys(p.professions||{}).join(" / ")));
   const button=make("button",p.id===active.id?"Play":"Switch & Play");button.type="button";button.onclick=()=>enter(p.id);
-  item.append(description,button);list.append(item);
+  const actions=make("div",undefined,"soa-character-actions");actions.append(button);
+  const remove=make("button","Delete");remove.type="button";remove.className="soa-delete-character";remove.setAttribute("aria-label","Delete "+p.name);remove.onclick=()=>deleteCharacter(p.id);actions.append(remove);
+  item.append(description,actions);list.append(item);
  }
  shell.append(list);
  const createToggle=make("button","＋ Create New Character");createToggle.type="button";createToggle.className="soa-roster-backup";createToggle.setAttribute("aria-expanded","false");createToggle.setAttribute("aria-controls","soa-character-creation");shell.append(createToggle);
@@ -297,6 +327,7 @@ function profilePanel(){
  const head=document.querySelector("header");if(!head)return;
  const title=get("soa-player-name"),tag=get("soa-player-class");if(title)title.textContent=active.name;if(tag)tag.textContent=active.id==="snacky"?"SI:7 · Combat Swords":factionDisplay(active)+" · "+active.race+" "+active.className;
  if(typeof render==="function")render();
+ window.soaEquipment?.renderStatus?.();
  const menu=make("button","☰ Characters");menu.id="soa-characters-button";menu.type="button";menu.onclick=drawMenu;head.append(menu);
  const pane=make("section");pane.className="panel soa-profession-panel";pane.id="soa-profession-panel";
  head.after(pane);drawProfessions();window.soaPortraits?.refresh?.();
