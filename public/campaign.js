@@ -539,7 +539,7 @@ function recordCombatDelta(enemy,dealt,taken,recipient,recipientBefore,recipient
  campaign.combatLog=log.slice(-12);
 }
 function racialCooldownLeft(ability){return Math.max(0,(campaign?.racialCooldowns?.[ability.id]||0)-(Number(campaign?.actionSerial)||0))}
-function hasRecentCorpse(){const location=String(campaign?.enemyLocation||campaign?.scene?.location||"").toLowerCase(),names=[...(campaign?.xpEncounter?.defeated||[]).map(x=>x.name),...(campaign?.defeatedEnemies||[]).filter(x=>String(x).toLowerCase().startsWith(location+"|")).map(x=>String(x).slice(String(x).indexOf("|")+1))];return names.some(name=>!/(?:beast|wolf|worg|spider|skeleton|ghoul|zombie|undead|construct|elemental)/i.test(String(name||"")))}
+function hasRecentCorpse(){const location=String(campaign?.enemyLocation||campaign?.scene?.location||"");return window.soaRacialAbilities?.hasNearbyHumanoidCorpse?.(location,campaign?.defeatedEnemies)||false}
 function racialCombatExchange(action,ability,targets){
  const left=racialCooldownLeft(ability);if(left){status(ability.name+" is cooling down for "+left+" more actions. No action spent.");return null}
  const resolution=classAbilityExchange(action,{...ability,cost:0,stat:ability.stat||"DEX"},targets);
@@ -721,7 +721,7 @@ function drawEnemyStatus(box){
   };
   skills.append(button);
  }
- const racialCombat=(window.soaRacialAbilities?.list?.(window.soaCharacters?.profile?.()?.race)||[]).filter(a=>a.mode==="combat");
+ const racialCombat=(window.soaRacialAbilities?.list?.(window.soaCharacters?.profile?.()?.race)||[]).filter(a=>a.mode==="combat"&&(!a.requiresCorpse||hasRecentCorpse()));
  for(const ability of racialCombat){const button=document.createElement("button");button.type="button";button.className="soa-ability-button soa-racial-combat-button";const left=racialCooldownLeft(ability);button.textContent=ability.name+" · No resource cost"+(left?" · cooldown "+left:" · Ready");button.title=ability.description;button.disabled=busy||!!pending()||!!left||s.hp>=heroHealthCap()&&ability.effect==="heal"||ability.requiresCorpse&&!hasRecentCorpse();button.onclick=()=>choose({text:(window.soaCharacters?.profile?.()?.name||"Hero")+" uses "+ability.name+" against "+(targets[0]?.name||"the nearby foe"),type:"combat",difficulty:"medium",ability:ability.id});skills.append(button)}
  if(enemies.length)section.append(skills);
  if(Array.isArray(campaign.combatLog)&&campaign.combatLog.length){
