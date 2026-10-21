@@ -48,24 +48,24 @@ test("resource costs use consistent power tiers and recoverability", () => {
   for (const name of ["Warrior", "Paladin", "Hunter", "Rogue", "Priest", "Mage", "Warlock", "Druid", "Shaman"]) {
     for (const ability of kits.all(name)) {
       costs.add(ability.cost);
-      assert.ok([10, 15, 20].includes(ability.cost), `${name} ${ability.name} should use a deliberate cost tier`);
+      assert.ok([30, 35, 40, 45].includes(ability.cost), `${name} ${ability.name} should use a deliberate cost tier`);
       assert.equal(kits.costOf(ability.id, name, ability.level), ability.cost);
     }
   }
-  assert.deepEqual([...costs].sort((a, b) => a - b), [10, 15, 20]);
-  assert.equal(kits.costOf("strike", "Rogue", 10), 15);
-  assert.equal(kits.costOf("evasion", "Warrior", 1), 15);
+  assert.deepEqual([...costs].sort((a, b) => a - b), [30, 35, 40, 45]);
+  assert.equal(kits.costOf("strike", "Rogue", 10), 0);
+  assert.equal(kits.costOf("evasion", "Warrior", 1), 35);
 });
 
 test("Rogue costs distinguish basic attacks, control, defense, and finishers", () => {
   const cost = id => kits.get(id, "Rogue", 10).cost;
-  assert.equal(cost("sinister_strike"), 15);
-  assert.equal(cost("kick"), 15);
-  assert.equal(cost("sprint"), 10);
-  assert.equal(cost("evasion"), 15);
-  assert.equal(cost("vanish"), 15);
-  assert.equal(cost("riposte"), 15);
-  assert.equal(cost("blade_flurry"), 20);
+  assert.equal(cost("sinister_strike"), 30);
+  assert.equal(cost("kick"), 35);
+  assert.equal(cost("sprint"), 30);
+  assert.equal(cost("evasion"), 35);
+  assert.equal(cost("vanish"), 40);
+  assert.equal(cost("riposte"), 30);
+  assert.equal(cost("blade_flurry"), 45);
 });
 
 test("all ability effects, costs, and level ranges are valid", () => {
@@ -73,9 +73,9 @@ test("all ability effects, costs, and level ranges are valid", () => {
   for (const name of ["Warrior", "Paladin", "Hunter", "Rogue", "Priest", "Mage", "Warlock", "Druid", "Shaman"]) {
     for (const ability of kits.all(name)) {
       assert.ok(effects.has(ability.effect), `${name} ${ability.name} has a supported effect`);
-      assert.ok(Number.isInteger(ability.cost) && ability.cost >= 10 && ability.cost <= 20);
+      assert.ok(Number.isInteger(ability.cost) && ability.cost >= 30 && ability.cost <= 45);
       assert.ok(Number.isInteger(ability.level) && ability.level >= 1 && ability.level <= 60);
-      assert.ok(Number.isInteger(ability.die) && ability.die >= 0);
+      assert.ok(Number.isInteger(ability.die) && ability.die >= 0);\n      assert.ok(Number.isInteger(ability.cooldown) && ability.cooldown >= 0 && ability.cooldown <= 3);
       assert.ok(typeof ability.description === "string" && ability.description.length > 5);
     }
   }
