@@ -118,7 +118,7 @@ test("combat preview includes the same equipment attack and damage bonuses as re
   context.window.soaAbilities.get = () => ({ className: "Warrior", proficiency: 3, modifiers: { DEX: 4, STR: 2 } });
   context.window.soaClassAbilities = {
     get: id => id === "sinister_strike" ? { id } : null,
-    costOf: id => ({ sinister_strike: 15, evasion: 15, riposte: 15, strike: 20, kick: 15 })[id] ?? null,
+    costOf: id => ({ sinister_strike: 30, evasion: 35, riposte: 30, strike: 0, kick: 35 })[id] ?? null,
   };
   context.window.soaCharacters.profile = () => ({ className: "Rogue" });
   const sinister = context.testPreview({ type: "combat", ability: "sinister_strike", text: "Sinister Strike the Guard" });
@@ -192,6 +192,16 @@ test("class combat abilities charge the class resource and resolve attacks and h
   assert.match(evasion, /evades the incoming attack/);
   assert.equal(capturedAdvantage, -1, "defensive abilities give the incoming attack disadvantage");
   assert.equal(context.s.en, 90, "Evasion pays its cost before 25-point exchange recovery");
+});
+
+test("class ability cooldowns block only the intended number of exchanges", () => {
+  const context = makeContext();
+  context.campaign = { combatRound: 1, classCooldowns: { kick: 3 } };
+  vm.runInContext(`${functionBlock("classCooldownLeft", "resourceKey")}\nglobalThis.cooldownLeft = classCooldownLeft;`, context);
+  assert.equal(context.cooldownLeft({ id: "kick" }), 1);
+  context.campaign.combatRound = 2;
+  assert.equal(context.cooldownLeft({ id: "kick" }), 0);
+  assert.equal(context.cooldownLeft({ id: "unknown" }), 0);
 });
 
 test("campaign save normalization repairs partial state and drops malformed scene data", () => {
