@@ -15,11 +15,11 @@ function makeChronicle(){
  };
  vm.createContext(context);
  vm.runInContext(chronicleSource,context,{filename:"chronicle.js"});
- return context.window.soaChronicle;
+ return {chronicle:context.window.soaChronicle,setSave:context.window.soaChronicleSetSave};
 }
 
 test("an existing active objective is promoted into the player-facing continuity anchor",()=>{
- const chronicle=makeChronicle();
+ const {chronicle}=makeChronicle();
  const save={turn:12,chronicle:{act:1,actTitle:"Crypt Descent",chapter:1,chapterTitle:"The Sealed Door",quests:[
   {id:"crypt",title:"Explore the crypt",status:"active",objectives:[
    {id:"crypt-1",label:"Search the lower chambers",done:false},
@@ -38,19 +38,15 @@ test("new campaigns do not treat the vague opening placeholder as a pinned quest
 });
 
 test("a player can pin and persist a specific quest and immediate objective",()=>{
- const chronicle=makeChronicle();
+ const {chronicle,setSave}=makeChronicle();
  const save={turn:17,chronicle:{quests:[]}};
  let saved=0;
- globalThis.__savedCount=0;
- const ctx=chronicle;
- const runtime=globalThis;
- void runtime;
- const scope=makeChronicle;
- assert.equal(ctx.setPrimaryQuest(save,"Explore the crypt","Map the lower chambers and find the source of the disturbance"),true);
- assert.equal(ctx.context(save).primaryQuest.title,"Explore the crypt");
- assert.equal(ctx.context(save).primaryQuest.objective,"Map the lower chambers and find the source of the disturbance");
+ setSave(()=>{saved++;return true});
+ assert.equal(chronicle.setPrimaryQuest(save,"Explore the crypt","Map the lower chambers and find the source of the disturbance"),true);
+ assert.equal(chronicle.context(save).primaryQuest.title,"Explore the crypt");
+ assert.equal(chronicle.context(save).primaryQuest.objective,"Map the lower chambers and find the source of the disturbance");
  assert.equal(save.chronicle.primaryQuest.updatedAtTurn,17);
- void saved;
+ assert.equal(saved,1);
 });
 
 test("the story API sanitizes and prioritizes the pinned quest anchor",()=>{
