@@ -62,7 +62,7 @@ const kits={
 };
 const normalize=([id,name,level,cost,effect,stat,die,flat,damageType,description])=>({id,name,level,cost,effect,stat,die,flat,damageType,description});
 function all(className){return (kits[className]||[]).map(normalize)}
-function available(className,level=1){const lv=Math.max(1,Math.min(60,Number(level)||1));return all(className).filter(x=>x.level<=lv)}
+function available(className,level=1){const lv=Math.max(1,Math.min(60,Number(level)||1)),learned=all(className).filter(x=>x.level<=lv),profile=window.soaCharacters?.profile?.();const signature=profile?.className===className?window.soaSpecializations?.ability?.(profile,lv):null;return signature?[...learned,signature]:learned}
 function get(id,className,level=1){return available(className,level).find(x=>x.id===id)||null}
 const fallbackCosts={strike:25,kick:20,evasion:15,riposte:20};
 function costOf(id,className,level=1){return get(id,className,level)?.cost??fallbackCosts[id]??null}
