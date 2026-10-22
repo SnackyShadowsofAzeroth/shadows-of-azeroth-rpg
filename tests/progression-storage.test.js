@@ -144,3 +144,67 @@ test("corrupt progression data is preserved and cannot be overwritten with defau
   assert.equal(harness.values.get("soa-progression-v1"), original);
   assert.equal(harness.context.window.soaSaveIntegrityBlocked, true);
 });
+
+
+test("legacy mastery ranks migrate to a 60-point path without changing modifiers", () => {
+  const legacy = {
+    version: 1,
+    actors: { hero: { level: 10, xp: 0, totalXp: 0, skills: {
+      combat: { rank: 9, practice: 11, attempts: 12, successes: 10 },
+      stealth: { rank: 4, practice: 8, attempts: 6, successes: 5 },
+    } } },
+    receipts: [],
+    history: [],
+  };
+  const harness = setup({ "soa-progression-v1": JSON.stringify(legacy) });
+
+  assert.equal(harness.progression.skill("hero", "combat").rank, 36);
+  assert.equal(harness.progression.bonus("combat"), 9);
+  assert.equal(harness.progression.skillNeeded(36), 22);
+  assert.equal(harness.progression.skill("hero", "stealth").rank, 16);
+  assert.equal(harness.progression.bonus("stealth"), 4);
+
+  const saved = JSON.parse(harness.values.get("soa-progression-v1"));
+  assert.equal(saved.version, 2);
+  assert.equal(saved.actors.hero.skills.combat.rank, 36);
+});
+
+test("mastery reaches rank 60 with the existing +15 maximum check bonus", () => {
+  const save = {
+    version: 2,
+    actors: { hero: { level: 60, xp: 0, totalXp: 0, skills: {
+      combat: { rank: 56, practice: 31, attempts: 0, successes: 0 },
+    } } },
+    receipts: [],
+    history: [],
+  };
+  const harness = setup({ "soa-progression-v1": JSON.stringify(save) });
+
+  const result = harness.progression.check({
+    receipt: "mastery-cap",
+    name: "combat",
+    success: true,
+    difficulty: "easy",
+    practiceOnly: true,
+  });
+
+  assert.equal(result.rank, 60);
+  assert.equal(result.rankUp, true);
+  assert.equal(harness.progression.bonus("combat"), 15);
+  assert.equal(harness.progression.skillNeeded(60), 0);
+});
+
+test("profession points map cleanly to sixty mastery ranks and four WoW-style tiers", () => {
+  const journey = setup().progression.professionJourney;
+  assert.deepEqual(JSON.parse(JSON.stringify(journey(1))), {
+    points: 1, rank: 1, pointsInRank: 1, tier: "Apprentice", mastered: false, progress: 1 / 60 * 100,
+  });
+  assert.equal(journey(75).rank, 15);
+  assert.equal(journey(75).tier, "Apprentice");
+  assert.equal(journey(76).rank, 16);
+  assert.equal(journey(76).tier, "Journeyman");
+  assert.equal(journey(151).tier, "Expert");
+  assert.equal(journey(226).tier, "Artisan");
+  assert.equal(journey(300).rank, 60);
+  assert.equal(journey(300).mastered, true);
+});
