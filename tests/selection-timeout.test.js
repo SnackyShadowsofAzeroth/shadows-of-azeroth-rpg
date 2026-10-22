@@ -16,7 +16,7 @@ test("a stalled story request releases the UI and preserves the selected action 
   const pending = { action: "Leave the vault", resolution: "Success: d100 roll 24", startedAt: 123 };
   const campaign = { scene: { title: "Vault and Exit", location: "Stormwind" }, journal: [], history: [],
     turn: 48, flags: {}, quests: { missions: {} }, pending, lastAction: pending.action, lastResult: pending.resolution };
-  let timeoutDelay = 0;
+  const timeoutDelays = [];
   let requestSignal;
   let displayedStatus = "";
   let saveCalls = 0;
@@ -32,7 +32,7 @@ test("a stalled story request releases the UI and preserves the selected action 
       soaChronicle: { context: () => null },
     },
     AbortController: class { constructor() { this.signal = {}; requestSignal = this.signal; } abort() {} },
-    setTimeout: (_callback, delay) => { timeoutDelay = delay; return 1; }, clearTimeout: () => {},
+    setTimeout: (_callback, delay) => { timeoutDelays.push(delay); return timeoutDelays.length; }, clearTimeout: () => {},
     fetch: async (_url, options) => {
       assert.equal(options.signal, requestSignal);
       const error = new Error("request aborted"); error.name = "AbortError"; throw error;
@@ -48,7 +48,7 @@ test("a stalled story request releases the UI and preserves the selected action 
 
   await context.advance(pending.action, pending.resolution, false);
 
-  assert.equal(timeoutDelay, 30000);
+  assert.deepEqual(timeoutDelays, [85000, 20000]);
   assert.match(displayedStatus, /timed out.*selection is saved.*Retry/i);
   assert.equal(campaign.pending, pending);
   assert.equal(campaign.lastAction, pending.action);
