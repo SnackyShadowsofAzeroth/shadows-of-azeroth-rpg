@@ -637,7 +637,7 @@ function useRacialAbility(action){
   const actor=window.soaAbilities?.get?.("hero"),heal=window.soaCombatRules.roll(ability.die)+(ability.flat||0)+(actor?.modifiers?.CON||0),before=s.hp;
   s.hp=Math.min(heroHealthCap(),s.hp+heal);s.en=Math.min(100,s.en+ACTION_RESOURCE_RECOVERY);s.time++;
   campaign.racialCooldowns={...(campaign.racialCooldowns||{}),[ability.id]:(Number(campaign.actionSerial)||0)+ability.cooldown+1};
-  return "Success: "+(hero?.name||"Your hero")+" uses Cannibalize on a defeated humanoid, restoring "+(s.hp-before)+" HP. "+resourceName()+" recovers by up to 10.";
+  return "Success: "+(hero?.name||"Your hero")+" uses Cannibalize on a defeated humanoid, restoring "+(s.hp-before)+" HP. "+resourceName()+" recovers by up to "+ACTION_RESOURCE_RECOVERY+".";
  }
  status(ability.name+" can only be used during combat. No action spent.");return null;
 }
