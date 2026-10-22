@@ -166,7 +166,7 @@ function dicePreview(action){
   const classAbility=window.soaClassAbilities?.get?.(abilityId,profile?.className,level);
   const cost=window.soaClassAbilities?.costOf?.(abilityId,profile?.className,level)??0;
   const resource=resourceName();
-  if(classAbility?.guaranteedEvade){const cooldown=classCooldownLeft(classAbility);return {primary:"🎲 Guaranteed success · 100%",secondary:"Vanish automatically evades the incoming attack · "+cost+" "+resource+" cost · "+(cooldown?cooldown+" exchange"+(cooldown===1?"":"s")+" remaining":classAbility.cooldown+"-exchange cooldown")};}
+  if(classAbility?.guaranteedEvade){const cooldown=classCooldownLeft(classAbility);return {primary:"🎲 Guaranteed success · 100%",secondary:"Vanish automatically evades the incoming attack · "+cost+" "+resource+" cost · "+(cooldown?cooldown+" exchange"+(cooldown===1?"":"s")+" remaining":classAbility.cooldown+" exchange cooldown")};}
   if(abilityId==="evasion")return {primary:"🎲 50% dodge chance per incoming hit",secondary:"Lasts 2 rounds · "+cost+" "+resource+" cost · 2-round cooldown · up to +25 "+resource+" recovery"};
   const attacker=window.soaAbilities?.get?.("hero");
   const gear=window.soaEquipment?.modifiers?.()||{};
@@ -203,7 +203,7 @@ function resourceForecast(action){
  else if(!socialSkill(action))cost=actionOdds(action).cost;
  const recovery=combatAction?COMBAT_RESOURCE_RECOVERY:ACTION_RESOURCE_RECOVERY,affordable=current>=cost,after=affordable?Math.min(100,current-cost+recovery):current;
  const ability=abilityId?window.soaClassAbilities?.get?.(abilityId,profile?.className,window.soaProgression?.level?.()||profile?.startLevel||1):null;
- const cooldown=ability?classCooldownLeft(ability):0,cooldownText=ability?.cooldown?(cooldown?" · "+ability.name+" cooldown · "+cooldown+" exchange"+(cooldown===1?"":"s")+" remaining":" · "+ability.name+" · "+ability.cooldown+"-exchange cooldown"):"";
+ const cooldown=ability?classCooldownLeft(ability):0,cooldownText=ability?.cooldown?(cooldown?" · "+ability.name+" cooldown · "+cooldown+" exchange"+(cooldown===1?"":"s")+" remaining":" · "+ability.name+" · "+ability.cooldown+" exchange cooldown"):"";
  const text=(affordable?(label+" "+current+" → "+after+"/100 · "+(cost?cost+" cost":"no cost")+" · +"+recovery+" recovery"):"Need "+cost+" "+label+" · have "+current+"/100")+cooldownText;
  return{label,current,max:100,cost,after,affordable,text,cooldown,abilityId};
 }
