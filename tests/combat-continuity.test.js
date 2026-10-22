@@ -325,3 +325,40 @@ test("generated Vanish choices use a fixed label without stale scene cover", asy
     global.fetch = previousFetch;
   }
 });
+
+test("Shaman scene generation excludes Rogue Vanish and offers ordinary stealth if needed", async () => {
+  const { onRequestPost } = await campaignModule;
+  const previousFetch = global.fetch;
+  let geminiRequest;
+  global.fetch = async (_url, options) => {
+    geminiRequest = JSON.parse(options.body);
+    return geminiReply(sceneResponse({
+      location: "Durotar",
+      choices: [
+        { text: "Vanish into the shadows", type: "stealth", difficulty: "easy" },
+        { text: "Spar with the recruit", type: "combat", difficulty: "easy" },
+      ],
+    }));
+  };
+  try {
+    const response = await onRequestPost({
+      request: campaignRequest({
+        action: "Survey the training camp",
+        location: "Durotar",
+        character: { id: "zinjo", name: "Zin'jo Gorethirst", race: "Troll", className: "Shaman", level: 1 },
+      }),
+      env: { GEMINI_API_KEY: "test-key", AI_ACCESS_CODE: "test-access-code" },
+    });
+    assert.equal(response.status, 200);
+    const instructions = geminiRequest.systemInstruction.parts[0].text;
+    assert.match(instructions, /Offer Vanish only to a Rogue of level 5 or higher/);
+    assert.match(instructions, /Shamans favor melee strikes, elemental spells and healing/);
+    const scene = await response.json();
+    assert.equal(scene.choices[0].text, "Move quietly to avoid notice");
+    assert.equal(scene.choices[0].type, "stealth");
+    assert.equal(scene.choices[0].difficulty, "medium");
+    assert.equal(scene.choices[1].text, "Spar with the recruit");
+  } finally {
+    global.fetch = previousFetch;
+  }
+});
