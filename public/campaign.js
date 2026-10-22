@@ -143,6 +143,11 @@ function resolvedCombatAbility(action){
  for(const [id,pattern] of Object.entries(aliases))if(pattern.test(String(action.text||""))&&window.soaClassAbilities?.get?.(id,hero?.className,level))return id;
  return ["strike","kick","evasion","riposte"].includes(action.ability)?action.ability:"strike";
 }
+function canonicalStoryChoice(choice){
+ const text=String(choice?.text||"");
+ if(!/\bvanish\b/i.test(text)||/\b(?:don't|do not|avoid|without)\b.{0,45}\bvanish\b/i.test(text))return choice;
+ return {...choice,text:"Vanish into the shadows",type:"stealth"};
+}
 function resolvedStoryVanish(action){
  if(action?.type!=="stealth"||!/\bvanish\b/i.test(String(action.text||""))||/\b(?:don't|do not|avoid|without)\b.{0,45}\bvanish\b/i.test(String(action.text||"")))return null;
  const hero=window.soaCharacters?.profile?.(),level=window.soaProgression?.level?.()||hero?.startLevel||1;
@@ -975,7 +980,7 @@ function draw(){
  const count=document.createElement("span");count.textContent=sc.choices.length+" story paths"+(livingEnemies().length?" · combat actions above":" + resources + custom");
  choicesHeader.append(title,count);box.append(choicesHeader);
  drawCombatActions(box);
- for(const [index,choice] of sc.choices.entries()){const b=document.createElement("button");b.className=choice.difficulty==="easy"?"low":choice.difficulty==="hard"?"high":"med";const headline=document.createElement("strong"),detail=document.createElement("small");headline.textContent=String.fromCharCode(65+index)+") "+choice.text;headline.style.display="block";const preview=dicePreview(choice);
+ for(const [index,savedChoice] of sc.choices.entries()){const choice=canonicalStoryChoice(savedChoice);const b=document.createElement("button");b.className=choice.difficulty==="easy"?"low":choice.difficulty==="hard"?"high":"med";const headline=document.createElement("strong"),detail=document.createElement("small");headline.textContent=String.fromCharCode(65+index)+") "+choice.text;headline.style.display="block";const preview=dicePreview(choice);
  detail.textContent=(choice.difficulty||"medium")+" difficulty · "+(socialSkill(choice)||choice.type||"investigate");
  const rollLine=document.createElement("span");rollLine.className="soa-roll-preview";rollLine.textContent=preview.primary;
  const rollHint=document.createElement("span");rollHint.className="soa-roll-hint";rollHint.textContent=preview.secondary;const transaction=document.createElement("span");transaction.className="soa-choice-resource-transaction";transaction.textContent=resourceForecast(choice).text;detail.style.cssText="display:block;margin-top:5px;color:#bccbd6;font:12px system-ui;text-transform:capitalize";b.append(headline,detail,rollLine,rollHint,transaction);b.disabled=busy||!!pending();b.onclick=()=>choose(choice);box.append(b)}
