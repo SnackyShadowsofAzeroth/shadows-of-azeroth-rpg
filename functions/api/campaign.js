@@ -31,15 +31,18 @@ function polishNarrative(value){
 }
 
 const REGION_MARKERS=[
+ ["stormwind",/\bstormwind\b/i],
+ ["ironforge",/\bironforge\b/i],
+ ["orgrimmar",/\b(?:orgrimmar|durotar|valley of trials)\b/i],
+ ["dalaran",/\bdalaran\b/i],
+ ["darkshire",/\b(?:darkshire|duskwood)\b/i],
+ ["elwynn",/\b(?:elwynn forest|northshire valley|goldshire)\b/i],
  ["dun-morogh",/\b(?:dun morogh|ice[- ]drill(?: site)?|coldridge valley)\b/i],
  ["hollow-raven",/\b(?:hollow raven|raven hill|sub-vault|sub vault)\b/i],
- ["stormwind",/\bstormwind\b/i],
- ["darkshire",/\b(?:darkshire|duskwood)\b/i],
- ["ironforge",/\bironforge\b/i],
- ["orgrimmar",/\b(?:orgrimmar|durotar)\b/i],
- ["dalaran",/\bdalaran\b/i],
- ["tirisfal",/\b(?:tirisfal glades|undercity)\b/i],
- ["teldrassil",/\b(?:teldrassil|darnassus)\b/i]
+ ["tirisfal",/\b(?:tirisfal glades|undercity|deathknell)\b/i],
+ ["teldrassil",/\b(?:teldrassil|darnassus|shadowglen)\b/i],
+ ["mulgore",/\b(?:mulgore|red cloud mesa|bloodhoof village)\b/i],
+ ["skyborne-enclave",/\bskyborne enclave\b/i]
 ];
 function regionOf(location){return REGION_MARKERS.find(([,re])=>re.test(String(location||"")))?.[0]||null}
 function intentionalTravel(action){
@@ -52,7 +55,8 @@ function unexpectedRelocation(before,after,action){
  if(!origin||!destination||origin===destination)return false;
  // A generic "leave the room" or "move to the console" is NOT permission
  // to teleport to a distant town. Require a named destination or a portal.
- const explicitDestination=regionOf(action)===destination;
+ const destinationMarker=REGION_MARKERS.find(([id])=>id===destination);
+ const explicitDestination=destinationMarker?.[1].test(String(action||""))===true;
  const explicitMagicTravel=/\b(?:teleport\w*|portal\b|hearth\w*)\b/i.test(String(action||""));
  return !(intentionalTravel(action)&&(explicitDestination||explicitMagicTravel));
 }
