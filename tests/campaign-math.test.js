@@ -815,3 +815,114 @@ test("Evasion dodges on 1–50, lasts two rounds, and cools down for two rounds"
   assert.equal(dodgeRolls.length, 0, "exactly the two active rounds requested a dodge roll");
   assert.ok(attackAdvantages.every(value => value === 0), "Evasion does not alter enemy d20 advantage");
 });
+
+test("Troll Berserking rolls three separate weapon attacks, scales follow-ups, and cools down for three actions", () => {
+  const context = makeContext({ random: () => 0.9 });
+  vm.runInContext(fs.readFileSync(path.join(__dirname, "..", "public", "racial-abilities.js"), "utf8"), context);
+  const ability = context.window.soaRacialAbilities.get("berserking", "Troll");
+  const enemy = { name: "Guard", hp: 100, maxHp: 100 };
+  const attackCalls = [];
+  context.campaign = { flags: {}, enemies: [enemy], combatRound: 0, actionSerial: 0, encounterSerial: 0, defeatedEnemies: [], racialCooldowns: {} };
+  context.s.hp = 40;
+  context.s.en = 20;
+  context.selectedCombatTarget = "Guard";
+  context.livingEnemies = () => context.campaign.enemies.filter(x => x.hp > 0);
+  context.startProgressionEncounter = () => ({ id: "troll-encounter", defeated: [], party: [] });
+  context.partyExperienceIds = () => [];
+  context.recordCombatDelta = () => {};
+  context.status = message => { context.statusMessage = message; };
+  context.resourceName = () => "Mana";
+  context.window.soaCharacters.profile = () => ({ name: "Zin'jo", className: "Shaman", race: "Troll" });
+  context.window.soaClassAbilities = { get: () => null, costOf: () => 0 };
+  context.window.soaAbilities.get = () => ({ className: "Shaman", proficiency: 2, modifiers: { DEX: 3 }, armorClass: 15, initiative: 1 });
+  context.window.soaEquipment.modifiers = () => ({ attack: 0, damage: 0 });
+  context.window.soaCombatRules = {
+    statBlock: () => ({ ac: 14, type: "guard", bonus: 3, die: 6 }),
+    weapon: () => ({ die: 10, flat: 8, type: "piercing" }),
+    attack: (bonus, ac, options = {}) => {
+      const die = [18, 3, 20, 2][attackCalls.length] || 2;
+      attackCalls.push({ die, bonus, options });
+      return { die, total: die + bonus, bonus, ac, critical: die >= (options.criticalOn || 20), hit: die !== 1 && (die >= (options.criticalOn || 20) || die + bonus >= ac) && die !== 3 };
+    },
+    damage: (die, flat, critical) => die + (critical ? die : 0) + flat,
+    mitigate: amount => amount,
+    initiative: () => 10,
+  };
+  vm.runInContext([
+    functionBlock("classCooldownLeft", "resourceKey"),
+    functionBlock("classAbilityExchange", "fightExchange"),
+    functionBlock("racialCooldownLeft", "hasRecentCorpse"),
+    functionBlock("racialCombatExchange", "useRacialAbility"),
+    functionBlock("resolvedCombatAbility", "dicePreview"),
+    functionBlock("dicePreview", "resourceForecast"),
+    functionBlock("resourceForecast", "socialCheck"),
+    "globalThis.trollTest = { racialCombatExchange, racialCooldownLeft, dicePreview, resourceForecast, resolvedRacialCombatAbility };",
+  ].join("\n"), context);
+
+  const choice = { type: "combat", text: "Use Berserking against Guard", difficulty: "medium" };
+  assert.equal(context.trollTest.resolvedRacialCombatAbility(choice).id, "berserking");
+  assert.match(context.trollTest.dicePreview(choice).primary, /3 separate attack rolls/);
+  assert.match(context.trollTest.dicePreview(choice).secondary, /follow-up hits deal half damage/);
+  assert.match(context.trollTest.resourceForecast(choice).text, /Mana 20 → 45\/100 · no cost/);
+  const result = context.trollTest.racialCombatExchange(choice, ability, [enemy]);
+  assert.match(result, /Strike 1 hit/);
+  assert.match(result, /Strike 2 miss/);
+  assert.match(result, /Strike 3 hit \(critical\)/);
+  assert.equal(attackCalls.length, 4, "three independent player rolls and one enemy response");
+  assert.equal(attackCalls[0].bonus, 5);
+  assert.equal(attackCalls[2].options.criticalOn, 20);
+  assert.equal(enemy.hp, 68, "full first hit and half of the critical third hit");
+  assert.equal(context.s.hp, 45, "regeneration restores five HP once, not per strike");
+  assert.equal(context.campaign.lastExchange.regenerated, 5);
+  assert.equal(context.s.en, 45, "the free ability restores 25 Mana after one exchange");
+  assert.equal(context.campaign.combatRound, 1);
+  context.campaign.actionSerial = 1;
+  assert.equal(context.trollTest.racialCooldownLeft(ability), 3);
+  assert.match(context.trollTest.resourceForecast(choice).text, /Berserking cooldown · 3 actions remaining/);
+  assert.equal(context.trollTest.racialCombatExchange(choice, ability, [enemy]), null, "an early repeat spends no turn");
+  assert.equal(attackCalls.length, 4);
+  context.campaign.actionSerial = 4;
+  assert.equal(context.trollTest.racialCooldownLeft(ability), 0);
+});
+
+test("Troll Regeneration also heals after a companion's combat exchange", () => {
+  const context = makeContext();
+  const enemy = { name: "Guard", hp: 40, maxHp: 40 };
+  context.campaign = { enemies: [enemy], combatAllies: [{ name: "Bromli Ironkeg", hp: 30, maxHp: 30 }], combatRound: 0, supportCooldowns: {} };
+  context.s.hp = 40;
+  context.livingEnemies = () => [enemy];
+  context.startProgressionEncounter = () => ({ id: "troll-encounter", defeated: [], party: [] });
+  context.resourceName = () => "Mana";
+  context.heroHealthCap = () => 100;
+  context.racialRegeneration = () => 5;
+  context.window.soaCombatRules = {
+    statBlock: () => ({ ac: 14, bonus: 3, die: 6 }),
+    attack: () => ({ die: 2, total: 5, hit: false, critical: false }),
+  };
+  vm.runInContext(`${functionBlock("companionExchange", "classAbilityExchange")}\nglobalThis.runCompanionExchange = companionExchange;`, context);
+  const result = context.runCompanionExchange({ ability: "bromli_guard" });
+  assert.match(result, /Regeneration restores 5 HP/);
+  assert.equal(context.s.hp, 45);
+  assert.equal(context.campaign.lastSupport.regenerated, 5);
+  assert.equal(context.campaign.combatRound, 1);
+});
+
+test("a named Berserking story choice reaches the racial exchange resolver", () => {
+  const context = makeContext();
+  const enemy = { name: "Guard", hp: 40, maxHp: 40 };
+  vm.runInContext(fs.readFileSync(path.join(__dirname, "..", "public", "racial-abilities.js"), "utf8"), context);
+  context.livingEnemies = () => [enemy];
+  context.window.soaCharacters.profile = () => ({ name: "Zin'jo", className: "Shaman", race: "Troll" });
+  context.window.soaClassAbilities = { get: () => null };
+  context.racialCombatExchange = (_action, ability) => {
+    context.routedRacial = ability;
+    return "Resolved Berserking.";
+  };
+  vm.runInContext([
+    functionBlock("resolvedCombatAbility", "dicePreview"),
+    functionBlock("fightExchange", "updateLivingEnemies"),
+    "globalThis.runFightExchange = fightExchange;",
+  ].join("\n"), context);
+  assert.equal(context.runFightExchange({ type: "combat", text: "Use Berserking against Guard" }), "Resolved Berserking.");
+  assert.equal(context.routedRacial.id, "berserking");
+});
