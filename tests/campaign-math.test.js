@@ -927,3 +927,32 @@ test("a named Berserking story choice reaches the racial exchange resolver", () 
   assert.equal(context.runFightExchange({ type: "combat", text: "Use Berserking against Guard" }), "Resolved Berserking.");
   assert.equal(context.routedRacial.id, "berserking");
 });
+
+test("Shaman story checks favor combat over stealth at level one", () => {
+  const context = makeContext();
+  context.s.alert = 0;
+  context.window.soaCharacters.profile = () => ({ className: "Shaman", race: "Troll", startLevel: 1 });
+  context.window.soaProgression.level = () => 1;
+  context.window.soaProgression.bonus = () => 0;
+  context.window.soaAbilities.modifier = () => 2;
+  vm.runInContext(functionBlock("actionOdds", "heroHealthCap") + "\nglobalThis.checkOdds = actionOdds;", context);
+  const stealth = context.checkOdds({ type: "stealth", text: "Move quietly to avoid notice", difficulty: "easy" });
+  const combat = context.checkOdds({ type: "combat", text: "Spar with the recruit", difficulty: "easy" });
+  assert.equal(stealth.target, 61);
+  assert.equal(stealth.classBonus, -25);
+  assert.equal(combat.target, 83);
+  assert.equal(combat.classBonus, 10);
+});
+
+test("a non-Rogue's saved Vanish option becomes an ordinary stealth choice", () => {
+  const context = makeContext();
+  context.window.soaCharacters.profile = () => ({ className: "Shaman", race: "Troll" });
+  context.window.soaProgression.level = () => 1;
+  vm.runInContext(functionBlock("canonicalStoryChoice", "resolvedStoryVanish") + "\nglobalThis.canonicalStoryChoice = canonicalStoryChoice;", context);
+  const saved = { type: "stealth", difficulty: "easy", text: "Vanish into the shadows" };
+  const displayed = context.canonicalStoryChoice(saved);
+  assert.equal(displayed.text, "Move quietly to avoid notice");
+  assert.equal(displayed.type, "stealth");
+  assert.equal(displayed.difficulty, "medium");
+  assert.equal(saved.text, "Vanish into the shadows", "the existing saved scene remains untouched");
+});
