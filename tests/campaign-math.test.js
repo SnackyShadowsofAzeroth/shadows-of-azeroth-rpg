@@ -131,12 +131,22 @@ test("combat preview includes the same equipment attack and damage bonuses as re
   assert.match(strike.primary, /d20 \+ 9 vs AC 14 · 80% hit/);
   assert.equal(context.testChance(5, 12), 70, "+5 vs AC 12 hits on rolls 7–20");
   assert.equal(context.testChance(5, 12, 1), 91, "advantage hits unless both dice are 1–6");
+  assert.equal(context.testChance(0, 20, 0, 19), 10, "a 19–20 critical range doubles the natural critical chance");
+  assert.equal(context.testChance(0, 20), 5, "ordinary attacks still crit only on a natural 20");
   assert.match(strike.secondary, /1d10 \+ 17 raw damage · 0 Energy cost · up to \+25 recovery/);
 
+  const killingSpree = { id: "spec_rogue_combat", name: "Killing Spree", strikes: 2, weaponDamage: true, criticalOn: 19, cost: 50, cooldown: 2 };
+  const vanish = { id: "vanish", name: "Vanish", guaranteedEvade: true, cost: 40, cooldown: 5 };
   context.window.soaClassAbilities = {
-    get: id => id === "sinister_strike" ? { id } : null,
-    costOf: id => ({ sinister_strike: 30, evasion: 35, riposte: 30, strike: 0, kick: 35 })[id] ?? null,
+    get: id => [killingSpree, vanish].find(ability => ability.id === id) || (id === "sinister_strike" ? { id } : null),
+    costOf: id => ({ sinister_strike: 30, evasion: 35, riposte: 30, strike: 0, kick: 35, spec_rogue_combat: 50, vanish: 40 })[id] ?? null,
   };
+  const spreePreview = context.testPreview({ type: "combat", ability: "spec_rogue_combat", text: "Use Killing Spree against the Guard" });
+  assert.match(spreePreview.primary, /2 separate attack rolls: each d20 \+ 9 vs AC 14 · 80% hit · natural 19–20 critical/);
+  assert.match(spreePreview.secondary, /2 weapon strikes · each 1d10 \+ 17 raw damage · 50 Energy cost/);
+  const vanishPreview = context.testPreview({ type: "combat", ability: "vanish", text: "Vanish from the Guard" });
+  assert.match(vanishPreview.primary, /Guaranteed success · 100%/);
+  assert.match(vanishPreview.secondary, /5 exchange cooldown/);
   const kick = context.testPreview({ type: "combat", ability: "kick", text: "Kick the Guard" });
   assert.match(kick.secondary, /1d6 \+ 11 raw damage · 35 Energy cost · up to \+25 recovery · interrupt on hit/);
 
@@ -227,6 +237,178 @@ test("class combat abilities charge the class resource and resolve attacks and h
   assert.equal(context.s.en, 90, "Evasion pays its cost before 25-point exchange recovery");
 });
 
+
+
+test("combat rules preserve ordinary criticals and allow a 19–20 ability crit range", () => {
+  const window = {};
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, "..", "public", "combat-rules.js"), "utf8"), { window });
+  const attack = window.soaCombatRules.attack;
+  const criticalNineteen = attack(0, 25, { criticalOn: 19, rng: () => 0.9 });
+  assert.equal(criticalNineteen.die, 19);
+  assert.equal(criticalNineteen.critical, true);
+  assert.equal(criticalNineteen.hit, true, "a natural 19 critical always hits");
+  const ordinaryNineteen = attack(0, 25, { rng: () => 0.9 });
+  assert.equal(ordinaryNineteen.critical, false);
+  assert.equal(ordinaryNineteen.hit, false);
+  const ordinaryTwenty = attack(0, 25, { rng: () => 0.99 });
+  assert.equal(ordinaryTwenty.critical, true);
+  assert.equal(ordinaryTwenty.hit, true);
+});
+
+test("Killing Spree rolls two weapon attacks separately and uses its expanded critical range", () => {
+  const context = makeContext({ random: () => 0.9 });
+  const enemy = { name: "Guard", hp: 100, maxHp: 100 };
+  const ability = { id: "spec_rogue_combat", name: "Killing Spree", cost: 50, effect: "damage", stat: "DEX", die: 12, flat: 8, damageType: "slashing", cooldown: 2, strikes: 2, weaponDamage: true, criticalOn: 19 };
+  const attackCalls = [], damageCalls = [];
+  context.campaign = { flags: {}, enemies: [enemy], combatRound: 0, encounterSerial: 0, defeatedEnemies: [], classCooldowns: {} };
+  context.selectedCombatTarget = "Guard";
+  context.livingEnemies = () => context.campaign.enemies.filter(x => x.hp > 0);
+  context.startProgressionEncounter = () => context.encounter = { id: "test", defeated: [], party: [] };
+  context.partyExperienceIds = () => [];
+  context.recordCombatDelta = () => {};
+  context.status = message => { context.statusMessage = message; };
+  context.resourceName = () => "Energy";
+  context.window.soaCharacters.profile = () => ({ name: "Snacky Lugnuts", className: "Rogue", race: "Gnome" });
+  context.window.soaProgression = { level: () => 10 };
+  context.window.soaClassAbilities = { get: id => id === ability.id ? ability : null };
+  context.window.soaAbilities.get = () => ({ name: "Snacky Lugnuts", className: "Rogue", proficiency: 3, modifiers: { DEX: 4 }, armorClass: 16, initiative: 1 });
+  context.window.soaEquipment.modifiers = () => ({ attack: 2, damage: 3 });
+  context.window.soaCombatRules = {
+    statBlock: () => ({ ac: 14, type: "guard", bonus: 3, die: 4 }),
+    weapon: actor => ({ die: 10, flat: 10 + (actor?.modifiers?.DEX || 0), type: "piercing" }),
+    attack: (bonus, ac, options = {}) => {
+      attackCalls.push({ bonus, ac, options });
+      const number = attackCalls.length;
+      const die = number === 1 ? 19 : number === 2 ? 4 : 1;
+      return { die, total: die + bonus, bonus, ac, critical: die >= (options.criticalOn || 20), hit: die !== 1 && (die >= (options.criticalOn || 20) || die + bonus >= ac) };
+    },
+    damage: (die, flat, critical) => { damageCalls.push({ die, flat, critical }); return flat + 10 + (critical ? 10 : 0); },
+    mitigate: amount => amount,
+    initiative: () => 10,
+  };
+  vm.runInContext([
+    functionBlock("classCooldownLeft", "resourceKey"),
+    functionBlock("classAbilityExchange", "fightExchange"),
+    "globalThis.runClassAbility = classAbilityExchange;",
+    "globalThis.cooldownLeft = classCooldownLeft;",
+  ].join("\n"), context);
+
+  const result = context.runClassAbility({ text: "Snacky uses Killing Spree against Guard" }, ability, [enemy]);
+  assert.match(result, /Strike 1 hit \(critical\)/);
+  assert.match(result, /Strike 2 miss/);
+  assert.equal(attackCalls.filter(call => call.options.criticalOn === 19).length, 2, "each strike rolls a separate d20 with a 19–20 critical range");
+  assert.equal(damageCalls.length, 1, "a missed strike does not roll a damage die");
+  assert.deepEqual(damageCalls[0], { die: 10, flat: 17, critical: true }, "critical uses the weapon die and equipment damage bonus");
+  assert.equal(enemy.hp, 63);
+  assert.equal(context.s.en, 75, "50 Energy is spent and one combat exchange restores 25");
+  assert.equal(context.campaign.combatRound, 1, "two strikes still consume one combat exchange");
+  assert.equal(context.campaign.classCooldowns[ability.id], 4);
+  assert.equal(context.cooldownLeft(ability), 2);
+  assert.equal(context.campaign.lastExchange.strikes.length, 2);
+  assert.equal(context.campaign.lastExchange.strikes[0].critical, true);
+});
+
+test("Killing Spree redirects its second strike to another living enemy after a takedown", () => {
+  const context = makeContext({ random: () => 0.9 });
+  const first = { name: "Guard", hp: 5, maxHp: 5 };
+  const second = { name: "Archer", hp: 50, maxHp: 50 };
+  const ability = { id: "spec_rogue_combat", name: "Killing Spree", cost: 50, effect: "damage", stat: "DEX", die: 12, flat: 8, damageType: "slashing", cooldown: 2, strikes: 2, weaponDamage: true, criticalOn: 19 };
+  const attackCalls = [];
+  context.campaign = { flags: {}, enemies: [first, second], combatRound: 0, encounterSerial: 0, defeatedEnemies: [], classCooldowns: {} };
+  context.selectedCombatTarget = "Guard";
+  context.livingEnemies = () => context.campaign.enemies.filter(x => x.hp > 0);
+  context.startProgressionEncounter = () => context.encounter = { id: "test", defeated: [], party: [] };
+  context.partyExperienceIds = () => [];
+  context.recordCombatDelta = (enemy, dealt, taken, recipient, before, after, additional) => { context.delta = { enemy, dealt, additional }; };
+  context.status = () => {};
+  context.resourceName = () => "Energy";
+  context.window.soaCharacters.profile = () => ({ name: "Snacky Lugnuts", className: "Rogue", race: "Gnome" });
+  context.window.soaProgression = { level: () => 10 };
+  context.window.soaClassAbilities = { get: id => id === ability.id ? ability : null };
+  context.window.soaAbilities.get = () => ({ className: "Rogue", proficiency: 3, modifiers: { DEX: 4 }, armorClass: 16, initiative: 1 });
+  context.window.soaEquipment.modifiers = () => ({ attack: 2, damage: 3 });
+  context.window.soaCombatRules = {
+    statBlock: () => ({ ac: 14, type: "guard", bonus: 3, die: 4 }),
+    weapon: actor => ({ die: 10, flat: 10 + (actor?.modifiers?.DEX || 0), type: "piercing" }),
+    attack: (bonus, ac, options = {}) => {
+      attackCalls.push({ bonus, ac, options });
+      const die = attackCalls.length === 1 ? 20 : attackCalls.length === 2 ? 19 : 1;
+      return { die, total: die + bonus, bonus, ac, critical: die >= (options.criticalOn || 20), hit: die !== 1 && (die >= (options.criticalOn || 20) || die + bonus >= ac) };
+    },
+    damage: (die, flat, critical) => flat + 10 + (critical ? 10 : 0),
+    mitigate: amount => amount,
+    initiative: () => 10,
+  };
+  vm.runInContext([
+    functionBlock("classCooldownLeft", "resourceKey"),
+    functionBlock("classAbilityExchange", "fightExchange"),
+    "globalThis.runClassAbility = classAbilityExchange;",
+  ].join("\n"), context);
+
+  context.runClassAbility({ text: "Snacky uses Killing Spree against Guard" }, ability, [first, second]);
+  assert.equal(first.hp, 0);
+  assert.equal(second.hp, 13, "the second hit is applied to the next living target");
+  assert.deepEqual(Array.from(context.campaign.lastExchange.strikes, x => x.target), ["Guard", "Archer"]);
+  assert.deepEqual(Array.from(context.campaign.lastExchange.defeatedTargets, x => x.name), ["Guard"]);
+  assert.equal(context.delta.enemy.name, "Guard");
+  assert.equal(context.delta.dealt, 5);
+  assert.equal(context.delta.additional[0].enemy.name, "Archer");
+  assert.equal(context.delta.additional[0].dealt, 37);
+});
+
+test("Vanish always evades the incoming attack and blocks for exactly five exchanges", () => {
+  const context = makeContext();
+  const enemy = { name: "Guard", hp: 40, maxHp: 40 };
+  const ability = { id: "vanish", name: "Vanish", cost: 40, effect: "guard", stat: "DEX", die: 0, flat: 0, damageType: "physical", cooldown: 5, guaranteedEvade: true };
+  let attackCalls = 0;
+  context.campaign = { flags: {}, enemies: [enemy], combatRound: 0, encounterSerial: 0, defeatedEnemies: [], classCooldowns: {} };
+  context.selectedCombatTarget = "Guard";
+  context.livingEnemies = () => context.campaign.enemies.filter(x => x.hp > 0);
+  context.startProgressionEncounter = () => context.encounter = { id: "test", defeated: [], party: [] };
+  context.partyExperienceIds = () => [];
+  context.recordCombatDelta = () => {};
+  context.status = message => { context.statusMessage = message; };
+  context.resourceName = () => "Energy";
+  context.window.soaCharacters.profile = () => ({ name: "Snacky Lugnuts", className: "Rogue", race: "Gnome" });
+  context.window.soaProgression = { level: () => 10 };
+  context.window.soaClassAbilities = { get: id => id === ability.id ? ability : null };
+  context.window.soaAbilities.get = () => ({ className: "Rogue", proficiency: 3, modifiers: { DEX: 4 }, armorClass: 16, initiative: 1 });
+  context.window.soaCombatRules = {
+    statBlock: () => ({ ac: 14, type: "guard", bonus: 5, die: 8 }),
+    attack: () => { attackCalls++; return { die: 20, total: 25, hit: true, critical: false }; },
+    damage: () => 8,
+    mitigate: amount => amount,
+    initiative: () => 10,
+  };
+  vm.runInContext([
+    functionBlock("classCooldownLeft", "resourceKey"),
+    functionBlock("classAbilityExchange", "fightExchange"),
+    "globalThis.runClassAbility = classAbilityExchange;",
+    "globalThis.cooldownLeft = classCooldownLeft;",
+  ].join("\n"), context);
+
+  const result = context.runClassAbility({ text: "Snacky uses Vanish" }, ability, [enemy]);
+  assert.match(result, /100% success/);
+  assert.equal(context.campaign.lastExchange.evaded, true);
+  assert.equal(context.campaign.lastExchange.taken, 0);
+  assert.equal(context.s.en, 85, "Vanish pays 40 Energy and the exchange restores 25");
+  assert.equal(attackCalls, 0, "guaranteed Vanish skips the enemy attack roll entirely");
+  assert.equal(context.campaign.classCooldowns.vanish, 7);
+  assert.equal(context.cooldownLeft(ability), 5);
+  for (let round = 2; round <= 6; round++) {
+    context.campaign.combatRound = round;
+    assert.equal(context.cooldownLeft(ability), 7 - (round + 1), "the cooldown counts five full exchanges after use");
+  }
+  context.campaign.combatRound = 1;
+  assert.equal(context.campaign.combatRound, 1);
+
+  const energy = context.s.en;
+  assert.equal(context.runClassAbility({ text: "Snacky uses Vanish" }, ability, [enemy]), null, "cooldown blocks reuse without resolving an action");
+  assert.equal(context.campaign.combatRound, 1);
+  assert.equal(context.s.en, energy);
+  assert.match(context.statusMessage, /5 more exchanges/);
+});
+
 test("story combat text resolves every learned class ability by its displayed name", () => {
   const context = makeContext();
   context.window.soaCharacters.profile = () => ({ className: "Rogue" });
@@ -236,6 +418,8 @@ test("story combat text resolves every learned class ability by its displayed na
     { id: "kick", name: "Kick" },
     { id: "evasion", name: "Evasion" },
     { id: "blade_flurry", name: "Blade Flurry" },
+    { id: "vanish", name: "Vanish" },
+    { id: "spec_rogue_combat", name: "Killing Spree" },
   ];
   context.window.soaClassAbilities = {
     available: () => learned,
@@ -248,6 +432,8 @@ test("story combat text resolves every learned class ability by its displayed na
   assert.equal(context.resolveCombatAbility({ type: "combat", text: "Follow up with a swift Sinister Strike." }), "sinister_strike");
   assert.equal(context.resolveCombatAbility({ type: "combat", text: "Kick the guard before he can shout." }), "kick");
   assert.equal(context.resolveCombatAbility({ type: "combat", text: "Use Blade Flurry against the pair." }), "blade_flurry");
+  assert.equal(context.resolveCombatAbility({ type: "combat", text: "Use Killing Spree against the pair." }), "spec_rogue_combat");
+  assert.equal(context.resolveCombatAbility({ type: "combat", text: "Vanish before the guard strikes." }), "vanish");
   assert.equal(context.resolveCombatAbility({ type: "combat", ability: "strike", text: "A measured weapon attack." }), "strike");
 });
 
@@ -255,14 +441,17 @@ test("story choices route named cooldown abilities through the shared ability ex
   const context = makeContext();
   const enemy = { name: "Trogg Scout", hp: 34, maxHp: 45 };
   const kick = { id: "kick", name: "Kick", cost: 35, effect: "interrupt", cooldown: 1 };
+  const killingSpree = { id: "spec_rogue_combat", name: "Killing Spree", cost: 50, effect: "damage", cooldown: 2, strikes: 2, weaponDamage: true, criticalOn: 19 };
+  const vanish = { id: "vanish", name: "Vanish", cost: 40, effect: "guard", cooldown: 5, guaranteedEvade: true };
+  const learned = [kick, killingSpree, vanish];
   context.campaign = { flags: {}, enemies: [enemy], combatRound: 4 };
   context.window.soaCharacters.profile = () => ({ name: "Test Rogue", className: "Rogue" });
-  context.window.soaProgression = { level: () => 3 };
+  context.window.soaProgression = { level: () => 10 };
   context.livingEnemies = () => [enemy];
   context.window.soaClassAbilities = {
-    available: () => [kick],
-    get: id => id === "kick" ? kick : null,
-    costOf: id => id === "kick" ? kick.cost : 0,
+    available: () => learned,
+    get: id => learned.find(ability => ability.id === id) || null,
+    costOf: id => learned.find(ability => ability.id === id)?.cost ?? 0,
   };
   context.window.soaRacialAbilities = { get: () => null };
   context.classAbilityExchange = (action, ability, targets) => {
@@ -278,6 +467,10 @@ test("story choices route named cooldown abilities through the shared ability ex
   assert.equal(context.runFightExchange({ type: "combat", text: "Use Kick against the Trogg Scout." }), "Resolved shared class ability.");
   assert.equal(context.routedAbility.id, "kick");
   assert.equal(context.routedTarget.name, "Trogg Scout");
+  assert.equal(context.runFightExchange({ type: "combat", text: "Use Killing Spree against the Trogg Scout." }), "Resolved shared class ability.");
+  assert.equal(context.routedAbility.id, "spec_rogue_combat", "named A/B combat choices route the signature ability");
+  assert.equal(context.runFightExchange({ type: "combat", text: "Vanish to evade the Trogg Scout's attack." }), "Resolved shared class ability.");
+  assert.equal(context.routedAbility.id, "vanish", "named Vanish choices route through its cooldown-bearing class ability");
 });
 
 test("combat overview stays hidden after the last hostile is defeated", () => {

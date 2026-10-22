@@ -452,3 +452,12 @@ This pass reconciles previews with the actual resolver, validates imported and s
 - The mobile navigation files are now loaded by the page and cached for offline use. An unknown saved tab falls back to Adventure, and storage exceptions no longer break navigation.
 - Offline cache **v51** includes the save validator and mobile navigation assets. The local checks now run through `npm run check` and `npm test`, with a GitHub Actions workflow on pull requests and `main`. All 27 Node tests passed, plus 128 faction-rule assertions. Coverage includes save corruption preservation, journal-import validation, XP rollback on storage failure, request-size enforcement, and mission reward gating. Live iPhone restore behavior still needs manual verification.
 - The public AI endpoint still needs a Cloudflare rate limit configured in the hosting account. The repository does not contain that account binding or WAF configuration; do not assume the shared access code is per-player authentication.
+
+
+## Rogue tactical ability tuning (v81)
+
+- **Killing Spree** costs **50 Energy**, keeps its **two-exchange cooldown**, and makes two independently rolled weapon attacks as one combat action. Each attack critically hits on a natural **19–20** and rolls the equipped weapon's damage, doubling its weapon die on a critical. If the first strike defeats its target, the second redirects to another living enemy; it is skipped if no target remains. The exchange restores Energy once.
+- **Vanish** retains its **40 Energy** cost and now guarantees the evade (**100% success**) with a **five-exchange cooldown**. A guaranteed evade skips the enemy's attack roll. Cooldowns are shown in combat and enforced in both the action panel and named story combat choices.
+- Combat previews and the last-exchange details show the separate strike rolls, each result, criticals, damage, target HP, and Vanish's guaranteed evade. Ordinary attacks still critically hit only on a natural 20.
+
+The offline shell cache is **v81**. Focused checks verify two attack rolls, expanded criticals, weapon damage, target redirection, one exchange of recovery, and the full five-exchange Vanish cooldown.

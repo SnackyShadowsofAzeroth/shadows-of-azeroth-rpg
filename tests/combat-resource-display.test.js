@@ -19,10 +19,10 @@ test("combat resource mapping covers each selectable class and Druid forms",()=>
 
 test("the allied player combat card displays the class resource as a live progress bar",()=>{
  assert.match(campaign,/resource:s\.en,maxResource:100/);
- assert.match(campaign,/window\.soaResources\?\.forClass\?\.\(ally\.className,ally\.form\)/);
+ assert.match(campaign,/const actor=window\.soaAbilities\?\.get\?\.\("hero"\),resource=window\.soaResources\?\.forClass\?\.\(actor\?\.className,actor\?\.form\)/);
  assert.match(campaign,/soa-combat-resource-rail/);
  assert.match(campaign,/aria-valuenow/);
- assert.match(campaign,/current\/maximum\*100/);
+ assert.match(campaign,/current\/max\*100/);
 });
 
 test("combat actions are integrated above story choices with a free baseline strike",()=>{

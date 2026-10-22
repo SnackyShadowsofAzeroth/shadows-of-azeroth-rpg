@@ -34,7 +34,12 @@ test("specialization ability is gated until level 10 and selection is class-spec
 test("legacy Combat Swords characters keep their saved value and receive Combat's signature move",()=>{
  profile={className:"Rogue",specialization:"Combat Swords"};
  assert.equal(specs.selected(profile),"Combat");
- assert.equal(specs.ability(profile,10).name,"Killing Spree");
+ const spree=specs.ability(profile,10);
+ assert.equal(spree.name,"Killing Spree");
+ assert.equal(spree.cost,50);
+ assert.equal(spree.strikes,2);
+ assert.equal(spree.weaponDamage,true);
+ assert.equal(spree.criticalOn,19);
  assert.equal(abilities.available("Rogue",10).some(x=>x.name==="Killing Spree"),true);
 });
 
@@ -43,7 +48,7 @@ test("signature ability data uses supported combat effects and deliberate resour
  for(const name of classes)for(const choice of specs.choices(name)){
   const a=choice.ability;
   assert.ok(supported.has(a.effect),name+" "+choice.name);
-  assert.ok([35,40,45].includes(a.cost),name+" "+choice.name);
+  assert.ok([35,40,45,50].includes(a.cost),name+" "+choice.name);
   assert.equal(a.cooldown,2,name+" "+choice.name+" should be a tactical signature move");
   assert.ok(a.description.length>8);
  }
