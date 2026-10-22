@@ -5,7 +5,7 @@ const get=id=>document.getElementById(id);
 function localGet(key){try{return localStorage.getItem(key)}catch{campaignStorageReadFailed=true;return null}}
 function localSet(key,value){try{localStorage.setItem(key,value);return true}catch{return false}}
 function store(){if(campaignLoadBlocked||window.soaSaveRules.isIntegrityBlocked()){status("Saved data could not be read. Restore a valid backup before continuing.");return false}try{localStorage.setItem(KEY,JSON.stringify(campaign));campaignSaveFailed=false;return true}catch(e){campaignSaveFailed=true;status("Campaign save failed. Check device storage; your current scene is still open.");window.soaReportStorageFailure?.("Campaign save failed. Check browser storage before continuing.");return false}}
-function make(){return {turn:0,scene:null,history:[],journal:[],lastError:"",lastAction:"Begin the next scene of this character’s adventure.",lastResult:"A new campaign is ready. No action has been taken yet.",pending:null}}
+function make(){return {turn:0,combatRound:0,evasionUntil:0,scene:null,history:[],journal:[],lastError:"",lastAction:"Begin the next scene of this character’s adventure.",lastResult:"A new campaign is ready. No action has been taken yet.",pending:null}}
 function normalizeCampaignState(value){
  value=window.soaSaveRules.validateCampaignSave(value);
  if(!value||typeof value!=="object"||Array.isArray(value))return null;
@@ -21,6 +21,8 @@ function normalizeCampaignState(value){
  c.combatLog=Array.isArray(c.combatLog)?c.combatLog.slice(-30).filter(row=>row&&typeof row==="object"&&Array.isArray(row.events)).map(row=>({round:Number.isSafeInteger(row.round)&&row.round>=0?row.round:0,events:row.events.filter(event=>event&&typeof event.name==="string").slice(0,10).map(event=>({name:event.name.slice(0,80),side:typeof event.side==="string"?event.side.slice(0,12):"",delta:Number.isFinite(event.delta)?event.delta:0,after:Number.isFinite(event.after)?event.after:0,maxHp:Number.isFinite(event.maxHp)?event.maxHp:null}))})):[];
  c.supportCooldowns=c.supportCooldowns&&typeof c.supportCooldowns==="object"&&!Array.isArray(c.supportCooldowns)?c.supportCooldowns:{};
  c.classCooldowns=c.classCooldowns&&typeof c.classCooldowns==="object"&&!Array.isArray(c.classCooldowns)?c.classCooldowns:{};
+ c.combatRound=Number.isSafeInteger(c.combatRound)&&c.combatRound>=0?c.combatRound:0;
+ c.evasionUntil=Number.isSafeInteger(c.evasionUntil)&&c.evasionUntil>=0?c.evasionUntil:0;
  c.partyHealth=c.partyHealth&&typeof c.partyHealth==="object"&&!Array.isArray(c.partyHealth)?c.partyHealth:{};
  c.defeatedEnemies=Array.isArray(c.defeatedEnemies)?c.defeatedEnemies.filter(item=>typeof item==="string").slice(-80):[];
  if(c.pending&&(typeof c.pending!=="object"||Array.isArray(c.pending)||typeof c.pending.action!=="string"||typeof c.pending.resolution!=="string"))c.pending=null;
@@ -158,7 +160,7 @@ function dicePreview(action){
   const cost=window.soaClassAbilities?.costOf?.(abilityId,profile?.className,level)??0;
   const resource=resourceName();
   if(classAbility?.guaranteedEvade)return {primary:"🎲 Guaranteed success · 100%",secondary:"Vanish automatically evades the incoming attack · "+cost+" "+resource+" cost · "+classAbility.cooldown+" exchange cooldown"};
-  if(abilityId==="evasion")return {primary:"🎲 No attack roll",secondary:"Incoming attack at disadvantage · "+cost+" "+resource+" cost · up to +25 "+resource+" recovery"};
+  if(abilityId==="evasion")return {primary:"🎲 50% dodge chance per incoming hit",secondary:"Lasts 2 rounds · "+cost+" "+resource+" cost · 2-round cooldown · up to +25 "+resource+" recovery"};
   const attacker=window.soaAbilities?.get?.("hero");
   const gear=window.soaEquipment?.modifiers?.()||{};
   if(abilityId==="riposte")return {primary:"🎲 Automatic hit after parry",secondary:(24+(attacker?.modifiers?.DEX||0)+(gear.damage||0))+" raw damage on a valid Riposte · "+cost+" "+resource+" cost · up to +25 recovery"};
@@ -302,19 +304,21 @@ function companionExchange(action){
  campaign.combatRound=round+1;
  s.time++;s.en=Math.min(100,s.en+COMBAT_RESOURCE_RECOVERY);
  const enemy=foes.find(e=>e.hp>0);
- let retaliation="";
+ let retaliation="",evasionRoll=null,evasionActive=(Number(campaign.evasionUntil)||0)>=campaign.combatRound,evaded=false;
  if(enemy){
   const block=rules.statBlock(enemy),hero=window.soaAbilities?.get?.("hero"),heroAC=hero?.armorClass||12;
   const caught=campaign.snaredEnemy===enemy.name&&campaign.snareUntil>=campaign.combatRound;
   if(caught){retaliation=enemy.name+" is snared and cannot attack.";campaign.snareUntil=0}
   else{
    const roll=rules.attack(block.bonus,heroAC,{advantage:campaign.guardUntil>=campaign.combatRound?-1:0});
-   if(roll.hit){const wound=rules.damage(block.die,2,roll.critical),before=s.hp;s.hp=Math.max(1,s.hp-wound);retaliation=enemy.name+" attacks: d20 "+roll.die+" total "+roll.total+" vs AC "+heroAC+", dealing "+(before-s.hp)+" damage."}
-   else retaliation=enemy.name+" misses: d20 "+roll.die+" total "+roll.total+" vs AC "+heroAC+".";
+   if(roll.hit&&evasionActive){evasionRoll=rules.roll(100);evaded=evasionRoll<=50}
+   if(roll.hit&&evaded)retaliation=enemy.name+"'s hit is dodged by Evasion (d100 "+evasionRoll+" ≤ 50).";
+   else if(roll.hit){const wound=rules.damage(block.die,2,roll.critical),before=s.hp;s.hp=Math.max(1,s.hp-wound);retaliation=(evasionRoll!==null?"Evasion fails (d100 "+evasionRoll+" > 50); ":"")+enemy.name+" attacks: d20 "+roll.die+" total "+roll.total+" vs AC "+heroAC+", dealing "+(before-s.hp)+" damage."}
+   else retaliation=enemy.name+" misses: d20 "+roll.die+" total "+roll.total+" vs AC "+heroAC+(evasionActive?"; Evasion was active, so no dodge roll was needed.":".");
   }
  }
  campaign.parryReady=false;
- campaign.lastSupport={round:campaign.combatRound,actor:spec.name,description,retaliation};
+ campaign.lastSupport={round:campaign.combatRound,actor:spec.name,description,retaliation,evasionActive,evasionRoll,evaded};
  return "Success: Round "+campaign.combatRound+". "+description+" "+retaliation+" "+resourceName()+" "+previous+" → "+s.en+". Exactly one exchange resolved.";
 }
 function classAbilityExchange(action,ability,targets){
@@ -338,7 +342,7 @@ function classAbilityExchange(action,ability,targets){
  if(!campaign.initiativeFor||campaign.initiativeFor!==campaign.enemyLocation){campaign.initiativeFor=campaign.enemyLocation;campaign.initiativeRoll=rules.initiative(actor?.initiative||0);campaign.enemyInitiative=rules.initiative(block.initiative)}
  const advantage=campaign.flags?.advantage?1:0,attackBonus=proficiency+stat+(gear.attack||0),weaponStrike=ability.weaponDamage===true,strikeCount=weaponStrike?Math.max(1,Math.min(6,Math.trunc(Number(ability.strikes)||1))):1;
  const weapon=weaponStrike?rules.weapon(actor,"strike"):null;
- let roll=null,hit=false,dealt=0,healed=0,racialProc=null,damageType=weaponStrike?weapon.type:ability.damageType||"physical",interrupted=false,guarding=ability.effect==="guard",evaded=false;
+ let roll=null,hit=false,dealt=0,healed=0,racialProc=null,damageType=weaponStrike?weapon.type:ability.damageType||"physical",interrupted=false,guarding=ability.effect==="guard",evaded=false,evasionRoll=null,evasionActive=false,evasionUntil=Number(campaign.evasionUntil)||0;
  const strikeDetails=[],racialProcs=[],targetDamage=new Map();
  const addTargetDamage=(enemy,before,amount=0)=>{let row=targetDamage.get(enemy);if(!row){row={enemy,before,dealt:0};targetDamage.set(enemy,row)}row.dealt+=Math.max(0,Number(amount)||0);return row};
  if(["damage","interrupt","drain","riposte"].includes(ability.effect)){
@@ -384,22 +388,25 @@ function classAbilityExchange(action,ability,targets){
  if(!livingEnemies().length&&defeatedTargets.length)encounter.pendingVictory=true;
  const enemyActsFirst=(campaign.enemyInitiative||0)>(campaign.initiativeRoll||0),remaining=livingEnemies(),retaliationTarget=remaining.find(e=>e.name===target.name)||remaining[0]||null;
  const retaliationBlock=retaliationTarget?rules.statBlock(retaliationTarget):block,retaliationAttempt=!!retaliationTarget&&(enemyActsFirst||!interrupted),heroAC=actor?.armorClass||12;
- const guaranteedEvade=ability.guaranteedEvade===true;
- const enemyAttack=retaliationAttempt&&!guaranteedEvade?rules.attack(retaliationBlock.bonus,heroAC,{advantage:guarding||ability.id==="evasion"?-1:campaign.guardUntil>=(Number(campaign.combatRound)||0)+1?-1:0}):null;
- evaded=retaliationAttempt&&guaranteedEvade;
- const retaliates=!!enemyAttack?.hit,amount=retaliates?rules.damage(retaliationBlock.die,2,enemyAttack.critical):0;
+ const guaranteedEvade=ability.guaranteedEvade===true,attackRound=(Number(campaign.combatRound)||0)+1;
+ if(ability.id==="evasion")campaign.evasionUntil=attackRound+1;
+ evasionUntil=Number(campaign.evasionUntil)||0;evasionActive=evasionUntil>=attackRound;
+ const enemyAttack=retaliationAttempt&&!guaranteedEvade?rules.attack(retaliationBlock.bonus,heroAC,{advantage:guarding&&ability.id!=="evasion"||campaign.guardUntil>=attackRound?-1:0}):null;
+ if(retaliationAttempt&&!guaranteedEvade&&evasionActive&&enemyAttack?.hit)evasionRoll=rules.roll(100);
+ evaded=retaliationAttempt&&(guaranteedEvade||evasionRoll!==null&&evasionRoll<=50);
+ const retaliates=!!enemyAttack?.hit&&!evaded,amount=retaliates?rules.damage(retaliationBlock.die,2,enemyAttack.critical):0;
  const taken=retaliates?Math.min(Math.max(0,s.hp-1),amount):0;s.hp=Math.min(heroHealthCap(),Math.max(1,s.hp-taken)+racialRegeneration());
  const parry=!!enemyAttack&&!enemyAttack.hit&&!!retaliationTarget&&!guarding&&enemyAttack.total<heroAC&&enemyAttack.die>1&&Math.random()<.5;
  campaign.parryReady=parry;s.en=Math.min(100,s.en-ability.cost+COMBAT_RESOURCE_RECOVERY);s.time++;campaign.combatRound=(Number(campaign.combatRound)||0)+1;
  if(isClassAbility&&ability.cooldown>0){campaign.classCooldowns||={};campaign.classCooldowns[ability.id]=campaign.combatRound+ability.cooldown+1}
  const firstDamage=targetDamage.values().next().value||{enemy:target,dealt:0},additionalDamage=Array.from(targetDamage.values()).slice(1);
- const event={round:campaign.combatRound,ability:ability.id,racialProc,racialProcs,attackRoll:roll?.die??null,targetAC:block.ac,enemyType:block.type,damageType,initiative:campaign.initiativeRoll,enemyInitiative:campaign.enemyInitiative,attackTotal:roll?.total??null,critical:weaponStrike?strikeDetails.some(x=>x.critical):!!roll?.critical,enemyRoll:enemyAttack?.die??null,enemyTotal:enemyAttack?.total??null,defenderAC:heroAC,target:target.name,dealt,taken,hit,defeated:target.hp===0,defeatedTargets,enemyBefore:oldHP,enemyAfter:target.hp,enemyMax:target.maxHp,heroBefore:heroHP,heroAfter:s.hp,energyBefore:oldResource,energyAfter:s.en,recipient:name,recipientBefore:heroHP,recipientAfter:s.hp,healed,parry,evaded,guaranteedEvade,strikes:weaponStrike?strikeDetails:undefined};
+ const event={round:campaign.combatRound,ability:ability.id,racialProc,racialProcs,attackRoll:roll?.die??null,targetAC:block.ac,enemyType:block.type,damageType,initiative:campaign.initiativeRoll,enemyInitiative:campaign.enemyInitiative,attackTotal:roll?.total??null,critical:weaponStrike?strikeDetails.some(x=>x.critical):!!roll?.critical,enemyRoll:enemyAttack?.die??null,enemyTotal:enemyAttack?.total??null,defenderAC:heroAC,target:target.name,dealt,taken,hit,defeated:target.hp===0,defeatedTargets,enemyBefore:oldHP,enemyAfter:target.hp,enemyMax:target.maxHp,heroBefore:heroHP,heroAfter:s.hp,energyBefore:oldResource,energyAfter:s.en,recipient:name,recipientBefore:heroHP,recipientAfter:s.hp,healed,parry,evaded,guaranteedEvade,evasionRoll,evasionActive,evasionUntil,evasionRemaining:Math.max(0,evasionUntil-campaign.combatRound),strikes:weaponStrike?strikeDetails:undefined};
  campaign.lastExchange=event;
  recordCombatDelta(firstDamage.enemy,firstDamage.dealt,taken,name,heroHP,s.hp,additionalDamage);
  const strikeReport=weaponStrike?" Strikes: "+strikeDetails.map(x=>x.skipped?"Strike "+x.index+" skipped; no living target.":"Strike "+x.index+" "+(x.hit?"hit":"miss")+(x.critical?" (critical)":"")+" for "+x.damage+" damage to "+x.target+" (d20 "+x.die+" + "+x.bonus+" = "+x.total+" vs AC "+x.ac+").").join(" "):"";
  const racialReport=racialProcs.length?" "+racialProcs.map(proc=>"Touch of the Grave deals "+proc.damage+" Shadow damage and restores "+proc.healing+" HP.").join(" "):"";
- const effect=ability.guaranteedEvade?(evaded?"vanishes and automatically evades the incoming attack (100% success)":"vanishes successfully; no enemy attack reaches you"):weaponStrike?(hit?"connects with "+strikeDetails.filter(x=>x.hit).length+" of "+strikeDetails.filter(x=>!x.skipped).length+" weapon strikes for "+dealt+" total damage":"misses with both weapon strikes"):guarding?"evades the incoming attack":healed?"restores "+healed+" HP":hit?"hits "+target.name+" for "+dealt+" damage":ability.effect==="heal"?"restores no health":"misses "+target.name;
- const retaliation=evaded?"The incoming attack is automatically evaded.":retaliates?retaliationTarget.name+" retaliates for "+taken+" HP.":"No damage received.";
+ const effect=ability.guaranteedEvade?(evaded?"vanishes and automatically evades the incoming attack (100% success)":"vanishes successfully; no enemy attack reaches you"):ability.id==="evasion"?"activates Evasion (50% dodge chance per incoming hit for two rounds)":weaponStrike?(hit?"connects with "+strikeDetails.filter(x=>x.hit).length+" of "+strikeDetails.filter(x=>!x.skipped).length+" weapon strikes for "+dealt+" total damage":"misses with both weapon strikes"):guarding?"evades the incoming attack":healed?"restores "+healed+" HP":hit?"hits "+target.name+" for "+dealt+" damage":ability.effect==="heal"?"restores no health":"misses "+target.name;
+ const retaliation=evaded?(guaranteedEvade?"The incoming attack is automatically evaded.":"Evasion succeeds (d100 "+evasionRoll+" ≤ 50); "+retaliationTarget.name+"'s hit is dodged."):retaliates?evasionRoll!==null?retaliationTarget.name+" hits; Evasion fails (d100 "+evasionRoll+" > 50), dealing "+taken+" HP.":retaliationTarget.name+" retaliates for "+taken+" HP.":evasionActive&&enemyAttack&&!enemyAttack.hit?retaliationTarget.name+" misses; no dodge roll was needed.":"No damage received.";
  const normalAttackReport=!weaponStrike&&roll?" Attack d20 "+roll.die+" + "+(proficiency+stat+(gear.attack||0))+" vs AC "+block.ac+".":"";
  return (hit||guarding||healed?"Success":"Complication")+": "+name+" uses "+ability.name+" and "+effect+"."+strikeReport+normalAttackReport+" "+retaliation+racialReport+" "+resource+" "+oldResource+" → "+s.en+". Player HP "+heroHP+" → "+s.hp+". Exactly one combat exchange resolved.";
 }
@@ -440,7 +447,9 @@ function fightExchange(action){
   campaign.initiativeRoll=rules.initiative(dex);
   campaign.enemyInitiative=rules.initiative(block.initiative);
  }
- const advantage=campaign.flags?.advantage?1:0;
+ const advantage=campaign.flags?.advantage?1:0,actionRound=(Number(campaign.combatRound)||0)+1;
+ if(ability==="evasion")campaign.evasionUntil=actionRound+1;
+ const evasionUntil=Number(campaign.evasionUntil)||0,evasionActive=evasionUntil>=actionRound;
  const gearBonus=window.soaEquipment?.modifiers?.()||{};
  const playerAttack=ability==="riposte"||ability==="evasion"?null:rules.attack(proficiency+attackModifier+(gearBonus.attack||0),targetAC,{advantage});
  const attackRoll=playerAttack?.die??null;
@@ -461,9 +470,11 @@ function fightExchange(action){
  const defendingAlly=retaliationAttempt&&eligibleTargets.length&&Math.random()<.35?eligibleTargets[Math.floor(Math.random()*eligibleTargets.length)]:null;
  const defendingId=defendingAlly?({"Pippa Sparkwhistle":"pippa","Bromli Ironkeg":"bromli","Lethariel Moonguard":"lethariel"})[defendingAlly.name]:null;
  const defenderAC=defendingId?window.soaAbilities?.get?.(defendingId)?.armorClass||12:heroAC;
- const enemyAttack=retaliationAttempt?rules.attack(block.bonus,defenderAC,{advantage:ability==="evasion"||campaign.guardUntil>=(Number(campaign.combatRound)||0)+1?-1:0}):null;
- const caught=campaign.snaredEnemy===target.name&&campaign.snareUntil>=(Number(campaign.combatRound)||0)+1;
- const retaliates=!caught&&!!enemyAttack?.hit;
+ const enemyAttack=retaliationAttempt?rules.attack(block.bonus,defenderAC,{advantage:campaign.guardUntil>=actionRound?-1:0}):null;
+ const caught=campaign.snaredEnemy===target.name&&campaign.snareUntil>=actionRound;
+ const evasionRoll=retaliationAttempt&&!defendingAlly&&!caught&&evasionActive&&enemyAttack?.hit?rules.roll(100):null;
+ const evaded=!caught&&!defendingAlly&&evasionRoll!==null&&evasionRoll<=50;
+ const retaliates=!caught&&!!enemyAttack?.hit&&!evaded;
  if(caught)campaign.snareUntil=0;
  const amount=retaliates?rules.damage(block.die,2,enemyAttack.critical):0;
  const allyRecipient=defendingAlly;
@@ -485,7 +496,7 @@ function fightExchange(action){
  campaign.parryReady=parry;
  s.en=Math.min(100,s.en-price+COMBAT_RESOURCE_RECOVERY);s.time++;
  campaign.combatRound=(Number(campaign.combatRound)||0)+1;
- const event={round:campaign.combatRound,ability,racialProc,healed:racialProc?.healing||0,attackRoll,hitTarget,targetAC,enemyType:block.type,damageType:arm.type,initiative:campaign.initiativeRoll,enemyInitiative:campaign.enemyInitiative,attackTotal:playerAttack?.total??null,critical:!!playerAttack?.critical,enemyRoll:enemyAttack?.die??null,enemyTotal:enemyAttack?.total??null,defenderAC,target:target.name,dealt,taken,hit,defeated,enemyBefore:oldHP,enemyAfter:target.hp,enemyMax:target.maxHp,heroBefore:heroHP,heroAfter:s.hp,energyBefore:oldEnergy,energyAfter:s.en,recipient:receivedName,recipientBefore,recipientAfter,parry};
+ const event={round:campaign.combatRound,ability,racialProc,healed:racialProc?.healing||0,attackRoll,hitTarget,targetAC,enemyType:block.type,damageType:arm.type,initiative:campaign.initiativeRoll,enemyInitiative:campaign.enemyInitiative,attackTotal:playerAttack?.total??null,critical:!!playerAttack?.critical,enemyRoll:enemyAttack?.die??null,enemyTotal:enemyAttack?.total??null,defenderAC,target:target.name,dealt,taken,hit,defeated,enemyBefore:oldHP,enemyAfter:target.hp,enemyMax:target.maxHp,heroBefore:heroHP,heroAfter:s.hp,energyBefore:oldEnergy,energyAfter:s.en,recipient:receivedName,recipientBefore,recipientAfter,parry,evaded,evasionRoll,evasionActive,evasionUntil,evasionRemaining:Math.max(0,evasionUntil-campaign.combatRound)};
  campaign.lastExchange=event;
  recordCombatDelta(target,dealt,taken,receivedName,recipientBefore,recipientAfter);
  if(defeated){
@@ -497,10 +508,10 @@ function fightExchange(action){
   campaign.defeatedEnemies.push(String(campaign.enemyLocation||campaign.scene?.location||"")+"|"+target.name.toLowerCase());
   campaign.defeatedEnemies=campaign.defeatedEnemies.slice(-80);
  }
- const report=(ability==="evasion"?"Defensive evasion; no attack roll.":hit?"Used "+ability+" on "+target.name+" for "+dealt+" HP.":"Used "+ability+" on "+target.name+" but missed.")+
+ const report=(ability==="evasion"?"Evasion activated: 50% dodge chance per incoming hit for two rounds.":hit?"Used "+ability+" on "+target.name+" for "+dealt+" HP.":"Used "+ability+" on "+target.name+" but missed.")+
   (attackRoll!==null?" d20 attack "+attackRoll+" + "+playerAttack.bonus+" vs AC "+targetAC+".":"")+
   " Enemy "+target.name+" HP "+oldHP+"/"+target.maxHp+" → "+target.hp+"/"+target.maxHp+". "+
-  (retaliates?target.name+" retaliates against "+receivedName+" for "+taken+" HP ("+recipientBefore+" → "+recipientAfter+").":"No damage received.")+
+  (evaded?"Evasion succeeds (d100 "+evasionRoll+" ≤ 50); incoming attack avoided.":retaliates?evasionRoll!==null?"Evasion fails (d100 "+evasionRoll+" > 50); "+target.name+" hits "+receivedName+" for "+taken+" HP ("+recipientBefore+" → "+recipientAfter+").":target.name+" retaliates against "+receivedName+" for "+taken+" HP ("+recipientBefore+" → "+recipientAfter+").":evasionActive&&enemyAttack&&!enemyAttack.hit?target.name+" misses; no dodge roll was needed.":"No damage received.")+
   " Player HP "+heroHP+" → "+s.hp+"; "+resourceName()+" "+oldEnergy+" → "+s.en+"."+
   (racialProc?" Touch of the Grave erupts for "+racialProc.damage+" Shadow damage and restores "+racialProc.healing+" HP.":"")+(defeated?" Opponent defeated.":"")+" Exactly ONE consequential combat exchange resolved. No automatic loot, extra turns, or unconfirmed healing.";
  return (hit||ability==="evasion"?"Success":"Complication")+": Combat exchange "+campaign.combatRound+": "+report;
@@ -509,6 +520,7 @@ function updateLivingEnemies(scene){
  if(!Array.isArray(scene?.enemies))return;
  const location=String(scene.location||"");
  const previous=(campaign.enemyLocation===location||campaign.pending?.combat)?livingEnemies():[];
+ if(!previous.length)campaign.evasionUntil=0;
  const defeated=campaign.defeatedEnemies||[];
  const next=[];
  for(const item of scene.enemies.slice(0,4)){
@@ -689,7 +701,8 @@ function drawEnemyStatus(box){
   }else if(exchange.guaranteedEvade){
    dealt.textContent="Vanish succeeded · guaranteed 100% evade"+(exchange.evaded?"; incoming attack avoided.":"; no enemy attack reached you.");
   }else{
-   dealt.textContent=exchange.healed?"Used "+String(exchange.ability||"ability").replaceAll("_"," ")+" · restored "+exchange.healed+" HP.":exchange.ability==="evasion"||["shield_block","divine_protection","power_word_shield","blink","sprint","vanish"].includes(exchange.ability)?"Used "+String(exchange.ability).replaceAll("_"," ")+" · incoming attack disadvantaged.":exchange.hit?"Hit · "+exchange.dealt+" damage to "+exchange.target+" ("+exchange.enemyBefore+" → "+exchange.enemyAfter+"/"+exchange.enemyMax+" HP).":"Miss · 0 damage to "+exchange.target+".";
+   const evasionNote=exchange.evasionActive?(Number.isInteger(exchange.evasionRoll)?exchange.evaded?" · Evasion succeeds (d100 "+exchange.evasionRoll+" ≤ 50).":" · Evasion fails (d100 "+exchange.evasionRoll+" > 50).":" · Evasion active; no dodge roll was needed."):"";
+   dealt.textContent=exchange.ability==="evasion"?"Evasion activated · 50% dodge chance per incoming hit for 2 rounds · 2-round cooldown"+evasionNote+".":exchange.healed?"Used "+String(exchange.ability||"ability").replaceAll("_"," ")+" · restored "+exchange.healed+" HP."+evasionNote:exchange.ability==="sprint"?"Used Sprint · incoming attack disadvantaged."+evasionNote:exchange.hit?"Hit · "+exchange.dealt+" damage to "+exchange.target+" ("+exchange.enemyBefore+" → "+exchange.enemyAfter+"/"+exchange.enemyMax+" HP)."+evasionNote:"Miss · 0 damage to "+exchange.target+"."+evasionNote;
   }
   const taken=document.createElement("p");taken.textContent="Damage received · "+(exchange.recipient||"you")+" "+exchange.taken+" HP ("+(exchange.recipientBefore??exchange.heroBefore)+" → "+(exchange.recipientAfter??exchange.heroAfter)+" HP).";
   summary.append(title,dealt,taken);
@@ -702,7 +715,9 @@ function drawEnemyStatus(box){
     details.append(roll);
    }
   }else if(Number.isInteger(exchange.attackRoll)){const roll=document.createElement("p");roll.textContent="Attack roll: d20 "+exchange.attackRoll+" + modifier = "+exchange.attackTotal+" vs AC "+exchange.targetAC+(exchange.critical?" · Critical hit":"");details.append(roll)}
+  if(exchange.ability==="evasion"){const note=document.createElement("p");note.textContent="Evasion gives a 50% chance to dodge each incoming hit for two rounds. A separate d100 roll of 1–50 dodges; 51–100 does not. Its two-round cooldown starts on use.";details.append(note)}
   if(exchange.guaranteedEvade){const note=document.createElement("p");note.textContent="Vanish is guaranteed: when a hostile can attack this exchange, that attack is automatically evaded.";details.append(note)}
+  if(exchange.evasionActive){const note=document.createElement("p");note.textContent=Number.isInteger(exchange.evasionRoll)?"Evasion d100 "+exchange.evasionRoll+" · "+(exchange.evaded?"dodged (1–50 succeeds)":"not dodged (51–100 fails)")+" · active through round "+exchange.evasionUntil+".":"Evasion was active for this round; no dodge roll was needed"+(exchange.evasionUntil?" · active through round "+exchange.evasionUntil:"")+".";details.append(note)}
   if(Number.isInteger(exchange.initiative)){const init=document.createElement("p");init.textContent="Initiative: Hero "+exchange.initiative+" · Foe "+exchange.enemyInitiative+" · "+exchange.enemyType+" · "+exchange.damageType+" damage";details.append(init)}
   if(Number.isInteger(exchange.enemyRoll)){const defense=document.createElement("p");defense.textContent="Enemy attack: d20 "+exchange.enemyRoll+" = "+exchange.enemyTotal+" vs defender AC "+exchange.defenderAC;details.append(defense)}
   if(exchange.defeatedTargets?.length){const note=document.createElement("p");note.textContent=exchange.defeatedTargets.map(x=>x.name).join(", ")+" defeated; loot is collected through a separate search action.";details.append(note)}
@@ -744,6 +759,8 @@ function drawCombatActions(box){
  const title=document.createElement("strong");title.textContent="Combat actions";
  const hint=document.createElement("span");hint.textContent="+"+COMBAT_RESOURCE_RECOVERY+" "+resourceName()+" each exchange";
  heading.append(title,hint);section.append(heading);
+ const evasionRemaining=Math.max(0,(Number(campaign.evasionUntil)||0)-(Number(campaign.combatRound)||0));
+ if(evasionRemaining>0){const evasionStatus=document.createElement("p");evasionStatus.className="soa-evasion-status";evasionStatus.textContent="Evasion active · 50% dodge chance per incoming hit · "+evasionRemaining+" round"+(evasionRemaining===1?"":"s")+" remaining";section.append(evasionStatus)}
  const targetLabel=document.createElement("label");targetLabel.className="soa-combat-target-label";targetLabel.textContent="Target";
  const target=document.createElement("select");target.className="soa-combat-target-select";target.setAttribute("aria-label","Combat target");
  const selected=enemies.find(e=>e.name===selectedCombatTarget)||enemies[0];
@@ -766,7 +783,7 @@ function drawCombatActions(box){
   const summary=document.createElement("summary");summary.textContent="Special abilities · "+(learned.length+racial.length);more.append(summary);
   const grid=document.createElement("div");grid.className="soa-combat-special-grid";
   for(const ability of learned){
-   const {id,name,cost,effect}=ability,button=document.createElement("button"),cooldown=classCooldownLeft(ability),isKillingSpree=ability.strikes===2&&ability.weaponDamage===true,isGuaranteedVanish=ability.guaranteedEvade===true;
+   const {id,name,cost,effect}=ability,button=document.createElement("button"),cooldown=classCooldownLeft(ability),isKillingSpree=ability.strikes===2&&ability.weaponDamage===true,isGuaranteedVanish=ability.guaranteedEvade===true,isEvasion=ability.id==="evasion";
    button.type="button";button.className="soa-ability-button soa-combat-special-button";
    button.textContent=name+" · "+cost+" "+resourceName()+(cooldown?" · "+cooldown+" exchange"+(cooldown===1?"":"s"):"");
    button.title=ability.description||name;
@@ -774,7 +791,7 @@ function drawCombatActions(box){
    button.disabled=busy||!!pending()||s.en<cost||!!cooldown||(effect==="riposte"&&!campaign.parryReady)||needsTarget&&!target.value;
    button.onclick=()=>choose({text:(hero?.name||"Your hero")+" uses "+name+(needsTarget?" against "+target.value:""),type:"combat",difficulty:"medium",ability:id});
    const note=document.createElement("small");
-   const mechanics=isKillingSpree?"Two weapon strikes · crits on 19–20":isGuaranteedVanish?"Guaranteed evade · 100% success":"";
+   const mechanics=isKillingSpree?"Two weapon strikes · crits on 19–20":isGuaranteedVanish?"Guaranteed evade · 100% success":isEvasion?"50% dodge chance · lasts 2 rounds":"";
    const state=cooldown?"Cooldown · "+cooldown+" exchange"+(cooldown===1?"":"s"):ability.cooldown?"Ready · "+cost+" "+resourceName()+" · "+ability.cooldown+" exchange cooldown":cost+" "+resourceName()+" · Ready";
    note.textContent=state+(mechanics?" · "+mechanics:"");button.append(note);grid.append(button);
   }
