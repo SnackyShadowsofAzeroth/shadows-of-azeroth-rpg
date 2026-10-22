@@ -738,8 +738,8 @@ function drawEnemyStatus(box){
   if(ally.player){
    const actor=window.soaAbilities?.get?.("hero"),resource=window.soaResources?.forClass?.(actor?.className,actor?.form);
    const current=Math.max(0,Math.min(resource?.max||100,Number(s.en)||0)),max=resource?.max||100;
-   const meter=document.createElement("div");meter.className="soa-hero-resource";
-   const label=document.createElement("div");label.className="soa-hero-resource-heading";
+   const meter=document.createElement("div");meter.className="soa-combat-resource soa-hero-resource";
+   const label=document.createElement("div");label.className="soa-combat-resource-heading soa-hero-resource-heading";
    const resourceNameNode=document.createElement("strong");resourceNameNode.textContent=resource?.label||"Resource";
    const resourceValue=document.createElement("span");resourceValue.textContent=current+" / "+max;
    label.append(resourceNameNode,resourceValue);
