@@ -12,7 +12,7 @@ const progressionSource = fs.readFileSync(path.join(root, "public", "progression
 
 function setup(initial = {}) {
   const values = new Map(Object.entries(initial));
-  const calls = { writes: 0, warnings: [] };
+  const calls = { writes: 0, warnings: [], levelUpRestores: 0, heroVitals: { hp: 42, resource: 17 }, failLevelUpRestore: false };
   let failNextWrite = false;
   const localStorage = {
     getItem: key => values.get(key) ?? null,
@@ -26,7 +26,16 @@ function setup(initial = {}) {
     localStorage,
     structuredClone,
     document: { addEventListener() {}, getElementById() { return null; } },
-    window: { soaReportStorageFailure: message => calls.warnings.push(message) },
+    window: {
+      soaReportStorageFailure: message => calls.warnings.push(message),
+      soaHeroLevelUp: { restore() {
+        calls.levelUpRestores++;
+        if (calls.failLevelUpRestore) return false;
+        calls.heroVitals.hp = 100;
+        calls.heroVitals.resource = 100;
+        return true;
+      } },
+    },
   };
   vm.createContext(context);
   vm.runInContext(rulesSource, context, { filename: "save-rules.js" });
@@ -37,6 +46,63 @@ function setup(initial = {}) {
     progression: context.window.soaProgression,
   };
 }
+
+
+test("a hero level-up refills health and the active class resource once, including multiple levels", () => {
+  const harness = setup();
+  const result = harness.progression.battle({
+    receipt: "encounter-level-up",
+    defeated: [{ maxHp: 500 }, { maxHp: 500 }, { maxHp: 500 }],
+    allies: [],
+  });
+
+  assert.equal(result.levels, 2);
+  assert.equal(result.vitalsRestored, true);
+  assert.equal(harness.calls.levelUpRestores, 1);
+  assert.deepEqual(harness.calls.heroVitals, { hp: 100, resource: 100 });
+  assert.equal(harness.progression.progress().level, 12);
+
+  const duplicate = harness.progression.battle({
+    receipt: "encounter-level-up",
+    defeated: [{ maxHp: 500 }, { maxHp: 500 }, { maxHp: 500 }],
+    allies: [],
+  });
+  assert.equal(duplicate.levels, undefined);
+  assert.equal(harness.calls.levelUpRestores, 1);
+});
+
+test("XP below the next level does not refill hero vitals", () => {
+  const harness = setup();
+  const result = harness.progression.check({
+    receipt: "short-of-level",
+    name: "investigate",
+    success: true,
+    difficulty: "hard",
+  });
+
+  assert.equal(result.levels, 0);
+  assert.equal(harness.calls.levelUpRestores, 0);
+  assert.deepEqual(harness.calls.heroVitals, { hp: 42, resource: 17 });
+});
+
+test("a failed level-up refill rolls the XP transaction back", () => {
+  const harness = setup();
+  harness.calls.failLevelUpRestore = true;
+
+  const result = harness.progression.battle({
+    receipt: "restore-failure",
+    defeated: [{ maxHp: 500 }, { maxHp: 500 }],
+    allies: [],
+  });
+
+  assert.equal(result.awarded, 0);
+  assert.equal(result.levels, 0);
+  assert.equal(result.storageWarning, true);
+  assert.equal(harness.progression.progress().level, 10);
+  assert.equal(harness.progression.progress().totalXp, 0);
+  assert.equal(harness.calls.levelUpRestores, 1);
+  assert.deepEqual(harness.calls.heroVitals, { hp: 42, resource: 17 });
+});
 
 test("XP and skill practice roll back together if persistence fails", () => {
   const harness = setup();
