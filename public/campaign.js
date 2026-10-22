@@ -153,10 +153,32 @@ function resolvedRacialCombatAbility(action){
  const normalized=" "+String(action.text||"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim()+" ";
  return abilities.find(ability=>ability.mode==="combat"&&normalized.includes(" "+ability.name.toLowerCase().replace(/[^a-z0-9]+/g," ").trim()+" "))||null;
 }
+function unavailableClassAbility(action){
+ const hero=window.soaCharacters?.profile?.(),level=window.soaProgression?.level?.()||hero?.startLevel||1;
+ const all=window.soaClassAbilities?.all?.(hero?.className)||[];
+ const locked=all.filter(ability=>ability.level>level);
+ const explicit=locked.find(ability=>ability.id===action?.ability);
+ if(explicit)return explicit;
+ if(action?.type!=="combat")return null;
+ const text=String(action.text||"");
+ if(/\b(?:don't|do not|avoid|without)\b.{0,45}\b(?:cast|use)\b/i.test(text))return null;
+ const normalized=" "+text.toLowerCase().replace(/[^a-z0-9]+/g," ").trim()+" ";
+ const named=locked.find(ability=>normalized.includes(" "+ability.name.toLowerCase().replace(/[^a-z0-9]+/g," ").trim()+" "));
+ if(named)return named;
+ // These are not in the Shaman kit; never resolve them as a free weapon strike.
+ if(hero?.className==="Shaman"&&/\b(?:fire|flame|frost)\s+shock\b/i.test(text))return {name:"Fire Shock",level:null};
+ return null;
+}
 function canonicalStoryChoice(choice){
  const text=String(choice?.text||"");
- if(!/\bvanish\b/i.test(text)||/\b(?:don't|do not|avoid|without)\b.{0,45}\bvanish\b/i.test(text))return choice;
  const hero=window.soaCharacters?.profile?.(),level=window.soaProgression?.level?.()||hero?.startLevel||1;
+ const unavailable=unavailableClassAbility(choice);
+ if(unavailable){
+  const learned=window.soaClassAbilities?.available?.(hero?.className,level)||[];
+  const replacement=learned.find(ability=>ability.effect==="damage")||learned[0];
+  return replacement?{...choice,text:"Cast "+replacement.name+" at the target",type:"combat",ability:replacement.id}:{...choice,text:"Strike the target with your weapon",type:"combat",ability:"strike"};
+ }
+ if(!/\bvanish\b/i.test(text)||/\b(?:don't|do not|avoid|without)\b.{0,45}\bvanish\b/i.test(text))return choice;
  if(hero?.className!=="Rogue"||level<5)return {...choice,text:"Move quietly to avoid notice",type:"stealth",difficulty:"medium"};
  return {...choice,text:"Vanish into the shadows",type:"stealth"};
 }
@@ -867,6 +889,8 @@ function drawCombatActions(box){
  box.append(section);
 }
 function result(action){
+ const unavailable=unavailableClassAbility(action);
+ if(unavailable){status(unavailable.name+(unavailable.level?" unlocks at level "+unavailable.level:" is not learned")+". No action spent.");return null}
  if(action.type==="racial")return useRacialAbility(action);
  if(action.type==="combat"&&livingEnemies().length)return fightExchange(action);
  const storyAbility=resolvedStoryVanish(action);
