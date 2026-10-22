@@ -20,7 +20,7 @@ function makeContext({ random = () => 0.5 } = {}) {
   deterministicMath.random = random;
   const context = {
     COMBAT_RESOURCE_RECOVERY: 25,
-    ACTION_RESOURCE_RECOVERY: 10,
+    ACTION_RESOURCE_RECOVERY: 25,
     Math: deterministicMath,
     s: { en: 100, hp: 100, money: 0, time: 0, alert: 1 },
     campaign: { flags: {} },
@@ -72,8 +72,12 @@ test("inferred skill drives preview, energy cost, effects, and practice", () => 
   assert.equal(odds.target, 85);
   assert.equal(context.testApi.resolvedSkillName(action), "stealth");
   assert.match(context.testApi.result(action), /Snacky remains concealed/);
-  assert.equal(context.s.en, 90);
+  assert.equal(context.s.en, 100, "a capped story action cannot exceed 100 resource");
   assert.equal(context.s.time, 1);
+
+  context.s.en = 45;
+  context.testApi.result(action);
+  assert.equal(context.s.en, 50, "a story action spends its cost and restores 25 resource");
 
   const search = context.testApi.actionOdds({ type: "stealth", text: "Search the room" });
   assert.equal(search.skill, "investigate");
@@ -564,8 +568,8 @@ test("choice resource forecasts show current reserve, cost, and post-exchange re
   const investigate = context.forecast({ type: "investigate", difficulty: "medium" });
   assert.equal(investigate.current, 45);
   assert.equal(investigate.cost, 10);
-  assert.equal(investigate.after, 45);
-  assert.match(investigate.text, /Energy 45 → 45\/100 · 10 cost · \+10 recovery/);
+  assert.equal(investigate.after, 60);
+  assert.match(investigate.text, /Energy 45 → 60\/100 · 10 cost · \+25 recovery/);
 
   const combat = context.forecast({ type: "combat", ability: "strike", text: "Strike the Guard" });
   assert.equal(combat.cost, 30);
@@ -582,6 +586,10 @@ test("choice resource forecasts show current reserve, cost, and post-exchange re
   const unavailable = context.forecast({ type: "investigate", difficulty: "medium" });
   assert.equal(unavailable.affordable, false);
   assert.match(unavailable.text, /Need 10 Energy · have 8\/100/);
+
+  context.s.en = 95;
+  const capped = context.forecast({ type: "investigate", difficulty: "medium" });
+  assert.equal(capped.after, 100, "story-action recovery is capped at the resource maximum");
 });
 
 
