@@ -885,10 +885,10 @@ test("Troll Berserking rolls three separate weapon attacks, scales follow-ups, a
   assert.equal(context.trollTest.racialCooldownLeft(ability), 0);
 });
 
-test("Troll Regeneration also heals after a companion's combat exchange", () => {
+test("Troll Regeneration heals only the hero after a companion's combat exchange", () => {
   const context = makeContext();
   const enemy = { name: "Guard", hp: 40, maxHp: 40 };
-  context.campaign = { enemies: [enemy], combatAllies: [{ name: "Bromli Ironkeg", hp: 30, maxHp: 30 }], combatRound: 0, supportCooldowns: {} };
+  context.campaign = { enemies: [enemy], combatAllies: [{ name: "Bromli Ironkeg", hp: 20, maxHp: 30 }], combatRound: 0, supportCooldowns: {} };
   context.s.hp = 40;
   context.livingEnemies = () => [enemy];
   context.startProgressionEncounter = () => ({ id: "troll-encounter", defeated: [], party: [] });
@@ -903,6 +903,7 @@ test("Troll Regeneration also heals after a companion's combat exchange", () => 
   const result = context.runCompanionExchange({ ability: "bromli_guard" });
   assert.match(result, /Regeneration restores 5 HP/);
   assert.equal(context.s.hp, 45);
+  assert.equal(context.campaign.combatAllies[0].hp, 20, "the wounded companion receives no Troll racial healing");
   assert.equal(context.campaign.lastSupport.regenerated, 5);
   assert.equal(context.campaign.combatRound, 1);
 });
