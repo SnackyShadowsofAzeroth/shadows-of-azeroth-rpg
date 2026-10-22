@@ -63,6 +63,8 @@ test("Rogue costs distinguish basic attacks, control, defense, and finishers", (
   assert.equal(cost("kick"), 35);
   assert.equal(cost("sprint"), 30);
   assert.equal(cost("evasion"), 35);
+  assert.equal(kits.get("evasion", "Rogue", 10).cooldown, 2);
+  assert.match(kits.get("evasion", "Rogue", 10).description, /50% chance.*two rounds/);
   assert.equal(cost("vanish"), 40);
   assert.equal(kits.get("vanish", "Rogue", 10).cooldown, 5);
   assert.equal(kits.get("vanish", "Rogue", 10).guaranteedEvade, true);
