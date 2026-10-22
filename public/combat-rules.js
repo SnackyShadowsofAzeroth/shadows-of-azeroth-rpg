@@ -1,11 +1,12 @@
 (()=>{"use strict";
 const roll=(sides,rng=Math.random)=>1+Math.floor(Math.min(.999999999,Math.max(0,rng()))*sides);
 const mod=score=>Math.floor((Number(score)-10)/2);
-const attack=(bonus,ac,{advantage=0,rng=Math.random}={})=>{
+const attack=(bonus,ac,{advantage=0,criticalOn=20,rng=Math.random}={})=>{
  const a=roll(20,rng),b=advantage?roll(20,rng):null;
  const die=b===null?a:advantage>0?Math.max(a,b):Math.min(a,b);
- const total=die+bonus;
- return {die,other:b,total,bonus,ac,critical:die===20,hit:die===20||die!==1&&total>=ac};
+ const total=die+bonus,threshold=Math.max(2,Math.min(20,Math.trunc(Number(criticalOn)||20)));
+ const critical=die>=threshold&&die!==1;
+ return {die,other:b,total,bonus,ac,critical,hit:critical||die!==1&&total>=ac};
 };
 const damage=(sides,bonus=0,critical=false,rng=Math.random)=>Math.max(1,roll(sides,rng)+(critical?roll(sides,rng):0)+bonus);
 const enemyAC=enemy=>Math.max(10,Math.min(22,Number.isFinite(Number(enemy?.armorClass))?Number(enemy.armorClass):12+Math.min(5,Math.floor((Number(enemy?.maxHp)||20)/55))));

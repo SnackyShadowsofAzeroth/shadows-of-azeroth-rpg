@@ -26,7 +26,7 @@ const kits={
   ["evasion","Evasion",1,35,"guard","DEX",0,0,"physical","Dodge and reduce the chance of a hit this exchange.",2],
   ["sprint","Sprint",1,30,"guard","DEX",0,0,"physical","Burst into motion to avoid the next attack.",2],
   ["blade_flurry","Blade Flurry",5,45,"damage","DEX",10,8,"slashing","A rapid flurry of blade work.",2],
-  ["vanish","Vanish",5,40,"guard","DEX",0,0,"physical","Disappear into the shadows to evade an attack.",3],
+  ["vanish","Vanish",5,40,"guard","DEX",0,0,"physical","Disappear into the shadows to automatically evade the next incoming attack (100% success).",5,{guaranteedEvade:true}],
   ["riposte","Riposte",5,30,"riposte","DEX",10,8,"slashing","A precise counterstrike, available after a parry.",1]
  ],
  Priest:[
@@ -60,7 +60,7 @@ const kits={
   ["chain_lightning","Chain Lightning",10,45,"damage","WIS",12,7,"lightning","Unleash a powerful lightning strike.",2]
  ]
 };
-const normalize=([id,name,level,cost,effect,stat,die,flat,damageType,description,cooldown=0])=>({id,name,level,cost,effect,stat,die,flat,damageType,description,cooldown});
+const normalize=([id,name,level,cost,effect,stat,die,flat,damageType,description,cooldown=0,mechanics={}])=>({id,name,level,cost,effect,stat,die,flat,damageType,description,cooldown,...mechanics});
 function all(className){return (kits[className]||[]).map(normalize)}
 function available(className,level=1){const lv=Math.max(1,Math.min(60,Number(level)||1)),learned=all(className).filter(x=>x.level<=lv),profile=window.soaCharacters?.profile?.();const signature=profile?.className===className?window.soaSpecializations?.ability?.(profile,lv):null;return signature?[...learned,signature]:learned}
 function get(id,className,level=1){return available(className,level).find(x=>x.id===id)||null}
