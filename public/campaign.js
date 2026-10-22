@@ -123,8 +123,9 @@ function actionOdds(action){
  const level=window.soaProgression?.level?.()||1;
  const difficulty=action.difficulty==="easy"?12:action.difficulty==="hard"?-22:0;
  const racialFocus=campaign?.racialFocus?.skill===relevant?Math.max(0,Number(campaign.racialFocus.bonus)||0):0;
- const target=Math.max(10,Math.min(95,Math.round(base+modifier*3+trained*2+Math.max(0,level-1)*.2+difficulty-(s.alert||0)*5+racialFocus)));
- return {cost:costs[relevant]??costs[t]??0,target,skill:relevant,modifier,trained};
+ const classBonus=({Shaman:{combat:10,stealth:-25}}[window.soaCharacters?.profile?.()?.className]||{})[relevant]||0;
+ const target=Math.max(10,Math.min(95,Math.round(base+modifier*3+trained*2+Math.max(0,level-1)*.2+difficulty-(s.alert||0)*5+racialFocus+classBonus)));
+ return {cost:costs[relevant]??costs[t]??0,target,skill:relevant,modifier,trained,classBonus};
 }
 function heroHealthCap(){const hero=window.soaCharacters?.profile?.();return 100+(window.soaRacialAbilities?.passives?.(hero?.race)?.maxHp||0)}
 function racialRegeneration(){const hero=window.soaCharacters?.profile?.();return window.soaRacialAbilities?.passives?.(hero?.race)?.regeneration||0}
@@ -155,6 +156,8 @@ function resolvedRacialCombatAbility(action){
 function canonicalStoryChoice(choice){
  const text=String(choice?.text||"");
  if(!/\bvanish\b/i.test(text)||/\b(?:don't|do not|avoid|without)\b.{0,45}\bvanish\b/i.test(text))return choice;
+ const hero=window.soaCharacters?.profile?.(),level=window.soaProgression?.level?.()||hero?.startLevel||1;
+ if(hero?.className!=="Rogue"||level<5)return {...choice,text:"Move quietly to avoid notice",type:"stealth",difficulty:"medium"};
  return {...choice,text:"Vanish into the shadows",type:"stealth"};
 }
 function resolvedStoryVanish(action){
@@ -207,7 +210,7 @@ function dicePreview(action){
   return {primary:"🎲 d20 "+(bonus>=0?"+ "+bonus:"− "+Math.abs(bonus))+" vs DC "+dc+" · "+chanceLabel(d20SuccessChance(bonus,dc))+" success",secondary:"CHA-based "+skill+" check · Natural 1 fails, 20 succeeds"};
  }
  const odds=actionOdds(action);
- const {cost,target}=odds;return {primary:"🎲 "+odds.skill+" · d100 ≤ "+target+" ("+target+"%)",secondary:cost+" "+resourceName()+" cost · up to +"+ACTION_RESOURCE_RECOVERY+" recovery · ability modifier "+(odds.modifier>=0?"+":"")+odds.modifier+" · training +"+odds.trained};
+ const {cost,target}=odds;return {primary:"🎲 "+odds.skill+" · d100 ≤ "+target+" ("+target+"%)",secondary:cost+" "+resourceName()+" cost · up to +"+ACTION_RESOURCE_RECOVERY+" recovery · ability modifier "+(odds.modifier>=0?"+":"")+odds.modifier+" · training +"+odds.trained+(odds.classBonus?" · class aptitude "+(odds.classBonus>0?"+":"")+odds.classBonus:"")};
 }
 function resourceForecast(action){
  const profile=window.soaCharacters?.profile?.(),label=resourceName(),current=Math.max(0,Math.min(100,Number(s.en)||0)),storyAbility=resolvedStoryVanish(action);
