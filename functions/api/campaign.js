@@ -107,8 +107,9 @@ export async function onRequestPost({request,env}){
 
  const chapterMilestone={propose:suggested.propose===true&&typeof suggested.title==="string"&&typeof suggested.reason==="string",kind:suggested.kind==="act"?"act":"chapter",title:clean(suggested.title,90),reason:clean(suggested.reason,220)};
  const allies=(Array.isArray(v.allies)?v.allies:[]).slice(0,6).filter(e=>e&&typeof e.name==="string"&&e.name.trim()).map(e=>{
-  const maxHp=Number.isInteger(e.maxHp)&&e.maxHp>0?Math.min(500,e.maxHp):null;
-  const hp=maxHp!==null&&Number.isInteger(e.hp)&&e.hp>=0?Math.min(maxHp,e.hp):null;
+  const validHealth=Number.isInteger(e.maxHp)&&e.maxHp>0&&Number.isInteger(e.hp)&&e.hp>=0;
+  const maxHp=validHealth?Math.min(500,e.maxHp):null;
+  const hp=validHealth?Math.min(maxHp,e.hp):null;
   return {name:clean(e.name.trim(),60),role:clean(e.role||"Ally",32),hp,maxHp};
  });
  const enemies=(Array.isArray(v.enemies)?v.enemies:[]).filter(e=>e&&typeof e.name==="string"&&e.name.trim()&&Number.isFinite(Number(e.maxHp))&&Number(e.maxHp)>0).map(e=>{
