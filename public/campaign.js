@@ -143,6 +143,11 @@ function resolvedCombatAbility(action){
  for(const [id,pattern] of Object.entries(aliases))if(pattern.test(String(action.text||""))&&window.soaClassAbilities?.get?.(id,hero?.className,level))return id;
  return ["strike","kick","evasion","riposte"].includes(action.ability)?action.ability:"strike";
 }
+function resolvedStoryVanish(action){
+ if(action?.type!=="stealth"||!/\bvanish\b/i.test(String(action.text||""))||/\b(?:don't|do not|avoid|without)\b.{0,45}\bvanish\b/i.test(String(action.text||"")))return null;
+ const hero=window.soaCharacters?.profile?.(),level=window.soaProgression?.level?.()||hero?.startLevel||1;
+ return window.soaClassAbilities?.get?.("vanish",hero?.className,level)?"vanish":null;
+}
 function d20SuccessChance(bonus,dc,advantage=0,criticalOn=20){
  let hits=0,rolls=0;
  const threshold=Math.max(2,Math.min(20,Math.trunc(Number(criticalOn)||20)));
@@ -154,13 +159,14 @@ function d20SuccessChance(bonus,dc,advantage=0,criticalOn=20){
 function chanceLabel(value){const rounded=Math.round(value*10)/10;return (Number.isInteger(rounded)?String(rounded):rounded.toFixed(1))+"%"}
 function dicePreview(action){
  // Combat takes priority over social keyword detection, matching the resolver.
- if(action.type==="combat"&&livingEnemies().length){
-  const abilityId=resolvedCombatAbility(action);
+ const storyAbility=resolvedStoryVanish(action);
+ if((action.type==="combat"||storyAbility)&&livingEnemies().length){
+  const abilityId=storyAbility||resolvedCombatAbility(action);
   const profile=window.soaCharacters?.profile?.(),level=window.soaProgression?.level?.()||profile?.startLevel||1;
   const classAbility=window.soaClassAbilities?.get?.(abilityId,profile?.className,level);
   const cost=window.soaClassAbilities?.costOf?.(abilityId,profile?.className,level)??0;
   const resource=resourceName();
-  if(classAbility?.guaranteedEvade)return {primary:"🎲 Guaranteed success · 100%",secondary:"Vanish automatically evades the incoming attack · "+cost+" "+resource+" cost · "+classAbility.cooldown+" exchange cooldown"};
+  if(classAbility?.guaranteedEvade){const cooldown=classCooldownLeft(classAbility);return {primary:"🎲 Guaranteed success · 100%",secondary:"Vanish automatically evades the incoming attack · "+cost+" "+resource+" cost · "+(cooldown?cooldown+" exchange"+(cooldown===1?"":"s")+" remaining":classAbility.cooldown+" exchange cooldown")};}
   if(abilityId==="evasion")return {primary:"🎲 50% dodge chance per incoming hit",secondary:"Lasts 2 rounds · "+cost+" "+resource+" cost · 2-round cooldown · up to +25 "+resource+" recovery"};
   const attacker=window.soaAbilities?.get?.("hero");
   const gear=window.soaEquipment?.modifiers?.()||{};
@@ -190,13 +196,16 @@ function dicePreview(action){
  const {cost,target}=odds;return {primary:"🎲 "+odds.skill+" · d100 ≤ "+target+" ("+target+"%)",secondary:cost+" "+resourceName()+" cost · up to +"+ACTION_RESOURCE_RECOVERY+" recovery · ability modifier "+(odds.modifier>=0?"+":"")+odds.modifier+" · training +"+odds.trained};
 }
 function resourceForecast(action){
- const profile=window.soaCharacters?.profile?.(),label=resourceName(),current=Math.max(0,Math.min(100,Number(s.en)||0));
- let cost=0;
- if(action.type==="combat"&&livingEnemies().length){const ability=resolvedCombatAbility(action),level=window.soaProgression?.level?.()||profile?.startLevel||1;cost=window.soaClassAbilities?.costOf?.(ability,profile?.className,level)??0}
+ const profile=window.soaCharacters?.profile?.(),label=resourceName(),current=Math.max(0,Math.min(100,Number(s.en)||0)),storyAbility=resolvedStoryVanish(action);
+ const combatAction=(action.type==="combat"||!!storyAbility)&&livingEnemies().length>0;
+ let abilityId=null,cost=0;
+ if(combatAction){abilityId=storyAbility||resolvedCombatAbility(action);const level=window.soaProgression?.level?.()||profile?.startLevel||1;cost=window.soaClassAbilities?.costOf?.(abilityId,profile?.className,level)??0}
  else if(!socialSkill(action))cost=actionOdds(action).cost;
- const recovery=action.type==="combat"&&livingEnemies().length?COMBAT_RESOURCE_RECOVERY:ACTION_RESOURCE_RECOVERY,affordable=current>=cost,after=affordable?Math.min(100,current-cost+recovery):current;
- const text=affordable?(label+" "+current+" → "+after+"/100 · "+(cost?cost+" cost":"no cost")+" · +"+recovery+" recovery"):"Need "+cost+" "+label+" · have "+current+"/100";
- return{label,current,max:100,cost,after,affordable,text};
+ const recovery=combatAction?COMBAT_RESOURCE_RECOVERY:ACTION_RESOURCE_RECOVERY,affordable=current>=cost,after=affordable?Math.min(100,current-cost+recovery):current;
+ const ability=abilityId?window.soaClassAbilities?.get?.(abilityId,profile?.className,window.soaProgression?.level?.()||profile?.startLevel||1):null;
+ const cooldown=ability?classCooldownLeft(ability):0,cooldownText=ability?.cooldown?(cooldown?" · "+ability.name+" cooldown · "+cooldown+" exchange"+(cooldown===1?"":"s")+" remaining":" · "+ability.name+" · "+ability.cooldown+" exchange cooldown"):"";
+ const text=(affordable?(label+" "+current+" → "+after+"/100 · "+(cost?cost+" cost":"no cost")+" · +"+recovery+" recovery"):"Need "+cost+" "+label+" · have "+current+"/100")+cooldownText;
+ return{label,current,max:100,cost,after,affordable,text,cooldown,abilityId};
 }
 function socialCheck(action,skill){
  const amounts=skill==="bribe"?bribeCopper(action.text):null;
@@ -835,6 +844,8 @@ function drawCombatActions(box){
 function result(action){
  if(action.type==="racial")return useRacialAbility(action);
  if(action.type==="combat"&&livingEnemies().length)return fightExchange(action);
+ const storyAbility=resolvedStoryVanish(action);
+ if(storyAbility&&livingEnemies().length)return fightExchange({...action,type:"combat",ability:storyAbility});
  const skill=socialSkill(action);if(skill)return socialCheck(action,skill);
  const {cost,target,skill:t}=actionOdds(action);let damage=0;
  const woundCare=/\b(?:bandag\w*|first aid|field dressing)\b|\b(?:bind|tend|dress|treat)\w*\b.{0,45}\b(?:my|your|own|self|wound|injur\w*|cut|bleed)\b|\b(?:my|your|own|self|wound|injur\w*|cut|bleed)\b.{0,45}\b(?:bind|tend|dress|treat)\w*\b/i.test(String(action.text||""));
@@ -1010,16 +1021,17 @@ async function choose(choice){
  if(!navigator.onLine){status("Offline: your saved scene is available. Reconnect to generate another.");return}
  if(!accessCode()){focusAccess();return}
  const detected=dialogueFromCustom(choice);if((detected||socialSkill(choice))&&choice.custom&&choice.type==="investigate")choice={...choice,type:"social"};
+ const storyAbility=resolvedStoryVanish(choice),resolvingChoice=storyAbility?{...choice,type:"combat",ability:storyAbility}:choice;
  const combatRoundBefore=Number(campaign.combatRound)||0;
- const resolution=result(choice);
- if(!resolution){if(!socialSkill(choice)&&choice.type!=="combat")status("Not enough "+resourceName()+" for that action.");return}
+ const resolution=result(resolvingChoice);
+ if(!resolution){if(!socialSkill(resolvingChoice)&&resolvingChoice.type!=="combat")status("Not enough "+resourceName()+" for that action.");return}
  const combatRoundAfter=Number(campaign.combatRound)||0;
  campaign.lastProgression="";
  campaign.actionSerial=(Number(campaign.actionSerial)||0)+1;
  const actionReceipt="turn-"+campaign.turn+"-action-"+campaign.actionSerial;
- recordActionPractice(choice,resolution,actionReceipt);
+ recordActionPractice(resolvingChoice,resolution,actionReceipt);
  campaign.lastAction=safe(choice.text);campaign.lastResult=resolution;
- campaign.pending={action:campaign.lastAction,resolution,startedAt:Date.now(),dialogue:detected,survey:choice.survey===true,combat:choice.type==="combat",combatRoundBefore,combatRoundAfter,combatExchangeResolved:choice.type==="combat"&&combatRoundAfter>combatRoundBefore,actionReceipt};
+ campaign.pending={action:campaign.lastAction,resolution,startedAt:Date.now(),dialogue:detected,survey:choice.survey===true,combat:resolvingChoice.type==="combat",combatRoundBefore,combatRoundAfter,combatExchangeResolved:resolvingChoice.type==="combat"&&combatRoundAfter>combatRoundBefore,actionReceipt};
  campaign.history.push("At "+safe(campaign.scene?.location||"unknown location")+": Player: "+campaign.lastAction+" | "+resolution);
  campaign.history=campaign.history.slice(-MAX);const saved=store();refreshDisplay();if(!saved)return;
  // Release the iPhone keyboard and return to the story while Gemini works.
