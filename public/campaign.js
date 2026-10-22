@@ -782,7 +782,7 @@ function result(action){
  if(action.type==="combat"&&livingEnemies().length)return fightExchange(action);
  const skill=socialSkill(action);if(skill)return socialCheck(action,skill);
  const {cost,target,skill:t}=actionOdds(action);let damage=0;
- const woundCare=/\\b(?:bandag\\w*|first aid|field dressing)\\b|\\b(?:bind|tend|dress|treat)\\w*\\b.{0,45}\\b(?:my|your|own|self|wound|injur\\w*|cut|bleed)\\b|\\b(?:my|your|own|self|wound|injur\\w*|cut|bleed)\\b.{0,45}\\b(?:bind|tend|dress|treat)\\w*\\b/i.test(String(action.text||""));
+ const woundCare=/\b(?:bandag\w*|first aid|field dressing)\b|\b(?:bind|tend|dress|treat)\w*\b.{0,45}\b(?:my|your|own|self|wound|injur\w*|cut|bleed)\b|\b(?:my|your|own|self|wound|injur\w*|cut|bleed)\b.{0,45}\b(?:bind|tend|dress|treat)\w*\b/i.test(String(action.text||""));
  if(campaign.racialFocus?.skill===t)campaign.racialFocus=null;
  if(s.en<cost)return null;
  const rolled=1+Math.floor(Math.random()*100),ok=rolled<=target;
