@@ -568,8 +568,8 @@ test("choice resource forecasts show current reserve, cost, and post-exchange re
   const investigate = context.forecast({ type: "investigate", difficulty: "medium" });
   assert.equal(investigate.current, 45);
   assert.equal(investigate.cost, 10);
-  assert.equal(investigate.after, 45);
-  assert.match(investigate.text, /Energy 45 → 45\/100 · 10 cost · \+10 recovery/);
+  assert.equal(investigate.after, 60);
+  assert.match(investigate.text, /Energy 45 → 60\/100 · 10 cost · \+25 recovery/);
 
   const combat = context.forecast({ type: "combat", ability: "strike", text: "Strike the Guard" });
   assert.equal(combat.cost, 30);
