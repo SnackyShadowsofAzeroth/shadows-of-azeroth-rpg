@@ -111,13 +111,11 @@ test("Vanish story choices use the learned combat ability with its stated cost a
   vm.runInContext([
     functionBlock("socialSkill", "bribeCopper"),
     functionBlock("resourceName", "classCooldownLeft"),
-    functionBlock("resourceKey", "d20SuccessChance"),
-    functionBlock("d20SuccessChance", "chanceLabel"),
-    functionBlock("chanceLabel", "actionOdds"),
+    functionBlock("classCooldownLeft", "resourceKey"),
+    functionBlock("resolvedCombatAbility", "dicePreview"),
     functionBlock("actionOdds", "heroHealthCap"),
     functionBlock("dicePreview", "resourceForecast"),
     functionBlock("resourceForecast", "socialCheck"),
-    functionBlock("resolvedStoryVanish", "d20SuccessChance"),
     functionBlock("result", "interfaceUI"),
     "globalThis.vanishTest = { resolvedStoryVanish, dicePreview, resourceForecast, result };",
   ].join("\n"), context);
@@ -126,11 +124,11 @@ test("Vanish story choices use the learned combat ability with its stated cost a
   assert.equal(context.vanishTest.resolvedStoryVanish(choice), "vanish");
   const preview = context.vanishTest.dicePreview(choice);
   assert.match(preview.primary, /Guaranteed success · 100%/);
-  assert.match(preview.secondary, /40 Energy cost · 5-exchange cooldown/);
+  assert.match(preview.secondary, /40 Energy cost · 5 exchange cooldown/);
   const forecast = context.vanishTest.resourceForecast(choice);
   assert.equal(forecast.cost, 40);
   assert.equal(forecast.after, 85);
-  assert.match(forecast.text, /Energy 100 → 85\/100 · 40 cost · \+25 recovery · Vanish · 5-exchange cooldown/);
+  assert.match(forecast.text, /Energy 100 → 85\/100 · 40 cost · \+25 recovery · Vanish · 5 exchange cooldown/);
   assert.equal(context.vanishTest.result(choice), "Resolved shared Vanish ability.");
   assert.deepEqual({ type: routed.type, ability: routed.ability }, { type: "combat", ability: "vanish" });
   assert.equal(randomCalls, 0, "Vanish does not make a stealth percentage roll");
@@ -344,7 +342,7 @@ test("Killing Spree rolls two weapon attacks separately and uses its expanded cr
     initiative: () => 10,
   };
   vm.runInContext([
-    functionBlock("resourceName", "classCooldownLeft"),
+    functionBlock("classCooldownLeft", "resourceKey"),
     functionBlock("classAbilityExchange", "fightExchange"),
     "globalThis.runClassAbility = classAbilityExchange;",
     "globalThis.cooldownLeft = classCooldownLeft;",
@@ -397,7 +395,7 @@ test("Killing Spree redirects its second strike to another living enemy after a 
     initiative: () => 10,
   };
   vm.runInContext([
-    functionBlock("resourceName", "classCooldownLeft"),
+    functionBlock("classCooldownLeft", "resourceKey"),
     functionBlock("classAbilityExchange", "fightExchange"),
     "globalThis.runClassAbility = classAbilityExchange;",
   ].join("\n"), context);
@@ -438,7 +436,7 @@ test("Vanish always evades the incoming attack and blocks for exactly five excha
     initiative: () => 10,
   };
   vm.runInContext([
-    functionBlock("resourceName", "classCooldownLeft"),
+    functionBlock("classCooldownLeft", "resourceKey"),
     functionBlock("classAbilityExchange", "fightExchange"),
     "globalThis.runClassAbility = classAbilityExchange;",
     "globalThis.cooldownLeft = classCooldownLeft;",
