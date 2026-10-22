@@ -23,7 +23,7 @@ const kits={
  Rogue:[
   ["sinister_strike","Sinister Strike",1,30,"damage","DEX",8,6,"slashing","A fast, precise weapon attack.",0],
   ["kick","Kick",1,35,"interrupt","DEX",6,4,"bludgeoning","A quick kick that interrupts on a hit.",1],
-  ["evasion","Evasion",1,35,"guard","DEX",0,0,"physical","Dodge and reduce the chance of a hit this exchange.",2],
+  ["evasion","Evasion",1,35,"guard","DEX",0,0,"physical","Gain a 50% chance to dodge each incoming hit for two rounds.",2],
   ["sprint","Sprint",1,30,"guard","DEX",0,0,"physical","Burst into motion to avoid the next attack.",2],
   ["blade_flurry","Blade Flurry",5,45,"damage","DEX",10,8,"slashing","A rapid flurry of blade work.",2],
   ["vanish","Vanish",5,40,"guard","DEX",0,0,"physical","Disappear into the shadows to automatically evade the next incoming attack (100% success).",5,{guaranteedEvade:true}],
