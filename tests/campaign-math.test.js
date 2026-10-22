@@ -194,6 +194,59 @@ test("class combat abilities charge the class resource and resolve attacks and h
   assert.equal(context.s.en, 90, "Evasion pays its cost before 25-point exchange recovery");
 });
 
+test("story combat text resolves every learned class ability by its displayed name", () => {
+  const context = makeContext();
+  context.window.soaCharacters.profile = () => ({ className: "Rogue" });
+  context.window.soaProgression = { level: () => 5 };
+  const learned = [
+    { id: "sinister_strike", name: "Sinister Strike" },
+    { id: "kick", name: "Kick" },
+    { id: "evasion", name: "Evasion" },
+    { id: "blade_flurry", name: "Blade Flurry" },
+  ];
+  context.window.soaClassAbilities = {
+    available: () => learned,
+    get: (id) => learned.find(ability => ability.id === id) || null,
+  };
+  vm.runInContext([
+    functionBlock("resolvedCombatAbility", "d20SuccessChance"),
+    "globalThis.resolveCombatAbility = resolvedCombatAbility;",
+  ].join("\n"), context);
+  assert.equal(context.resolveCombatAbility({ type: "combat", text: "Follow up with a swift Sinister Strike." }), "sinister_strike");
+  assert.equal(context.resolveCombatAbility({ type: "combat", text: "Kick the guard before he can shout." }), "kick");
+  assert.equal(context.resolveCombatAbility({ type: "combat", text: "Use Blade Flurry against the pair." }), "blade_flurry");
+  assert.equal(context.resolveCombatAbility({ type: "combat", ability: "strike", text: "A measured weapon attack." }), "strike");
+});
+
+test("story choices route named cooldown abilities through the shared ability exchange", () => {
+  const context = makeContext();
+  const enemy = { name: "Trogg Scout", hp: 34, maxHp: 45 };
+  const kick = { id: "kick", name: "Kick", cost: 35, effect: "interrupt", cooldown: 1 };
+  context.campaign = { flags: {}, enemies: [enemy], combatRound: 4 };
+  context.window.soaCharacters.profile = () => ({ name: "Test Rogue", className: "Rogue" });
+  context.window.soaProgression = { level: () => 3 };
+  context.livingEnemies = () => [enemy];
+  context.window.soaClassAbilities = {
+    available: () => [kick],
+    get: id => id === "kick" ? kick : null,
+    costOf: id => id === "kick" ? kick.cost : 0,
+  };
+  context.window.soaRacialAbilities = { get: () => null };
+  context.classAbilityExchange = (action, ability, targets) => {
+    context.routedAbility = ability;
+    context.routedTarget = targets[0];
+    return "Resolved shared class ability.";
+  };
+  vm.runInContext([
+    functionBlock("resolvedCombatAbility", "d20SuccessChance"),
+    functionBlock("fightExchange", "updateLivingEnemies"),
+    "globalThis.runFightExchange = fightExchange;",
+  ].join("\n"), context);
+  assert.equal(context.runFightExchange({ type: "combat", text: "Use Kick against the Trogg Scout." }), "Resolved shared class ability.");
+  assert.equal(context.routedAbility.id, "kick");
+  assert.equal(context.routedTarget.name, "Trogg Scout");
+});
+
 test("class ability cooldowns block only the intended number of exchanges", () => {
   const context = makeContext();
   context.campaign = { combatRound: 1, classCooldowns: { kick: 3 } };
