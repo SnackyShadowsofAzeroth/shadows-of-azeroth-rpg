@@ -85,6 +85,39 @@ test("inferred skill drives preview, energy cost, effects, and practice", () => 
   assert.equal(context.testApi.resolvedSkillName({ type: "combat", text: "Search the room" }), "combat");
 });
 
+test("binding wounds restores a small, capped amount of HP only when the action succeeds", () => {
+  const context = makeContext();
+  context.heroHealthCap = () => 100;
+  vm.runInContext([
+    functionBlock("actionOdds", "heroHealthCap"),
+    functionBlock("result", "interfaceUI"),
+    "globalThis.resolveAction = result;",
+  ].join("\n"), context);
+
+  context.s.hp = 42;
+  const action = { type: "investigate", text: "Bind my wounds with a bandage", difficulty: "easy" };
+  const result = context.resolveAction(action);
+  assert.match(result, /You bind your wounds and restore 4 HP; the bleeding subsides/);
+  assert.equal(context.s.hp, 46);
+  assert.equal(context.s.en, 100);
+
+  context.s.hp = 99;
+  context.resolveAction(action);
+  assert.equal(context.s.hp, 100, "wound care cannot raise HP above the character cap");
+
+  const failingContext = makeContext({ random: () => 0.99 });
+  failingContext.heroHealthCap = () => 100;
+  failingContext.s.hp = 42;
+  vm.runInContext([
+    functionBlock("actionOdds", "heroHealthCap"),
+    functionBlock("result", "interfaceUI"),
+    "globalThis.resolveAction = result;",
+  ].join("\n"), failingContext);
+  const failure = failingContext.resolveAction({ type: "investigate", text: "Apply a field dressing to my wound", difficulty: "hard" });
+  assert.match(failure, /no HP is restored/);
+  assert.equal(failingContext.s.hp, 42);
+});
+
 test("combat preview includes the same equipment attack and damage bonuses as resolution", () => {
   const context = makeContext();
   vm.runInContext([

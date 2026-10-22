@@ -782,14 +782,16 @@ function result(action){
  if(action.type==="combat"&&livingEnemies().length)return fightExchange(action);
  const skill=socialSkill(action);if(skill)return socialCheck(action,skill);
  const {cost,target,skill:t}=actionOdds(action);let damage=0;
+ const woundCare=/\b(?:bandag\w*|first aid|field dressing)\b|\b(?:bind|tend|dress|treat)\w*\b.{0,45}\b(?:my|your|own|self|wound|injur\w*|cut|bleed)\b|\b(?:my|your|own|self|wound|injur\w*|cut|bleed)\b.{0,45}\b(?:bind|tend|dress|treat)\w*\b/i.test(String(action.text||""));
  if(campaign.racialFocus?.skill===t)campaign.racialFocus=null;
  if(s.en<cost)return null;
  const rolled=1+Math.floor(Math.random()*100),ok=rolled<=target;
  s.en=Math.min(100,s.en-cost+10);s.time++; if(!ok&&["stealth","engineering","combat"].includes(t)){s.alert=Math.min(3,s.alert+1);damage=t==="combat"?8:t==="stealth"?3:0;s.hp=Math.max(1,s.hp-damage)}
- if(ok&&t==="rest")s.hp=Math.min(heroHealthCap(),s.hp+4);
+ let healed=0;
+ if(ok&&(t==="rest"||woundCare)){const before=s.hp;s.hp=Math.min(heroHealthCap(),s.hp+4);healed=s.hp-before}
  // Defeating an opponent does not itself loot them: currency changes require explicit search/loot actions.
  const msg=ok?"Success":"Complication";
- let effect=t==="combat"?(ok?"The immediate opponent is overcome in a single abstract skirmish.":"The opponent remains a threat; Snacky takes "+damage+" damage."):t==="stealth"?(ok?"Snacky remains concealed.":"A noise attracts nearby attention."):t==="engineering"?(ok?"Pippa's mechanism works as intended.":"The apparatus sparks and raises suspicion."):t==="social"?(ok?"The approach is received favorably.":"The target refuses to cooperate."):t==="rest"?(ok?"The party regains composure.":"The party cannot safely rest."):ok?"The action achieves its immediate intent.":"The action encounters resistance.";
+ let effect=woundCare?(ok?"You bind your wounds and restore "+healed+" HP; the bleeding subsides.":"Your attempt to bind your wounds fails; no HP is restored."):t==="combat"?(ok?"The immediate opponent is overcome in a single abstract skirmish.":"The opponent remains a threat; Snacky takes "+damage+" damage."):t==="stealth"?(ok?"Snacky remains concealed.":"A noise attracts nearby attention."):t==="engineering"?(ok?"Pippa's mechanism works as intended.":"The apparatus sparks and raises suspicion."):t==="social"?(ok?"The approach is received favorably.":"The target refuses to cooperate."):t==="rest"?(ok?"The party regains composure.":"The party cannot safely rest."):ok?"The action achieves its immediate intent.":"The action encounters resistance.";
  return msg+": d100 roll "+rolled+" vs target "+target+" ("+(ok?"success":"failure")+"). "+effect+" Result is authoritative; do not invent additional mechanical effects.";
 }
 function interfaceUI(){
