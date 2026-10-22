@@ -64,3 +64,59 @@ body.theme-alternative .soa-social-score{background:#efd6a76b;border-color:#9679
 
 /* Keep race and Skyborne allegiance guidance readable in the parchment creator. */
 .soa-allegiance-help{margin:0;color:#634b32;font:12px/1.5 system-ui}
+
+
+/* Make talent-tree choices readable and easy to tap on small screens. */
+.soa-specialization-choices{
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  gap:10px;
+  margin:14px 0 0;
+}
+body.theme-alternative button.soa-specialization-choice{
+  display:grid;
+  align-content:start;
+  gap:8px;
+  width:100%;
+  min-height:116px;
+  margin:0;
+  padding:14px 15px;
+  text-align:left;
+  color:#342316;
+  background:linear-gradient(145deg,#fff3d8,#eed7a5);
+  border:2px solid #9c7844;
+  border-left:6px solid #b88332;
+  border-radius:11px;
+  box-shadow:0 2px 7px #4b301c33,inset 0 1px 0 #ffffff99;
+  white-space:normal;
+}
+body.theme-alternative button.soa-specialization-choice strong{
+  color:#392719;
+  font:750 18px/1.2 system-ui,sans-serif;
+}
+body.theme-alternative button.soa-specialization-choice span{
+  color:#59432e;
+  font:500 14px/1.5 system-ui,sans-serif;
+  overflow-wrap:anywhere;
+}
+body.theme-alternative button.soa-specialization-choice em{
+  display:inline-flex;
+  justify-self:start;
+  max-width:100%;
+  padding:6px 9px;
+  border:1px solid #86643b;
+  border-radius:7px;
+  background:#4d3724;
+  color:#fff0cc;
+  font:700 12px/1.4 system-ui,sans-serif;
+  font-style:normal;
+  overflow-wrap:anywhere;
+}
+body.theme-alternative button.soa-specialization-choice:hover{
+  border-color:#76552d;
+  box-shadow:0 4px 10px #4b301c40,inset 0 1px 0 #ffffff99;
+}
+body.theme-alternative button.soa-specialization-choice:focus-visible{
+  outline:3px solid #356442;
+  outline-offset:3px;
+}
