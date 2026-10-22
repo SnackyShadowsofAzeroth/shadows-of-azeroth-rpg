@@ -762,7 +762,7 @@ function drawEnemyStatus(box){
   }
   const taken=document.createElement("p");taken.textContent="Damage received · "+(exchange.recipient||"you")+" "+exchange.taken+" HP ("+(exchange.recipientBefore??exchange.heroBefore)+" → "+(exchange.recipientAfter??exchange.heroAfter)+" HP).";
   summary.append(title,dealt,taken);
-  if(exchange.regenerated>0){const healing=document.createElement("p");healing.textContent="Troll Regeneration · +"+exchange.regenerated+" HP (up to maximum).";summary.append(healing)}
+  if(exchange.regenerated>0){const healing=document.createElement("p");healing.textContent="Troll Regeneration · "+(window.soaCharacters?.profile?.()?.name||"Your hero")+" recovers "+exchange.regenerated+" HP (up to maximum).";summary.append(healing)}
   const details=document.createElement("details");details.className="soa-exchange-details";
   const detailsLabel=document.createElement("summary");detailsLabel.textContent="Roll & event details";details.append(detailsLabel);
   if(Array.isArray(exchange.strikes)){
