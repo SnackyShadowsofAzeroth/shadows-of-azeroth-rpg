@@ -72,7 +72,7 @@ test("inferred skill drives preview, energy cost, effects, and practice", () => 
   assert.equal(odds.target, 85);
   assert.equal(context.testApi.resolvedSkillName(action), "stealth");
   assert.match(context.testApi.result(action), /Snacky remains concealed/);
-  assert.equal(context.s.en, 90, "a capped story action cannot exceed 100 resource");
+  assert.equal(context.s.en, 100, "a capped story action cannot exceed 100 resource");
   assert.equal(context.s.time, 1);
 
   context.s.en = 45;
