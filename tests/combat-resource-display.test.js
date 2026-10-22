@@ -27,10 +27,10 @@ test("the allied player combat card displays the class resource as a live progre
 });
 
 test("allied hero resource has a clean aligned label/value row above its meter",()=>{
- assert.match(campaign,/meter\\.className="soa-combat-resource soa-hero-resource"/);
- assert.match(campaign,/label\\.className="soa-combat-resource-heading soa-hero-resource-heading"/);
- assert.match(abilitiesCss,/\\.soa-combat-resource-heading\\{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px;font:700 13px\\/1\\.4 system-ui;color:#664b31\\}/);
- assert.match(abilitiesCss,/\\.soa-combat-resource-heading span\\{flex:0 0 auto;white-space:nowrap;font-variant-numeric:tabular-nums\\}/);
+ assert.ok(campaign.includes('meter.className="soa-combat-resource soa-hero-resource"'));
+ assert.ok(campaign.includes('label.className="soa-combat-resource-heading soa-hero-resource-heading"'));
+ assert.ok(abilitiesCss.includes(".soa-combat-resource-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px;font:700 13px/1.4 system-ui;color:#664b31}"));
+ assert.ok(abilitiesCss.includes(".soa-combat-resource-heading span{flex:0 0 auto;white-space:nowrap;font-variant-numeric:tabular-nums}"));
 });
 
 test("combat actions are integrated above story choices with a free baseline strike",()=>{
