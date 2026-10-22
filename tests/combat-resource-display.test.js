@@ -22,7 +22,7 @@ test("the allied player combat card displays the class resource as a live progre
  assert.match(campaign,/const actor=window\.soaAbilities\?\.get\?\.\("hero"\),resource=window\.soaResources\?\.forClass\?\.\(actor\?\.className,actor\?\.form\)/);
  assert.match(campaign,/soa-combat-resource-rail/);
  assert.match(campaign,/aria-valuenow/);
- assert.match(campaign,/current\/maximum\*100/);
+ assert.match(campaign,/current\\/max\\*100/);
 });
 
 test("combat actions are integrated above story choices with a free baseline strike",()=>{
