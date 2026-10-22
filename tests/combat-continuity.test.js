@@ -155,6 +155,71 @@ test("campaign API rejects unchosen regional relocation but permits explicitly s
   }
 });
 
+test("past combat events are filtered from noncombat turns and scoped to the matching encounter", async () => {
+  const { onRequestPost } = await campaignModule;
+  const previousFetch = global.fetch;
+  const captured = [];
+  global.fetch = async (_url, options) => {
+    const request = JSON.parse(options.body);
+    captured.push({
+      instructions: request.systemInstruction.parts[0].text,
+      context: JSON.parse(request.contents[0].parts[0].text),
+    });
+    return geminiReply(sceneResponse());
+  };
+
+  try {
+    const staleExchange = {
+      encounterId: "encounter-7", round: 74, target: "Trogg Mechanic",
+      ability: "spec_rogue_combat", recipient: "Snacky Lugnuts",
+      dealt: 36, taken: 0, recipientBefore: 100, recipientAfter: 100, defeated: true,
+    };
+    const oldLog = [{ encounterId: "encounter-7", round: 74, events: [
+      { name: "Trogg Mechanic", side: "enemy", delta: -36, after: 0 },
+    ] }];
+    const env = { GEMINI_API_KEY: "test-key", AI_ACCESS_CODE: "test-access-code" };
+
+    const noncombat = await onRequestPost({
+      request: campaignRequest({
+        action: "Inspect the live copper conduit",
+        resolution: "Complication: the bolt hits a conduit and sparks.",
+        combatAction: false, encounterId: "encounter-8", combatRound: 74,
+        combatLog: oldLog, lastExchange: staleExchange,
+        history: ["Previous encounter: Killing Spree defeated Trogg Mechanic."],
+      }),
+      env,
+    });
+    assert.equal(noncombat.status, 200);
+    assert.equal(captured[0].context.combatAction, false);
+    assert.deepEqual(captured[0].context.combatLog, []);
+    assert.equal(captured[0].context.lastExchange, null);
+    assert.match(captured[0].instructions, /Never narrate a prior ability use, attack, damage, defeat or cooldown as occurring this turn/i);
+    assert.match(captured[0].instructions, /The supplied resolution is the sole authority for what just happened/i);
+
+    const currentCombat = await onRequestPost({
+      request: campaignRequest({
+        action: "Use Killing Spree on the Trogg Scout",
+        resolution: "Success: two separate strikes hit the Trogg Scout.",
+        combatAction: true, encounterId: "encounter-8", combatRound: 1,
+        combatLog: [
+          ...oldLog,
+          { encounterId: "encounter-8", round: 1, events: [
+            { name: "Trogg Scout", side: "enemy", delta: -20, after: 25 },
+          ] },
+        ],
+        lastExchange: { ...staleExchange, encounterId: "encounter-8", round: 1, target: "Trogg Scout" },
+      }),
+      env,
+    });
+    assert.equal(currentCombat.status, 200);
+    assert.equal(captured[1].context.combatAction, true);
+    assert.deepEqual(captured[1].context.combatLog.map(row => [row.encounterId, row.round]), [["encounter-8", 1]]);
+    assert.equal(captured[1].context.lastExchange.target, "Trogg Scout");
+  } finally {
+    global.fetch = previousFetch;
+  }
+});
+
 test("campaign API preserves zero HP and clamps combat health to valid maximums", async () => {
   const { onRequestPost } = await campaignModule;
   const previousFetch = global.fetch;

@@ -18,7 +18,7 @@ function normalizeCampaignState(value){
  c.flags=c.flags&&typeof c.flags==="object"&&!Array.isArray(c.flags)?c.flags:{};
  c.enemies=Array.isArray(c.enemies)?c.enemies.filter(enemy=>enemy&&typeof enemy.name==="string"&&Number.isFinite(enemy.hp)&&enemy.hp>=0&&Number.isFinite(enemy.maxHp)&&enemy.maxHp>0&&enemy.hp<=enemy.maxHp).slice(0,4):[];
  c.combatAllies=Array.isArray(c.combatAllies)?c.combatAllies.filter(ally=>ally&&typeof ally.name==="string").slice(0,7):[];
- c.combatLog=Array.isArray(c.combatLog)?c.combatLog.slice(-30).filter(row=>row&&typeof row==="object"&&Array.isArray(row.events)).map(row=>({round:Number.isSafeInteger(row.round)&&row.round>=0?row.round:0,events:row.events.filter(event=>event&&typeof event.name==="string").slice(0,10).map(event=>({name:event.name.slice(0,80),side:typeof event.side==="string"?event.side.slice(0,12):"",delta:Number.isFinite(event.delta)?event.delta:0,after:Number.isFinite(event.after)?event.after:0,maxHp:Number.isFinite(event.maxHp)?event.maxHp:null}))})):[];
+ c.combatLog=Array.isArray(c.combatLog)?c.combatLog.slice(-30).filter(row=>row&&typeof row==="object"&&Array.isArray(row.events)).map(row=>({round:Number.isSafeInteger(row.round)&&row.round>=0?row.round:0,encounterId:typeof row.encounterId==="string"?row.encounterId.slice(0,100):null,events:row.events.filter(event=>event&&typeof event.name==="string").slice(0,10).map(event=>({name:event.name.slice(0,80),side:typeof event.side==="string"?event.side.slice(0,12):"",delta:Number.isFinite(event.delta)?event.delta:0,after:Number.isFinite(event.after)?event.after:0,maxHp:Number.isFinite(event.maxHp)?event.maxHp:null}))})):[];
  c.supportCooldowns=c.supportCooldowns&&typeof c.supportCooldowns==="object"&&!Array.isArray(c.supportCooldowns)?c.supportCooldowns:{};
  c.classCooldowns=c.classCooldowns&&typeof c.classCooldowns==="object"&&!Array.isArray(c.classCooldowns)?c.classCooldowns:{};
  c.combatRound=Number.isSafeInteger(c.combatRound)&&c.combatRound>=0?c.combatRound:0;
@@ -28,7 +28,8 @@ function normalizeCampaignState(value){
  if(c.pending&&(typeof c.pending!=="object"||Array.isArray(c.pending)||typeof c.pending.action!=="string"||typeof c.pending.resolution!=="string"))c.pending=null;
  else if(c.pending){
   const p=c.pending,tones=new Set(["betray","insult","apologize","flirt","disagree","support","honest","friendly","neutral"]),targets=new Set(["pippa","bromli","lethariel"]);
-  c.pending={action:p.action.slice(0,320),resolution:p.resolution.slice(0,700),startedAt:Number.isSafeInteger(p.startedAt)&&p.startedAt>=0?p.startedAt:0,dialogue:p.dialogue&&targets.has(p.dialogue.target)?{target:p.dialogue.target,tone:tones.has(p.dialogue.tone)?p.dialogue.tone:"neutral"}:null,survey:p.survey===true,combat:p.combat===true,actionReceipt:typeof p.actionReceipt==="string"?p.actionReceipt.slice(0,120):""};
+  const roundBefore=Number.isSafeInteger(p.combatRoundBefore)&&p.combatRoundBefore>=0?p.combatRoundBefore:null,roundAfter=Number.isSafeInteger(p.combatRoundAfter)&&p.combatRoundAfter>=0?p.combatRoundAfter:null;
+  c.pending={action:p.action.slice(0,320),resolution:p.resolution.slice(0,700),startedAt:Number.isSafeInteger(p.startedAt)&&p.startedAt>=0?p.startedAt:0,dialogue:p.dialogue&&targets.has(p.dialogue.target)?{target:p.dialogue.target,tone:tones.has(p.dialogue.tone)?p.dialogue.tone:"neutral"}:null,survey:p.survey===true,combat:p.combat===true,combatRoundBefore:roundBefore,combatRoundAfter:roundAfter,combatExchangeResolved:p.combat===true&&roundBefore!==null&&roundAfter!==null&&roundAfter>roundBefore,actionReceipt:typeof p.actionReceipt==="string"?p.actionReceipt.slice(0,120):""};
  }
  if(c.xpEncounter&&typeof c.xpEncounter==="object"&&!Array.isArray(c.xpEncounter)){
   const e=c.xpEncounter;
@@ -219,16 +220,23 @@ function partyExperienceIds(){
  const names=Array.isArray(campaign?.combatAllies)?campaign.combatAllies.map(a=>a?.name).filter(Boolean):[];
  return [...new Set(names.map(name=>window.soaProgression?.register?.(name)).filter(Boolean))];
 }
+function resetEncounterCombatState(){
+ campaign.classCooldowns={};campaign.supportCooldowns={};
+ campaign.combatRound=0;campaign.evasionUntil=0;campaign.guardUntil=0;campaign.snareUntil=0;
+ campaign.snaredEnemy=null;campaign.parryReady=false;
+ campaign.initiativeFor=null;campaign.initiativeRoll=null;campaign.enemyInitiative=null;
+}
 function startProgressionEncounter(){
  if(campaign.xpEncounter&&campaign.xpEncounter.active)return campaign.xpEncounter;
+ resetEncounterCombatState();
  campaign.encounterSerial=(Number(campaign.encounterSerial)||0)+1;
  const reference="encounter-"+campaign.encounterSerial;
  campaign.xpEncounter={id:reference,active:true,defeated:[],party:partyExperienceIds(),pendingVictory:false};
  return campaign.xpEncounter;
 }
-function concludeProgressionEncounter(){
+function concludeProgressionEncounter(allowNextRoster=false){
  const encounter=campaign.xpEncounter;
- if(!encounter?.active||!encounter.pendingVictory||livingEnemies().length||!encounter.defeated.length)return null;
+ if(!encounter?.active||!encounter.pendingVictory||(!allowNextRoster&&livingEnemies().length)||!encounter.defeated.length)return null;
  const result=window.soaProgression?.battle?.({receipt:encounter.id,defeated:encounter.defeated,allies:encounter.party})||null;
  encounter.active=false;encounter.pendingVictory=false;encounter.completed=true;
  if(result?.awarded){
@@ -280,10 +288,11 @@ function companionExchange(action){
  const spec=types[id];if(!spec)return null;
  const ally=campaign.combatAllies?.find(a=>a.name===spec.name&&a.hp>0);
  if(!ally){status(spec.name+" is not available to assist.");return null}
+ const foes=livingEnemies();if(!foes.length)return null;
+ startProgressionEncounter();
  campaign.supportCooldowns||={};
  const round=Number(campaign.combatRound)||0;
  if((campaign.supportCooldowns[id]||0)>round){status("Ability cooling down; no turn spent.");return null}
- const foes=livingEnemies();if(!foes.length)return null;
  const previous=s.en;
  let description="";
  if(id==="bromli_guard"){campaign.guardUntil=round+2;description="Bromli raises his shield: enemy attacks suffer disadvantage for this exchange and the next."}
@@ -400,7 +409,7 @@ function classAbilityExchange(action,ability,targets){
  campaign.parryReady=parry;s.en=Math.min(100,s.en-ability.cost+COMBAT_RESOURCE_RECOVERY);s.time++;campaign.combatRound=(Number(campaign.combatRound)||0)+1;
  if(isClassAbility&&ability.cooldown>0){campaign.classCooldowns||={};campaign.classCooldowns[ability.id]=campaign.combatRound+ability.cooldown+1}
  const firstDamage=targetDamage.values().next().value||{enemy:target,dealt:0},additionalDamage=Array.from(targetDamage.values()).slice(1);
- const event={round:campaign.combatRound,ability:ability.id,racialProc,racialProcs,attackRoll:roll?.die??null,targetAC:block.ac,enemyType:block.type,damageType,initiative:campaign.initiativeRoll,enemyInitiative:campaign.enemyInitiative,attackTotal:roll?.total??null,critical:weaponStrike?strikeDetails.some(x=>x.critical):!!roll?.critical,enemyRoll:enemyAttack?.die??null,enemyTotal:enemyAttack?.total??null,defenderAC:heroAC,target:target.name,dealt,taken,hit,defeated:target.hp===0,defeatedTargets,enemyBefore:oldHP,enemyAfter:target.hp,enemyMax:target.maxHp,heroBefore:heroHP,heroAfter:s.hp,energyBefore:oldResource,energyAfter:s.en,recipient:name,recipientBefore:heroHP,recipientAfter:s.hp,healed,parry,evaded,guaranteedEvade,evasionRoll,evasionActive,evasionUntil,evasionRemaining:Math.max(0,evasionUntil-campaign.combatRound),strikes:weaponStrike?strikeDetails:undefined};
+ const event={round:campaign.combatRound,encounterId:encounter.id,ability:ability.id,racialProc,racialProcs,attackRoll:roll?.die??null,targetAC:block.ac,enemyType:block.type,damageType,initiative:campaign.initiativeRoll,enemyInitiative:campaign.enemyInitiative,attackTotal:roll?.total??null,critical:weaponStrike?strikeDetails.some(x=>x.critical):!!roll?.critical,enemyRoll:enemyAttack?.die??null,enemyTotal:enemyAttack?.total??null,defenderAC:heroAC,target:target.name,dealt,taken,hit,defeated:target.hp===0,defeatedTargets,enemyBefore:oldHP,enemyAfter:target.hp,enemyMax:target.maxHp,heroBefore:heroHP,heroAfter:s.hp,energyBefore:oldResource,energyAfter:s.en,recipient:name,recipientBefore:heroHP,recipientAfter:s.hp,healed,parry,evaded,guaranteedEvade,evasionRoll,evasionActive,evasionUntil,evasionRemaining:Math.max(0,evasionUntil-campaign.combatRound),strikes:weaponStrike?strikeDetails:undefined};
  campaign.lastExchange=event;
  recordCombatDelta(firstDamage.enemy,firstDamage.dealt,taken,name,heroHP,s.hp,additionalDamage);
  const strikeReport=weaponStrike?" Strikes: "+strikeDetails.map(x=>x.skipped?"Strike "+x.index+" skipped; no living target.":"Strike "+x.index+" "+(x.hit?"hit":"miss")+(x.critical?" (critical)":"")+" for "+x.damage+" damage to "+x.target+" (d20 "+x.die+" + "+x.bonus+" = "+x.total+" vs AC "+x.ac+").").join(" "):"";
@@ -496,7 +505,7 @@ function fightExchange(action){
  campaign.parryReady=parry;
  s.en=Math.min(100,s.en-price+COMBAT_RESOURCE_RECOVERY);s.time++;
  campaign.combatRound=(Number(campaign.combatRound)||0)+1;
- const event={round:campaign.combatRound,ability,racialProc,healed:racialProc?.healing||0,attackRoll,hitTarget,targetAC,enemyType:block.type,damageType:arm.type,initiative:campaign.initiativeRoll,enemyInitiative:campaign.enemyInitiative,attackTotal:playerAttack?.total??null,critical:!!playerAttack?.critical,enemyRoll:enemyAttack?.die??null,enemyTotal:enemyAttack?.total??null,defenderAC,target:target.name,dealt,taken,hit,defeated,enemyBefore:oldHP,enemyAfter:target.hp,enemyMax:target.maxHp,heroBefore:heroHP,heroAfter:s.hp,energyBefore:oldEnergy,energyAfter:s.en,recipient:receivedName,recipientBefore,recipientAfter,parry,evaded,evasionRoll,evasionActive,evasionUntil,evasionRemaining:Math.max(0,evasionUntil-campaign.combatRound)};
+ const event={round:campaign.combatRound,encounterId:encounter.id,ability,racialProc,healed:racialProc?.healing||0,attackRoll,hitTarget,targetAC,enemyType:block.type,damageType:arm.type,initiative:campaign.initiativeRoll,enemyInitiative:campaign.enemyInitiative,attackTotal:playerAttack?.total??null,critical:!!playerAttack?.critical,enemyRoll:enemyAttack?.die??null,enemyTotal:enemyAttack?.total??null,defenderAC,target:target.name,dealt,taken,hit,defeated,enemyBefore:oldHP,enemyAfter:target.hp,enemyMax:target.maxHp,heroBefore:heroHP,heroAfter:s.hp,energyBefore:oldEnergy,energyAfter:s.en,recipient:receivedName,recipientBefore,recipientAfter,parry,evaded,evasionRoll,evasionActive,evasionUntil,evasionRemaining:Math.max(0,evasionUntil-campaign.combatRound)};
  campaign.lastExchange=event;
  recordCombatDelta(target,dealt,taken,receivedName,recipientBefore,recipientAfter);
  if(defeated){
@@ -541,6 +550,18 @@ function updateLivingEnemies(scene){
  // If Gemini omits surviving enemies right after a strike, keep their locally tracked HP.
  // Deliberate movement or noncombat disengagement can clear the previous encounter.
  if(!next.length&&previous.length&&campaign.pending?.combat)next.push(...previous);
+ const hasIncomingHostiles=next.length>0;
+ const newEncounter=hasIncomingHostiles&&!campaign.pending?.combat&&!previous.length;
+ if(newEncounter){
+  if(campaign.xpEncounter?.active){
+   if(campaign.xpEncounter.pendingVictory)concludeProgressionEncounter(true);
+   else{campaign.xpEncounter.active=false;campaign.xpEncounter.abandoned=true}
+  }
+  resetEncounterCombatState();
+ }else if(hasIncomingHostiles&&campaign.pending?.combat&&campaign.xpEncounter?.active&&campaign.xpEncounter.pendingVictory){
+  // Reinforcements arriving after a combat action continue the same encounter.
+  campaign.xpEncounter.pendingVictory=false;
+ }
  // Disengaging from a fight without defeating every tracked foe ends that encounter
  // without a victory payment. A later fight starts a new receipt and reward pool.
  if(!next.length&&!campaign.pending?.combat&&campaign.xpEncounter?.active&&!campaign.xpEncounter.pendingVictory){
@@ -609,7 +630,7 @@ function recordCombatDelta(enemy,dealt,taken,recipient,recipientBefore,recipient
  const targets=[{enemy,dealt},...(Array.isArray(additional)?additional:[])].filter(entry=>entry?.enemy);
  const events=targets.map(entry=>({name:entry.enemy.name,side:"enemy",delta:-Math.max(0,Number(entry.dealt)||0),after:entry.enemy.hp,maxHp:entry.enemy.maxHp}));
  events.push({name:recipient,side:"ally",delta:-taken,before:recipientBefore,after:recipientAfter,maxHp:recipient===(window.soaCharacters?.profile?.()?.name||"Your hero")?100:campaign.combatAllies?.find(a=>a.name===recipient)?.maxHp||null});
- log.push({round:campaign.combatRound,events});
+ log.push({round:campaign.combatRound,encounterId:campaign.xpEncounter?.id||null,events});
  campaign.combatLog=log.slice(-12);
 }
 function racialCooldownLeft(ability){return Math.max(0,(campaign?.racialCooldowns?.[ability.id]||0)-(Number(campaign?.actionSerial)||0))}
@@ -649,12 +670,17 @@ function drawRacialActions(box){
  for(const ability of usable){const button=document.createElement("button");button.type="button";button.className="soa-ability-button";const left=racialCooldownLeft(ability);button.textContent=ability.name+" · "+(left?"Cooldown "+left:"Ready");button.title=ability.description;button.disabled=busy||!!pending()||!!left||(ability.id==="cannibalize"&&s.hp>=heroHealthCap());button.onclick=()=>choose({text:(hero?.name||"Your hero")+" uses "+ability.name,type:"racial",difficulty:"medium",ability:ability.id});section.append(button)}
  box.append(section);
 }
+function currentEncounterExchange(){
+ const encounterId=campaign?.xpEncounter?.active?String(campaign.xpEncounter.id||""):"";
+ const exchange=campaign?.lastExchange||null;
+ return encounterId&&exchange?.encounterId===encounterId?exchange:null;
+}
 function drawEnemyStatus(box){
  const enemies=livingEnemies();
  if(!enemies.length)return;
- const exchange=campaign?.lastExchange||null;
+ const exchange=currentEncounterExchange();
  const section=document.createElement("section");section.className="soa-enemy-status";
- const heading=document.createElement("h4");heading.textContent="Combat · Round "+(exchange?.round||campaign?.combatRound||1);section.append(heading);
+ const heading=document.createElement("h4");heading.textContent=exchange?"Combat · Round "+exchange.round:"Combat";section.append(heading);
  for(const enemy of enemies){
   const item=document.createElement("button");item.type="button";item.className="soa-foe soa-foe-target";item.setAttribute("aria-pressed",String(selectedCombatTarget===enemy.name));item.setAttribute("aria-label",enemy.name+" · "+enemy.hp+" / "+enemy.maxHp+" HP · select target");item.disabled=busy||!!pending();item.onclick=()=>{selectedCombatTarget=enemy.name;draw()};
   const header=document.createElement("div");header.className="soa-foe-heading";
@@ -984,14 +1010,16 @@ async function choose(choice){
  if(!navigator.onLine){status("Offline: your saved scene is available. Reconnect to generate another.");return}
  if(!accessCode()){focusAccess();return}
  const detected=dialogueFromCustom(choice);if((detected||socialSkill(choice))&&choice.custom&&choice.type==="investigate")choice={...choice,type:"social"};
+ const combatRoundBefore=Number(campaign.combatRound)||0;
  const resolution=result(choice);
  if(!resolution){if(!socialSkill(choice)&&choice.type!=="combat")status("Not enough "+resourceName()+" for that action.");return}
+ const combatRoundAfter=Number(campaign.combatRound)||0;
  campaign.lastProgression="";
  campaign.actionSerial=(Number(campaign.actionSerial)||0)+1;
  const actionReceipt="turn-"+campaign.turn+"-action-"+campaign.actionSerial;
  recordActionPractice(choice,resolution,actionReceipt);
  campaign.lastAction=safe(choice.text);campaign.lastResult=resolution;
- campaign.pending={action:campaign.lastAction,resolution,startedAt:Date.now(),dialogue:detected,survey:choice.survey===true,combat:choice.type==="combat",actionReceipt};
+ campaign.pending={action:campaign.lastAction,resolution,startedAt:Date.now(),dialogue:detected,survey:choice.survey===true,combat:choice.type==="combat",combatRoundBefore,combatRoundAfter,combatExchangeResolved:choice.type==="combat"&&combatRoundAfter>combatRoundBefore,actionReceipt};
  campaign.history.push("At "+safe(campaign.scene?.location||"unknown location")+": Player: "+campaign.lastAction+" | "+resolution);
  campaign.history=campaign.history.slice(-MAX);const saved=store();refreshDisplay();if(!saved)return;
  // Release the iPhone keyboard and return to the story while Gemini works.
@@ -1008,7 +1036,11 @@ async function advance(action,resolution,retry){
  let requestTimeout;
  try{
  const controller=new AbortController();requestTimeout=setTimeout(()=>controller.abort(),30000);
- const response=await fetch("./api/campaign",{method:"POST",headers:{"content-type":"application/json","x-story-access":code},signal:controller.signal,body:JSON.stringify({context:{location:campaign.scene?.location||(window.soaCharacters?.profile?.()?.startingZone||"Current starting area"),previousTitle:campaign.scene?.title||"",previousScene:campaign.scene?.story||"",campaignOrigin:originOfCampaign(),startingZone:window.soaCharacters?.profile?.()?.startingZone||null,recentDiscoveries:campaign.journal.slice(-12),action,resolution,hp:s.hp,energy:s.en,resourceLabel:resourceName(),gold:fmtMoney(s.money),alarm:s.alert,turn:campaign.turn,history:campaign.history.slice(-20),flags:Object.keys(s.flags||{}),companionMoments:window.soaCompanions?.getRecent?.()||[],companionProfiles:window.soaCompanions?.getProfiles?.()||{},relationships:window.soaCompanions?.getRelationships?.()||{},conversationContext:window.soaCompanions?.getConversationContext?.()||{},character:window.soaCharacters?.profile?.()||null,abilityScores:window.soaAbilities?.get?.("hero")?.stats||null,reputation:window.soaReputation?.getStandings?.()||{},reputationDevelopments:window.soaReputation?.getDevelopments?.()||[],enemies:livingEnemies().map(e=>({name:e.name,hp:e.hp,maxHp:e.maxHp})),allies:combatParty().map(e=>({name:e.name,hp:e.hp,maxHp:e.maxHp})),questRewards:{last:campaign.quests?.lastReward||null,activeMissions:Object.entries(campaign.quests?.missions||{}).filter(([,v])=>v.state!=="claimed").map(([id,v])=>({id,state:v.state}))},combatLog:(campaign.combatLog||[]).slice(-3),lastExchange:campaign.lastExchange||null,chronicle:window.soaChronicle?.context?.(campaign)||null,resourceSurvey:campaign.pending?.survey===true}})});
+ const response=await fetch("./api/campaign",{method:"POST",headers:{"content-type":"application/json","x-story-access":code},signal:controller.signal,body:JSON.stringify({context:{location:campaign.scene?.location||(window.soaCharacters?.profile?.()?.startingZone||"Current starting area"),previousTitle:campaign.scene?.title||"",previousScene:campaign.scene?.story||"",campaignOrigin:originOfCampaign(),startingZone:window.soaCharacters?.profile?.()?.startingZone||null,recentDiscoveries:campaign.journal.slice(-12),action,resolution,hp:s.hp,energy:s.en,resourceLabel:resourceName(),gold:fmtMoney(s.money),alarm:s.alert,turn:campaign.turn,history:campaign.history.slice(-20),flags:Object.keys(s.flags||{}),companionMoments:window.soaCompanions?.getRecent?.()||[],companionProfiles:window.soaCompanions?.getProfiles?.()||{},relationships:window.soaCompanions?.getRelationships?.()||{},conversationContext:window.soaCompanions?.getConversationContext?.()||{},character:window.soaCharacters?.profile?.()||null,abilityScores:window.soaAbilities?.get?.("hero")?.stats||null,reputation:window.soaReputation?.getStandings?.()||{},reputationDevelopments:window.soaReputation?.getDevelopments?.()||[],enemies:livingEnemies().map(e=>({name:e.name,hp:e.hp,maxHp:e.maxHp})),allies:combatParty().map(e=>({name:e.name,hp:e.hp,maxHp:e.maxHp})),questRewards:{last:campaign.quests?.lastReward||null,activeMissions:Object.entries(campaign.quests?.missions||{}).filter(([,v])=>v.state!=="claimed").map(([id,v])=>({id,state:v.state}))},combatAction:campaign.pending?.combatExchangeResolved===true&&campaign.xpEncounter?.active===true,
+encounterId:campaign.pending?.combatExchangeResolved===true?campaign.xpEncounter?.id||null:null,
+combatRound:Number(campaign.combatRound)||0,
+combatLog:campaign.pending?.combatExchangeResolved===true?(campaign.combatLog||[]).filter(row=>row.encounterId===campaign.xpEncounter?.id).slice(-3):[],
+lastExchange:campaign.pending?.combatExchangeResolved===true&&campaign.lastExchange?.encounterId===campaign.xpEncounter?.id&&campaign.lastExchange?.round===campaign.pending?.combatRoundAfter?campaign.lastExchange:null,chronicle:window.soaChronicle?.context?.(campaign)||null,resourceSurvey:campaign.pending?.survey===true}})});
  const data=await response.json().catch(()=>({error:"Invalid server response"}));if(window.soaSaveRules.isIntegrityBlocked()){status("Saved data could not be read. The pending scene was not applied; restore a valid backup before continuing.");return}if(!response.ok){if(response.status===401||response.status===403||response.status>=500)window.soaAiDirector?.showSetup?.(data.error||"AI connection needs attention.");const requestError=Error(data.error||"Request failed");if(response.status===409)requestError.name="ContinuityError";throw requestError};
  if(!Array.isArray(data.choices)||!data.story)throw Error("Incomplete generated scene");
  const completedDialogue=campaign.pending?.dialogue?{...campaign.pending.dialogue,id:"campaign-dialogue-"+campaign.pending.startedAt+"-"+campaign.turn,success:/^Success:/i.test(campaign.pending.resolution)}:null;
@@ -1037,6 +1069,19 @@ function migrateCompanionDisplayNames(){
 const savedCampaign=localGet(KEY);if(campaignStorageReadFailed)campaignSaveFailed=true;
 if(savedCampaign!==null){try{campaign=normalizeCampaignState(JSON.parse(savedCampaign));if(!campaign)campaignLoadBlocked=true}catch{campaign=null;campaignLoadBlocked=true;window.soaSaveRules.reportCorruption(KEY)}}
 migrateCompanionDisplayNames();
+function repairLegacyEncounterBoundary(){
+ const encounter=campaign?.xpEncounter;
+ if(!encounter?.active||!encounter.pendingVictory||!livingEnemies().length)return;
+ const abilityId=String(campaign.lastExchange?.ability||"");
+ const abilityIdName=abilityId.replaceAll("_"," ").toLowerCase();
+ const hero=window.soaCharacters?.profile?.(),level=window.soaProgression?.level?.()||hero?.startLevel||1;
+ const abilityName=window.soaClassAbilities?.get?.(abilityId,hero?.className,level)?.name?.toLowerCase()||"";
+ const selected=(String(campaign.lastAction||"")+" "+String(campaign.lastResult||"")).toLowerCase();
+ if([abilityIdName,abilityName].some(name=>name&&selected.includes(name))){encounter.pendingVictory=false;return}
+ concludeProgressionEncounter(true);
+ resetEncounterCombatState();
+}
+repairLegacyEncounterBoundary();
 enabled=localGet("soa-campaign-enabled")==="1"&&!campaignLoadBlocked&&!campaignStorageReadFailed;let campaignReady=true;if(campaign){window.soaChronicle?.attach?.(campaign);campaignReady=store();window.soaChronicle?.render?.(campaign)}window.soaChronicleSetSave?.(store);interfaceUI();get("campaign-mode").checked=enabled;
 if(campaignLoadBlocked||campaignStorageReadFailed){status("")}else if(enabled){if(!campaign){campaign=make();campaignReady=store()}draw();if(campaignReady&&!campaign.scene&&navigator.onLine)advance(campaign.lastAction,campaign.lastResult,true)}
 window.soaLivingCampaign={getState:()=>campaign,enabled:()=>enabled,persist:store,refreshUI:()=>{draw();window.soaCharacters?.refreshProfessions?.()}};})();

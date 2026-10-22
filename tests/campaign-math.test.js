@@ -500,6 +500,100 @@ test("combat overview stays hidden after the last hostile is defeated", () => {
   assert.equal(context.drawnCombat.length, 0);
 });
 
+test("combat overview ignores a stale exchange from an earlier encounter", () => {
+  const context = makeContext();
+  context.campaign = {
+    xpEncounter: { id: "encounter-9", active: true },
+    lastExchange: { encounterId: "encounter-8", round: 74, ability: "spec_rogue_combat" },
+  };
+  vm.runInContext([
+    functionBlock("currentEncounterExchange", "drawEnemyStatus"),
+    "globalThis.currentExchange = currentEncounterExchange;",
+  ].join("\n"), context);
+
+  assert.equal(context.currentExchange(), null, "legacy and prior-encounter exchanges are not shown as current");
+  const current = { encounterId: "encounter-9", round: 1, ability: "kick" };
+  context.campaign.lastExchange = current;
+  assert.equal(context.currentExchange(), current, "the active encounter's latest exchange remains visible");
+});
+
+test("a story action after victory starts a fresh encounter and clears combat cooldowns", () => {
+  const context = makeContext();
+  const oldFoe = { name: "Trogg Mechanic", hp: 0, maxHp: 60 };
+  context.campaign = {
+    enemyLocation: "Thunderbrew Distillery Service Tunnel",
+    enemies: [oldFoe],
+    pending: { combat: false },
+    xpEncounter: { id: "encounter-7", active: true, pendingVictory: true, defeated: [{ name: oldFoe.name, maxHp: oldFoe.maxHp }] },
+    combatRound: 74,
+    classCooldowns: { spec_rogue_combat: 77, kick: 75 },
+    supportCooldowns: { bromli_guard: 76 },
+    evasionUntil: 75, guardUntil: 76, snareUntil: 77, snaredEnemy: "Old Guard",
+    parryReady: true, initiativeFor: "Thunderbrew Distillery Service Tunnel",
+    initiativeRoll: 21, enemyInitiative: 12,
+  };
+  context.livingEnemies = () => context.campaign.enemies.filter(enemy => enemy.hp > 0);
+  context.concludeCalls = [];
+  context.concludeProgressionEncounter = allowNextRoster => {
+    context.concludeCalls.push(allowNextRoster);
+    context.campaign.xpEncounter.active = false;
+    context.campaign.xpEncounter.completed = true;
+    context.campaign.xpEncounter.pendingVictory = false;
+    return { awarded: 10 };
+  };
+  vm.runInContext([
+    functionBlock("resetEncounterCombatState", "startProgressionEncounter"),
+    functionBlock("updateLivingEnemies", "hydrateKnownAllyHP"),
+    "globalThis.updateEnemies = updateLivingEnemies;",
+  ].join("\n"), context);
+
+  context.updateEnemies({
+    location: "Thunderbrew Distillery Service Tunnel",
+    enemies: [{ name: "Trogg Scout", hp: 45, maxHp: 45 }],
+  });
+
+  assert.deepEqual(Array.from(context.concludeCalls), [true], "the completed encounter is finalized before adding the scout");
+  assert.equal(context.campaign.xpEncounter.active, false);
+  assert.equal(context.campaign.enemies[0].name, "Trogg Scout");
+  assert.deepEqual({ ...context.campaign.classCooldowns }, {});
+  assert.deepEqual({ ...context.campaign.supportCooldowns }, {});
+  assert.equal(context.campaign.combatRound, 0);
+  assert.equal(context.campaign.evasionUntil, 0);
+  assert.equal(context.campaign.guardUntil, 0);
+  assert.equal(context.campaign.snareUntil, 0);
+  assert.equal(context.campaign.parryReady, false);
+  assert.equal(context.campaign.initiativeFor, null);
+});
+
+test("reinforcements after a combat action remain in the same encounter", () => {
+  const context = makeContext();
+  context.campaign = {
+    enemyLocation: "Thunderbrew Distillery Service Tunnel",
+    enemies: [{ name: "Trogg Mechanic", hp: 0, maxHp: 60 }],
+    pending: { combat: true },
+    xpEncounter: { id: "encounter-7", active: true, pendingVictory: true, defeated: [{ name: "Trogg Mechanic", maxHp: 60 }] },
+    combatRound: 74,
+    classCooldowns: { spec_rogue_combat: 77 },
+  };
+  context.livingEnemies = () => context.campaign.enemies.filter(enemy => enemy.hp > 0);
+  context.concludeProgressionEncounter = () => { throw new Error("combat reinforcements must not close the encounter"); };
+  vm.runInContext([
+    functionBlock("resetEncounterCombatState", "startProgressionEncounter"),
+    functionBlock("updateLivingEnemies", "hydrateKnownAllyHP"),
+    "globalThis.updateEnemies = updateLivingEnemies;",
+  ].join("\n"), context);
+
+  context.updateEnemies({
+    location: "Thunderbrew Distillery Service Tunnel",
+    enemies: [{ name: "Trogg Scout", hp: 45, maxHp: 45 }],
+  });
+
+  assert.equal(context.campaign.xpEncounter.active, true);
+  assert.equal(context.campaign.xpEncounter.pendingVictory, false);
+  assert.equal(context.campaign.classCooldowns.spec_rogue_combat, 77);
+  assert.equal(context.campaign.combatRound, 74);
+});
+
 test("class ability cooldowns block only the intended number of exchanges", () => {
   const context = makeContext();
   context.campaign = { combatRound: 1, classCooldowns: { kick: 3 } };
