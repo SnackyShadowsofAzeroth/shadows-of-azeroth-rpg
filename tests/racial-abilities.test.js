@@ -41,5 +41,11 @@ assert.equal(context.window.soaAbilities.get("hero").armorClass,17,"Night Elf Qu
 profile.race="Tauren";profile.className="Warrior";
 assert.equal(context.window.soaAbilities.get("hero").maxHp,22,"Tauren Endurance adds maximum HP");
 profile.race="Troll";profile.className="Rogue";
-assert.equal(context.window.soaRacialAbilities.passives("Troll").regeneration,2,"Troll Regeneration is represented mechanically");
+assert.equal(context.window.soaRacialAbilities.passives("Troll").regeneration,5,"Troll Regeneration restores five HP per combat exchange");
+const berserking=racial.get("berserking","Troll");
+assert.equal(berserking.strikes,3,"Berserking resolves three separate melee swings");
+assert.equal(berserking.weaponDamage,true);
+assert.equal(berserking.followupMultiplier,0.5,"free follow-up attacks deal half damage");
+assert.equal(berserking.criticalOn,20,"Berserking uses the standard critical range");
+assert.equal(berserking.cooldown,3);
 console.log("Racial ability catalog and passive bonuses verified.");
