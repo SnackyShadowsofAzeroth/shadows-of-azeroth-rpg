@@ -30,7 +30,7 @@ function readStoredJSON(key){
 function validateOfflineSave(value){
  if(!object(value)||typeof value.id!=="string"||!value.id.trim()||value.id.length>80)fail("Save data is incomplete.");
  if(!["afterbattle","archives","combat","crossing","death","hall","junction","memo","new-hero-start","relayfailed","trap","trapfailed","wires"].includes(value.id))fail("Save points to an unknown scene.");
- if(!finite(value.hp,0,100))fail("Health is outside the allowed range.");
+ if(!finite(value.hp,0,110))fail("Health is outside the allowed range.");
  const result=structuredClone(value);
  result.en=result.en===undefined?100:result.en;
  result.money=result.money===undefined?0:result.money;

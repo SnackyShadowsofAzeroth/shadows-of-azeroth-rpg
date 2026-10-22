@@ -222,7 +222,7 @@ function concludeProgressionEncounter(){
  encounter.active=false;encounter.pendingVictory=false;encounter.completed=true;
  if(result?.awarded){
   const extra=result.party?.reduce((sum,p)=>sum+(p.awarded||0),0)||0;
-  campaign.lastProgression="Victory · +"+result.awarded+" XP to your hero"+(extra?" · companions shared "+extra+" XP":"")+(result.levels?" · LEVEL UP!":"");
+  campaign.lastProgression="Victory · +"+result.awarded+" XP to your hero"+(extra?" · companions shared "+extra+" XP":"")+(result.vitalsRestored?" · LEVEL UP! Full health and "+resourceName()+" restored":"");
  }
  return result;
 }
@@ -251,7 +251,7 @@ function recordActionPractice(choice,resolution,receipt){
  const meaningful=meaningfulSocialPractice(choice,skill);
  const earned=window.soaProgression?.check?.({receipt,name:skill,success,difficulty:choice.difficulty||"medium",meaningful});
  if(earned?.awarded){
-  campaign.lastProgression=(success?"Successful":"Attempted")+" "+skill+" check · +"+earned.awarded+" XP"+(earned.rankUp?" · "+skill+" skill rank increased!":"")+(earned.levels?" · LEVEL UP!":"");
+  campaign.lastProgression=(success?"Successful":"Attempted")+" "+skill+" check · +"+earned.awarded+" XP"+(earned.rankUp?" · "+skill+" skill rank increased!":"")+(earned.vitalsRestored?" · LEVEL UP! Full health and "+resourceName()+" restored":"");
  }
  // Participating companions gain skill practice only for an explicitly shared named task.
  const text=String(choice.text||"").toLowerCase();

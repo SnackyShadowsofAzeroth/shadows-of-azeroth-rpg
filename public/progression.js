@@ -78,9 +78,22 @@ function awardCore(id,amount,receipt,reason){
  data.receipts.push(receipt);data.receipts=data.receipts.slice(-800);
  data.history.push({actor:id,amount,reason:actor.lastGain.reason,level:actor.level,at:Date.now()});
  data.history=data.history.slice(-30);
- return {awarded:amount,levels:actor.level-previous,level:actor.level};
+ return {awarded:amount,levels:actor.level-previous,level:actor.level,actorId:id};
 }
-function commitMutation(before,result){if(!persist()){data=before;return {...result,awarded:0,levels:0,party:[],storageWarning:true}}return result}
+function commitMutation(before,result){
+ if(!persist()){data=before;return {...result,awarded:0,levels:0,party:[],storageWarning:true}}
+ const restore=window.soaHeroLevelUp?.restore;
+ if(result.actorId==="hero"&&result.levels>0&&typeof restore==="function"){
+  if(!restore()){
+   data=before;
+   const rollbackSaved=persist();
+   window.soaReportStorageFailure?.("Level up could not be saved with the health and resource refill. The XP award was rolled back; check browser storage and retry.");
+   return {...result,awarded:0,levels:0,level:score(HERO).level,party:[],storageWarning:true,rollbackFailed:!rollbackSaved};
+  }
+  return {...result,vitalsRestored:true};
+ }
+ return result;
+}
 function award(id,amount,receipt,reason){
  if(storageBlocked||window.soaSaveRules.isIntegrityBlocked())return {awarded:0,levels:0,storageWarning:true};
  const before=structuredClone(data),result=awardCore(id,amount,receipt,reason);

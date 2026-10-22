@@ -49,7 +49,8 @@ test("fresh installs get a clean save instead of embedded playthrough progress",
 
 test("rejects invalid scenes, out-of-range stats, and malformed encounters", () => {
   assert.throws(() => rules.validateOfflineSave(validSave({ id: "not-a-scene" })), /unknown scene/);
-  assert.throws(() => rules.validateOfflineSave(validSave({ hp: 101 })), /Health/);
+  assert.equal(rules.validateOfflineSave(validSave({ hp: 110 })).hp, 110, "Tauren Endurance supports its 110 HP cap");
+  assert.throws(() => rules.validateOfflineSave(validSave({ hp: 111 })), /Health/);
   assert.throws(() => rules.validateOfflineSave(validSave({ money: -1 })), /Save values/);
   assert.throws(() => rules.validateOfflineSave(validSave({ id: "combat", enemy: null })), /no saved opponent/);
   assert.throws(() => rules.validateOfflineSave(validSave({ enemy: { name: "Guard", hp: 80, max: 40, damage: 6 } })), /Encounter/);
