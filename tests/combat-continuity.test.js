@@ -157,6 +157,7 @@ test("campaign API preserves zero HP and clamps combat health to valid maximums"
     allies: [
       { name: "Bromli Ironkeg", role: "Protection Paladin", hp: 0, maxHp: 120 },
       { name: "Pippa Sparkwhistle", role: "Subtlety Rogue", hp: 80, maxHp: 45 },
+      { name: "Lethariel Moonguard", role: "Restoration Priest", hp: null, maxHp: 90 },
     ],
     enemies: [
       { name: "Fallen Guard", hp: 0, maxHp: 45 },
@@ -174,6 +175,7 @@ test("campaign API preserves zero HP and clamps combat health to valid maximums"
     assert.deepEqual(result.allies.map(ally => [ally.name, ally.hp, ally.maxHp]), [
       ["Bromli Ironkeg", 0, 120],
       ["Pippa Sparkwhistle", 45, 45],
+      ["Lethariel Moonguard", null, null],
     ]);
     assert.deepEqual(result.enemies.map(enemy => [enemy.name, enemy.hp, enemy.maxHp]), [
       ["Crypt Stalker", 20, 45],
