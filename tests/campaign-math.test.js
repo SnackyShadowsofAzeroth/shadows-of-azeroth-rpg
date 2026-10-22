@@ -247,6 +247,25 @@ test("story choices route named cooldown abilities through the shared ability ex
   assert.equal(context.routedTarget.name, "Trogg Scout");
 });
 
+test("combat overview stays hidden after the last hostile is defeated", () => {
+  const context = makeContext();
+  context.campaign = {
+    combatAllies: [{ name: "Companion" }],
+    scene: { choices: [{ type: "combat", text: "An old combat choice" }] },
+    lastExchange: { defeated: true, target: "Guard" },
+  };
+  context.livingEnemies = () => [];
+  context.document = { createElement: () => { throw new Error("inactive combat must not render an overview"); } };
+  context.drawnCombat = [];
+  vm.runInContext([
+    functionBlock("drawEnemyStatus", "drawCombatActions"),
+    "globalThis.renderEnemyStatus = drawEnemyStatus;",
+  ].join("\n"), context);
+  context.testBox = { append: node => context.drawnCombat.push(node) };
+  context.renderEnemyStatus(context.testBox);
+  assert.equal(context.drawnCombat.length, 0);
+});
+
 test("class ability cooldowns block only the intended number of exchanges", () => {
   const context = makeContext();
   context.campaign = { combatRound: 1, classCooldowns: { kick: 3 } };

@@ -587,9 +587,9 @@ function drawRacialActions(box){
  box.append(section);
 }
 function drawEnemyStatus(box){
- const enemies=livingEnemies(),activeContext=enemies.length||(campaign?.combatAllies||[]).length||campaign?.scene?.choices?.some(x=>x.type==="combat");
- const exchange=activeContext?campaign?.lastExchange:null;
- if(!activeContext)return;
+ const enemies=livingEnemies();
+ if(!enemies.length)return;
+ const exchange=campaign?.lastExchange||null;
  const section=document.createElement("section");section.className="soa-enemy-status";
  const heading=document.createElement("h4");heading.textContent="Combat · Round "+(exchange?.round||campaign?.combatRound||1);section.append(heading);
  if(!enemies.length){const hint=document.createElement("p");hint.className="soa-combat-hint";hint.textContent=exchange?.defeated?"The last opponent has been defeated.":"No enemy HP has been confirmed for this scene yet. The story will reveal enemy health when combatants are identified.";section.append(hint)}
