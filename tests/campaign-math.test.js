@@ -51,6 +51,7 @@ function makeContext({ random = () => 0.5 } = {}) {
     socialTarget: () => ({ bonus: 0, dc: 14 }),
     fightExchange: () => null,
     socialCheck: () => null,
+    unavailableClassAbility: () => null,
   };
   vm.createContext(context);
   return context;
