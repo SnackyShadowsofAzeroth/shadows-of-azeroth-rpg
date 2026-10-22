@@ -295,3 +295,33 @@ test("Vanish uses current-scene masking and does not inherit unrelated elevated 
     global.fetch = previousFetch;
   }
 });
+
+test("generated Vanish choices use a fixed label without stale scene cover", async () => {
+  const { onRequestPost } = await campaignModule;
+  const previousFetch = global.fetch;
+  global.fetch = async () => geminiReply(sceneResponse({
+    choices: [
+      { text: "Vanish back into the deeper shadows of the catwalk to reset your stealth", type: "stealth", difficulty: "medium" },
+      { text: "Strike the trogg scout", type: "combat", difficulty: "easy" },
+      { text: "Do not Vanish; search the controls", type: "investigate", difficulty: "easy" },
+    ],
+  }));
+  try {
+    const response = await onRequestPost({
+      request: campaignRequest({
+        action: "Listen for movement",
+        location: "Service Tunnel, Upper Gantry, Ice-Drill Site, Dun Morogh",
+        character: { name: "Snacky Lugnuts", race: "Gnome", className: "Rogue" },
+      }),
+      env: { GEMINI_API_KEY: "test-key", AI_ACCESS_CODE: "test-access-code" },
+    });
+    assert.equal(response.status, 200);
+    const scene = await response.json();
+    assert.equal(scene.choices[0].text, "Vanish into the shadows");
+    assert.equal(scene.choices[0].type, "stealth");
+    assert.equal(scene.choices[1].text, "Strike the trogg scout");
+    assert.equal(scene.choices[2].text, "Do not Vanish; search the controls");
+  } finally {
+    global.fetch = previousFetch;
+  }
+});

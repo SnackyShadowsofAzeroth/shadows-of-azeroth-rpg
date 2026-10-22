@@ -90,6 +90,23 @@ test("inferred skill drives preview, energy cost, effects, and practice", () => 
   assert.equal(context.testApi.resolvedSkillName({ type: "combat", text: "Search the room" }), "combat");
 });
 
+test("saved Vanish choices display the same short label without changing unrelated choices", () => {
+  const context = makeContext();
+  vm.runInContext([
+    functionBlock("canonicalStoryChoice", "resolvedStoryVanish"),
+    "globalThis.canonicalStoryChoice = canonicalStoryChoice;",
+  ].join("\n"), context);
+  const saved = { type: "stealth", difficulty: "medium", text: "Vanish back into the deeper shadows of the catwalk to reset your stealth" };
+  const canonical = context.canonicalStoryChoice(saved);
+  assert.equal(canonical.text, "Vanish into the shadows");
+  assert.equal(canonical.type, "stealth");
+  assert.equal(saved.text, "Vanish back into the deeper shadows of the catwalk to reset your stealth");
+  const unrelated = { type: "stealth", text: "Hide beside the steam pipe" };
+  assert.equal(context.canonicalStoryChoice(unrelated), unrelated);
+  const negated = { type: "investigate", text: "Do not Vanish; search the controls" };
+  assert.equal(context.canonicalStoryChoice(negated), negated);
+});
+
 test("Vanish story choices use the learned combat ability with its stated cost and cooldown", () => {
   const context = makeContext();
   const enemy = { name: "Trogg Scout", hp: 45, maxHp: 45 };
