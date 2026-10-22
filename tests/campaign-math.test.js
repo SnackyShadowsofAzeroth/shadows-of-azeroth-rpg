@@ -956,3 +956,40 @@ test("a non-Rogue's saved Vanish option becomes an ordinary stealth choice", () 
   assert.equal(displayed.difficulty, "medium");
   assert.equal(saved.text, "Vanish into the shadows", "the existing saved scene remains untouched");
 });
+
+test("locked and unsupported Shaman spells are replaced before preview and cannot spend a turn", () => {
+  const context = makeContext();
+  const spells = [
+    { id: "lightning_bolt", name: "Lightning Bolt", level: 1, cost: 30, effect: "damage" },
+    { id: "healing_wave", name: "Healing Wave", level: 1, cost: 35, effect: "heal" },
+    { id: "earth_shock", name: "Earth Shock", level: 5, cost: 35, effect: "interrupt" },
+    { id: "chain_lightning", name: "Chain Lightning", level: 10, cost: 45, effect: "damage" },
+  ];
+  context.window.soaCharacters.profile = () => ({ className: "Shaman", startLevel: 1 });
+  context.window.soaProgression.level = () => 1;
+  context.window.soaClassAbilities = {
+    all: () => spells,
+    available: (_className, level) => spells.filter(spell => spell.level <= level),
+  };
+  context.status = value => { context.statusMessage = value; };
+  vm.runInContext([
+    functionBlock("unavailableClassAbility", "resolvedStoryVanish"),
+    functionBlock("result", "interfaceUI"),
+    "globalThis.unavailableClassAbility = unavailableClassAbility;",
+    "globalThis.canonicalStoryChoice = canonicalStoryChoice;",
+    "globalThis.result = result;",
+  ].join("\n"), context);
+  for (const name of ["earth shock", "fire shock", "chain lightning"]) {
+    const offered = { text: "Cast an " + name + " at the scorpide", type: "combat", difficulty: "medium" };
+    const displayed = context.canonicalStoryChoice(offered);
+    assert.equal(displayed.text, "Cast Lightning Bolt at the target");
+    assert.equal(displayed.ability, "lightning_bolt");
+    assert.equal(offered.ability, undefined);
+    assert.equal(context.result(offered), null);
+    assert.match(context.statusMessage, /No action spent/);
+    assert.equal(context.s.en, 100);
+  }
+  context.window.soaProgression.level = () => 5;
+  const learned = { text: "Cast Earth Shock at the scorpide", type: "combat" };
+  assert.equal(context.canonicalStoryChoice(learned), learned);
+});
