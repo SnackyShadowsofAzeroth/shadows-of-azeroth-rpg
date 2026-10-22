@@ -994,3 +994,42 @@ test("locked and unsupported Shaman spells are replaced before preview and canno
   const learned = { text: "Cast Earth Shock at the scorpide", type: "combat" };
   assert.equal(context.canonicalStoryChoice(learned), learned);
 });
+
+test("an engaged foe remains tracked when a same-scene noncombat action omits it", () => {
+  const context = makeContext();
+  context.campaign = {
+    enemies: [{ name: "Wild Scorpide", hp: 23, maxHp: 45 }],
+    enemyLocation: "Durotar Basin",
+    pending: { action: "Examine the nearby tracks", combat: false },
+    xpEncounter: { active: true, pendingVictory: false },
+    defeatedEnemies: [],
+  };
+  vm.runInContext([
+    functionBlock("livingEnemies", "partyExperienceIds"),
+    functionBlock("updateLivingEnemies", "hydrateKnownAllyHP"),
+    "globalThis.updateLivingEnemies = updateLivingEnemies;",
+    "globalThis.livingEnemies = livingEnemies;",
+  ].join("\n"), context);
+  context.updateLivingEnemies({ location: "Durotar Basin", enemies: [] });
+  assert.equal(context.campaign.enemies[0].hp, 23);
+  assert.equal(context.campaign.xpEncounter.active, true);
+  context.updateLivingEnemies({ location: "Durotar Basin", enemies: [{ name: "Dust Scorpide", hp: 40, maxHp: 40 }] });
+  assert.deepEqual(Array.from(context.campaign.enemies, enemy => enemy.name).sort(), ["Dust Scorpide", "Wild Scorpide"]);
+  context.campaign.pending.action = "Retreat from the basin";
+  context.updateLivingEnemies({ location: "Durotar Basin", enemies: [] });
+  assert.equal(context.campaign.enemies.length, 0);
+  assert.equal(context.campaign.xpEncounter.abandoned, true);
+});
+
+test("an unengaged threat does not manufacture a combat target", () => {
+  const context = makeContext();
+  context.campaign = { enemies: [], enemyLocation: "Durotar Basin", pending: { action: "Listen for scuttling", combat: false }, defeatedEnemies: [] };
+  vm.runInContext([
+    functionBlock("livingEnemies", "partyExperienceIds"),
+    functionBlock("updateLivingEnemies", "hydrateKnownAllyHP"),
+    "globalThis.updateLivingEnemies = updateLivingEnemies;",
+    "globalThis.livingEnemies = livingEnemies;",
+  ].join("\n"), context);
+  context.updateLivingEnemies({ location: "Durotar Basin", enemies: [] });
+  assert.equal(context.livingEnemies().length, 0);
+});

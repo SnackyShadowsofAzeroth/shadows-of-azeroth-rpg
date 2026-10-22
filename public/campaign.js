@@ -600,9 +600,15 @@ function updateLivingEnemies(scene){
   const armorClass=Number.isInteger(item.armorClass)?Math.max(8,Math.min(25,item.armorClass)):existing?.armorClass;
   next.push({...existing,name,maxHp,hp:existing?Math.max(0,Math.min(maxHp,existing.hp)):Math.max(1,Math.min(maxHp,Math.round(Number(item.hp)||maxHp))),className,form,armorClass,resource,maxResource});
  }
- // If Gemini omits surviving enemies right after a strike, keep their locally tracked HP.
- // Deliberate movement or noncombat disengagement can clear the previous encounter.
- if(!next.length&&previous.length&&campaign.pending?.combat)next.push(...previous);
+ // A generated scene can omit an engaged foe even after a noncombat choice.
+ // Keep local survivors and their HP until the player explicitly disengages or changes location.
+ const disengaged=/\b(?:retreat|flee|escape|withdraw|disengage|leave|exit)\b/i.test(String(campaign.pending?.action||""));
+ if(previous.length&&!disengaged){
+  for(const enemy of previous){
+   if(next.length>=4)break;
+   if(!next.some(item=>item.name.toLowerCase()===enemy.name.toLowerCase()))next.push(enemy);
+  }
+ }
  const hasIncomingHostiles=next.length>0;
  const newEncounter=hasIncomingHostiles&&!campaign.pending?.combat&&!previous.length;
  if(newEncounter){
@@ -1017,6 +1023,11 @@ function draw(){
   notice.textContent="✦ A chapter milestone is ready for your review · Open Journal";
   notice.onclick=()=>get("soa-chronicle")?.scrollIntoView({behavior:window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches?"auto":"smooth",block:"start"});
   box.append(notice);
+ }
+ if(!livingEnemies().length&&sc.choices?.some(choice=>choice.type==="combat")){
+  const cue=document.createElement("p");cue.className="soa-precombat-cue";
+  cue.textContent="No hostile target engaged yet · Choose a story action to begin an encounter. Combat actions appear when an opponent enters the fight.";
+  box.append(cue);
  }
  const reserve=document.createElement("section");reserve.className="soa-choice-resource";reserve.dataset.resource=resourceKey();reserve.setAttribute("aria-label","Current "+resourceName());const reserveHeading=document.createElement("div");reserveHeading.className="soa-choice-resource-heading";const reserveLabel=document.createElement("strong");reserveLabel.textContent="CURRENT "+resourceName().toUpperCase();const reserveValue=document.createElement("span");const reserveCurrent=Math.max(0,Math.min(100,Number(s.en)||0));reserveValue.textContent=reserveCurrent+" / 100";reserveHeading.append(reserveLabel,reserveValue);const reserveTrack=document.createElement("div");reserveTrack.className="soa-choice-resource-track";reserveTrack.dataset.resource=resourceKey();reserveTrack.setAttribute("role","progressbar");reserveTrack.setAttribute("aria-label",resourceName()+" reserve");reserveTrack.setAttribute("aria-valuemin","0");reserveTrack.setAttribute("aria-valuemax","100");reserveTrack.setAttribute("aria-valuenow",String(reserveCurrent));const reserveFill=document.createElement("div");reserveFill.className="soa-choice-resource-fill";reserveFill.style.width=reserveCurrent+"%";reserveTrack.append(reserveFill);const reserveHint=document.createElement("small");reserveHint.textContent="Combat exchanges and other actions restore up to +25 "+resourceName()+" (maximum 100). Costs below show your projected balance.";reserve.append(reserveHeading,reserveTrack,reserveHint);box.append(reserve);
  const choicesHeader=document.createElement("div");choicesHeader.className="soa-choices-heading";
