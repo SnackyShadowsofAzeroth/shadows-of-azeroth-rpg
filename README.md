@@ -461,3 +461,10 @@ This pass reconciles previews with the actual resolver, validates imported and s
 - Combat previews and the last-exchange details show the separate strike rolls, each result, criticals, damage, target HP, and Vanish's guaranteed evade. Ordinary attacks still critically hit only on a natural 20.
 
 The offline shell cache is **v81**. Focused checks verify two attack rolls, expanded criticals, weapon damage, target redirection, one exchange of recovery, and the full five-exchange Vanish cooldown.
+
+
+## Rogue Evasion rework (v82)
+
+- **Evasion** keeps its 35 Energy cost and two-round cooldown. On use it grants a **50% chance to dodge each incoming hit** during the activation round and the following round. A separate d100 roll of 1–50 dodges; 51–100 allows the hit through. It no longer changes the enemy's d20 attack roll.
+- Combat displays the remaining Evasion duration, and the last-exchange details show each dodge roll. The effect ends when the tracked encounter ends and is saved with the campaign state.
+- The offline shell cache is **v82**. Focused checks cover both sides of the 50% threshold, the two-round duration, and cooldown timing.
