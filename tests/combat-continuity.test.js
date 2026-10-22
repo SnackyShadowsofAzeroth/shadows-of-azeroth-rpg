@@ -254,3 +254,44 @@ test("campaign API preserves zero HP and clamps combat health to valid maximums"
     global.fetch = previousFetch;
   }
 });
+
+
+test("Vanish uses current-scene masking and does not inherit unrelated elevated scenery", async () => {
+  const { onRequestPost } = await campaignModule;
+  const previousFetch = global.fetch;
+  let geminiRequest;
+  global.fetch = async (_url, options) => {
+    geminiRequest = JSON.parse(options.body);
+    return geminiReply(sceneResponse({
+      title: "Steam in the Service Tunnel",
+      location: "Service Tunnel, Ice-Drill Site, Dun Morogh",
+      story: "You vanish behind the sudden plume of steam.",
+    }));
+  };
+
+  try {
+    const response = await onRequestPost({
+      request: campaignRequest({
+        action: "Vanish into the steam vent's plume",
+        resolution: "Vanish succeeded; the incoming attack was automatically evaded.",
+        location: "Service Tunnel, Ice-Drill Site, Dun Morogh",
+        previousScene: "A guard was knocked from a catwalk in a different chamber.",
+        history: ["Earlier: Snacky fought on a catwalk."],
+        character: { id: "snacky", name: "Snacky Lugnuts", gender: "Male", race: "Gnome", className: "Rogue" },
+      }),
+      env: { GEMINI_API_KEY: "test-key", AI_ACCESS_CODE: "test-access-code" },
+    });
+    assert.equal(response.status, 200);
+    const instructions = geminiRequest.systemInstruction.parts[0].text;
+    assert.match(instructions, /When the selected action uses Vanish, portray a brief disappearance by exploiting a masking condition that fits the current scene/i);
+    assert.match(instructions, /steam, smoke, dust, darkness, harsh weather, or the aftermath of an explosion/i);
+    assert.match(instructions, /do not carry a hiding place or structure forward from unrelated historical scenes/i);
+    assert.doesNotMatch(instructions, /catwalk/i);
+    const context = JSON.parse(geminiRequest.contents[0].parts[0].text);
+    assert.equal(context.action, "Vanish into the steam vent's plume");
+    assert.match(context.previousScene, /catwalk/i);
+    assert.match(context.resolution, /automatically evaded/i);
+  } finally {
+    global.fetch = previousFetch;
+  }
+});
