@@ -362,3 +362,38 @@ test("Shaman scene generation excludes Rogue Vanish and offers ordinary stealth 
     global.fetch = previousFetch;
   }
 });
+
+test("level-one Shaman choices replace locked and unimplemented shocks with Lightning Bolt", async () => {
+  const { onRequestPost } = await campaignModule;
+  const previousFetch = global.fetch;
+  let geminiRequest;
+  global.fetch = async (_url, options) => {
+    geminiRequest = JSON.parse(options.body);
+    return geminiReply(sceneResponse({
+      location: "Durotar",
+      choices: [
+        { text: "Cast an earth shock to disrupt the scorpide", type: "combat", difficulty: "medium" },
+        { text: "Use fire shock against the scorpide", type: "combat", difficulty: "easy" },
+        { text: "Cast Chain Lightning", type: "combat", difficulty: "hard" },
+        { text: "Cast Lightning Bolt at the scorpide", type: "combat", difficulty: "easy" },
+      ],
+    }));
+  };
+  try {
+    const response = await onRequestPost({
+      request: campaignRequest({
+        action: "Face the scorpide",
+        location: "Durotar",
+        character: { id: "zinjo", name: "Zin'jo", race: "Troll", className: "Shaman", level: 1 },
+      }),
+      env: { GEMINI_API_KEY: "test-key", AI_ACCESS_CODE: "test-access-code" },
+    });
+    assert.equal(response.status, 200);
+    assert.match(geminiRequest.systemInstruction.parts[0].text, /Earth Shock at level 5/);
+    const scene = await response.json();
+    assert.deepEqual(scene.choices.slice(0, 3).map(choice => choice.text), Array(3).fill("Cast Lightning Bolt at the target"));
+    assert.equal(scene.choices[3].text, "Cast Lightning Bolt at the scorpide");
+  } finally {
+    global.fetch = previousFetch;
+  }
+});
