@@ -372,6 +372,23 @@ function specializationCard(){
  for(const spec of choices){const button=make("button");button.type="button";button.className="soa-specialization-choice";button.append(make("strong",spec.name),make("span",spec.description),make("em","Signature · "+spec.ability.name+" · "+spec.ability.cost+" "+(window.soaResources?.forClass?.(active.className)?.label||"Resource")));button.onclick=()=>{const old=active.specialization;active.specialization=spec.name;if(!commitRoster()){active.specialization=old;window.alert?.("Could not save specialization. Check available device storage.");return}drawProfessions()};list.append(button)}
  box.append(list);return box
 }
+function professionRow(name,record,label,onClick){
+ const journey=window.soaProgression?.professionJourney?.(record?.skill)||{rank:1,pointsInRank:1,tier:"Apprentice",mastered:false,progress:1/60*100};
+ const row=make("div",undefined,"soa-profession-row soa-profession-row-mastery");
+ const info=make("div",undefined,"soa-profession-info"),heading=make("div",undefined,"soa-profession-heading");
+ heading.append(make("strong",name),make("span","Rank "+journey.rank+" / 60"));
+ const track=make("div",undefined,"soa-profession-track");track.setAttribute("role","progressbar");track.setAttribute("aria-label",name+" mastery");track.setAttribute("aria-valuemin","0");track.setAttribute("aria-valuemax","60");track.setAttribute("aria-valuenow",String(journey.rank));track.setAttribute("aria-valuetext","Rank "+journey.rank+" of 60 · "+journey.tier+(journey.mastered?" · mastered":""));
+ const fill=make("div",undefined,"soa-profession-fill");fill.style.width=journey.progress+"%";track.append(fill);
+ const note=journey.mastered?"Artisan · Mastered":journey.tier+" · "+journey.pointsInRank+"/5 training points toward next rank";
+ info.append(heading,track,make("small",note,"soa-profession-note"));
+ const action=make("button",label);action.type="button";action.onclick=onClick;row.append(info,action);return row;
+}
+function formatProfessionLog(entry){
+ const match=String(entry).match(/^(.+?) \+1 skill \((.+), (\d+)\/300\)$/);
+ if(!match)return String(entry);
+ const journey=window.soaProgression?.professionJourney?.(match[3]);if(!journey)return String(entry);
+ return match[1]+" +1 profession point · Rank "+journey.rank+"/60 · "+journey.pointsInRank+"/5 training points";
+}
 function drawProfessions(){
  const root=get("soa-profession-panel");if(!root)return;get("soa-character-status")?.querySelectorAll(".soa-ability-sheet").forEach(sheet=>sheet.remove());root.replaceChildren();
  root.append(make("div","CHARACTER RECORD","soa-roster-kicker"),make("h2",active.name+" · "+active.race+" "+active.className));
@@ -390,16 +407,12 @@ function drawProfessions(){
  }
  social.append(scores,make("p","Living Campaign social actions use d20 + skill versus a difficulty check. Bribery requires an explicitly offered amount; affection still requires mutual consent.","muted"));
  root.append(social);
- root.append(make("h3","Professions"));
- for(const [name,progress] of Object.entries(active.professions||{})){
-  const row=make("div",undefined,"soa-profession-row");row.append(make("strong",name),make("span","Skill "+progress.skill+"/300"));
-  const action=make("button","Practice via Story");action.type="button";action.onclick=()=>prefill(name);row.append(action);root.append(row);
- }
- const secondary=make("details");const sum=make("summary","Secondary skills");secondary.append(sum);
- for(const [name,skill] of Object.entries(active.secondary||{})){
-  const r=make("div",undefined,"soa-profession-row");r.append(make("span",name+" · "+skill.skill+"/300"));const b=make("button","Practice");b.onclick=()=>prefill(name);r.append(b);secondary.append(r)
- }root.append(secondary);
- const recents=active.professionLog||[];if(recents.length)root.append(make("p",recents.slice(-2).join(" · "),"muted"));
+ root.append(make("h3","Professions"),make("p","60 mastery ranks · 5 training points per rank.","muted soa-profession-help"));
+ for(const [name,record] of Object.entries(active.professions||{}))root.append(professionRow(name,record,"Practice via Story",()=>prefill(name)));
+ const secondary=make("details");const sum=make("summary","Secondary skills · 60-rank path");secondary.append(sum);
+ for(const [name,record] of Object.entries(active.secondary||{}))secondary.append(professionRow(name,record,"Practice",()=>prefill(name)));
+ root.append(secondary);
+ const recents=active.professionLog||[];if(recents.length)root.append(make("p",recents.slice(-2).map(formatProfessionLog).join(" · "),"muted"));
  const status=get("soa-character-status"),sheet=root.querySelector(".soa-ability-sheet"),abilities=get("abilities");if(status&&sheet&&abilities)status.insertBefore(sheet,abilities);
 }
 function prefill(prof){

@@ -120,3 +120,17 @@ body.theme-alternative button.soa-specialization-choice:focus-visible{
   outline:3px solid #356442;
   outline-offset:3px;
 }
+
+
+/* Professions share the character's 60-rank journey; five training points make one rank. */
+body.theme-alternative .soa-profession-help{margin:-5px 0 4px;color:#624b32;font:12px/1.45 system-ui,sans-serif}
+body.theme-alternative .soa-profession-row-mastery{align-items:center;gap:12px}
+body.theme-alternative .soa-profession-info{display:grid;flex:1;gap:5px;min-width:0}
+body.theme-alternative .soa-profession-heading{display:flex;align-items:baseline;justify-content:space-between;gap:8px;font:700 13px/1.35 system-ui,sans-serif}
+body.theme-alternative .soa-profession-heading strong{flex:1;color:#49301b}
+body.theme-alternative .soa-profession-heading span{flex:0 0 auto;color:#624525;font-variant-numeric:tabular-nums;text-align:right}
+body.theme-alternative .soa-profession-track{height:8px;overflow:hidden;border:1px solid #9c8156;border-radius:99px;background:#846b4b66;box-shadow:inset 0 1px 2px #533b2470}
+body.theme-alternative .soa-profession-fill{height:100%;border-radius:inherit;background:linear-gradient(90deg,#9b6d2c,#d4a444);transition:width .2s ease}
+body.theme-alternative .soa-profession-note{display:block;color:#604728;font:500 11px/1.35 system-ui,sans-serif}
+@media(max-width:370px){body.theme-alternative .soa-profession-row-mastery{align-items:stretch;flex-direction:column}.soa-profession-row-mastery button{width:100%}}
+@media(prefers-reduced-motion:reduce){body.theme-alternative .soa-profession-fill{transition:none}}

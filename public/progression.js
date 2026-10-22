@@ -1,6 +1,6 @@
 (()=>{"use strict";
 // Save-slot-scoped progression. No Gemini response may modify XP or levels.
-const KEY="soa-progression-v1",ESTABLISHED_LEVEL=10,FRESH_LEVEL=1,MAX_LEVEL=60,MAX_RANK=15;
+const KEY="soa-progression-v1",ESTABLISHED_LEVEL=10,FRESH_LEVEL=1,MAX_LEVEL=60,MAX_RANK=60,LEGACY_MAX_RANK=15,MASTERY_POINTS_PER_BONUS=4,PROGRESSION_VERSION=2,PROFESSION_POINT_CAP=300,PROFESSION_POINTS_PER_RANK=5,PROFESSION_RANK_CAP=60;
 const currentProfile=(()=>{try{const r=JSON.parse(localStorage.getItem("soa-character-roster-v1")||"null");return r?.characters?.find(x=>x.id===r.active)||null}catch{return null}})();
 const isNewHero=currentProfile?.origin==="custom"&&currentProfile.startLevel===1;
 const START_LEVEL=isNewHero?FRESH_LEVEL:ESTABLISHED_LEVEL;
@@ -10,13 +10,19 @@ const knownNames={"Pippa Sparkwhistle":"pippa","Bromli Ironkeg":"bromli","Lethar
 const LABELS={bluff:"Bluff",bribe:"Bribe",romance:"Romance",threaten:"Threaten",stealth:"Stealth",engineering:"Engineering",investigate:"Investigation",social:"Persuasion",combat:"Combat"};
 const clamp=(n,lo,hi)=>Math.max(lo,Math.min(hi,Number.isFinite(Number(n))?Math.trunc(Number(n)):lo));
 const xpNeeded=level=>level>=MAX_LEVEL?0:140+22*level+2*level*level;
-const skillNeeded=rank=>rank>=MAX_RANK?0:4+2*rank;
+const skillNeeded=rank=>rank>=MAX_RANK?0:4+2*Math.floor(Math.max(0,Number(rank)||0)/MASTERY_POINTS_PER_BONUS);
 const blank=()=>({level:START_LEVEL,xp:0,totalXp:0,skills:{},lastGain:null});
-const fresh=()=>({version:1,actors:isNewHero?{hero:blank()}:{hero:blank(),pippa:blank(),bromli:blank(),lethariel:blank()},receipts:[],history:[]});
+const fresh=()=>({version:PROGRESSION_VERSION,actors:isNewHero?{hero:blank()}:{hero:blank(),pippa:blank(),bromli:blank(),lethariel:blank()},receipts:[],history:[]});
 const loaded=window.soaSaveRules.readStoredJSON(KEY);
 let storageBlocked=!loaded.ok;
 let data=fresh();
-if(loaded.ok&&!loaded.missing){try{data=window.soaSaveRules.validateProgressionSave(loaded.value)}catch{storageBlocked=true;window.soaSaveRules.reportCorruption(KEY)}}
+if(loaded.ok&&!loaded.missing){try{
+ data=window.soaSaveRules.validateProgressionSave(loaded.value);
+ if((Number(data.version)||1)<PROGRESSION_VERSION){
+  for(const actor of Object.values(data.actors||{}))for(const name of SKILLS){const value=actor?.skills?.[name];if(value&&typeof value==="object"&&!Array.isArray(value))value.rank=clamp(value.rank,0,LEGACY_MAX_RANK)*MASTERY_POINTS_PER_BONUS}
+  data.version=PROGRESSION_VERSION;
+ }
+}catch{storageBlocked=true;window.soaSaveRules.reportCorruption(KEY)}}
 for(const id of [HERO,...(isNewHero?[]:PARTY)]){
  const savedActor=data.actors?.[id];
  if(savedActor!==undefined&&(!savedActor||typeof savedActor!=="object"||Array.isArray(savedActor)||(savedActor.skills!==undefined&&(!savedActor.skills||typeof savedActor.skills!=="object"||Array.isArray(savedActor.skills))))){storageBlocked=true;window.soaSaveRules.reportCorruption(KEY)}
@@ -63,7 +69,7 @@ function skill(id,name){
  if(!SKILLS.includes(name))return {rank:0,practice:0,attempts:0,successes:0};
  const v=score(id).skills[name];return v?{rank:clamp(v.rank,0,MAX_RANK),practice:clamp(v.practice,0,1000),attempts:clamp(v.attempts,0,1000000),successes:clamp(v.successes,0,1000000)}:{rank:0,practice:0,attempts:0,successes:0};
 }
-function bonus(name){return skill(HERO,name).rank}
+function bonus(name){return Math.floor(skill(HERO,name).rank/MASTERY_POINTS_PER_BONUS)}
 function awardCore(id,amount,receipt,reason){
  id=identity(id);amount=clamp(amount,0,5000);
  if(!id||!receipt||amount===0||data.receipts.includes(receipt))return {awarded:0,levels:0};
@@ -105,7 +111,7 @@ function practiceCore({receipt,name,success,difficulty,actorId="hero",meaningful
  const actor=score(actorId),value=skill(actorId,name),old=value.rank;
  value.attempts++;if(success)value.successes++;
  value.practice+=success?2:1;
- while(value.rank<MAX_RANK&&value.practice>=skillNeeded(value.rank)){value.practice-=skillNeeded(value.rank);value.rank++}
+ while(value.rank<MAX_RANK&&value.practice>=skillNeeded(value.rank)){value.practice-=skillNeeded(value.rank);value.rank=Math.min(MAX_RANK,(Math.floor(value.rank/MASTERY_POINTS_PER_BONUS)+1)*MASTERY_POINTS_PER_BONUS)}
  if(value.rank===MAX_RANK)value.practice=0;
  actor.skills[name]=value;
  const isSocial=["social","romance","bluff","bribe","threaten"].includes(name);
@@ -153,10 +159,10 @@ function heroPanel(){
  box.append(elem("div","CHARACTER PROGRESSION","soa-roster-kicker"));
  const p=progress(),heading=elem("div",undefined,"soa-level-heading");
  heading.append(elem("strong","Level "+p.level+" / "+MAX_LEVEL),elem("span",p.level===MAX_LEVEL?"Maximum level":p.xp+" / "+p.needed+" XP"));box.append(heading,bar(p.xp,p.needed,"Experience to next level"));
- const detail=elem("details",undefined,"soa-skill-list");detail.append(elem("summary","Skill mastery · view practice and ranks"));
+ const detail=elem("details",undefined,"soa-skill-list");detail.append(elem("summary","Skill mastery · 60-rank path"),elem("p","Mastery has 60 points, matching the character level cap. Every 4 points add +1 to checks, up to +15.","soa-skill-help"));
  for(const name of SKILLS){
-  const x=skill(HERO,name),row=elem("div",undefined,"soa-skill-line");
-  row.append(elem("span",LABELS[name]),elem("span","Rank "+x.rank+" / "+MAX_RANK+" · "+(x.rank===MAX_RANK?"Mastered":x.practice+"/"+skillNeeded(x.rank)+" practice")));detail.append(row);
+  const x=skill(HERO,name),row=elem("div",undefined,"soa-skill-line"),bonus=Math.floor(x.rank/MASTERY_POINTS_PER_BONUS);
+  row.append(elem("span",LABELS[name]),elem("span","Rank "+x.rank+" / "+MAX_RANK+" · check +"+bonus+" · "+(x.rank===MAX_RANK?"Mastered":x.practice+"/"+skillNeeded(x.rank)+" practice")));detail.append(row);
  }
  box.append(detail);
  const extras=Object.entries(data.labels);
@@ -188,6 +194,11 @@ function overnightBond({receipt,companionId,quality=1}={}){
  if(result.awarded)refresh();
  return result;
 }
-window.soaProgression={level,progress,skill,bonus,check,battle,overnightBond,register,recent,refresh,heroPanel,companionBadge,xpNeeded,skillNeeded,MAX_LEVEL};
+function professionJourney(value){
+ const points=clamp(value,1,PROFESSION_POINT_CAP),rank=Math.ceil(points/PROFESSION_POINTS_PER_RANK),pointsInRank=((points-1)%PROFESSION_POINTS_PER_RANK)+1;
+ const tier=rank<=PROFESSION_RANK_CAP/4?"Apprentice":rank<=PROFESSION_RANK_CAP/2?"Journeyman":rank<=PROFESSION_RANK_CAP*3/4?"Expert":"Artisan";
+ return {points,rank,pointsInRank,tier,mastered:points>=PROFESSION_POINT_CAP,progress:rank/PROFESSION_RANK_CAP*100};
+}
+window.soaProgression={level,progress,skill,bonus,check,battle,overnightBond,register,recent,refresh,heroPanel,companionBadge,xpNeeded,skillNeeded,MAX_LEVEL,professionJourney};
 document.addEventListener("DOMContentLoaded",refresh);
 })();

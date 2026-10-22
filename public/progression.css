@@ -16,3 +16,7 @@ body.theme-alternative .soa-companion-level span{font-variant-numeric:tabular-nu
 body.theme-alternative .soa-level-toast{margin:12px 0;padding:11px 14px;border-left:4px solid #a57ac0;background:#efe0be;border-radius:5px;font:700 13px/1.6 system-ui;color:#674071}
 @media(prefers-reduced-motion:reduce){body.theme-alternative .soa-xp-fill{transition:none}}
 @media(max-width:410px){body.theme-alternative .soa-skill-line{flex-direction:column;gap:2px}body.theme-alternative .soa-skill-line span:last-child{text-align:left}}
+
+/* Explain the new mastery scale without hiding useful skill details. */
+body.theme-alternative .soa-skill-help{margin:0 0 5px;color:#624b32;font:12px/1.5 system-ui,sans-serif}
+body.theme-alternative .soa-skill-line span:last-child{font-size:11px;line-height:1.45}
