@@ -32,6 +32,7 @@ test("campaign prompt preserves incapacitation and unresolved falls as nonfatal 
         action: "Kick the conspirator off the catwalk",
         resolution: "Success: the kick connects and knocks the conspirator from the catwalk.",
         previousScene: "The conspirator is alive and incapacitated beside the railing.",
+        character: { id: "snacky", name: "Snacky Lugnuts", gender: "Male", race: "Gnome", className: "Rogue" },
       } }),
     });
     const response = await onRequestPost({ request, env: { GEMINI_API_KEY: "test-key", AI_ACCESS_CODE: "test-access-code" } });
@@ -41,8 +42,11 @@ test("campaign prompt preserves incapacitation and unresolved falls as nonfatal 
     assert.match(instructions, /“Incapacitated,” “downed,” “unconscious,” “defeated,” and “dead” are distinct states/i);
     assert.match(instructions, /do not convert the fall into a killing blow/i);
     assert.match(instructions, /fate unconfirmed/i);
+    assert.match(instructions, /male gnome SI:7 Combat Swords rogue and uses he\/him pronouns/i);
+    assert.match(instructions, /Never call him “lass”, “girl”, or other feminine terms/i);
     const sentContext = JSON.parse(geminiRequest.contents[0].parts[0].text);
     assert.equal(sentContext.action, "Kick the conspirator off the catwalk");
+    assert.equal(sentContext.character.gender, "Male");
     assert.match(sentContext.previousScene, /alive and incapacitated/i);
   } finally {
     global.fetch = previousFetch;
