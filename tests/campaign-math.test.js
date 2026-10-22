@@ -167,7 +167,8 @@ test("combat preview includes the same equipment attack and damage bonuses as re
   const sinister = context.testPreview({ type: "combat", ability: "sinister_strike", text: "Sinister Strike the Guard" });
   assert.match(sinister.secondary, /30 Energy cost/);
   const evasive = context.testPreview({ type: "combat", ability: "evasion", text: "Evade the Guard" });
-  assert.match(evasive.secondary, /35 Energy cost/);
+  assert.match(evasive.primary, /50% dodge chance per incoming hit/);
+  assert.match(evasive.secondary, /Lasts 2 rounds · 35 Energy cost · 2-round cooldown · up to \+25 Energy recovery/);
   const ripostePreview = context.testPreview({ type: "combat", ability: "riposte", text: "Riposte" });
   assert.match(ripostePreview.secondary, /30 Energy cost · up to \+25 recovery/);
 
@@ -206,6 +207,7 @@ test("class combat abilities charge the class resource and resolve attacks and h
     damage: (die, flat) => Math.ceil(die / 2) + flat,
     mitigate: amount => amount,
     initiative: () => 10,
+    roll: () => 50,
   };
   vm.runInContext(`${functionBlock("classAbilityExchange", "fightExchange")}\nglobalThis.runClassAbility = classAbilityExchange;`, context);
 
@@ -232,8 +234,10 @@ test("class combat abilities charge the class resource and resolve attacks and h
   const evasion = context.runClassAbility({ text: "Test Rogue uses Evasion" }, {
     id: "evasion", name: "Evasion", cost: 35, effect: "guard", stat: "DEX", die: 0, flat: 0, damageType: "physical",
   }, [enemy]);
-  assert.match(evasion, /evades the incoming attack/);
-  assert.equal(capturedAdvantage, -1, "defensive abilities give the incoming attack disadvantage");
+  assert.match(evasion, /activates Evasion/);
+  assert.equal(capturedAdvantage, 0, "Evasion uses a separate dodge roll instead of changing the enemy attack roll");
+  assert.equal(context.campaign.lastExchange.evasionRoll, 50);
+  assert.equal(context.campaign.lastExchange.evaded, true);
   assert.equal(context.s.en, 90, "Evasion pays its cost before 25-point exchange recovery");
 });
 
@@ -578,4 +582,70 @@ test("choice resource forecasts show current reserve, cost, and post-exchange re
   const unavailable = context.forecast({ type: "investigate", difficulty: "medium" });
   assert.equal(unavailable.affordable, false);
   assert.match(unavailable.text, /Need 10 Energy · have 8\/100/);
+});
+
+
+test("Evasion dodges on 1–50, lasts two rounds, and cools down for two rounds", () => {
+  const context = makeContext();
+  const enemy = { name: "Guard", hp: 1000, maxHp: 1000 };
+  const dodgeRolls = [50, 51];
+  const attackAdvantages = [];
+  context.campaign = { flags: {}, enemies: [enemy], combatRound: 0, encounterSerial: 0, defeatedEnemies: [], classCooldowns: {}, enemyLocation: "crypt" };
+  context.selectedCombatTarget = "Guard";
+  context.livingEnemies = () => context.campaign.enemies.filter(x => x.hp > 0);
+  context.startProgressionEncounter = () => context.encounter = { id: "test", defeated: [], party: [] };
+  context.partyExperienceIds = () => [];
+  context.recordCombatDelta = () => {};
+  context.status = message => { context.statusMessage = message; };
+  context.resourceName = () => "Energy";
+  context.classCooldownLeft = ability => Math.max(0, (Number(context.campaign.classCooldowns?.[ability.id]) || 0) - ((Number(context.campaign.combatRound) || 0) + 1));
+  context.window.soaCharacters.profile = () => ({ name: "Snacky", className: "Rogue" });
+  context.window.soaAbilities.get = () => ({ name: "Snacky", className: "Rogue", proficiency: 3, modifiers: { DEX: 4 }, armorClass: 16, initiative: 10 });
+  const evasion = { id: "evasion", name: "Evasion", cost: 35, effect: "guard", stat: "DEX", die: 0, flat: 0, damageType: "physical", cooldown: 2 };
+  context.window.soaClassAbilities = { get: id => id === "evasion" ? evasion : null };
+  context.window.soaCombatRules = {
+    statBlock: () => ({ ac: 12, type: "guard", bonus: 0, die: 4, initiative: 0 }),
+    attack: (bonus, ac, options = {}) => {
+      attackAdvantages.push(options.advantage ?? 0);
+      return { die: 15, total: bonus + 15, bonus, ac, critical: false, hit: true };
+    },
+    damage: (die, flat) => Math.ceil(die / 2) + flat,
+    mitigate: amount => amount,
+    initiative: () => 10,
+    roll: sides => { assert.equal(sides, 100); return dodgeRolls.shift(); },
+  };
+  vm.runInContext(`${functionBlock("classAbilityExchange", "fightExchange")}\nglobalThis.runClassAbility = classAbilityExchange;`, context);
+
+  context.s.en = 70;
+  const activation = context.runClassAbility({ text: "Snacky uses Evasion against Guard" }, evasion, [enemy]);
+  assert.match(activation, /50% dodge chance per incoming hit/);
+  assert.equal(context.campaign.lastExchange.evasionRoll, 50, "50 is inside the successful half");
+  assert.equal(context.campaign.lastExchange.evaded, true);
+  assert.equal(context.campaign.lastExchange.evasionUntil, 2);
+  assert.equal(context.campaign.lastExchange.evasionRemaining, 1);
+  assert.equal(context.s.hp, 100, "the activation round's incoming hit is dodged");
+  assert.equal(context.s.en, 60, "35 cost and +25 combat recovery net to -10 Energy");
+  assert.equal(context.classCooldownLeft(evasion), 2);
+
+  const beforeBlockedUse = { hp: context.s.hp, en: context.s.en, round: context.campaign.combatRound };
+  assert.equal(context.runClassAbility({ text: "Snacky uses Evasion against Guard" }, evasion, [enemy]), null);
+  assert.match(context.statusMessage, /cooling down for 2 more exchanges/);
+  assert.deepEqual({ hp: context.s.hp, en: context.s.en, round: context.campaign.combatRound }, beforeBlockedUse, "cooldown rejects a use without spending an action or resource");
+
+  const strike = { id: "test_strike", name: "Test Strike", cost: 0, effect: "damage", stat: "DEX", die: 1, flat: 0, damageType: "physical" };
+  context.runClassAbility({ text: "Snacky uses Test Strike against Guard" }, strike, [enemy]);
+  assert.equal(context.campaign.lastExchange.evasionActive, true, "Evasion remains active for the following round");
+  assert.equal(context.campaign.lastExchange.evasionRoll, 51, "51 is outside the successful half");
+  assert.equal(context.campaign.lastExchange.evaded, false);
+  assert.equal(context.s.hp, 96, "a hit lands when the dodge roll is 51");
+  assert.equal(context.campaign.lastExchange.evasionRemaining, 0);
+  assert.equal(context.classCooldownLeft(evasion), 1);
+
+  context.runClassAbility({ text: "Snacky uses Test Strike against Guard" }, strike, [enemy]);
+  assert.equal(context.campaign.lastExchange.evasionActive, false, "Evasion expires after two incoming-attack rounds");
+  assert.equal(context.campaign.lastExchange.evasionRoll, null, "expired Evasion does not roll");
+  assert.equal(context.s.hp, 92, "the later hit lands normally");
+  assert.equal(context.classCooldownLeft(evasion), 0, "the two-round cooldown expires after two later exchanges");
+  assert.equal(dodgeRolls.length, 0, "exactly the two active rounds requested a dodge roll");
+  assert.ok(attackAdvantages.every(value => value === 0), "Evasion does not alter enemy d20 advantage");
 });
