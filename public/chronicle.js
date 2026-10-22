@@ -14,18 +14,34 @@ function makeQuest(id,title,objectives,complete=false){
 function initial(){
  const person=window.soaCharacters?.profile?.();
  if(person?.id==="snacky"||!person){
-  return {schema:1,act:2,actTitle:"Shadows Over Stormwind",chapter:1,chapterTitle:"The Threat in the Capital",startedAtTurn:0,archives:[{id:"hollow-raven-complete",act:1,actTitle:"The Hollow Raven Conspiracy",chapter:1,chapterTitle:"The Hollow Raven Investigation",summary:"The Hollow Raven investigation is completed and its findings await debriefing with SI:7.",completed:true}],quests:[
-    makeQuest("hollow-raven","Investigate Hollow Raven",["Solve the Hollow Raven operation"],true),
-    makeQuest("stormwind","The Stormwind Threat",["Return to Stormwind","Investigate the explosives threat","Defuse the threat"],false),
-    makeQuest("si7-debrief","Report to SI:7",["Brief SI:7 on Hollow Raven and the Stormwind situation"],false)
-   ],pendingMilestone:null,lastPresented:"",banner:null};
+  return {schema:1,act:1,actTitle:"Azeroth Adventures",chapter:1,chapterTitle:"A New Journey",startedAtTurn:0,archives:[],quests:[makeQuest("personal-quest","The First Adventure",["Follow the opening lead"],false)],pendingMilestone:null,lastPresented:"",banner:null};
  }
  return {schema:1,act:1,actTitle:"An Adventurer's Beginning",chapter:1,chapterTitle:"A New Path",startedAtTurn:0,archives:[],quests:[makeQuest("personal-quest","The First Adventure",["Follow the opening lead"],false)],pendingMilestone:null,lastPresented:"",banner:null};
+}
+function isUntouchedLegacySeed(c,d){
+ const location=String(c?.scene?.location||"");
+ const seedPrimary=d?.primaryQuest;
+ const primaryMatches=!seedPrimary||(seedPrimary.title==="The Stormwind Threat"&&seedPrimary.objective==="Return to Stormwind"&&Number(seedPrimary.updatedAtTurn||0)===0);
+ const archive=d?.archives?.[0];
+ const quest=id=>d?.quests?.find(item=>item?.id===id);
+ const completed=quest("hollow-raven"),stormwind=quest("stormwind"),debrief=quest("si7-debrief");
+ const exactQuest=(item,title,status,labels,done)=>item?.title===title&&item.status===status&&Array.isArray(item.objectives)&&item.objectives.length===labels.length&&item.objectives.every((objective,index)=>objective.label===labels[index]&&objective.done===done);
+ return Boolean(location&&!/\bstormwind\b/i.test(location)&&d?.act===2&&d.actTitle==="Shadows Over Stormwind"&&d.chapter===1&&d.chapterTitle==="The Threat in the Capital"&&primaryMatches&&d.quests?.length===3&&d.archives?.length===1&&archive?.id==="hollow-raven-complete"&&archive.completed===true&&exactQuest(completed,"Investigate Hollow Raven","completed",["Solve the Hollow Raven operation"],true)&&exactQuest(stormwind,"The Stormwind Threat","active",["Return to Stormwind","Investigate the explosives threat","Defuse the threat"],false)&&exactQuest(debrief,"Report to SI:7","active",["Brief SI:7 on Hollow Raven and the Stormwind situation"],false));
+}
+function migrateUntouchedLegacySeed(c,d){
+ if(!isUntouchedLegacySeed(c,d))return false;
+ d.quests=d.quests.filter(quest=>quest.id!=="stormwind"&&quest.id!=="si7-debrief");
+ d.quests.push(makeQuest("personal-quest","The First Adventure",["Follow the current story lead"],false));
+ d.primaryQuest=null;
+ d.actTitle="A Continuing Adventure";
+ d.chapterTitle="Current Story";
+ return true;
 }
 function attach(c){
  if(!c||typeof c!=="object")return null;
  if(!c.chronicle||typeof c.chronicle!=="object")c.chronicle=initial();
  const d=c.chronicle;
+ const migrated=migrateUntouchedLegacySeed(c,d);
  d.act=Math.max(1,Math.min(99,Math.floor(Number(d.act)||1)));
  d.chapter=Math.max(1,Math.min(99,Math.floor(Number(d.chapter)||1)));
  d.actTitle=clean(d.actTitle)||"An Unnamed Act";
@@ -43,6 +59,7 @@ function attach(c){
  }
  trimCompletedQuests(d);
  current=c;
+ if(migrated)save();
  return d;
 }
 function completedTime(q){
@@ -60,7 +77,7 @@ function trimCompletedQuests(d){
 }
 function context(c){
  const d=attach(c);if(!d)return null;
- return {act:d.act,actTitle:d.actTitle,chapter:d.chapter,chapterTitle:d.chapterTitle,primaryQuest:d.primaryQuest?{title:clean(d.primaryQuest.title,120),objective:clean(d.primaryQuest.objective,240)}:null,activeQuests:d.quests.filter(q=>q&&q.status==="active"&&Array.isArray(q.objectives)).slice(0,8).map(q=>({title:clean(q.title),objectives:q.objectives.filter(o=>o&&o.done!==true).map(o=>clean(o.label))})),completedQuests:d.quests.filter(q=>q&&q.status==="completed").sort((a,b)=>completedTime(b)-completedTime(a)).slice(0,6).map(q=>clean(q.title)),recentArchives:d.archives.slice(-4).map(x=>({act:x.act,chapter:x.chapter,title:clean(x.chapterTitle),summary:clean(x.summary,180)}))};
+ return {act:d.act,actTitle:d.actTitle,chapter:d.chapter,chapterTitle:d.chapterTitle,primaryQuest:d.primaryQuest?{title:clean(d.primaryQuest.title,120),objective:clean(d.primaryQuest.objective,240)}:null,activeQuests:d.quests.filter(q=>q&&q.status==="active"&&Array.isArray(q.objectives)&&!(q.id==="personal-quest"&&q.title==="The First Adventure")).slice(0,8).map(q=>({title:clean(q.title),objectives:q.objectives.filter(o=>o&&o.done!==true).map(o=>clean(o.label))})),completedQuests:d.quests.filter(q=>q&&q.status==="completed").sort((a,b)=>completedTime(b)-completedTime(a)).slice(0,6).map(q=>clean(q.title)),recentArchives:d.archives.slice(-4).map(x=>({act:x.act,chapter:x.chapter,title:clean(x.chapterTitle),summary:clean(x.summary,180)}))};
 }
 function receive(c,scene){
  if(integrityBlocked())return;
