@@ -1,5 +1,5 @@
 (()=>{"use strict";
-const KEY="soa-campaign-v1", MAX=24, COMBAT_RESOURCE_RECOVERY=25, ACTION_RESOURCE_RECOVERY=10;
+const KEY="soa-campaign-v1", MAX=24, COMBAT_RESOURCE_RECOVERY=25, ACTION_RESOURCE_RECOVERY=25;
 let campaign=null,busy=false,enabled=false,customDraft="",customType="investigate",customSocialSkill="auto",statusMessage="",campaignSaveFailed=false,campaignLoadBlocked=false,campaignStorageReadFailed=false,selectedCombatTarget=null,selectedAllyTarget=null;
 const get=id=>document.getElementById(id);
 function localGet(key){try{return localStorage.getItem(key)}catch{campaignStorageReadFailed=true;return null}}
@@ -186,7 +186,7 @@ function dicePreview(action){
   return {primary:"🎲 d20 "+(bonus>=0?"+ "+bonus:"− "+Math.abs(bonus))+" vs DC "+dc+" · "+chanceLabel(d20SuccessChance(bonus,dc))+" success",secondary:"CHA-based "+skill+" check · Natural 1 fails, 20 succeeds"};
  }
  const odds=actionOdds(action);
- const {cost,target}=odds;return {primary:"🎲 "+odds.skill+" · d100 ≤ "+target+" ("+target+"%)",secondary:cost+" "+resourceName()+" cost · up to +10 recovery · ability modifier "+(odds.modifier>=0?"+":"")+odds.modifier+" · training +"+odds.trained};
+ const {cost,target}=odds;return {primary:"🎲 "+odds.skill+" · d100 ≤ "+target+" ("+target+"%)",secondary:cost+" "+resourceName()+" cost · up to +"+ACTION_RESOURCE_RECOVERY+" recovery · ability modifier "+(odds.modifier>=0?"+":"")+odds.modifier+" · training +"+odds.trained};
 }
 function resourceForecast(action){
  const profile=window.soaCharacters?.profile?.(),label=resourceName(),current=Math.max(0,Math.min(100,Number(s.en)||0));
@@ -211,7 +211,7 @@ function socialCheck(action,skill){
   if(ok){s.money-=amounts;effect="The offered "+fmtMoney(amounts)+" is accepted and paid; the target cooperates within reason."}
   else effect="The offer is refused. No money changes hands.";
  }
- s.time++;s.en=Math.min(100,s.en+10);
+ s.time++;s.en=Math.min(100,s.en+ACTION_RESOURCE_RECOVERY);
  return (ok?"Success":"Complication")+": "+skill[0].toUpperCase()+skill.slice(1)+" check: d20 "+roll+" + "+bonus+" = "+total+" vs DC "+dc+". "+effect+" Result is authoritative. Do not fabricate further costs, relationship stages, or compelled consent.";
 }
 function livingEnemies(){return Array.isArray(campaign?.enemies)?campaign.enemies.filter(e=>e&&e.hp>0&&e.maxHp>0):[]}
@@ -627,15 +627,15 @@ function useRacialAbility(action){
  if(ability.mode==="focus"){
   campaign.racialFocus={skill:ability.skill,bonus:ability.bonus,source:ability.id};
   campaign.racialCooldowns={...(campaign.racialCooldowns||{}),[ability.id]:(Number(campaign.actionSerial)||0)+ability.cooldown+1};
-  s.en=Math.min(100,s.en+10);s.time++;
-  return "Success: "+(hero?.name||"Your hero")+" uses "+ability.name+". The next "+ability.skill+" check gains +"+ability.bonus+" percentage points. "+resourceName()+" recovers by up to 10. No resource cost.";
+  s.en=Math.min(100,s.en+ACTION_RESOURCE_RECOVERY);s.time++;
+  return "Success: "+(hero?.name||"Your hero")+" uses "+ability.name+". The next "+ability.skill+" check gains +"+ability.bonus+" percentage points. "+resourceName()+" recovers by up to "+ACTION_RESOURCE_RECOVERY+". No resource cost.";
  }
  if(ability.mode==="combat"&&livingEnemies().length)return fightExchange(action);
  if(ability.id==="cannibalize"){
   if(!hasRecentCorpse()){status("Cannibalize requires a nearby defeated humanoid. No action spent.");return null}
   if(s.hp>=heroHealthCap()){status("Your health is already full. No action spent.");return null}
   const actor=window.soaAbilities?.get?.("hero"),heal=window.soaCombatRules.roll(ability.die)+(ability.flat||0)+(actor?.modifiers?.CON||0),before=s.hp;
-  s.hp=Math.min(heroHealthCap(),s.hp+heal);s.en=Math.min(100,s.en+10);s.time++;
+  s.hp=Math.min(heroHealthCap(),s.hp+heal);s.en=Math.min(100,s.en+ACTION_RESOURCE_RECOVERY);s.time++;
   campaign.racialCooldowns={...(campaign.racialCooldowns||{}),[ability.id]:(Number(campaign.actionSerial)||0)+ability.cooldown+1};
   return "Success: "+(hero?.name||"Your hero")+" uses Cannibalize on a defeated humanoid, restoring "+(s.hp-before)+" HP. "+resourceName()+" recovers by up to 10.";
  }
@@ -815,7 +815,7 @@ function result(action){
  if(campaign.racialFocus?.skill===t)campaign.racialFocus=null;
  if(s.en<cost)return null;
  const rolled=1+Math.floor(Math.random()*100),ok=rolled<=target;
- s.en=Math.min(100,s.en-cost+10);s.time++; if(!ok&&["stealth","engineering","combat"].includes(t)){s.alert=Math.min(3,s.alert+1);damage=t==="combat"?8:t==="stealth"?3:0;s.hp=Math.max(1,s.hp-damage)}
+ s.en=Math.min(100,s.en-cost+ACTION_RESOURCE_RECOVERY);s.time++; if(!ok&&["stealth","engineering","combat"].includes(t)){s.alert=Math.min(3,s.alert+1);damage=t==="combat"?8:t==="stealth"?3:0;s.hp=Math.max(1,s.hp-damage)}
  let healed=0;
  if(ok&&(t==="rest"||woundCare)){const before=s.hp;s.hp=Math.min(heroHealthCap(),s.hp+4);healed=s.hp-before}
  // Defeating an opponent does not itself loot them: currency changes require explicit search/loot actions.
@@ -932,7 +932,7 @@ function draw(){
   notice.onclick=()=>get("soa-chronicle")?.scrollIntoView({behavior:window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches?"auto":"smooth",block:"start"});
   box.append(notice);
  }
- const reserve=document.createElement("section");reserve.className="soa-choice-resource";reserve.dataset.resource=resourceKey();reserve.setAttribute("aria-label","Current "+resourceName());const reserveHeading=document.createElement("div");reserveHeading.className="soa-choice-resource-heading";const reserveLabel=document.createElement("strong");reserveLabel.textContent="CURRENT "+resourceName().toUpperCase();const reserveValue=document.createElement("span");const reserveCurrent=Math.max(0,Math.min(100,Number(s.en)||0));reserveValue.textContent=reserveCurrent+" / 100";reserveHeading.append(reserveLabel,reserveValue);const reserveTrack=document.createElement("div");reserveTrack.className="soa-choice-resource-track";reserveTrack.dataset.resource=resourceKey();reserveTrack.setAttribute("role","progressbar");reserveTrack.setAttribute("aria-label",resourceName()+" reserve");reserveTrack.setAttribute("aria-valuemin","0");reserveTrack.setAttribute("aria-valuemax","100");reserveTrack.setAttribute("aria-valuenow",String(reserveCurrent));const reserveFill=document.createElement("div");reserveFill.className="soa-choice-resource-fill";reserveFill.style.width=reserveCurrent+"%";reserveTrack.append(reserveFill);const reserveHint=document.createElement("small");reserveHint.textContent="Combat restores +25 "+resourceName()+" after each completed exchange; other actions restore +10. Costs below show your projected balance.";reserve.append(reserveHeading,reserveTrack,reserveHint);box.append(reserve);
+ const reserve=document.createElement("section");reserve.className="soa-choice-resource";reserve.dataset.resource=resourceKey();reserve.setAttribute("aria-label","Current "+resourceName());const reserveHeading=document.createElement("div");reserveHeading.className="soa-choice-resource-heading";const reserveLabel=document.createElement("strong");reserveLabel.textContent="CURRENT "+resourceName().toUpperCase();const reserveValue=document.createElement("span");const reserveCurrent=Math.max(0,Math.min(100,Number(s.en)||0));reserveValue.textContent=reserveCurrent+" / 100";reserveHeading.append(reserveLabel,reserveValue);const reserveTrack=document.createElement("div");reserveTrack.className="soa-choice-resource-track";reserveTrack.dataset.resource=resourceKey();reserveTrack.setAttribute("role","progressbar");reserveTrack.setAttribute("aria-label",resourceName()+" reserve");reserveTrack.setAttribute("aria-valuemin","0");reserveTrack.setAttribute("aria-valuemax","100");reserveTrack.setAttribute("aria-valuenow",String(reserveCurrent));const reserveFill=document.createElement("div");reserveFill.className="soa-choice-resource-fill";reserveFill.style.width=reserveCurrent+"%";reserveTrack.append(reserveFill);const reserveHint=document.createElement("small");reserveHint.textContent="Combat exchanges and other actions restore up to +25 "+resourceName()+" (maximum 100). Costs below show your projected balance.";reserve.append(reserveHeading,reserveTrack,reserveHint);box.append(reserve);
  const choicesHeader=document.createElement("div");choicesHeader.className="soa-choices-heading";
  const title=document.createElement("strong");title.textContent="Choose your next move";
  const count=document.createElement("span");count.textContent=sc.choices.length+" story paths"+(livingEnemies().length?" · combat actions above":" + resources + custom");
