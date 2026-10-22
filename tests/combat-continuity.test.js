@@ -136,13 +136,18 @@ test("campaign API rejects unchosen regional relocation but permits explicitly s
     assert.equal(response.status, 409);
     assert.match((await response.json()).error, /resource costs are preserved/i);
 
-    context.action = "Travel to Stormwind City through a portal";
+    context.action = "Travel from Dun Morogh to Stormwind City";
     generatedLocation = "Stormwind City";
     response = await onRequestPost({ request: campaignRequest(context), env });
     assert.equal(response.status, 200);
 
     context.action = "Do not travel to Stormwind; inspect the local machinery";
     generatedLocation = "Stormwind City";
+    response = await onRequestPost({ request: campaignRequest(context), env });
+    assert.equal(response.status, 409);
+
+    context.location = "Northshire Valley, Elwynn Forest";
+    context.action = "Inspect the chapel";
     response = await onRequestPost({ request: campaignRequest(context), env });
     assert.equal(response.status, 409);
   } finally {
