@@ -48,7 +48,7 @@ test("a stalled story request releases the UI and preserves the selected action 
 
   await context.advance(pending.action, pending.resolution, false);
 
-  assert.equal(timeoutDelay, 28000);
+  assert.equal(timeoutDelay, 30000);
   assert.match(displayedStatus, /timed out.*selection is saved.*Retry/i);
   assert.equal(campaign.pending, pending);
   assert.equal(campaign.lastAction, pending.action);
