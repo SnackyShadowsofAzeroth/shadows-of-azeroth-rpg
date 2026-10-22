@@ -61,6 +61,7 @@ test("inferred skill drives preview, energy cost, effects, and practice", () => 
   vm.runInContext([
     functionBlock("actionOdds", "resolvedCombatAbility"),
     functionBlock("resolvedSkillName", "meaningfulSocialPractice"),
+    functionBlock("resolvedStoryVanish", "d20SuccessChance"),
     functionBlock("result", "interfaceUI"),
     "globalThis.testApi = { actionOdds, resolvedSkillName, result };",
   ].join("\n"), context);
@@ -89,11 +90,58 @@ test("inferred skill drives preview, energy cost, effects, and practice", () => 
   assert.equal(context.testApi.resolvedSkillName({ type: "combat", text: "Search the room" }), "combat");
 });
 
+test("Vanish story choices use the learned combat ability with its stated cost and cooldown", () => {
+  const context = makeContext();
+  const enemy = { name: "Trogg Scout", hp: 45, maxHp: 45 };
+  const vanish = { id: "vanish", name: "Vanish", cost: 40, effect: "guard", cooldown: 5, guaranteedEvade: true };
+  let routed = null;
+  let randomCalls = 0;
+  context.Math.random = () => { randomCalls++; return 0.99; };
+  context.campaign = { flags: {}, combatRound: 0, classCooldowns: {} };
+  context.window.soaCharacters.profile = () => ({ name: "Snacky Lugnuts", className: "Rogue" });
+  context.window.soaProgression = { level: () => 10 };
+  context.window.soaClassAbilities = {
+    get: id => id === "vanish" ? vanish : null,
+    costOf: id => id === "vanish" ? 40 : 0,
+  };
+  context.livingEnemies = () => [enemy];
+  context.fightExchange = action => { routed = action; return "Resolved shared Vanish ability."; };
+  context.status = message => { context.statusMessage = message; };
+
+  vm.runInContext([
+    functionBlock("socialSkill", "bribeCopper"),
+    functionBlock("resourceName", "classCooldownLeft"),
+    functionBlock("resourceKey", "d20SuccessChance"),
+    functionBlock("d20SuccessChance", "chanceLabel"),
+    functionBlock("chanceLabel", "actionOdds"),
+    functionBlock("actionOdds", "heroHealthCap"),
+    functionBlock("dicePreview", "resourceForecast"),
+    functionBlock("resourceForecast", "socialCheck"),
+    functionBlock("resolvedStoryVanish", "d20SuccessChance"),
+    functionBlock("result", "interfaceUI"),
+    "globalThis.vanishTest = { resolvedStoryVanish, dicePreview, resourceForecast, result };",
+  ].join("\n"), context);
+
+  const choice = { type: "stealth", difficulty: "easy", text: "Vanish completely into the surrounding steam vents" };
+  assert.equal(context.vanishTest.resolvedStoryVanish(choice), "vanish");
+  const preview = context.vanishTest.dicePreview(choice);
+  assert.match(preview.primary, /Guaranteed success · 100%/);
+  assert.match(preview.secondary, /40 Energy cost · 5-exchange cooldown/);
+  const forecast = context.vanishTest.resourceForecast(choice);
+  assert.equal(forecast.cost, 40);
+  assert.equal(forecast.after, 85);
+  assert.match(forecast.text, /Energy 100 → 85\/100 · 40 cost · \+25 recovery · Vanish · 5-exchange cooldown/);
+  assert.equal(context.vanishTest.result(choice), "Resolved shared Vanish ability.");
+  assert.deepEqual({ type: routed.type, ability: routed.ability }, { type: "combat", ability: "vanish" });
+  assert.equal(randomCalls, 0, "Vanish does not make a stealth percentage roll");
+});
+
 test("binding wounds restores a small, capped amount of HP only when the action succeeds", () => {
   const context = makeContext();
   context.heroHealthCap = () => 100;
   vm.runInContext([
     functionBlock("actionOdds", "heroHealthCap"),
+    functionBlock("resolvedStoryVanish", "d20SuccessChance"),
     functionBlock("result", "interfaceUI"),
     "globalThis.resolveAction = result;",
   ].join("\n"), context);
@@ -114,6 +162,7 @@ test("binding wounds restores a small, capped amount of HP only when the action 
   failingContext.s.hp = 42;
   vm.runInContext([
     functionBlock("actionOdds", "heroHealthCap"),
+    functionBlock("resolvedStoryVanish", "d20SuccessChance"),
     functionBlock("result", "interfaceUI"),
     "globalThis.resolveAction = result;",
   ].join("\n"), failingContext);
@@ -295,7 +344,7 @@ test("Killing Spree rolls two weapon attacks separately and uses its expanded cr
     initiative: () => 10,
   };
   vm.runInContext([
-    functionBlock("classCooldownLeft", "resourceKey"),
+    functionBlock("resourceName", "classCooldownLeft"),
     functionBlock("classAbilityExchange", "fightExchange"),
     "globalThis.runClassAbility = classAbilityExchange;",
     "globalThis.cooldownLeft = classCooldownLeft;",
@@ -348,7 +397,7 @@ test("Killing Spree redirects its second strike to another living enemy after a 
     initiative: () => 10,
   };
   vm.runInContext([
-    functionBlock("classCooldownLeft", "resourceKey"),
+    functionBlock("resourceName", "classCooldownLeft"),
     functionBlock("classAbilityExchange", "fightExchange"),
     "globalThis.runClassAbility = classAbilityExchange;",
   ].join("\n"), context);
@@ -389,7 +438,7 @@ test("Vanish always evades the incoming attack and blocks for exactly five excha
     initiative: () => 10,
   };
   vm.runInContext([
-    functionBlock("classCooldownLeft", "resourceKey"),
+    functionBlock("resourceName", "classCooldownLeft"),
     functionBlock("classAbilityExchange", "fightExchange"),
     "globalThis.runClassAbility = classAbilityExchange;",
     "globalThis.cooldownLeft = classCooldownLeft;",
