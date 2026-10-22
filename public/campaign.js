@@ -131,10 +131,14 @@ function resourceKey(){const hero=window.soaCharacters?.profile?.();return windo
 function resolvedCombatAbility(action){
  const hero=window.soaCharacters?.profile?.(),level=window.soaProgression?.level?.()||hero?.startLevel||1;
  if(window.soaClassAbilities?.get?.(action.ability,hero?.className,level))return action.ability;
- const description=String(action.text||"");
- const rogue=window.soaCharacters?.profile?.()?.className==="Rogue";
- const inferred=rogue&&/\briposte\b/i.test(description)?"riposte":rogue&&/\b(?:evasion|evade)\b/i.test(description)?"evasion":rogue&&/\bkick\b/i.test(description)?"kick":"strike";
- return ["strike","kick","evasion","riposte"].includes(action.ability)?action.ability:inferred;
+ const normalize=value=>" "+String(value||"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim()+" ";
+ const description=normalize(action.text);
+ const learned=window.soaClassAbilities?.available?.(hero?.className,level)||[];
+ const named=learned.slice().sort((a,b)=>String(b.name||"").length-String(a.name||"").length).find(ability=>description.includes(normalize(ability.name)));
+ if(named)return named.id;
+ const aliases={riposte:/\briposte\b/i,evasion:/\b(?:evasion|evade)\b/i,kick:/\bkick\b/i};
+ for(const [id,pattern] of Object.entries(aliases))if(pattern.test(String(action.text||""))&&window.soaClassAbilities?.get?.(id,hero?.className,level))return id;
+ return ["strike","kick","evasion","riposte"].includes(action.ability)?action.ability:"strike";
 }
 function d20SuccessChance(bonus,dc,advantage=0){
  let hits=0,rolls=0;
@@ -359,6 +363,8 @@ function fightExchange(action){
  const racialAbility=window.soaRacialAbilities?.get?.(action.ability,heroProfile?.race);
  if(racialAbility?.mode==="combat")return racialCombatExchange(action,racialAbility,targets);
  const ability=resolvedCombatAbility(action);
+ const inferredClassAbility=window.soaClassAbilities?.get?.(ability,heroProfile?.className,heroLevel);
+ if(inferredClassAbility)return classAbilityExchange(action,inferredClassAbility,targets);
  const price=window.soaClassAbilities?.costOf?.(ability,heroProfile?.className,heroLevel)??0;
  if(ability==="riposte"&&!campaign.parryReady){status("Riposte requires a parry in the previous exchange. No action spent.");return null}
  if(s.en<price){status("Not enough "+resourceName()+" for "+ability+" ("+price+" required). No action spent.");return null}
