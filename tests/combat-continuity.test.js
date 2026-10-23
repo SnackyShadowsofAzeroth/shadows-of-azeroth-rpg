@@ -196,6 +196,7 @@ test("past combat events are filtered from noncombat turns and scoped to the mat
     assert.match(captured[0].instructions, /Never narrate a prior ability use, attack, damage, defeat or cooldown as occurring this turn/i);
     assert.match(captured[0].instructions, /The supplied resolution is the sole authority for what just happened/i);
 
+    const enemyAttacks=[{index:1,enemy:"Trogg Scout",recipient:"Snacky Lugnuts",before:100,after:94,damage:6,die:15,total:18,defenderAC:16,hit:true},{index:2,enemy:"Trogg Mechanic",recipient:"Bromli Ironkeg",before:30,after:30,damage:0,die:2,total:5,defenderAC:18,hit:false}];
     const currentCombat = await onRequestPost({
       request: campaignRequest({
         action: "Use Killing Spree on the Trogg Scout",
@@ -205,9 +206,10 @@ test("past combat events are filtered from noncombat turns and scoped to the mat
           ...oldLog,
           { encounterId: "encounter-8", round: 1, events: [
             { name: "Trogg Scout", side: "enemy", delta: -20, after: 25 },
+            ...Array.from({length:6},()=>({name:"Snacky Lugnuts",source:"Trogg Scout",side:"ally",delta:-1,before:100,after:99})),
           ] },
         ],
-        lastExchange: { ...staleExchange, encounterId: "encounter-8", round: 1, target: "Trogg Scout" },
+        lastExchange: { ...staleExchange, encounterId: "encounter-8", round: 1, target: "Trogg Scout",enemyAttacks },
       }),
       env,
     });
@@ -215,6 +217,11 @@ test("past combat events are filtered from noncombat turns and scoped to the mat
     assert.equal(captured[1].context.combatAction, true);
     assert.deepEqual(captured[1].context.combatLog.map(row => [row.encounterId, row.round]), [["encounter-8", 1]]);
     assert.equal(captured[1].context.lastExchange.target, "Trogg Scout");
+    assert.equal(captured[1].context.lastExchange.enemyAttacks.length,2);
+    assert.equal(captured[1].context.lastExchange.enemyAttacks[1].recipient,"Bromli Ironkeg");
+    assert.equal(captured[1].context.combatLog[0].events.length,7,"all multi-enemy damage events reach narration");
+    assert.equal(captured[1].context.combatLog[0].events[1].source,"Trogg Scout");
+    assert.match(captured[1].instructions,/each surviving enemy's response in roster order/);
   } finally {
     global.fetch = previousFetch;
   }
@@ -397,3 +404,4 @@ test("level-one Shaman choices replace locked and unimplemented shocks with Ligh
     global.fetch = previousFetch;
   }
 });
+

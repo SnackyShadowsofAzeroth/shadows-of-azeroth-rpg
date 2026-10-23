@@ -154,9 +154,9 @@ function healOutsideCombat(s,c,profile,ability,rules,actor){
  if(ability.cooldown){d.cooldowns||={};d.cooldowns[ability.id]=s.time+ability.cooldown;}
  return {message:"Success: "+ability.name+(ability.periodicHeal?" applied for three rounds; "+hot.message:" restores "+(s.hp-before)+" HP.")+" "+FORMS[d.form].resource+" now "+s.en+"/100; "+ability.cost+" spent. One turn resolved."};
 }
-function recover(s,{cost=0,hit=false,taken=0,shifted=false,combat=true}={}){
+function recover(s,{cost=0,hit=false,taken=0,takenHits=taken>0?1:0,shifted=false,combat=true}={}){
  const d=state(s),key=FORMS[d.form].resource;
- if(!shifted){const gain=key==="energy"?20:key==="rage"?(hit?5:0)+(taken>0?5:0):25;s.en=clamp(s.en-cost+gain);d.pools[key]=s.en;}
+ if(!shifted){const gain=key==="energy"?20:key==="rage"?(hit?5:0)+takenHits*5:25;s.en=clamp(s.en-cost+gain);d.pools[key]=s.en;}
  if(key!=="mana"&&!shifted)d.pools.mana=clamp(d.pools.mana+5);
  if(!combat&&key==="rage"){s.en=Math.max(0,s.en-5);d.pools.rage=s.en;}
  return s.en;
@@ -240,14 +240,11 @@ function exchange(s,c,profile,level,action,ability,target,rules,actor){
  for(const dot of d.dots){const foe=targets.find(e=>e.name===dot.target);if(foe?.hp>0&&dot.start<=round&&dot.until>=round){const amount=Math.min(foe.hp,dot.amount);foe.hp-=amount;dealt+=amount;notes.push(dot.id+" bleeds "+foe.name+" for "+amount+" HP");}}
  d.dots=d.dots.filter(x=>x.until>round&&targets.some(e=>e.name===x.target&&e.hp>0));
  if(d.effects.regrowth?.until>=round&&!ability?.hot){const old=s.hp;s.hp=Math.min(maxHP,s.hp+4);healed+=s.hp-old;notes.push("Regrowth restores "+(s.hp-old)+" HP");}
- const retaliationTarget=targets.find(e=>e.name===target.name&&e.hp>0)||targets.find(e=>e.hp>0);
  const ac=(actor?.armorClass||12)+(actor?.form===d.form?0:mods.ac)+(BEARS.includes(d.form)&&d.effects.challengeUntil>=round?3:0)+(d.form==="cat"&&d.effects.dashUntil>=round?3:0)-(BEARS.includes(d.form)&&d.effects.enrageUntil>=round?2:0);
- let enemyRoll=null,taken=0;
- if(retaliationTarget&&!(interrupted&&retaliationTarget===target)){
-  const block=rules.statBlock(retaliationTarget);enemyRoll=rules.attack(block.bonus-(d.effects.roarUntil>=round?3:0),ac,{advantage:guard&&!ability?.enrage||c.guardUntil>=round?-1:0});
-  if(enemyRoll.hit){taken=Math.min(Math.max(0,s.hp-1),rules.damage(block.die,2,enemyRoll.critical));s.hp-=taken;}
- }
- if(!shifting)recover(s,{cost:ability.cost,hit,taken});
+ const phase=window.soaEnemyPhase.resolve({s,c,enemies:targets,rules,round,heroAC:ac,heroName:profile.name,interruptedTarget:interrupted?target:null,guard:guard&&!ability?.enrage,attackPenalty:d.effects.roarUntil>=round?3:0,guaranteedEvade:c.preparedVanish===true});
+ c.preparedVanish=false;
+ const enemyRoll=phase.first,taken=phase.taken;
+ if(!shifting)recover(s,{cost:ability.cost,hit,taken,takenHits:phase.heroHits});
  else {d.pools[FORMS[d.form].resource]=s.en;}
  const regen=window.soaRacialAbilities?.passives?.(profile.race)?.regeneration||0;const preRegen=s.hp;s.hp=Math.min(maxHP,s.hp+regen);healed+=s.hp-preRegen;
  c.combatRound=round;s.time++;
@@ -257,7 +254,8 @@ function exchange(s,c,profile,level,action,ability,target,rules,actor){
  if(!targets.some(e=>e.name===d.combo.target&&e.hp>0))d.combo={target:null,points:0};
  const resourceReport="Mana "+beforeResources.mana+" → "+d.pools.mana+", Energy "+beforeResources.energy+" → "+d.pools.energy+", Rage "+beforeResources.rage+" → "+d.pools.rage;
  const event={round,ability:used,abilityName:shifting?"Shapeshift":ability.name,effect:shifting?"shift":ability.effect,form:d.form,previousForm:beforeForm,shapeshift:shifting,target:target.name,hit,dealt,taken,healed,heroBefore:beforeHP,heroAfter:s.hp,recipient:profile.name,recipientBefore:beforeHP,recipientAfter:s.hp,energyBefore:oldResource,energyAfter:s.en,enemyBefore:snap.find(x=>x.enemy===target).before,enemyAfter:target.hp,enemyMax:target.maxHp,defenderAC:ac,enemyRoll:enemyRoll?.die??null,enemyTotal:enemyRoll?.total??null,attackRoll:attacks[0]?.die??null,attackTotal:attacks[0]?.total??null,targetAC:attacks[0]?.ac??null,damageType:ability?.damageType||"physical",defeated:target.hp===0,defeatedTargets:rows.filter(x=>x.before>0&&x.enemy.hp===0).map(x=>({name:x.enemy.name,maxHp:x.enemy.maxHp})),combo:{...d.combo},resourceReport,details:notes,strikes:attacks};
- const message=(shifting?"Shapeshifted into "+name(d.form,profile)+"; no attack or spell":ability.name+": "+dealt+" damage, "+healed+" healing")+". Received "+taken+" damage. "+resourceReport+". "+(notes.length?notes.join("; ")+". ":"")+"Exactly one combat exchange resolved.";
+ event.enemyAttacks=phase.attacks;
+ const message=(shifting?"Shapeshifted into "+name(d.form,profile)+"; no attack or spell":ability.name+": "+dealt+" damage, "+healed+" healing")+". "+window.soaEnemyPhase.summary(phase.attacks)+" Received "+taken+" total damage. "+resourceReport+". "+(notes.length?notes.join("; ")+". ":"")+"Exactly one combat exchange resolved.";
  return {message:"Success: "+message,event,rows};
 }
 function questAction(s,c,profile,level,id,operation,rules){

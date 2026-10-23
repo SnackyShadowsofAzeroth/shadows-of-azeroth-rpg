@@ -44,6 +44,21 @@ test("combat retaliation uses the destination form's live armor, including Cat d
   assert.equal(out.event.defenderAC,get().armorClass,"retaliation after shifting to "+form);
  }
 });
+test("Bear gains Rage for each damaging enemy hit but regeneration and cooldowns advance once",()=>{
+ const x=setup();x.unlock("bear");x.d.shift(x.s,x.c,x.profile,60,"bear");
+ x.c.enemies=["Wolf","Satyr","Guard"].map(name=>({name,hp:500,maxHp:500}));x.s.en=x.s.druid.pools.rage=40;
+ const out=x.cast("maul");assert.equal(out.event.enemyAttacks.length,3);assert.equal(out.event.taken,18);assert.equal(x.s.en,45,"40 - 15 Maul + 5 landed attack + 15 from three incoming hits");assert.equal(x.s.druid.pools.mana,85);assert.equal(x.s.time,1);assert.equal(x.c.combatRound,1);
+});
+test("Druid Bash stops only its target and Rejuvenation ticks once after the whole enemy phase",()=>{
+ const x=setup();x.unlock("bear");x.d.shift(x.s,x.c,x.profile,60,"bear");x.c.enemies=["Wolf","Satyr","Guard"].map(name=>({name,hp:500,maxHp:500}));x.s.en=x.s.druid.pools.rage=50;
+ let out=x.cast("bash",x.c.enemies[1]);assert.equal(out.event.enemyAttacks[1].reason,"interrupted");assert.equal(out.event.taken,12);
+ x.d.shift(x.s,x.c,x.profile,60,"caster");x.s.hp=40;out=x.cast("rejuvenation");assert.equal(out.event.taken,18);assert.equal(out.event.healed,15);assert.equal(x.s.hp,37);assert.equal(x.s.druid.effects.rejuvenation.remaining,2);assert.equal(x.c.combatRound,2);
+});
+test("combat shapeshifting permits every surviving enemy to respond without adding player attacks",()=>{
+ const x=setup();x.unlock("bear");x.c.enemies=["Wolf","Satyr","Guard"].map(name=>({name,hp:500,maxHp:500}));
+ const out=x.d.exchange(x.s,x.c,x.profile,60,{form:"bear"},null,x.c.enemies[0],x.rules,x.actor);
+ assert.equal(out.event.enemyAttacks.length,3);assert.equal(out.event.taken,18);assert.equal(out.event.dealt,0);assert.equal(out.event.strikes.length,0);assert.ok(x.c.enemies.every(e=>e.hp===500));assert.equal(x.s.druid.pools.mana,80);assert.equal(x.s.time,1);assert.equal(x.c.combatRound,1);
+});
 test("Cat, Bear, Moonkin, Tree and utility forms enforce their actual spellbooks",()=>{
  const x=setup();for(const id of ["bear","cat","moonkin","tree","travel"])x.unlock(id);
  x.d.shift(x.s,x.c,x.profile,60,"bear");let ids=x.learned().map(a=>a.id);assert.ok(ids.includes("maul"));assert.ok(ids.includes("spec_druid_feral"));assert.ok(!ids.includes("wrath"));assert.ok(!ids.includes("rejuvenation"));

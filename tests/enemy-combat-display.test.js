@@ -48,7 +48,7 @@ function renderExchange(overrides={},className="Druid"){
  const ctx={window:{soaCharacters:{profile:()=>hero},soaCombatRules:{statBlock:()=>({ac:12})}},livingEnemies:()=>[{name:"Corrupted Satyr",hp:40,maxHp:50}],currentEncounterExchange:()=>exchange,selectedCombatTarget:null,busy:false,pending:()=>false,combatParty:()=>[]};
  const element=()=>({children:[],style:{},dataset:{},append(...children){this.children.push(...children)},setAttribute(){}});
  ctx.document={createElement:element};vm.createContext(ctx);
- for(const file of ["specializations.js","druid.js","class-abilities.js","racial-abilities.js"])vm.runInContext(fs.readFileSync(path.join(root,file),"utf8"),ctx);
+ for(const file of ["combat-rules.js","specializations.js","druid.js","class-abilities.js","racial-abilities.js"])vm.runInContext(fs.readFileSync(path.join(root,file),"utf8"),ctx);
  const helper=campaign.slice(campaign.indexOf("function combatExchangeDisplay("),campaign.indexOf("\nfunction currentEncounterExchange("));
  const draw=campaign.slice(campaign.indexOf("function drawEnemyStatus("),campaign.indexOf("\nfunction drawCombatActions("));
  vm.runInContext(helper+"\n"+draw+"\nglobalThis.show=drawEnemyStatus;globalThis.present=combatExchangeDisplay;",ctx);
@@ -78,5 +78,10 @@ test("old secondary-target rolls omit unavailable HP and default critical thresh
 });
 test("recorded names remain accurate after a form or specialization changes",()=>{
  const x=renderExchange({ability:"custom_old_ability",abilityName:"Earlier Learned Spell",strikes:[oldDruidStrike]});assert.match(x.text,/Earlier Learned Spell · 1 attack/);assert.doesNotMatch(x.text,/Killing Spree/);
+});
+test("enemy phase displays each attacker, recipient and independent dodge result",()=>{
+ const attacks=[{index:1,enemy:"Corrupted Satyr",recipient:"Hero",before:100,after:94,damage:6,hit:true,die:15,bonus:3,total:18,defenderAC:14,evasionRoll:90,evaded:false},{index:2,enemy:"Satyr Cultist",recipient:"Hero",before:94,after:94,damage:0,hit:true,die:16,bonus:3,total:19,defenderAC:14,evasionRoll:20,evaded:true}];
+ const x=renderExchange({taken:6,heroAfter:94,enemyAttacks:attacks,evasionActive:true,evasionRoll:90,evaded:true});
+ assert.match(x.text,/Enemy phase · 2 responses · 6 total damage/);assert.match(x.text,/1\) Corrupted Satyr → Hero · Hit · 6 damage/);assert.match(x.text,/2\) Satyr Cultist → Hero · Dodged/);assert.match(x.text,/Evasion fails \(d100 90/);assert.match(x.text,/dodged by Evasion \(d100 20/);assert.doesNotMatch(x.text,/undefined|NaN/);
 });
 

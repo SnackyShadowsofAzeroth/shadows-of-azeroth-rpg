@@ -9,6 +9,7 @@ function setup(className="Druid",level=10){
  const rules={roll:n=>n===100?90:15,attack:(bonus,ac)=>({die:15,bonus,total:15+bonus,hit:15+bonus>=ac,critical:false}),damage:(die,flat)=>4+flat,statBlock:()=>({ac:12,bonus:3,die:6,type:"humanoid",initiative:0,resist:[],vulnerable:[]}),mitigate:n=>n,initiative:()=>10,weapon:()=>({die:6,flat:3,type:"physical"})};
  const actor={className,modifiers:{STR:2,DEX:2,WIS:4,INT:4,CHA:3,CON:2},proficiency:2,armorClass:14,initiative:2};
  Object.assign(ctx.window,{soaCharacters:{profile:()=>({...hero,form:className==="Druid"?ctx.s.druid?.form||"caster":undefined})},soaProgression:{level:()=>level},soaAbilities:{get:()=>actor},soaCombatRules:rules,soaEquipment:{modifiers:()=>({})}});
+ vm.runInContext(src("public/combat-rules.js"),ctx);ctx.window.soaCombatRules=rules;
  for(const f of ["save-rules","story-actions","druid","class-abilities"])vm.runInContext(src("public/"+f+".js"),ctx);
  if(className==="Druid"){ctx.window.soaDruid.bind({state:()=>ctx.s,campaign:()=>ctx.campaign});ctx.window.soaDruid.state(ctx.s);}else delete ctx.window.soaDruid;
  Object.assign(ctx,{livingEnemies:()=>ctx.campaign.enemies.filter(e=>e.hp>0),partyExperienceIds:()=>["hero"],recordCombatDelta(){},concludeProgressionEncounter(){},resourceName:()=>"Mana",heroHealthCap:()=>100,status:m=>ctx.notice=m,save:()=>true,store:()=>true,pending:()=>ctx.campaign.pending,accessCode:()=>true,dialogueFromCustom:()=>null,socialSkill:()=>null,resolvedStoryVanish:()=>null,unavailableClassAbility:()=>null,resolvedCombatAbility:a=>a.ability||ctx.window.soaStoryActions.named(a,hero,level)?.id||"strike",recordActionPractice(){},refreshDisplay(){},returnToAdventure(){},safe:String,advance:async()=>ctx.generations=(ctx.generations||0)+1,hasRecentCorpse:()=>false,actionOdds:()=>({cost:0,skill:"rest",target:100}),scavengeFallenEnemy:()=>null,canonicalStoryChoice:c=>c,selectedAllyTarget:null});
@@ -102,4 +103,11 @@ test("already-natural and unaffordable form choices are filtered before selectio
 });
 test("form-change persistence failure restores the prior Bear form and Mana pool",async()=>{
  const x=bearReturnSetup(),ctx=x.ctx;ctx.store=()=>false;const before=JSON.stringify(ctx.s);await ctx.select(x.action);assert.equal(JSON.stringify(ctx.s),before);assert.equal(ctx.campaign.pending,undefined);assert.equal(ctx.generations,undefined);
+});
+test("multi-enemy damage resolves once and rolls back with the whole action on save failure",async()=>{
+ for(const fail of [false,true]){const x=setup(),ctx=x.ctx;ctx.campaign.enemies=["Wolf","Satyr","Guard"].map(name=>({name,hp:100,maxHp:100}));const before=JSON.stringify(ctx.s);if(fail)ctx.store=()=>false;
+  const action=x.cast("Cast Wrath at Wolf","wrath");await ctx.select(action);
+  if(fail){assert.equal(JSON.stringify(ctx.s),before);assert.equal(ctx.campaign.combatRound,0);assert.equal(ctx.campaign.enemies[0].hp,100);assert.equal(ctx.campaign.lastExchange,undefined);}
+  else {assert.equal(ctx.campaign.lastExchange.enemyAttacks.length,3);assert.equal(ctx.campaign.combatRound,1);assert.equal(ctx.s.time,1);const after=JSON.stringify(ctx.s);await ctx.select(action);assert.equal(JSON.stringify(ctx.s),after);assert.equal(ctx.generations,1);}
+ }
 });

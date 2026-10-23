@@ -546,3 +546,20 @@ Reference rulesets (consulted October 22, 2026):
 
 These are turn-based SoA adaptations, not a reproduction of WoW's real-time costs,
 spell ranks, talents, combat clock or server quest scripting.
+
+## Group combat rounds (October 23, 2026)
+
+One player action now resolves a full enemy phase: every surviving enemy responds
+once, in the roster's displayed order. Each response has its own attack roll,
+recipient, damage and HP change in the combat panel. A defeated enemy cannot
+attack; a successful interrupt or Pippa's snare stops only that opponent.
+Evasion checks each incoming hit separately, Vanish protects the full phase,
+and a qualifying parry from any response opens Riposte for the next decision.
+Resources, cooldowns, regeneration and healing-over-time advance once per round.
+Bear Rage gains +5 per enemy hit that actually deals damage, alongside the normal
+landed-attack gain; Energy and Mana recovery do not multiply with enemy count.
+Class abilities, basic attacks, Druid shifts and companion support all use the
+same enemy phase. Existing nonfatal hero HP behavior is preserved.
+Current saves support the new combat records without a reset; older single-attack
+records remain readable. Pending narration retries reuse the resolved round.
+Offline shell cache: v111.

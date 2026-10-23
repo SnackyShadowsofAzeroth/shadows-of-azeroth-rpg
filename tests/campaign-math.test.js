@@ -55,6 +55,10 @@ function makeContext({ random = () => 0.5 } = {}) {
     scavengeFallenEnemy: () => null,
   };
   vm.createContext(context);
+  const mockRules=context.window.soaCombatRules;
+  vm.runInContext(fs.readFileSync(path.join(__dirname,"..","public","combat-rules.js"),"utf8"),context);
+  context.window.soaCombatRules=mockRules;
+  context.recordCombatDelta=()=>{};
   return context;
 }
 
@@ -1069,3 +1073,4 @@ test("a rare successful scavenge can include one silver without exceeding a smal
   assert.match(context.scavengeFallenEnemy({ text: "Loot the fallen raider" }, true), /1 silver and 6 copper/);
   assert.equal(context.s.money, 106);
 });
+

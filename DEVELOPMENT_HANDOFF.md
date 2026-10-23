@@ -300,3 +300,22 @@ Added three region-bound, engine-authored missions with immutable reward terms a
   All referenced interface and cached assets exist. Shell cache v109.
 - Chromium is unavailable here. Actual mobile rendering, the player's saved
   campaign and a paid live Gemini generation have not been exercised.
+
+## Shared multi-enemy phase (2026-10-23)
+- `soaEnemyPhase` in combat-rules.js resolves one attack per surviving enemy in
+  roster order after the player's action. Basic/class/racial, Druid and support
+  resolvers share it. Control is target-specific; dead enemies never retaliate.
+  Independent Evasion checks, phase-wide Vanish and any qualifying parry work
+  across all incoming attacks. Existing ally-target selection remains on basic
+  attacks; downed allies cannot receive later attacks in that phase.
+- `enemyAttacks` records preserve ordered rolls, recipient HP, damage and skips;
+  UI, combatLog and bounded API narration context use them. Legacy records retain
+  their existing display. All phase effects are inside existing action rollback
+  and pending/retry transactions. No extra time, recovery, cooldown or HOT ticks.
+- Bear Rage credits each actual damaging incoming hit; phase completion still
+  restores Mana/Energy and ticks healing only once. Service worker v111.
+- Validation: 235 Node tests plus 128 faction-rule assertions; syntax/static
+  build checks. Added coverage for three-enemy sequencing, per-hit Evasion,
+  target-specific control, takedowns, ally recipients, later parries, combat
+  shifts, Rage, HOT ticks, multi-enemy rollback/replay, rendering and API context.
+  Actual iPhone rendering and live Gemini generation remain unverified here.
