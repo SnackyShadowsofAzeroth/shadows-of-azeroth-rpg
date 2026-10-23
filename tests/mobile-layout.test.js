@@ -15,7 +15,7 @@ const serviceWorker = fs.readFileSync(path.join(__dirname, "..", "public", "sw.j
 const layoutCss = fs.readFileSync(path.join(__dirname, "..", "public", "mobile-layout.css"), "utf8");
 const characterCss = fs.readFileSync(path.join(__dirname, "..", "public", "characters.css"), "utf8");
 const portraitCss = fs.readFileSync(path.join(__dirname, "..", "public", "portraits.css"), "utf8");
-const tabIds = ["adventure", "quest", "character", "reputation", "settings"];
+const tabIds = ["adventure", "quest", "character", "dungeons", "settings"];
 
 function element(tagName, id = "", tab = "") {
   const children = [];
@@ -54,7 +54,7 @@ function startLayout({ getItem = () => null, setItem = () => {}, readyState = "l
   body.classList.remove = name => classes.delete(name);
   body.classList.contains = name => classes.has(name);
   const sections = [
-    "campaign-box", "soa-adventure-story", "soa-legacy-ai", "soa-ai-narration", "soa-chronicle", "soa-contract-board", "soa-party-evidence",
+    "campaign-box", "soa-adventure-story", "soa-legacy-ai", "soa-ai-narration", "soa-chronicle", "soa-contract-board", "soa-party-evidence", "soa-allies-screen", "soa-dungeons-screen",
     "soa-character-screen", "soa-character-tools", "companion-panel", "soa-standalone-reputation",
     "soa-save-settings",
   ].map(id => element("section", id));
@@ -100,6 +100,9 @@ test("one five-destination bottom navigation is loaded and cached for offline pl
   assert.match(serviceWorker, /"\.\/class-abilities\.js"/);
   assert.match(serviceWorker, /"\.\/racial-abilities\.js"/);
   assert.match(source, /\["adventure","Adventure","campaign-box","Current scene and available actions"\],\s*\["quest","Quest","soa-chronicle"/);
+  assert.match(source, /\["dungeons","Dungeons","soa-dungeons-screen"/);
+  assert.doesNotMatch(source,/\["reputation","Reputation"/);
+  assert.match(html, /id="soa-dungeons-screen"[\s\S]*id="soa-dungeons-controls"/);
   assert.match(serviceWorker, /shadows-of-azeroth-v\d+/);
   assert.match(layoutCss, /#soa-mobile-nav\{position:fixed;z-index:999;bottom:0/);
   assert.match(source, /function createNavigation\(\)/);
@@ -112,6 +115,23 @@ test("contract and bounty board belongs to the Quest tab",()=>{
  assert.equal(sections.find(section=>section.id==="soa-contract-board").hidden,false);
  layout.select("adventure");
  assert.equal(sections.find(section=>section.id==="soa-contract-board").hidden,true);
+});
+test("dungeons has its own tab and allies stay accessible under Quest",()=>{
+ const {layout,tabs,sections}=startLayout();
+ assert.deepEqual([...tabs.keys()],tabIds);
+ layout.select("dungeons");
+ assert.equal(tabs.get("dungeons").getAttribute("aria-current"),"page");
+ assert.equal(sections.find(section=>section.id==="soa-dungeons-screen").hidden,false);
+ assert.equal(sections.find(section=>section.id==="campaign-box").hidden,true);
+ layout.select("quest");
+ assert.equal(sections.find(section=>section.id==="soa-allies-screen").hidden,false);
+ assert.equal(sections.find(section=>section.id==="soa-dungeons-screen").hidden,true);
+ assert.match(characters,/soa-allies-drawer/);
+ assert.match(characters,/details:not\(\.soa-collapsible-quests\):not\(\.soa-create-new\):not\(\.soa-allies-drawer\)/);
+ assert.match(characters,/reputationPanel\.parentElement!==content/);
+ assert.match(campaign,/challengeMount\?\.append\(arenaPanel\)/);
+ assert.match(campaign,/challengeMount\?\.append\(dungeonPanel\)/);
+ assert.match(campaign,/drawCombatActions\(gameplayPanel\)/);
 });
 test("mobile roster keeps square portraits and Play/Delete actions within the card", () => {
   assert.match(portraitCss, /\.soa-character-item\{box-sizing:border-box;display:grid;grid-template-columns:58px minmax\(0,1fr\) 122px/);
@@ -141,8 +161,8 @@ test("tab selection displays only its screen and maps old saved tab names", () =
   assert.equal(sections.find(section => section.id === "soa-character-screen").hidden, false);
   assert.equal(sections.find(section => section.id === "soa-chronicle").hidden, true);
   layout.select("companions");
-  assert.equal(tabs.get("reputation").getAttribute("aria-current"), "page");
-  assert.equal(sections.find(section => section.id === "soa-standalone-reputation").hidden, false);
+  assert.equal(tabs.get("quest").getAttribute("aria-current"), "page");
+  assert.equal(sections.find(section => section.id === "soa-allies-screen").hidden, false);
   assert.equal(sections.find(section => section.id === "companion-panel").hidden, true);
   assert.equal(state.scrollCalls, 2);
 });
@@ -207,3 +227,4 @@ test("combat and records follow the action-first tab hierarchy", () => {
   assert.match(campaign, /Loadout & Equipment/);
   assert.match(layoutCss, /soa-exchange-details>summary/);
 });
+

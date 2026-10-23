@@ -18,15 +18,15 @@ const get=id=>document.getElementById(id);
 const make=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e};
 // Keep grouped game content visible, except the intentional character-creation disclosure.
 function keepGameSectionsExpanded(root=document){
- const expand=scope=>scope.querySelectorAll?.("details:not(.soa-collapsible-quests):not(.soa-create-new)").forEach(node=>{node.open=true});
+ const expand=scope=>scope.querySelectorAll?.("details:not(.soa-collapsible-quests):not(.soa-create-new):not(.soa-allies-drawer)").forEach(node=>{node.open=true});
  expand(root);
  const observer=new MutationObserver(records=>records.forEach(record=>record.addedNodes.forEach(node=>{
   if(node.nodeType!==1)return;
-  if(node.matches("details")&&!node.classList.contains("soa-collapsible-quests")&&!node.classList.contains("soa-create-new"))node.open=true;
+  if(node.matches("details")&&!node.classList.contains("soa-collapsible-quests")&&!node.classList.contains("soa-create-new")&&!node.classList.contains("soa-allies-drawer"))node.open=true;
   expand(node);
  })));
  observer.observe(document.documentElement,{childList:true,subtree:true});
- document.addEventListener("toggle",event=>{if(event.target instanceof HTMLDetailsElement&&!event.target.open&&!event.target.classList.contains("soa-collapsible-quests"))event.target.open=true},true);
+ document.addEventListener("toggle",event=>{if(event.target instanceof HTMLDetailsElement&&!event.target.open&&!event.target.classList.contains("soa-collapsible-quests")&&!event.target.classList.contains("soa-allies-drawer"))event.target.open=true},true);
 }
 keepGameSectionsExpanded();
 const read=(key)=>{const result=window.soaSaveRules.readStoredJSON(key);if(!result.ok&&result.unavailable)window.soaReportStorageFailure?.("Character save could not be read because device storage is unavailable.");return result.ok?result.value:null};
@@ -349,7 +349,19 @@ function organizeGameSections(){
   const abilitySheet=profession.querySelector(".soa-ability-sheet");const legacyAbilities=get("abilities");if(abilitySheet&&legacyAbilities)status.insertBefore(abilitySheet,legacyAbilities);
  }
  const reputationId=active.origin==="custom"?"soa-standalone-reputation":"companion-panel";
- const ordered=["soa-adventure-story","campaign-box","soa-contract-board","soa-chronicle","soa-party-evidence","soa-character-screen","soa-character-tools",reputationId,"soa-save-settings","soa-legacy-ai","soa-ai-narration"]
+ const reputationPanel=get(reputationId);
+ if(reputationPanel){
+  let allies=get("soa-allies-screen");
+  if(!allies){
+   allies=make("section");allies.id="soa-allies-screen";allies.className="panel soa-game-screen soa-allies-screen";allies.setAttribute("aria-label","Allies and faction standing");
+   const drawer=make("details",undefined,"soa-allies-drawer"),summary=make("summary","Allies & faction standing"),hint=make("p","Companions, relationships, and faction records are saved with this character.","muted"),content=make("div",undefined,"soa-allies-content");
+   drawer.append(summary,hint,content);allies.append(drawer);
+  }
+  const content=allies.querySelector?.(".soa-allies-content");
+  if(content&&reputationPanel.parentElement!==content){reputationPanel.hidden=false;delete reputationPanel.dataset.soaUnavailable;content.append(reputationPanel)}
+  if(allies.parentElement!==main)main.insertBefore(allies,main.querySelector(":scope > footer")||null);
+ }
+ const ordered=["soa-adventure-story","campaign-box","soa-contract-board","soa-chronicle","soa-party-evidence","soa-allies-screen","soa-character-screen","soa-character-tools","soa-dungeons-screen","soa-save-settings","soa-legacy-ai","soa-ai-narration"]
   .map(get).filter(panel=>panel?.parentElement===main);
  if(!ordered.length)return;
  const footer=main.querySelector(":scope > footer");
@@ -503,7 +515,7 @@ document.addEventListener("DOMContentLoaded",()=>{
  profilePanel();
  try{if(rosterLoadBlocked||window.soaSaveRules.isIntegrityBlocked()||sessionStorage.getItem(ENTER_KEY)!=="1")drawMenu()}catch(e){drawMenu()}
  // New-character adventures need their own future companions. Snacky's fixed party should not be shown as theirs.
- if(active.origin==="custom"){const pane=get("companion-panel");if(pane){pane.hidden=true;pane.dataset.soaUnavailable="true"}const rep=document.createElement("section");rep.className="panel soa-standalone-reputation";rep.id="soa-standalone-reputation";rep.append(document.createElement("h2"));rep.firstChild.textContent="Reputation";get("soa-profession-panel")?.after(rep);window.soaReputation?.renderInto?.(rep);const journal=get("journal");if(journal?.closest){const legacy=journal.closest("section.panel");if(legacy)legacy.hidden=true;legacy.dataset.soaUnavailable="true"}}
+ if(active.origin==="custom"){const pane=get("companion-panel");if(pane){pane.hidden=true;pane.dataset.soaUnavailable="true"}const rep=document.createElement("section");rep.className="panel soa-standalone-reputation";rep.id="soa-standalone-reputation";rep.append(document.createElement("h2"));rep.firstChild.textContent="Faction standing";get("soa-profession-panel")?.after(rep);window.soaReputation?.renderInto?.(rep);const journal=get("journal");if(journal?.closest){const legacy=journal.closest("section.panel");if(legacy)legacy.hidden=true;legacy.dataset.soaUnavailable="true"}}
  organizeGameSections();
 });
 })();

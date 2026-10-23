@@ -113,7 +113,7 @@ test("AI advancement cannot overwrite an active local dungeon scene",()=>{
 
 test("campaign dungeon entry works offline and restores the save if persistence fails",async()=>{
  const x=setup(),{ctx,api,campaign,save,hero}=x,originalCampaign=JSON.stringify(campaign),originalSave=JSON.stringify(save),page=source("campaign.js");
- Object.assign(ctx,{campaign,s:save,selectedCombatTarget:null,busy:false,MAX:24,status(message){ctx.notice=message},refreshDisplay(){},returnToAdventure(){},startProgressionEncounter(){},save:()=>true,store:()=>true,concludeProgressionEncounter(){}});
+ Object.assign(ctx,{campaign,s:save,selectedCombatTarget:null,busy:false,MAX:24,status(message){ctx.notice=message},refreshDisplay(){},returnToAdventure(){},returnToDungeons(){},startProgressionEncounter(){},save:()=>true,store:()=>true,concludeProgressionEncounter(){}});
  Object.assign(ctx.window,{soaDungeons:api,soaCharacters:{profile:()=>hero},soaProgression:{level:()=>60},soaSaveRules:{isIntegrityBlocked:()=>false},soaChronicle:{receive(){},render(){}}});
  const start=page.indexOf("async function chooseDungeon("),end=page.indexOf("\nasync function choose(",start);assert.ok(start>=0&&end>start);vm.runInContext(page.slice(start,end)+"\nglobalThis.runDungeonChoice=chooseDungeon;",ctx);
  let stores=0;ctx.store=()=>++stores>1;

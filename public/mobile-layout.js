@@ -4,10 +4,10 @@ const tabs=[
  ["adventure","Adventure","campaign-box","Current scene and available actions"],
  ["quest","Quest","soa-chronicle","Objectives, contracts, rewards, and discoveries"],
  ["character","Character","soa-character-screen","Health, abilities, resources, and equipment"],
- ["reputation","Reputation","companion-panel","Allies, factions, and relationships"],
+ ["dungeons","Dungeons","soa-dungeons-screen","Dungeon expeditions, party recruitment, and arenas"],
  ["settings","Settings","soa-save-settings","Saves and optional online features"],
 ];
-const legacyTabs={journal:"quest",companions:"reputation"};
+const legacyTabs={journal:"quest",companions:"quest",reputation:"dungeons"};
 const normalize=name=>legacyTabs[name]||name;
 const validTab=name=>tabs.some(([id])=>id===name);
 let active="adventure";
@@ -17,9 +17,9 @@ function sections(){return [...document.querySelectorAll("main > section.panel, 
 function group(section){
  if(section.id==="soa-contract-board")return "quest";
  if(["campaign-box","soa-adventure-story"].includes(section.id)||section.querySelector?.("#choices"))return "adventure";
- if(["soa-chronicle","soa-party-evidence"].includes(section.id))return "quest";
+ if(["soa-chronicle","soa-party-evidence","soa-allies-screen"].includes(section.id))return "quest";
  if(["soa-character-screen","soa-character-tools","soa-character-status","soa-profession-panel"].includes(section.id)||section.querySelector?.("#hpbar"))return "character";
- if(["companion-panel","soa-standalone-reputation"].includes(section.id)||section.querySelector?.("#soa-companions-content"))return "reputation";
+ if(section.id==="soa-dungeons-screen")return "dungeons";
  if(["soa-save-settings","soa-legacy-ai","soa-ai-narration"].includes(section.id)||section.querySelector?.("#export"))return "settings";
  return "adventure";
 }
@@ -64,3 +64,4 @@ function init(){
 }
 if(document.readyState==="loading"||document.readyState==="interactive")document.addEventListener("DOMContentLoaded",init,{once:true});else init();
 })();
+

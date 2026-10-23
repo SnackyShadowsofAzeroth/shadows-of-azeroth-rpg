@@ -232,10 +232,10 @@ function applyDialogueOutcome(event){
 function draw(){
  const target=$("companion-panel");if(!target)return;
  target.replaceChildren();
- const top=add("div","REPUTATION · ALLIES, FACTIONS & ENEMIES");top.className="soa-kicker";target.append(top);
- const heading=add("h2","Reputation");heading.className="soa-section-title";target.append(heading);
+ const top=add("div","ALLIES, FACTION STANDING & ENEMIES");top.className="soa-kicker";target.append(top);
+ const heading=add("h2","Allies & Standing");heading.className="soa-section-title";target.append(heading);
  const intro=add("p","Companion bonds, faction standings and enemies shape your reputation across Azeroth. Friendship, romance and rivalries remain part of your story.");intro.className="muted";target.append(intro);
- const views=add("div","");views.className="soa-reputation-view-tabs";views.setAttribute("role","group");views.setAttribute("aria-label","Reputation section");
+ const views=add("div","");views.className="soa-reputation-view-tabs";views.setAttribute("role","group");views.setAttribute("aria-label","Allies and faction standing");
  const companionsButton=add("button","Companions & Romance"),factionsButton=add("button","Factions & Enemies");
  for(const btn of [companionsButton,factionsButton]){btn.type="button";btn.className="soa-reputation-view-button";views.append(btn)}
  target.append(views);
@@ -308,3 +308,4 @@ const campaign=$("campaign-box");if(campaign)campaign.after(el);else document.qu
 draw();
 window.soaCompanions={getProfiles:()=>Object.fromEntries(establishedPeople().map(id=>{const p=PEOPLE[id];return [id,{name:p.name,race:p.race,className:p.className,specialization:p.specialization,level:window.soaProgression?.level?.(id)||10,role:p.role}]})),getRecent:()=>{const allowed=new Set(establishedPeople().map(id=>PEOPLE[id].name)),seen=new Set();return data.entries.slice().reverse().filter(x=>allowed.has(x.person)).filter(x=>{const key=(x.person+"|"+x.text).toLowerCase().replace(/\s+/g," ").trim();if(seen.has(key))return false;seen.add(key);return true}).slice(0,4).reverse().map(x=>x.person+": "+x.text.slice(0,150))},getAdventureMoments:()=>{const turn=window.soaLivingCampaign?.getState?.()?.turn,allowed=new Set(establishedPeople().map(id=>PEOPLE[id].name));return data.entries.filter(x=>allowed.has(x.person)&&x.source==="interaction"&&typeof x.dialogue==="string"&&x.sceneTurn===turn).slice(-3)},getRapport:()=>Object.fromEntries(establishedPeople().map(id=>[id,data.rapport[id]||0])),getConversationContext:()=>Object.fromEntries(establishedPeople().map(id=>{const r=rel(id);return [id,{stage:status(r),romance:r.romance,trust:r.trust,affection:r.affection,respect:r.respect,interactions:r.interactions,grievances:r.grievances,nights:r.nights||0,memories:(r.memories||[]).slice(-8).map(m=>m.text),recentMoments:data.entries.filter(x=>x.person===PEOPLE[id].name).slice(-4).map(x=>x.text.slice(0,150))}]})),getRelationships:()=>Object.fromEntries(establishedPeople().map(id=>{const r=rel(id);return [id,{trust:r.trust,affection:r.affection,respect:r.respect,status:status(r),romance:r.romance,grievances:r.grievances}]})),applyStoryConsequence,applyDialogueOutcome,refresh:draw,refreshProgress:draw};
 })();
+

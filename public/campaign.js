@@ -66,6 +66,13 @@ function returnToAdventure(mode="scene"){
  const reduced=window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches===true;
  destination.scrollIntoView({behavior:reduced?"instant":"smooth",block:"start"});
 }
+function returnToDungeons(){
+ window.soaLayout?.select?.("dungeons");
+ const destination=get("soa-dungeons-screen")?.querySelector?.("h2")||get("soa-dungeons-screen");
+ if(!destination?.scrollIntoView)return;
+ const reduced=window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches===true;
+ destination.scrollIntoView({behavior:reduced?"instant":"smooth",block:"start"});
+}
 // Conservative explicit-target parsing: never infer a relationship event from ordinary movement.
 function dialogueFromCustom(action){
  if(!action?.custom)return null;
@@ -1081,7 +1088,15 @@ function draw(){
  if(!enabled||!campaign)return;document.body.classList.add("soa-living-mode");showOriginal(false);
  const box=get("campaign-scene");box.replaceChildren();
  if(campaignSaveFailed){const retrySave=document.createElement("button");retrySave.type="button";retrySave.className="med";retrySave.textContent="Retry saving campaign";retrySave.onclick=()=>{if(!store())return;status("Campaign saved. You can safely continue.");if(pending())advance(campaign.lastAction,campaign.lastResult,true);else if(!campaign.scene&&navigator.onLine)advance(campaign.lastAction,campaign.lastResult,true);else refreshDisplay()};box.append(retrySave)}
- if(!campaign.scene){status(statusMessage||"Ready to generate the next scene.");return}
+ const challengeMount=get("soa-dungeons-controls");
+ if(!campaign.scene){
+  status(statusMessage||"Ready to generate the next scene.");
+  if(challengeMount){challengeMount.replaceChildren();const arenaPanel=window.soaArena?.panel?.(campaign,s,window.soaCharacters?.profile?.(),choose,busy||!!pending());if(arenaPanel)challengeMount.append(arenaPanel);const dungeonPanel=window.soaDungeons?.panel?.(campaign,s,window.soaCharacters?.profile?.(),window.soaProgression?.level?.()||1,choose,busy||!!pending());if(dungeonPanel)challengeMount.append(dungeonPanel)}
+  window.soaLayout?.refresh?.();return
+ }
+ const activeChallenge=!!(window.soaDungeons?.current?.(campaign)||window.soaArena?.current?.(campaign));
+ if(challengeMount)challengeMount.replaceChildren();
+ const gameplayPanel=activeChallenge&&challengeMount?challengeMount:box;
  const sc=campaign.scene,head=document.createElement("h3"),where=document.createElement("div"),text=document.createElement("p");
  reconcileAuthorizedMissionReward();
  const questPanel=window.soaQuests?.panel?.(campaign,sc.location,()=>s.money,(result)=>{if(result?.error){status(result.error);return}if(Number.isSafeInteger(result?.wallet)){s.money=result.wallet;save()}store();render();draw();status(result?.description||result?.message||"Contract updated.");}) || null;
@@ -1148,14 +1163,14 @@ function draw(){
  }
  if(pending()){const note=document.createElement("p");note.className="soa-pending";note.textContent="Your last decision is saved. The next story scene has not arrived. Retry safely without repeating the action.";box.append(note);const retry=document.createElement("button");retry.className="med";retry.textContent="Retry generating next scene";retry.disabled=busy;retry.onclick=()=>{returnToAdventure("status");advance(campaign.lastAction,campaign.lastResult,true)};box.append(retry)}
 
- drawEnemyStatus(box);
- drawRacialActions(box);
+ drawEnemyStatus(gameplayPanel);
+ drawRacialActions(gameplayPanel);
  const druidStatusPanel=window.soaCharacters?.profile?.()?.className==="Druid"&&window.soaDruid?window.soaDruid.panel(s,campaign,window.soaCharacters.profile(),window.soaProgression?.level?.()||1,choose,busy||!!pending()):null;
- if(druidStatusPanel)box.append(druidStatusPanel);
+ if(druidStatusPanel)gameplayPanel.append(druidStatusPanel);
  if(!livingEnemies().length&&sc.choices?.some(choice=>choice.type==="combat")){
   const cue=document.createElement("p");cue.className="soa-precombat-cue";
   cue.textContent="Spell choices can affect visible obstacles or yourself without an enemy. An opening attack on a visible foe begins combat and resolves one exchange.";
-  box.append(cue);
+  gameplayPanel.append(cue);
  }
  if(!druidStatusPanel){
   const reserve=document.createElement("section");reserve.className="soa-choice-resource";reserve.dataset.resource=resourceKey();reserve.setAttribute("aria-label","Current "+resourceName());
@@ -1165,12 +1180,12 @@ function draw(){
   const reserveTrack=document.createElement("div");reserveTrack.className="soa-choice-resource-track";reserveTrack.dataset.resource=resourceKey();reserveTrack.setAttribute("role","progressbar");reserveTrack.setAttribute("aria-label",resourceName()+" reserve");reserveTrack.setAttribute("aria-valuemin","0");reserveTrack.setAttribute("aria-valuemax","100");reserveTrack.setAttribute("aria-valuenow",String(reserveCurrent));
   const reserveFill=document.createElement("div");reserveFill.className="soa-choice-resource-fill";reserveFill.style.width=reserveCurrent+"%";reserveTrack.append(reserveFill);
   const reserveHint=document.createElement("small");reserveHint.textContent="Combat exchanges and other actions restore up to +25 "+resourceName()+" (maximum 100). Costs below show your projected balance.";
-  reserve.append(reserveHeading,reserveTrack,reserveHint);box.append(reserve);
+  reserve.append(reserveHeading,reserveTrack,reserveHint);gameplayPanel.append(reserve);
  }
+ const arenaPanel=window.soaArena?.panel?.(campaign,s,window.soaCharacters?.profile?.(),choose,busy||!!pending());if(arenaPanel)challengeMount?.append(arenaPanel);
+ const dungeonPanel=window.soaDungeons?.panel?.(campaign,s,window.soaCharacters?.profile?.(),window.soaProgression?.level?.()||1,choose,busy||!!pending());if(dungeonPanel)challengeMount?.append(dungeonPanel);
  const choicesHeader=document.createElement("div");choicesHeader.className="soa-choices-heading";
- const arenaPanel=window.soaArena?.panel?.(campaign,s,window.soaCharacters?.profile?.(),choose,busy||!!pending());if(arenaPanel)box.append(arenaPanel);
- const dungeonPanel=window.soaDungeons?.panel?.(campaign,s,window.soaCharacters?.profile?.(),window.soaProgression?.level?.()||1,choose,busy||!!pending());if(dungeonPanel)box.append(dungeonPanel);
- if(window.soaDungeons?.current?.(campaign)||window.soaArena?.current?.(campaign)){drawCombatActions(box);const foot=document.createElement("p");foot.className="muted soa-scene-footer";foot.textContent="Turn "+campaign.turn+" · Local challenge progress saved on this device";box.append(foot);return;}
+ if(activeChallenge){const cue=document.createElement("p");cue.className="soa-precombat-cue";cue.textContent="Your expedition or arena bout is active. Continue the encounter in Dungeons.";box.append(cue);drawCombatActions(gameplayPanel);const foot=document.createElement("p");foot.className="muted soa-scene-footer";foot.textContent="Turn "+campaign.turn+" · Local challenge progress saved on this device";gameplayPanel.append(foot);return;}
  const title=document.createElement("strong");title.textContent="Choose your next move";
  const count=document.createElement("span");count.textContent=sc.choices.length+" story paths"+(livingEnemies().length?" · combat actions above":" + resources + custom");
  choicesHeader.append(title,count);box.append(choicesHeader);
@@ -1240,7 +1255,7 @@ async function chooseDungeon(choice){
   window.soaChronicle?.receive?.(campaign,campaign.scene);
   if(!(save()&&store())){rollback("Dungeon action could not be saved. No turn committed; retry after restoring storage.");save();store();return;}
   if(out?.waveCleared)concludeProgressionEncounter();
-  store();window.soaChronicle?.render?.(campaign);refreshDisplay();status(resolution);returnToAdventure("scene");
+  store();window.soaChronicle?.render?.(campaign);refreshDisplay();status(resolution);returnToDungeons();
  }catch(error){rollback("Dungeon action could not be completed: "+error.message+". No turn committed.");}
  finally{busy=false;refreshDisplay();}
 }
@@ -1271,7 +1286,7 @@ async function chooseArena(choice){
   window.soaChronicle?.receive?.(campaign,campaign.scene);
   if(!(save()&&store())){rollback("Arena action could not be saved. No turn committed; retry after restoring storage.");save();store();return;}
   if(out?.waveCleared)concludeProgressionEncounter();
-  store();window.soaChronicle?.render?.(campaign);refreshDisplay();status(resolution);returnToAdventure("scene");
+  store();window.soaChronicle?.render?.(campaign);refreshDisplay();status(resolution);returnToDungeons();
  }catch(error){rollback("Arena action could not be completed: "+error.message+". No turn committed.");}
  finally{busy=false;refreshDisplay();}
 }
