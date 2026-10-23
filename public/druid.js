@@ -139,6 +139,7 @@ function recover(s,{cost=0,hit=false,taken=0,shifted=false,combat=true}={}){
 }
 // Story choices may aim a learned spell at scenery without creating an enemy.
 function environmentalTarget(action,c){
+ if(window.soaStoryActions)return window.soaStoryActions.obstacle(action,c);
  const text=String(action?.text||""),match=text.match(/\b(?:root[ -]knot|tangled roots|vines?|brambles?|barricade|wooden door|door|padlock|lock|chains?|webbing|spiderweb|boulder|fallen branch|fallen log|obstruction|obstacle)\b/i);
  if(!match)return null;
  const target=match[0].toLowerCase().replace(/-/g," ");
@@ -214,7 +215,7 @@ function exchange(s,c,profile,level,action,ability,target,rules,actor){
  const ac=(actor?.armorClass||12)+(actor?.form===d.form?0:mods.ac)+(BEARS.includes(d.form)&&d.effects.challengeUntil>=round?3:0)+(d.form==="cat"&&d.effects.dashUntil>=round?3:0)-(BEARS.includes(d.form)&&d.effects.enrageUntil>=round?2:0);
  let enemyRoll=null,taken=0;
  if(retaliationTarget&&!(interrupted&&retaliationTarget===target)){
-  const block=rules.statBlock(retaliationTarget);enemyRoll=rules.attack(block.bonus-(d.effects.roarUntil>=round?3:0),ac,{advantage:guard&&!ability?.enrage?-1:0});
+  const block=rules.statBlock(retaliationTarget);enemyRoll=rules.attack(block.bonus-(d.effects.roarUntil>=round?3:0),ac,{advantage:guard&&!ability?.enrage||c.guardUntil>=round?-1:0});
   if(enemyRoll.hit){taken=Math.min(Math.max(0,s.hp-1),rules.damage(block.die,2,enemyRoll.critical));s.hp-=taken;}
  }
  if(!shifting)recover(s,{cost:ability.cost,hit,taken});

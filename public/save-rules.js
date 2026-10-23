@@ -87,6 +87,8 @@ function validateCampaignSave(value){
   for(const [id,r] of Object.entries(value.druidQuests))if(!(id in lengths)||!object(r)||!["active","claimed"].includes(r.state)||!Number.isInteger(r.step)||r.step<0||r.step>lengths[id]||!Array.isArray(r.proof)||r.proof.length!==r.step||r.state==="claimed"&&(r.step!==lengths[id]||r.receipt!=="druid-form:"+id))fail("Druid quest progress is invalid.");
  }
  if(value.chronicle!==undefined&&value.chronicle!==null)validateChronicle(value.chronicle);
+ if(value.storyCooldowns!==undefined&&(!object(value.storyCooldowns)||Object.values(value.storyCooldowns).some(n=>!Number.isSafeInteger(n)||n<0)))fail("Story ability cooldowns are invalid.");
+ if(value.storyGuard!==undefined&&(!object(value.storyGuard)||typeof value.storyGuard.id!=="string"||value.storyGuard.id.length>80||!Number.isSafeInteger(value.storyGuard.expires)||value.storyGuard.expires<0))fail("Prepared defensive ability is invalid.");
  if(value.crafting!==undefined){
   const c=value.crafting;
   if(!object(c)||c.version!==1||!object(c.materials)||!object(c.receipts)||!object(c.recovered)||!Array.isArray(c.log)||c.log.length>60)fail("Crafting ledger is invalid.");
