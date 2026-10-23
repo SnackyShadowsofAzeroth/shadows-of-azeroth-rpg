@@ -817,7 +817,7 @@ test("Evasion dodges on 1–50, lasts two rounds, and cools down for two rounds"
   assert.ok(attackAdvantages.every(value => value === 0), "Evasion does not alter enemy d20 advantage");
 });
 
-test("Troll Berserking rolls three separate weapon attacks, scales follow-ups, and cools down for three actions", () => {
+test("Troll Berserking rolls three separate weapon attacks, scales follow-ups, and cools down for four actions", () => {
   const context = makeContext({ random: () => 0.9 });
   vm.runInContext(fs.readFileSync(path.join(__dirname, "..", "public", "racial-abilities.js"), "utf8"), context);
   const ability = context.window.soaRacialAbilities.get("berserking", "Troll");
@@ -878,11 +878,11 @@ test("Troll Berserking rolls three separate weapon attacks, scales follow-ups, a
   assert.equal(context.s.en, 45, "the free ability restores 25 Mana after one exchange");
   assert.equal(context.campaign.combatRound, 1);
   context.campaign.actionSerial = 1;
-  assert.equal(context.trollTest.racialCooldownLeft(ability), 3);
-  assert.match(context.trollTest.resourceForecast(choice).text, /Berserking cooldown · 3 actions remaining/);
+  assert.equal(context.trollTest.racialCooldownLeft(ability), 4);
+  assert.match(context.trollTest.resourceForecast(choice).text, /Berserking cooldown · 4 actions remaining/);
   assert.equal(context.trollTest.racialCombatExchange(choice, ability, [enemy]), null, "an early repeat spends no turn");
   assert.equal(attackCalls.length, 4);
-  context.campaign.actionSerial = 4;
+  context.campaign.actionSerial = 5;
   assert.equal(context.trollTest.racialCooldownLeft(ability), 0);
 });
 
@@ -961,9 +961,9 @@ test("a non-Rogue's saved Vanish option becomes an ordinary stealth choice", () 
 test("locked and unsupported Shaman spells are replaced before preview and cannot spend a turn", () => {
   const context = makeContext();
   const spells = [
-    { id: "lightning_bolt", name: "Lightning Bolt", level: 1, cost: 30, effect: "damage" },
-    { id: "healing_wave", name: "Healing Wave", level: 1, cost: 35, effect: "heal" },
-    { id: "earth_shock", name: "Earth Shock", level: 5, cost: 35, effect: "interrupt" },
+    { id: "lightning_bolt", name: "Lightning Bolt", level: 1, cost: 40, effect: "damage" },
+    { id: "healing_wave", name: "Healing Wave", level: 1, cost: 45, effect: "heal" },
+    { id: "earth_shock", name: "Earth Shock", level: 5, cost: 40, effect: "interrupt" },
     { id: "chain_lightning", name: "Chain Lightning", level: 10, cost: 45, effect: "damage" },
   ];
   context.window.soaCharacters.profile = () => ({ className: "Shaman", startLevel: 1 });
@@ -1032,4 +1032,39 @@ test("an unengaged threat does not manufacture a combat target", () => {
   ].join("\n"), context);
   context.updateLivingEnemies({ location: "Durotar Basin", enemies: [] });
   assert.equal(context.livingEnemies().length, 0);
+});
+
+test("successful corpse scavenging credits small coins once and reports the exact wallet change", () => {
+  const context = makeContext({ random: () => 0.5 });
+  context.campaign.scene = { location: "Durotar Basin" };
+  context.campaign.defeatedEnemies = ["Durotar Basin|trogg raider", "Durotar Basin|wild scorpide"];
+  context.s.flags = {};
+  context.fmtMoney = amount => Math.floor(amount / 100) + "s " + amount % 100 + "c";
+  vm.runInContext([
+    functionBlock("scavengeFallenEnemy", "result"),
+    "globalThis.scavengeFallenEnemy = scavengeFallenEnemy;",
+  ].join("\n"), context);
+  const action = { text: "Scavenge the fallen trogg raider", type: "investigate" };
+  assert.equal(context.scavengeFallenEnemy(action, false), null, "failed checks credit nothing");
+  assert.equal(context.scavengeFallenEnemy({ text: "Search the nearby herbs" }, true), null);
+  const found = context.scavengeFallenEnemy(action, true);
+  assert.match(found, /Loot: found 15 copper on trogg raider\. Wallet now 0s 15c\./);
+  assert.equal(context.s.money, 15);
+  assert.equal(context.s.flags.lootReceipts.length, 1);
+  assert.equal(context.scavengeFallenEnemy(action, true), "No unsearched fallen enemy here yielded coins.");
+  assert.equal(context.s.money, 15, "the same corpse cannot pay twice");
+});
+
+test("a rare successful scavenge can include one silver without exceeding a small payout", () => {
+  const context = makeContext({ random: () => 0 });
+  context.campaign.scene = { location: "Durotar Basin" };
+  context.campaign.defeatedEnemies = ["Durotar Basin|raider"];
+  context.s.flags = {};
+  context.fmtMoney = amount => amount + " copper total";
+  vm.runInContext([
+    functionBlock("scavengeFallenEnemy", "result"),
+    "globalThis.scavengeFallenEnemy = scavengeFallenEnemy;",
+  ].join("\n"), context);
+  assert.match(context.scavengeFallenEnemy({ text: "Loot the fallen raider" }, true), /1 silver and 6 copper/);
+  assert.equal(context.s.money, 106);
 });
