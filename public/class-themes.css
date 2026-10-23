@@ -1,0 +1,71 @@
+/* Active Druid: the same woodland skin across Adventure, Quest, Character,
+   Reputation, Settings and the character selector. Kept outside the base theme. */
+body.theme-alternative.soa-theme-druid{
+ --alt-ink:#eee8d6;--alt-muted:#b5c6ad;--soa-parchment-ink:#eee8d6;--soa-scroll-gold:#b6cb8d;--soa-rule:#64784e;
+ --wood-ink:#eee8d6;--wood-muted:#b5c6ad;--wood-gold:#e3d3a0;--wood-edge:#63764d;--wood-teal:#9cd7c9;
+ color:var(--wood-ink);background:#0b1410;
+ background-image:radial-gradient(ellipse at 12% 0%,#36533766,transparent 50%),radial-gradient(ellipse at 95% 80%,#103e3755,transparent 55%),repeating-linear-gradient(173deg,#b3ba7605 0 1px,transparent 1px 12px),linear-gradient(100deg,#0a100c,#19271c 48%,#0b1713);
+ background-attachment:fixed;
+}
+body.theme-alternative.soa-theme-druid header h1{color:var(--wood-gold);text-shadow:0 2px 4px #000,0 0 22px #74ac5e33}
+body.theme-alternative.soa-theme-druid header .eyebrow{color:#becfa9}
+body.theme-alternative.soa-theme-druid .panel,body.theme-alternative.soa-theme-druid .soa-menu-card{
+ position:relative;isolation:isolate;color:var(--wood-ink);background:radial-gradient(ellipse at 0 0,#26453155,transparent 65%),repeating-linear-gradient(176deg,#a5b07803 0 1px,transparent 1px 9px),linear-gradient(130deg,#142018,#0c1511 65%,#15251d);
+ border:5px solid #30291e;border-radius:8px;padding:26px 16px 20px;
+ box-shadow:inset 0 0 0 1px #778659,inset 0 0 0 4px #11160f,inset 0 0 24px #0007,0 0 0 1px #756447,0 8px 24px #0007;
+}
+body.theme-alternative.soa-theme-druid .panel::before,body.theme-alternative.soa-theme-druid .soa-menu-card::before{content:"";position:absolute;left:-8px;right:-8px;top:-13px;height:36px;background:url("./druid-vines.svg") center top / 420px 52px repeat-x;pointer-events:none;z-index:0}
+body.theme-alternative.soa-theme-druid .panel>*,body.theme-alternative.soa-theme-druid .soa-menu-card>*{position:relative;z-index:1}
+body.theme-alternative.soa-theme-druid #campaign-box{border-top:5px solid #30291e}
+body.theme-alternative.soa-theme-druid .panel :where(p,span,small,label,summary,li,strong,em,h4),
+body.theme-alternative.soa-theme-druid .soa-menu-card :where(p,span,small,label,summary,li,strong,em,h4){color:var(--wood-ink)}
+body.theme-alternative.soa-theme-druid :is(.panel h2,.panel h3,.soa-menu-card h1,.soa-section-title,#campaign-scene>h3,.soa-quest-entry h4,.soa-journal-list-heading){color:var(--wood-gold);text-shadow:0 1px 3px #000}
+body.theme-alternative.soa-theme-druid :is(#scene,#campaign-scene>p,#campaign-scene>div.muted,#campaign-status,#journal,#campaign-scene form label,#campaign-scene form p){color:var(--wood-ink)}
+body.theme-alternative.soa-theme-druid :is(.muted,.abilities,.soa-kicker,.soa-roster-kicker,.soa-scene-kicker,.soa-current-chapter,.soa-ability-caption,.soa-profession-help,.soa-profession-note,.soa-combat-basic-note,.soa-foe-stats,.soa-menu-help,.soa-allegiance-help){color:var(--wood-muted)}
+body.theme-alternative.soa-theme-druid .soa-scene-kicker::after{background:linear-gradient(90deg,#819b65,transparent)}
+body.theme-alternative.soa-theme-druid :is(.stat,.soa-relation-cell,.soa-companion-info,.soa-ability-sheet,.soa-ability-stat,.soa-class-abilities,.soa-specialization-card,.soa-progression-card,.soa-social-score,.soa-companion-level,.soa-quest-entry,.soa-chapter-proposal,.soa-faction-row,.soa-reputation-alerts,.soa-combat-move-panel,.soa-combat-optional,.soa-foe-target,.soa-ally,.soa-character-gear-item,.soa-ability-special,.soa-next-ability,.soa-active-portrait){
+ color:var(--wood-ink);background:linear-gradient(145deg,#233523,#121f18);border-color:#5b7149;box-shadow:inset 0 1px 0 #bdcea11c,0 1px 4px #0003;
+}
+body.theme-alternative.soa-theme-druid :is(.soa-ability-stat strong,.soa-profession-heading strong,.soa-class-ability strong,.soa-character-gear summary,.soa-character-gear-item strong,.stat .num,.stat strong){color:var(--wood-gold)}
+body.theme-alternative.soa-theme-druid :is(.soa-ability-stat em,.soa-class-ability span,.soa-profession-heading span,.soa-character-gear-item small,.soa-combat-move-heading span,.soa-combat-resource-heading,.soa-foe-resource-heading){color:var(--wood-muted)}
+body.theme-alternative.soa-theme-druid :is(.soa-journal,.soa-journal-entries p,.soa-skill-line,.soa-skill-list,.soa-xp-history,.soa-reputation-ledger,.soa-reputation-history,.soa-relation-action-group,.soa-character-gear,.soa-exchange-details,.soa-combat-optional){border-color:#536749}
+body.theme-alternative.soa-theme-druid :is(.soa-level-toast,.soa-social-result,.soa-pending,#campaign-scene>.soa-chapter-review){color:#eee5c9;background:linear-gradient(100deg,#2d402b,#1a2b22);border-color:#93ae6a;box-shadow:inset 3px 0 #9eb87a}
+body.theme-alternative.soa-theme-druid :is(.soa-chapter-banner){background:radial-gradient(ellipse at 50% 0,#355537,#101d16);border-color:#9bb178;box-shadow:0 5px 20px #0006}
+body.theme-alternative.soa-theme-druid :is(button,button.soa-person,.soa-social-action,.soa-journal-tabs button,.soa-specialization-choice,.soa-target-button,.soa-ability-button){
+ color:#f0e8d0;background:repeating-linear-gradient(173deg,#bda37506 0 1px,transparent 1px 6px),linear-gradient(#35422d,#1f2b20);border-color:#7b8b59;box-shadow:inset 0 1px 0 #b6c28f24,inset 0 0 0 2px #152014,0 2px 5px #0005;
+}
+body.theme-alternative.soa-theme-druid :is(button.low,.soa-ally-target-button){background:linear-gradient(100deg,#30492f,#1d2c22);border-left-color:#8abb79}
+body.theme-alternative.soa-theme-druid button.med{background:linear-gradient(100deg,#45422b,#242b1e);border-left-color:#dab66a}
+body.theme-alternative.soa-theme-druid :is(button.high,.soa-delete-character){background:linear-gradient(100deg,#4b342a,#2b211d);border-left-color:#d8947c}
+body.theme-alternative.soa-theme-druid :is(button[aria-pressed="true"],button[aria-current="page"],button.soa-person.selected){color:#fff1cc;background:linear-gradient(#46613a,#253e2e);border-color:#b9cc83;box-shadow:inset 0 0 0 1px #718e57,0 0 10px #7aa35b25}
+body.theme-alternative.soa-theme-druid :is(button:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible){outline:3px solid #9cd7c9;outline-offset:3px}
+body.theme-alternative.soa-theme-druid #campaign-scene button:disabled{opacity:1;color:#b2bca6;cursor:default}
+body.theme-alternative.soa-theme-druid :is(.ai-input,textarea,select,input[type="password"],input[type="text"],.soa-create-form input,.soa-create-form select,.soa-journal-edit textarea,.soa-add-quest input){color:#f0ead9;background:#0d1a14;border-color:#6f8455;box-shadow:inset 0 1px 5px #0006}
+body.theme-alternative.soa-theme-druid :is(textarea,.ai-input,input)::placeholder{color:#a4b69a}
+body.theme-alternative.soa-theme-druid :is(.soa-choice-resource,.soa-choice-resource-transaction,.soa-roll-preview){background:linear-gradient(110deg,#14251a,#172a23);border-color:#738c54;color:#f1e9d2;box-shadow:inset 0 0 0 1px #263d26,0 3px 10px #0003}
+body.theme-alternative.soa-theme-druid :is(.soa-choice-resource small,.soa-roll-hint,.soa-combat-special-button small,.soa-combat-current-target){color:#d0dec3}
+body.theme-alternative.soa-theme-druid .soa-choice-resource[data-resource="mana"] strong{color:#abdafa}
+body.theme-alternative.soa-theme-druid .soa-choice-resource[data-resource="energy"] strong{color:#f2d873}
+body.theme-alternative.soa-theme-druid .soa-choice-resource[data-resource="rage"] strong{color:#ffb1a2}
+body.theme-alternative.soa-theme-druid :is(.bar,.soa-relation-rail,.soa-xp-track,.soa-choice-resource-track,.soa-foe-track,.soa-combat-resource-rail){background:#08130d;border-color:#6a8051}
+/* Health and resource fill colors remain semantically distinct. */
+body.theme-alternative.soa-theme-druid #hpbar{background:linear-gradient(90deg,#2b913d,#81cc56)}
+body.theme-alternative.soa-theme-druid .soa-portrait-frame{border-color:#809c61;background:radial-gradient(ellipse at 50% 10%,#365539,#0c1c16);box-shadow:inset 0 0 0 1px #a4bd7777,0 0 12px #59946f25}
+body.theme-alternative.soa-theme-druid .soa-foe-target[aria-pressed="true"]{border-color:#b5cf81;box-shadow:inset 0 0 0 1px #597d4b,0 0 0 2px #a8c97833}
+body.theme-alternative.soa-theme-druid #soa-mobile-nav{background:linear-gradient(#273325f5,#101c16fa);border-color:#8b9f65;box-shadow:inset 0 2px 0 #62724b55,0 -7px 20px #0006}
+body.theme-alternative.soa-theme-druid #soa-mobile-nav button{color:#d8e1c6;background:transparent;box-shadow:none;border-color:transparent}
+body.theme-alternative.soa-theme-druid #soa-mobile-nav button[aria-current="page"]{color:#fff1c9;background:linear-gradient(#4e673d,#28402e);border-color:#bad28b;box-shadow:inset 0 0 0 1px #78995d,0 0 10px #7ea55d22}
+body.theme-alternative.soa-theme-druid :is(.soa-character-tabs button[aria-pressed="true"],.soa-reputation-view-tabs button[aria-pressed="true"],.soa-journal-tabs button[aria-pressed="true"]){background:linear-gradient(#4e673d,#28402e);border-color:#bad28b}
+body.theme-alternative.soa-theme-druid .soa-character-item{color:var(--wood-ink);background:#1e3022;border-color:#758c57}
+body.theme-alternative.soa-theme-druid .soa-menu-error{color:#ffc2af}
+body.theme-alternative.soa-theme-druid .soa-character-gear-enchant{color:#cfb8f0!important}
+body.theme-alternative.soa-theme-druid .soa-menu-card h1{text-shadow:0 1px 4px #000}
+@media(max-width:420px){body.theme-alternative.soa-theme-druid .panel{padding:25px 13px 18px}}
+@media(prefers-reduced-motion:reduce){body.theme-alternative.soa-theme-druid *{scroll-behavior:auto}}
+/* Nested ledgers and editors also need dark surfaces beneath their light text. */
+body.theme-alternative.soa-theme-druid :is(.soa-enemy-status,.soa-battle-status,.soa-foe,.soa-battle-enemy,.soa-exchange,.soa-battle-report,.soa-combat-roster,.soa-combat-person,.soa-combat-targets,.soa-companion-quote,.soa-custom-roll-preview,.soa-story-focus,.soa-journal-compose,.soa-journal-edit,.soa-personal-entry){background:linear-gradient(140deg,#243624,#121f18);border-color:#5b7149;color:var(--wood-ink);box-shadow:inset 0 1px 0 #bdcea11c}
+body.theme-alternative.soa-theme-druid #campaign-scene>form{background:linear-gradient(140deg,#1e3224,#101e17);border-color:#667f50;color:var(--wood-ink)}
+body.theme-alternative.soa-theme-druid :is(.soa-story-focus-form input,.soa-hp-setup input,.soa-journal-compose textarea){color:var(--wood-ink);background:#0d1a14;border-color:#6f8455}
+body.theme-alternative.soa-theme-druid #soa-characters-button{color:#f0e8d0;background:linear-gradient(#35482f,#1f3022);border-color:#819563}
+body.theme-alternative.soa-theme-druid .soa-druid-panel h4{color:var(--wood-gold)}
+body.theme-alternative.soa-theme-druid .soa-hp-unknown{background:repeating-linear-gradient(115deg,#394b39,#394b39 9px,#697958 9px,#697958 18px)}

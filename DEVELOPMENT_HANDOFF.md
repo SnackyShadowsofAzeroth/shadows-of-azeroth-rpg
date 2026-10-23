@@ -267,3 +267,22 @@ Added three region-bound, engine-authored missions with immutable reward terms a
 - 154 tests pass; real DOM action test confirms 20 -> 35 -> 50 -> 65 HP, correct
   Mana cost, disabled reasons, cooldown expiry and no extra heal on failed retry.
   Older obstacle-cast and shapeshifting DOM regressions also pass. Shell v101.
+
+## Automatic class UI skins: Druid woodland (2026-10-22)
+- `class-themes.js` introduces a presentation-only registry and applies the active
+  character's supported class skin on initialization, DOM ready and page restore.
+  Druid maps to `soa-theme-druid`; unsupported classes retain the existing base
+  skin. No save keys, gameplay values, portraits or access settings are changed.
+- `class-themes.css`, loaded after existing sheets, extends the Druid woodland
+  treatment across all five tabs, story decisions, combat ledgers, quest editors,
+  ability/profession/equipment cards, character selection, fields and navigation.
+- Reuses the leaf/bark SVG; keeps green HP and blue/yellow/red resource meanings,
+  difficulty tints, visible focus states and existing mobile hit targets.
+- Chrome theme color follows the character. Switching away removes the Druid
+  class and restores the base browser color. Character switching already reloads
+  the selected independent save, so no new preferences or data migration needed.
+- 158 tests pass. Full DOM navigation covers all five tabs, skin cleanup and
+  unchanged game saves. Combat shifting, Rejuvenation and obstacle-cast regression
+  checks still pass. New stylesheet/module included in shell cache v102.
+- Actual browser/iPhone visual rendering remains unverified; no claim of testing
+  a live Gemini session or the player's current saved campaign.
