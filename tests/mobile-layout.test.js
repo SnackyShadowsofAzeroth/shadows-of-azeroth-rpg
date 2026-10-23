@@ -167,6 +167,18 @@ test("tab selection displays only its screen and maps old saved tab names", () =
   assert.equal(state.scrollCalls, 2);
 });
 
+
+test("Living Campaign controls are in Settings while its active scene stays in Adventure", () => {
+  assert.match(campaign, /const el=document\.createElement\("section"\);el\.className="panel";el\.id="campaign-box";el\.style\.display="none"/);
+  assert.match(campaign, /const scene=document\.createElement\("div"\);scene\.id="campaign-scene";el\.append\(scene\)/);
+  assert.match(campaign, /const settings=get\("soa-save-settings"\);\s*if\(settings\)settings\.insertBefore\(disclosure,get\("export"\)\)/);
+  assert.match(campaign, /get\("campaign-mode"\)/);
+  assert.match(campaign, /get\("campaign-start"\)/);
+  assert.match(campaign, /get\("campaign-offline"\)/);
+  assert.match(campaign, /window\.soaLayout\?\.select\?\.\("adventure"\)/);
+  assert.match(campaign, /if\(campaignBox\)campaignBox\.style\.display=show\?"none":""/);
+});
+
 test("AI connection and narration controls belong to Settings", () => {
   const { layout, sections, connection } = startLayout();
   const director = sections.find(section => section.id === "soa-legacy-ai");
