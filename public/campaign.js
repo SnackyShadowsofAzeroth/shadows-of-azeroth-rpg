@@ -1044,7 +1044,9 @@ function result(action){
 }
 function interfaceUI(){
  if(get("campaign-box"))return;
- const el=document.createElement("section");el.className="panel";el.id="campaign-box";
+ const el=document.createElement("section");el.className="panel";el.id="campaign-box";el.style.display="none";
+ const scene=document.createElement("div");scene.id="campaign-scene";el.append(scene);
+ document.querySelector("header").after(el);
  const disclosure=document.createElement("details");disclosure.className="soa-panel-disclosure soa-campaign-disclosure";
  disclosure.open=localGet("soa-campaign-panel-open")==="1";
  disclosure.ontoggle=()=>{if(!localSet("soa-campaign-panel-open",disclosure.open?"1":"0"))window.soaReportStorageFailure?.("Campaign panel preference could not be saved; game progress is unchanged.")};
@@ -1055,14 +1057,15 @@ function interfaceUI(){
  const start=document.createElement("button");start.id="campaign-start";start.textContent="Start / Resume AI campaign";
  const offline=document.createElement("button");offline.id="campaign-offline";offline.className="sub";offline.textContent="Return to offline adventure";
  const campaignStatus=document.createElement("div");campaignStatus.id="campaign-status";campaignStatus.className="muted";campaignStatus.setAttribute("aria-live","polite");
- const scene=document.createElement("div");scene.id="campaign-scene";
- content.append(toggleLabel,start,offline,campaignStatus,scene);disclosure.append(summary,content);el.append(disclosure);
- document.querySelector("header").after(el);
- get("campaign-mode").onchange=e=>{if(e.target.checked){if(campaignLoadBlocked||campaignStorageReadFailed){e.target.checked=false;status("");return}if(!campaign)campaign=make();if(!store()){e.target.checked=false;enabled=false;return}enabled=true;if(!localSet("soa-campaign-enabled","1"))window.soaReportStorageFailure?.("Campaign mode preference could not be saved.");draw();if(navigator.onLine&&(!campaign.scene||pending()))advance(campaign.lastAction,campaign.lastResult,true)}else{enabled=false;if(!localSet("soa-campaign-enabled","0"))window.soaReportStorageFailure?.("Campaign mode preference could not be saved.");document.body.classList.remove("soa-living-mode");get("campaign-scene").replaceChildren();showOriginal(true)}};
- get("campaign-start").onclick=()=>{if(campaignLoadBlocked||campaignStorageReadFailed){status("");return}if(!campaign)campaign=make();if(!store())return;enabled=true;get("campaign-mode").checked=true;if(!localSet("soa-campaign-enabled","1"))window.soaReportStorageFailure?.("Campaign mode preference could not be saved.");draw();if(!accessCode()){focusAccess();return}if(pending()||!campaign.scene)advance(campaign.lastAction,campaign.lastResult,true);else{status("Saved scene ready. Choose your next action below.");refreshDisplay()}};
- get("campaign-offline").onclick=()=>{enabled=false;document.body.classList.remove("soa-living-mode");get("campaign-mode").checked=false;if(!localSet("soa-campaign-enabled","0"))window.soaReportStorageFailure?.("Campaign mode preference could not be saved.");showOriginal(true);get("campaign-status").textContent="Offline scripted adventure enabled."};
+ content.append(toggleLabel,start,offline,campaignStatus);disclosure.append(summary,content);
+ const settings=get("soa-save-settings");
+ if(settings)settings.insertBefore(disclosure,get("export"));
+ else document.querySelector("main")?.append(disclosure);
+ get("campaign-mode").onchange=e=>{if(e.target.checked){if(campaignLoadBlocked||campaignStorageReadFailed){e.target.checked=false;status("");return}if(!campaign)campaign=make();if(!store()){e.target.checked=false;enabled=false;return}enabled=true;if(!localSet("soa-campaign-enabled","1"))window.soaReportStorageFailure?.("Campaign mode preference could not be saved.");draw();if(navigator.onLine&&(!campaign.scene||pending())){window.soaLayout?.select?.("adventure");advance(campaign.lastAction,campaign.lastResult,true)}}else{enabled=false;if(!localSet("soa-campaign-enabled","0"))window.soaReportStorageFailure?.("Campaign mode preference could not be saved.");document.body.classList.remove("soa-living-mode");get("campaign-scene").replaceChildren();showOriginal(true)}};
+ get("campaign-start").onclick=()=>{if(campaignLoadBlocked||campaignStorageReadFailed){status("");return}if(!campaign)campaign=make();if(!store())return;enabled=true;get("campaign-mode").checked=true;if(!localSet("soa-campaign-enabled","1"))window.soaReportStorageFailure?.("Campaign mode preference could not be saved.");draw();if(!accessCode()){focusAccess();return}window.soaLayout?.select?.("adventure");if(pending()||!campaign.scene)advance(campaign.lastAction,campaign.lastResult,true);else{status("Saved scene ready. Choose your next action below.");refreshDisplay()}};
+ get("campaign-offline").onclick=()=>{enabled=false;document.body.classList.remove("soa-living-mode");get("campaign-mode").checked=false;if(!localSet("soa-campaign-enabled","0"))window.soaReportStorageFailure?.("Campaign mode preference could not be saved.");showOriginal(true);get("campaign-status").textContent="Offline scripted adventure enabled.";window.soaLayout?.select?.("adventure")};
 }
-function showOriginal(show){if(window.soaCharacters?.isNewCharacter?.())show=false;for(const el of document.querySelectorAll("main > section.panel")){if(el.id==="campaign-box")continue;const isStory=!!el.querySelector("#choices");if(isStory)el.style.display=show?"":"none"}}
+function showOriginal(show){const campaignBox=get("campaign-box");if(campaignBox)campaignBox.style.display=show?"none":"";if(window.soaCharacters?.isNewCharacter?.())show=false;for(const el of document.querySelectorAll("main > section.panel")){if(el.id==="campaign-box")continue;const isStory=!!el.querySelector("#choices");if(isStory)el.style.display=show?"":"none"}}
 function reconcileAuthorizedMissionReward(){
  if(!campaign||window.soaCharacters?.profile?.()?.id!=="snacky")return;
  const q=window.soaQuests?.ensure?.(campaign);
