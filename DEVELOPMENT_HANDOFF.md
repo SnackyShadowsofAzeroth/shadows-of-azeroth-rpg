@@ -250,3 +250,20 @@ Added three region-bound, engine-authored missions with immutable reward terms a
 - 149 tests, syntax check, DOM interactions and both-theme text contrast checks
   pass. New asset included in service-worker shell v100. Real-iPhone visual QA
   remains unverified.
+
+## Rejuvenation periodic healing (2026-10-22)
+- Rejuvenation now costs exactly 35 Mana and restores exactly 15 HP at the end of
+  its casting turn plus the next two resolved turns (45 total before overheal).
+  Cooldown blocks the following three resolved turns. No random heal, Wisdom
+  bonus or Tree cost/heal adjustment is applied to this explicitly fixed spell.
+- Saved remaining ticks use the existing action clock, survive form changes,
+  reload and encounter boundaries, and are consumed even when health is capped.
+  Same-turn redraws and pending story retries cannot produce duplicate ticks.
+- Primary combat resolution and fallback racial/support/exploration actions all
+  advance the buff once. Combat healing updates authoritative exchange/log HP;
+  server context includes remaining duration and narration respects the receipt.
+- Full health still blocks a fresh cast. Active duration, cooldown rounds, full
+  health and insufficient resource reasons are now visible on healing buttons.
+- 154 tests pass; real DOM action test confirms 20 -> 35 -> 50 -> 65 HP, correct
+  Mana cost, disabled reasons, cooldown expiry and no extra heal on failed retry.
+  Older obstacle-cast and shapeshifting DOM regressions also pass. Shell v101.

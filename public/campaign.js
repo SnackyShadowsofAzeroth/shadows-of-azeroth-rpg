@@ -198,7 +198,7 @@ function d20SuccessChance(bonus,dc,advantage=0,criticalOn=20){
 }
 function chanceLabel(value){const rounded=Math.round(value*10)/10;return (Number.isInteger(rounded)?String(rounded):rounded.toFixed(1))+"%"}
 function dicePreview(action){
- if(window.soaDruid?.current?.()){const shift=window.soaDruid.shiftFrom(action);if(shift!==null)return {primary:"Shapeshift · one full turn",secondary:"20 Mana to enter a form; return to humanoid costs no Mana. No attack included."};const a=window.soaClassAbilities.available("Druid",window.soaProgression?.level?.()||1).find(x=>x.id===resolvedCombatAbility(action));if(a&&!livingEnemies().length&&["damage","interrupt"].includes(a.effect)){const target=window.soaDruid.environmentalTarget(action,campaign);return {primary:target?a.name+" · d20 + proficiency + "+a.stat+" vs obstacle DC "+window.soaDruid.obstacleDC(action):a.name+" · Requires a hostile target or visible obstacle",secondary:a.description+" · "+a.cost+" "+resourceName()};}if(a)return {primary:a.name+" · "+(a.effect==="heal"?"Healing roll":a.effect==="guard"?"Defensive action":"d20 + proficiency + "+a.stat+" vs target AC"),secondary:a.description+" · "+a.cost+" "+resourceName()};}
+ if(window.soaDruid?.current?.()){const shift=window.soaDruid.shiftFrom(action);if(shift!==null)return {primary:"Shapeshift · one full turn",secondary:"20 Mana to enter a form; return to humanoid costs no Mana. No attack included."};const a=window.soaClassAbilities.available("Druid",window.soaProgression?.level?.()||1).find(x=>x.id===resolvedCombatAbility(action));if(a&&!livingEnemies().length&&["damage","interrupt"].includes(a.effect)){const target=window.soaDruid.environmentalTarget(action,campaign);return {primary:target?a.name+" · d20 + proficiency + "+a.stat+" vs obstacle DC "+window.soaDruid.obstacleDC(action):a.name+" · Requires a hostile target or visible obstacle",secondary:a.description+" · "+a.cost+" "+resourceName()};}if(a)return {primary:a.name+" · "+(a.periodicHeal?"15 HP per round · 3 rounds":a.effect==="heal"?"Healing roll":a.effect==="guard"?"Defensive action":"d20 + proficiency + "+a.stat+" vs target AC"),secondary:a.description+" · "+a.cost+" "+resourceName()};}
  // Combat takes priority over social keyword detection, matching the resolver.
  const storyAbility=resolvedStoryVanish(action);
  if((action.type==="combat"||storyAbility)&&livingEnemies().length){
@@ -886,7 +886,7 @@ function drawCombatActions(box){
    const note=document.createElement("small");
    const mechanics=isKillingSpree?"Two weapon strikes · crits on 19–20":isGuaranteedVanish?"Guaranteed evade · 100% success":isEvasion?"50% dodge chance · lasts 2 rounds":"";
    const state=cooldown?"Cooldown · "+cooldown+" exchange"+(cooldown===1?"":"s"):ability.cooldown?"Ready · "+cost+" "+resourceName()+" · "+ability.cooldown+" exchange cooldown":cost+" "+resourceName()+" · Ready";
-   note.textContent=state+(mechanics?" · "+mechanics:"");button.append(note);grid.append(button);
+   const unavailableReason=hero?.className==="Druid"?window.soaDruid?.errorFor?.(ability,s,campaign,true,selected):null;note.textContent=unavailableReason||state+(ability.periodicHeal?" · 15 HP per round for 3 rounds":"")+(mechanics?" · "+mechanics:"");button.append(note);grid.append(button);
   }
   for(const ability of racial){
    const left=racialCooldownLeft(ability),button=document.createElement("button");button.type="button";button.className="soa-ability-button soa-combat-special-button soa-racial-combat-button";
@@ -946,7 +946,7 @@ function druidResult(action){
    campaign.druidResolvedTime=s.time;return outcome.message;
   }
   if(ability.prowl){if(d.prowl)return fail("Prowl is already active");d.prowl=true;}
-  else {const actor=window.soaAbilities.get("hero"),amount=window.soaCombatRules.damage(ability.die,ability.flat+(actor.modifiers[ability.stat]||0)+druid.modifiers(s).heal);const before=s.hp;s.hp=Math.min(heroHealthCap(),s.hp+amount);campaign.druidResolvedTime=s.time+1;druid.recover(s,{cost:ability.cost,combat:false});s.time++;if(ability.hot){d.effects||={};d.effects.regrowth={until:(campaign.combatRound||0)+3};}d.cooldowns||={};d.cooldowns[ability.id]=s.time+ability.cooldown;return "Success: "+ability.name+" restores "+(s.hp-before)+" HP. "+resourceName()+" now "+s.en+"/100. One turn resolved.";}
+  else {const outcome=druid.healOutsideCombat(s,campaign,profile,ability,window.soaCombatRules,window.soaAbilities.get("hero"));if(outcome.error)return fail(outcome.error);campaign.druidResolvedTime=s.time;return outcome.message;}
   druid.recover(s,{cost:ability.cost,combat:false});s.time++;campaign.druidResolvedTime=s.time;return "Success: Prowl active. Your next cat opener gains advantage. One turn resolved.";
  }
  if(!combat||(!ability&&shiftId===null&&action.type!=="combat"))return undefined;
@@ -1164,9 +1164,14 @@ async function choose(choice){
  const storyAbility=resolvedStoryVanish(choice),resolvingChoice=storyAbility?{...choice,type:"combat",ability:storyAbility}:choice;
  const combatRoundBefore=Number(campaign.combatRound)||0;
  const druidBefore=window.soaDruid?.current?.()?{s:structuredClone(s),c:structuredClone(campaign),energy:s.en,cost:resourceForecast(resolvingChoice).cost}:null;
- const resolution=result(resolvingChoice);
+ let resolution=result(resolvingChoice);
  if(resolution&&druidBefore&&campaign.druidResolvedTime!==s.time){s.en=druidBefore.energy;window.soaDruid.recover(s,{cost:druidBefore.cost,hit:(Number(campaign.combatRound)||0)>combatRoundBefore&&campaign.lastExchange?.hit===true,taken:(Number(campaign.combatRound)||0)>combatRoundBefore?campaign.lastExchange?.taken||0:0,combat:livingEnemies().length>0});}
  
+ if(resolution&&druidBefore){const tick=window.soaDruid.tickRejuvenation(s);if(tick){resolution+=" "+tick.message;
+  if((Number(campaign.combatRound)||0)>combatRoundBefore&&campaign.lastExchange){const exchange=campaign.lastExchange;exchange.healed=(exchange.healed||0)+tick.amount;exchange.heroAfter=s.hp;if(exchange.recipient===window.soaCharacters.profile().name)exchange.recipientAfter=s.hp;
+   const row=campaign.combatLog?.at(-1);if(row)row.events.push({name:window.soaCharacters.profile().name,side:"ally",delta:tick.amount,after:s.hp,maxHp:heroHealthCap()});
+  }
+ }}
  if(!resolution){if(!druidBefore&&!socialSkill(resolvingChoice)&&resolvingChoice.type!=="combat")status("Not enough "+resourceName()+" for that action.");return}
  if(druidBefore&&window.soaDruid.current()?.effects?.dashActions>0)window.soaDruid.current().effects.dashActions--;
  const combatRoundAfter=Number(campaign.combatRound)||0;

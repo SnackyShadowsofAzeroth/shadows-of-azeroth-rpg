@@ -49,7 +49,7 @@ const kits={
  ],
  Druid:[
   ["wrath","Wrath",1,30,"damage","WIS",8,5,"nature","Call down a swift blast of nature magic.",0],
-  ["rejuvenation","Rejuvenation",1,35,"heal","WIS",8,5,"nature","Restore health with living nature magic.",2],
+  ["rejuvenation","Rejuvenation",1,35,"heal","WIS",0,0,"nature","Restore 15 HP per round for 3 rounds (45 HP total). First tick at the end of the casting turn.",3,{periodicHeal:{amount:15,rounds:3}}],
   ["moonfire","Moonfire",5,30,"damage","WIS",10,5,"arcane","Strike with a beam of lunar energy.",0],
   ["entangling_roots","Entangling Roots",10,35,"interrupt","WIS",8,4,"nature","Roots hinder and can interrupt your foe.",2]
  ],

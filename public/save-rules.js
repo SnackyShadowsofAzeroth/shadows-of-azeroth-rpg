@@ -53,6 +53,7 @@ function validateOfflineSave(value){
   if(!object(d)||d.version!==1||!forms.includes(d.form)||!object(d.pools)||["mana","energy","rage"].some(k=>!Number.isInteger(d.pools[k])||!finite(d.pools[k],0,100))||!object(d.combo)||!Number.isInteger(d.combo.points)||!finite(d.combo.points,0,5)||(d.combo.target!==null&&typeof d.combo.target!=="string")||typeof d.prowl!=="boolean")fail("Druid form or resource data is invalid.");
   if(d.cooldowns!==undefined&&(!object(d.cooldowns)||Object.values(d.cooldowns).some(n=>!Number.isSafeInteger(n)||n<0)))fail("Druid cooldown data is invalid.");
   if(d.effects!==undefined&&!object(d.effects))fail("Druid effect data is invalid.");
+  if(d.effects?.rejuvenation!==undefined){const hot=d.effects.rejuvenation;if(!object(hot)||!Number.isInteger(hot.remaining)||hot.remaining<1||hot.remaining>3||!Number.isSafeInteger(hot.nextTime)||hot.nextTime<0)fail("Rejuvenation healing data is invalid.");}
   if(d.dots!==undefined&&(!Array.isArray(d.dots)||d.dots.length>20||d.dots.some(x=>!object(x)||typeof x.id!=="string"||typeof x.target!=="string"||!finite(x.amount,0,50)||!Number.isInteger(x.start)||!Number.isInteger(x.until)||x.start<0||x.until<x.start)))fail("Druid bleed data is invalid.");
  }
  return result;

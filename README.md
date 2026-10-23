@@ -514,11 +514,15 @@ finishers consume points. Shred/Ravage/Pounce require prior Prowl; Prowl can onl
 start outside combat. Bleeds tick on three subsequent resolved exchanges, never
 on render/retry. Regrowth (12) adds immediate healing and three future healing ticks.
 The existing core spells and signature skills remain; Mangle requires a combat
-animal form, Starfire is caster/Moonkin, and Swiftmend is caster/Tree. Rejuvenation
-retains its existing immediate heal implementation in this release.
+animal form, Starfire is caster/Moonkin, and Swiftmend is caster/Tree. Rejuvenation costs 35 Mana and heals 15 HP at the end of its casting turn and
+each of the next two turns (45 total), with a three-round cooldown. It uses no
+healing roll or stat bonus. Exploration actions also advance its ticks. Rendering,
+loading and story retries never heal again. Ticks persist across forms and
+encounter transitions, stop at maximum HP, and cannot stack. Disabled heal buttons
+show their reason: full health, active healing, remaining cooldown or insufficient Mana.
 
 Bear/Dire Bear grant +3/+5 AC; Cat grants +1 AC; Moonkin grants +3 AC and +3 spell
-damage. Tree grants +1 AC, +3 healing, and a 5-Mana healing discount. Bear strength
+damage. Tree grants +1 AC, +3 healing, and a 5-Mana healing discount for other healing spells; Rejuvenation retains its fixed 35-Mana cost and 15-HP ticks. Bear strength
 and Cat dexterity use at least the Druid's Wisdom score while transformed.
 Aquatic/Travel/Flight cannot attack or cast. Aquatic needs a water location;
 Travel/Flight need confirmed outdoor terrain; Flight cannot start in combat.

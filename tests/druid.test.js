@@ -39,7 +39,7 @@ test("Cat, Bear, Moonkin, Tree and utility forms enforce their actual spellbooks
  x.d.shift(x.s,x.c,x.profile,60,"bear");let ids=x.learned().map(a=>a.id);assert.ok(ids.includes("maul"));assert.ok(ids.includes("spec_druid_feral"));assert.ok(!ids.includes("wrath"));assert.ok(!ids.includes("rejuvenation"));
  x.d.shift(x.s,x.c,x.profile,60,"cat");ids=x.learned().map(a=>a.id);assert.ok(ids.includes("claw"));assert.ok(!ids.includes("maul"));
  x.s.druid.pools.mana=100;x.profile.specialization="Balance";x.d.shift(x.s,x.c,x.profile,60,"moonkin");ids=x.learned().map(a=>a.id);assert.ok(ids.includes("wrath"));assert.ok(ids.includes("spec_druid_balance"));assert.ok(!ids.includes("rejuvenation"));
- x.profile.specialization="Restoration";x.d.shift(x.s,x.c,x.profile,60,"tree");assert.ok(x.learned().every(a=>a.effect==="heal"));assert.equal(x.learned().find(a=>a.id==="rejuvenation").cost,30);
+ x.profile.specialization="Restoration";x.d.shift(x.s,x.c,x.profile,60,"tree");assert.ok(x.learned().every(a=>a.effect==="heal"));assert.equal(x.learned().find(a=>a.id==="rejuvenation").cost,35);
  x.d.shift(x.s,x.c,x.profile,60,"travel");assert.equal(x.learned().length,0);x.foe();assert.match(x.cast("claw").error,/Return to humanoid/);
 });
 test("form abilities appear only at the specified level and require that form",()=>{
@@ -65,8 +65,8 @@ test("bleeds tick once per future exchange and cannot tick while viewing or retr
  assert.equal(target.hp,after-9);assert.equal(x.s.druid.dots.length,0);
 });
 test("Prowl openers, timed buffs and real cooldowns are enforced",()=>{
- const x=setup();x.unlock("cat");x.d.shift(x.s,x.c,x.profile,60,"cat");x.foe();assert.match(x.cast("pounce").error,/requires Prowl/);x.s.druid.prowl=true;assert.ok(!x.cast("pounce").error);assert.equal(x.s.druid.prowl,false);x.s.en=100;assert.match(x.cast("pounce").error,/requires Prowl|cooling/);
- x.s.druid.prowl=true;assert.match(x.cast("pounce").error,/cooling/);
+ const x=setup();x.unlock("cat");x.d.shift(x.s,x.c,x.profile,60,"cat");x.foe();assert.match(x.cast("pounce").error,/requires Prowl/);x.s.druid.prowl=true;assert.ok(!x.cast("pounce").error);assert.equal(x.s.druid.prowl,false);x.s.en=100;assert.match(x.cast("pounce").error,/requires Prowl|cooldown/);
+ x.s.druid.prowl=true;assert.match(x.cast("pounce").error,/cooldown/);
 });
 test("utility form environment checks and Flight combat prohibition have no side effects",()=>{
  const x=setup();for(const id of ["aquatic","travel","flight"])x.unlock(id);
@@ -142,4 +142,43 @@ test("environmental casting cannot invent scenery or defeat an untracked enemy",
  const x=setup(1),wrath=x.learned().find(a=>a.id==="wrath");x.c.scene.story="A wolf prowls the path.";
  const before=JSON.stringify(x.s);assert.ok(x.d.castAtEnvironment(x.s,x.c,x.profile,1,{text:"Cast Wrath on the wolf"},wrath,x.rules,x.actor).error);assert.ok(x.d.castAtEnvironment(x.s,x.c,x.profile,1,{text:"Cast Wrath on a root knot"},wrath,x.rules,x.actor).error);assert.equal(JSON.stringify(x.s),before);
  x.c.scene.story="A root knot blocks the path.";x.foe();assert.match(x.d.castAtEnvironment(x.s,x.c,x.profile,1,{text:"Cast Wrath on the root knot"},wrath,x.rules,x.actor).error,/combat target/);
+});
+
+test("Rejuvenation costs 35 Mana and heals exactly 15 per round for three rounds",()=>{
+ const x=setup(1);x.s.hp=20;const a=x.learned().find(a=>a.id==="rejuvenation");
+ assert.equal(a.cost,35);assert.equal(a.cooldown,3);assert.equal(a.periodicHeal.amount,15);assert.equal(a.periodicHeal.rounds,3);
+ const outcome=x.d.healOutsideCombat(x.s,x.c,x.profile,a,x.rules,x.actor);
+ assert.ok(!outcome.error);assert.equal(x.s.hp,35);assert.equal(x.s.en,90);assert.equal(x.s.time,1);assert.equal(x.s.druid.effects.rejuvenation.remaining,2);
+ assert.equal(x.d.tickRejuvenation(x.s),null,"rendering/retrying at the same action time cannot heal twice");
+ x.s.time++;assert.equal(x.d.tickRejuvenation(x.s).amount,15);assert.equal(x.s.hp,50);
+ x.s.time++;assert.equal(x.d.tickRejuvenation(x.s).amount,15);assert.equal(x.s.hp,65);assert.equal(x.s.druid.effects.rejuvenation,undefined);
+ x.s.time++;assert.equal(x.d.tickRejuvenation(x.s),null);assert.equal(x.s.hp,65);
+});
+test("Rejuvenation ticks after enemy damage and blocks exactly three following turns",()=>{
+ const x=setup(1);x.s.hp=20;x.foe();let out=x.cast("rejuvenation");assert.equal(out.event.healed,15);assert.equal(x.s.hp,29);assert.equal(x.s.druid.cooldowns.rejuvenation,4);
+ const guard={id:"wait",name:"Wait",effect:"guard",cost:0,stat:"WIS",die:0,flat:0};
+ for(let i=0;i<3;i++){
+  assert.ok(x.d.errorFor(x.learned().find(a=>a.id==="rejuvenation"),x.s,x.c,true));
+  out=x.d.exchange(x.s,x.c,x.profile,1,{},guard,x.c.enemies[0],x.rules,x.actor);
+  assert.equal(out.event.healed,i<2?15:0);
+ }
+ assert.equal(x.s.time,4);assert.equal(x.d.errorFor(x.learned().find(a=>a.id==="rejuvenation"),x.s,x.c,true),null);
+});
+test("Rejuvenation survives encounter boundaries, shapeshifting and save reload",()=>{
+ const x=setup();x.s.hp=20;const a=x.learned().find(a=>a.id==="rejuvenation");x.d.healOutsideCombat(x.s,x.c,x.profile,a,x.rules,x.actor);
+ const loaded=x.context.window.soaSaveRules.validateOfflineSave(x.s);assert.equal(loaded.druid.effects.rejuvenation.remaining,2);assert.equal(x.d.tickRejuvenation(loaded),null);
+ x.d.resetEncounter(x.s);assert.equal(x.s.druid.effects.rejuvenation.remaining,2);x.unlock("cat");x.foe();const out=x.d.exchange(x.s,x.c,x.profile,60,{form:"cat"},null,x.c.enemies[0],x.rules,x.actor);assert.equal(out.event.healed,15);assert.equal(x.s.druid.effects.rejuvenation.remaining,1);assert.equal(x.s.druid.form,"cat");
+});
+test("Rejuvenation does not stack, bank overhealing or gain Tree bonuses",()=>{
+ const x=setup();x.profile.specialization="Restoration";x.unlock("tree");x.d.shift(x.s,x.c,x.profile,60,"tree");x.s.hp=90;const a=x.learned().find(a=>a.id==="rejuvenation");assert.equal(a.cost,35);
+ x.d.healOutsideCombat(x.s,x.c,x.profile,a,x.rules,x.actor);assert.equal(x.s.hp,100);assert.match(x.d.errorFor(a,x.s,x.c,false),/active/);
+ x.s.time++;assert.equal(x.d.tickRejuvenation(x.s).amount,0);x.s.hp=70;x.s.time++;assert.equal(x.d.tickRejuvenation(x.s).amount,15);assert.equal(x.s.hp,85);
+ x.s.time++;x.d.tickRejuvenation(x.s);assert.equal(x.s.hp,85);
+});
+test("healing availability exposes health, duration, cooldown and Mana reasons",()=>{
+ const x=setup(1),a=x.learned().find(a=>a.id==="rejuvenation");x.s.hp=100;assert.match(x.d.errorFor(a,x.s,x.c,false),/Health is already full/);
+ x.s.hp=30;x.s.en=20;assert.match(x.d.errorFor(a,x.s,x.c,false),/Not enough mana/);
+ x.s.en=100;x.d.healOutsideCombat(x.s,x.c,x.profile,a,x.rules,x.actor);assert.match(x.d.errorFor(a,x.s,x.c,false),/2 healing rounds remaining/);
+ x.s.time+=2;x.d.tickRejuvenation(x.s);x.s.time++;x.d.tickRejuvenation(x.s);x.s.druid.cooldowns.rejuvenation=x.s.time+2;assert.match(x.d.errorFor(a,x.s,x.c,false),/2 rounds remaining/);
+ const bad=structuredClone(x.s);bad.druid.effects.rejuvenation={remaining:99,nextTime:1};assert.throws(()=>x.context.window.soaSaveRules.validateOfflineSave(bad));
 });

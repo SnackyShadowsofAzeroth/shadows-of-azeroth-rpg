@@ -86,7 +86,7 @@ function abilities(base,signature,level,s,c,profile){
  const spellForms=["caster","moonkin","tree"];
  const caster=spellForms.includes(f)?base.filter(a=>a.level<=level).filter(a=>f!=="tree"||a.effect==="heal").filter(a=>f!=="moonkin"||a.effect!=="heal"):[];
  const sig=signature&&((signature.id==="spec_druid_feral"&&BEARS.concat("cat").includes(f))||(signature.id==="spec_druid_balance"&&["caster","moonkin"].includes(f))||(signature.id==="spec_druid_restoration"&&["caster","tree"].includes(f)))?[signature]:[];
- return [...caster,...KIT.filter(a=>a.level<=level&&a.forms.includes(f)),...sig].map(a=>({...a,stat:a.id==="spec_druid_feral"&&BEARS.includes(f)?"STR":a.stat,cost:f==="tree"&&a.effect==="heal"?Math.max(0,a.cost-5):a.cost}));
+ return [...caster,...KIT.filter(a=>a.level<=level&&a.forms.includes(f)),...sig].map(a=>({...a,stat:a.id==="spec_druid_feral"&&BEARS.includes(f)?"STR":a.stat,cost:f==="tree"&&a.effect==="heal"&&a.id!=="rejuvenation"?Math.max(0,a.cost-5):a.cost}));
 }
 function available(base,signature,level){const p=hero();return binding&&p?.className==="Druid"?abilities(base,signature,level,binding.state(),binding.campaign()||{},p):base.filter(a=>a.level<=level)}
 function all(){return KIT.map(x=>({...x}))}
@@ -103,10 +103,32 @@ function errorFor(ability,s,c,combat=true,target){
  if(ability.outOfCombat&&combat)return ability.name+" is only available outside combat.";
  if(ability.opener&&!d.prowl)return ability.name+" requires Prowl. Enter Prowl before engaging.";
  if(ability.finisher&&(d.combo.points<1||d.combo.target!==target?.name))return "Build combo points on this target first.";
+ if(ability.id==="rejuvenation"&&d.effects?.rejuvenation)return "Rejuvenation active · "+d.effects.rejuvenation.remaining+" healing round"+(d.effects.rejuvenation.remaining===1?"":"s")+" remaining.";
+ const cooldown=Math.max(0,(d.cooldowns?.[ability.id]||0)-(Number(s.time)||0));
+ if(cooldown)return ability.name+" cooldown · "+cooldown+" round"+(cooldown===1?"":"s")+" remaining.";
  if(ability.effect==="heal"&&s.hp>=100+(window.soaRacialAbilities?.passives?.(hero()?.race)?.maxHp||0))return "Health is already full.";
- if((d.cooldowns?.[ability.id]||0)>(Number(s.time)||0))return ability.name+" is cooling down.";
  if(s.en<ability.cost)return "Not enough "+FORMS[d.form].resource+" for "+ability.name+".";
  return null;
+}
+function startRejuvenation(s){const d=state(s);d.effects||={};d.effects.rejuvenation={remaining:3,nextTime:(Number(s.time)||0)+1};}
+function tickRejuvenation(s,profile=hero()){
+ const d=state(s),hot=d.effects?.rejuvenation;
+ if(!hot||s.time<hot.nextTime)return null;
+ const before=s.hp,max=100+(window.soaRacialAbilities?.passives?.(profile?.race)?.maxHp||0);
+ s.hp=Math.min(max,s.hp+15);hot.remaining--;hot.nextTime=s.time+1;
+ const remaining=hot.remaining;if(!remaining)delete d.effects.rejuvenation;
+ return {amount:s.hp-before,remaining,message:"Rejuvenation restores "+(s.hp-before)+" HP · "+remaining+" healing round"+(remaining===1?"":"s")+" remaining."};
+}
+function healOutsideCombat(s,c,profile,ability,rules,actor){
+ const error=errorFor(ability,s,c,false);if(error)return {error};
+ const before=s.hp,d=state(s),max=100+(window.soaRacialAbilities?.passives?.(profile.race)?.maxHp||0);
+ if(ability.periodicHeal)startRejuvenation(s);
+ else s.hp=Math.min(max,s.hp+rules.damage(ability.die,ability.flat+(actor?.modifiers?.[ability.stat]||0)+modifiers(s).heal));
+ recover(s,{cost:ability.cost,combat:false});s.time++;
+ const hot=tickRejuvenation(s,profile);
+ if(ability.hot){d.effects||={};d.effects.regrowth={until:(c.combatRound||0)+3};}
+ if(ability.cooldown){d.cooldowns||={};d.cooldowns[ability.id]=s.time+ability.cooldown;}
+ return {message:"Success: "+ability.name+(ability.periodicHeal?" applied for three rounds; "+hot.message:" restores "+(s.hp-before)+" HP.")+" "+FORMS[d.form].resource+" now "+s.en+"/100; "+ability.cost+" spent. One turn resolved."};
 }
 function recover(s,{cost=0,hit=false,taken=0,shifted=false,combat=true}={}){
  const d=state(s),key=FORMS[d.form].resource;
@@ -160,7 +182,8 @@ function exchange(s,c,profile,level,action,ability,target,rules,actor){
  if(!shifting){
   guard=ability.effect==="guard";
   if(ability.effect==="heal"){
-   const amount=rules.damage(ability.die,ability.flat+stat+mods.heal),old=s.hp;s.hp=Math.min(maxHP,s.hp+amount);healed=s.hp-old;
+   if(ability.periodicHeal)startRejuvenation(s);
+   else {const amount=rules.damage(ability.die,ability.flat+stat+mods.heal),old=s.hp;s.hp=Math.min(maxHP,s.hp+amount);healed=s.hp-old;}
    if(ability.hot)d.effects.regrowth={until:round+3};
   }else if(["damage","interrupt"].includes(ability.effect)){
    const victims=ability.aoe?targets.slice(0,3):[target];
@@ -198,6 +221,7 @@ function exchange(s,c,profile,level,action,ability,target,rules,actor){
  else {d.pools[FORMS[d.form].resource]=s.en;}
  const regen=window.soaRacialAbilities?.passives?.(profile.race)?.regeneration||0;const preRegen=s.hp;s.hp=Math.min(maxHP,s.hp+regen);healed+=s.hp-preRegen;
  c.combatRound=round;s.time++;
+ const rejuvenationTick=tickRejuvenation(s,profile);if(rejuvenationTick){healed+=rejuvenationTick.amount;notes.push(rejuvenationTick.message);}
  if(!shifting&&ability.cooldown){d.cooldowns||={};d.cooldowns[ability.id]=s.time+ability.cooldown;}
  const rows=snap.map(row=>({...row,dealt:row.before-row.enemy.hp}));
  if(!targets.some(e=>e.name===d.combo.target&&e.hp>0))d.combo={target:null,points:0};
@@ -237,8 +261,8 @@ function questAction(s,c,profile,level,id,operation,rules){
  return {message:(ok?"Success: ":"Complication: ")+objective.text+" · d20 "+die+" + "+bonus+" vs DC 11. "+(ok?"Objective verified. "+(record.step===q.steps.length?"Return to your mentor to learn the form.":"Next: "+q.steps[record.step].text):"Objective incomplete; you may try again on a later turn.")};
 }
 function onDefeat(c,enemy){for(const [id,r] of Object.entries(quests(c))){const o=QUESTS[id]?.steps[r.step];if(r.state==="active"&&r.fighting===enemy&&o?.target===enemy){r.proof.push({step:r.step,target:enemy,location:c.enemyLocation});r.step++;delete r.fighting;}}}
-function resetEncounter(s){const d=state(s);d.combo={target:null,points:0};d.dots=[];const hot=d.effects?.regrowth;d.effects=hot?{regrowth:{until:3}}:{};d.pools.rage=0;if(FORMS[d.form].resource==="rage")s.en=0;}
-function context(){const d=current();if(!d||!binding)return null;const c=binding.campaign()||{},p=hero(),level=window.soaProgression?.level?.()||1;return {form:d.form,appearance:name(d.form,p),pools:{...d.pools},combo:{...d.combo},prowl:d.prowl,unlocked:Object.keys(FORMS).filter(id=>unlocked(c,id,p,level)),learned:window.soaClassAbilities?.available?.("Druid",level).map(a=>({name:a.name,cost:a.cost,effect:a.effect})),quests:Object.entries(quests(c)).map(([id,r])=>({id,title:QUESTS[id]?.title,state:r.state,next:QUESTS[id]?.steps[r.step]?.text||"Return to mentor"}))}}
+function resetEncounter(s){const d=state(s);d.combo={target:null,points:0};d.dots=[];const hot=d.effects?.regrowth;const rejuvenation=d.effects?.rejuvenation;d.effects={...(hot?{regrowth:{until:3}}:{}),...(rejuvenation?{rejuvenation}:{} )};d.pools.rage=0;if(FORMS[d.form].resource==="rage")s.en=0;}
+function context(){const d=current();if(!d||!binding)return null;const c=binding.campaign()||{},p=hero(),level=window.soaProgression?.level?.()||1;return {form:d.form,appearance:name(d.form,p),pools:{...d.pools},combo:{...d.combo},prowl:d.prowl,rejuvenation:d.effects?.rejuvenation?{remaining:d.effects.rejuvenation.remaining}:null,unlocked:Object.keys(FORMS).filter(id=>unlocked(c,id,p,level)),learned:window.soaClassAbilities?.available?.("Druid",level).map(a=>({name:a.name,cost:a.cost,effect:a.effect})),quests:Object.entries(quests(c)).map(([id,r])=>({id,title:QUESTS[id]?.title,state:r.state,next:QUESTS[id]?.steps[r.step]?.text||"Return to mentor"}))}}
 function panel(s,c,p,level,choose,locked=false){
  const box=document.createElement("section");box.className="soa-druid-panel";box.setAttribute("aria-label","Druid forms and training");
  const add=(tag,text,parent=box)=>{const e=document.createElement(tag);e.textContent=text;if(tag==="details")e.className="soa-collapsible-quests";parent.append(e);return e;};
@@ -250,6 +274,7 @@ function panel(s,c,p,level,choose,locked=false){
  if(resources.includes("energy"))add("p","Cat Energy recovers 20 per exchange.",rules);
  if(resources.includes("rage"))add("p","Bear Rage gains 5 per landed attack and 5 when hit; it loses 5 outside combat.",rules);
  if(learnedForms.length>1)add("p","Shifting never refills a resource pool.",rules);
+ if(d.effects?.rejuvenation){const status=add("p","Rejuvenation active · 15 HP per round · "+d.effects.rejuvenation.remaining+" rounds remaining");status.className="soa-druid-hot";status.setAttribute("aria-live","polite");}
  if(d.form==="cat")add("p","Combo points: "+d.combo.points+" / 5"+(d.combo.target?" on "+d.combo.target:"")+(d.prowl?" · Prowl active":""));
  if(learnedForms.length>1){
  const formPicker=add("details","");add("summary","Change form · one full turn",formPicker);
@@ -262,7 +287,7 @@ function panel(s,c,p,level,choose,locked=false){
  for(const a of techniques)add("p",a.name+" · Level "+a.level+" · "+a.forms.filter(id=>learnedForms.includes(id)).map(id=>name(id,p)).join(" / ")+" · "+a.cost+" "+FORMS[a.forms[0]].resource+" · "+a.description,spellbook);}
  if(!combat){
   const learned=window.soaClassAbilities?.available?.("Druid",level)||[];
-  for(const a of learned.filter(a=>a.prowl||a.effect==="heal")){const button=add("button",a.name+" · "+a.cost+" "+FORMS[d.form].resource);button.disabled=locked||!!errorFor(a,s,c,false);button.onclick=()=>choose({text:"Use "+a.name,type:"druid",ability:a.id});}
+  for(const a of learned.filter(a=>a.prowl||a.effect==="heal")){const reason=locked?"Waiting for the current action.":errorFor(a,s,c,false),button=add("button",a.name+" · "+a.cost+" "+FORMS[d.form].resource);button.disabled=!!reason;button.title=reason||a.description;add("small",reason||(a.periodicHeal?"15 HP per round · 3 rounds · 3-round cooldown":"Ready"),button);button.onclick=()=>choose({text:"Use "+a.name,type:"druid",ability:a.id});}
  }
  const visibleQuests=Object.entries(QUESTS).filter(([id,q])=>{const f=FORMS[id],record=quests(c)[id],required=q.requires||f.requires;return !!record||(level>=f.level&&(!f.spec||p.specialization===f.spec)&&(!required||unlocked(c,required,p,level)));});
  if(!visibleQuests.length&&learnedForms.length===1)add("p","No animal forms learned yet. Druid training begins at level 10.");
@@ -278,5 +303,5 @@ function panel(s,c,p,level,choose,locked=false){
  }
  return box;
 }
-window.soaDruid={FORMS,QUESTS,state,current,form,name,bind:callbacks=>{binding=callbacks;},unlocked,environment,shiftError,shift,abilities,available,all,named,shiftFrom,errorFor,recover,environmentalTarget,obstacleDC,castAtEnvironment,modifiers,skillBonus,exchange,questAction,onDefeat,resetEncounter,context,panel};
+window.soaDruid={FORMS,QUESTS,state,current,form,name,bind:callbacks=>{binding=callbacks;},unlocked,environment,shiftError,shift,abilities,available,all,named,shiftFrom,errorFor,startRejuvenation,tickRejuvenation,healOutsideCombat,recover,environmentalTarget,obstacleDC,castAtEnvironment,modifiers,skillBonus,exchange,questAction,onDefeat,resetEncounter,context,panel};
 })();
