@@ -66,8 +66,29 @@ details.soa-collapsible-quests>summary::-webkit-details-marker{display:inline-bl
 .soa-choice-resource[data-resource="focus"] .soa-choice-resource-fill{background:linear-gradient(90deg,#388b67,#8ad8ae);box-shadow:0 0 9px #62d39c99}
 
 
-/* Druid resource pools remain readable at phone width. */
-.soa-druid-panel{border:1px solid #536a51;border-radius:12px;padding:14px;margin:16px 0;background:linear-gradient(145deg,#24352c,#18252d);font:14px/1.5 system-ui}
-.soa-druid-panel h4{color:#d7c08b;margin:0 0 10px}.soa-druid-panel small{display:block;color:#bcc7bb}.soa-druid-panel details{margin-top:14px}.soa-druid-panel details>div{border-top:1px solid #52614d;padding-top:12px;margin-top:12px}
-.soa-druid-pool{margin:10px 0}.soa-druid-rail{height:8px;background:#121a22;border-radius:8px;overflow:hidden;margin-top:5px}.soa-druid-rail i{display:block;height:100%;background:#60a9f0}.soa-druid-pool[data-resource="energy"] i{background:#f0ca23}.soa-druid-pool[data-resource="rage"] i{background:#ec6453}
+/* Druid menu has explicit foregrounds in both themes; child text cannot inherit
+   parchment ink on a dark surface. Resource colors retain their class meaning. */
+.soa-druid-panel{--druid-ink:#eee8d8;--druid-muted:#bccbbb;--druid-heading:#e3ca91;--druid-edge:#62715a;color:var(--druid-ink);border:1px solid var(--druid-edge);border-radius:12px;padding:16px;margin:16px 0;background:linear-gradient(145deg,#24352c,#18252d);font:14px/1.55 system-ui}
+.soa-druid-panel h4{color:var(--druid-heading);font-size:16px;margin:0 0 10px}
+.soa-druid-panel p,.soa-druid-panel strong,.soa-druid-panel summary{color:var(--druid-ink)}
+.soa-druid-panel p{margin:8px 0}.soa-druid-panel small{display:block;color:var(--druid-muted)}
+.soa-druid-panel details{margin-top:12px;border-top:1px solid var(--druid-edge);padding-top:10px}
+.soa-druid-panel details>summary{font-weight:650;min-height:32px;line-height:1.5;cursor:pointer;pointer-events:auto}
+.soa-druid-panel details>div{border-top:1px solid var(--druid-edge);padding-top:12px;margin-top:12px}
+.soa-druid-panel button{color:#f7ecd4;background:linear-gradient(#42533d,#2b382a);border:1px solid #81916b;min-height:48px;line-height:1.45;white-space:normal}
+.soa-druid-panel button[aria-pressed="true"]{color:#fff3d5;background:#304d39;border-color:#cfb67b;box-shadow:inset 3px 0 #cfb67b}
+.soa-druid-panel button:disabled{opacity:1;color:#bbc1b2;cursor:default}
+.soa-druid-panel button:focus-visible,.soa-druid-panel summary:focus-visible{outline:3px solid #d6ae59;outline-offset:3px}
+.soa-druid-pool{margin:14px 0}.soa-druid-pool strong{font-size:13px;letter-spacing:.025em}
+.soa-druid-rail{height:10px;background:#111b21;border:1px solid #61706a;border-radius:8px;overflow:hidden;margin-top:6px}
+.soa-druid-rail i{display:block;height:100%;background:#60a9f0}.soa-druid-pool[data-resource="energy"] i{background:#f0ca23}.soa-druid-pool[data-resource="rage"] i{background:#ec6453}
+body.theme-alternative .soa-druid-panel{--druid-ink:#342719;--druid-muted:#615039;--druid-heading:#30452b;--druid-edge:#ac966a;background:linear-gradient(135deg,#f4e6bf,#dfcca0);color:var(--druid-ink);border-color:#8b7850;box-shadow:inset 0 1px 0 #fff6d8,0 3px 8px #49371b24}
+body.theme-alternative .soa-druid-panel h4{color:var(--druid-heading);text-shadow:none}
+body.theme-alternative .soa-druid-panel p,body.theme-alternative .soa-druid-panel strong,body.theme-alternative .soa-druid-panel summary{color:var(--druid-ink)}
+body.theme-alternative .soa-druid-panel small{color:var(--druid-muted)}
+body.theme-alternative .soa-druid-panel button{color:#382b1d;background:linear-gradient(#fff1cf,#e6d2a5);border-color:#9d8456;box-shadow:inset 0 1px 0 #fff8e7,0 1px 3px #4e371d26}
+body.theme-alternative .soa-druid-panel button[aria-pressed="true"]{color:#fff5dd;background:linear-gradient(#425b3c,#30472e);border-color:#5f744d;box-shadow:inset 3px 0 #d3b76f}
+body.theme-alternative .soa-druid-panel button:disabled{color:#6a5840;background:#e3d2ac;box-shadow:none}
+body.theme-alternative .soa-druid-panel button[aria-pressed="true"]:disabled{color:#fff5dd;background:#354e32;box-shadow:inset 3px 0 #d3b76f}
+body.theme-alternative .soa-druid-panel .soa-druid-rail{background:#77694f;border-color:#95805b}
 #resource-meter[data-resource="mana"] i{background:#60a9f0}#resource-meter[data-resource="rage"] i{background:#ec6453}#resource-meter[data-resource="energy"] i{background:#f0ca23}

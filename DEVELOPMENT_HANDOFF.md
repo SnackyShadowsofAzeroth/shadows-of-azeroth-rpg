@@ -206,3 +206,17 @@ Added three region-bound, engine-authored missions with immutable reward terms a
 - Browser visual QA could not run because the available runtime lacked a Chromium
   binary and its download failed. Live Cloudflare/Gemini and real-iPhone QA are not
   claimed. README documents mechanics and the existing no-drowning-meter limitation.
+
+## Druid menu readability and earned progression (2026-10-23)
+- Fixed parchment theme ink inheriting onto a dark green Druid panel. The panel now
+  has explicit foreground colors in both themes; parchment uses cream surfaces,
+  brown body text and forest headings, with readable active form buttons.
+- The form picker and spellbook show only earned, eligible forms/techniques. Mana
+  remains visible; Energy and Rage appear when their forms have been learned.
+- Training quests show only when eligible or already recorded; accepting a quest
+  does not expose the unearned form. Low-level heroes get a concise training hint.
+- Resource rules, the form picker and training use existing optional-disclosure
+  behavior, avoiding the global auto-expanded details override. Cache version v98.
+- 146 tests pass. DOM checks confirm earned-only forms/resources and independent
+  dark/parchment text contrast of at least 4.5:1. Existing full DOM combat, save and
+  pending-retry checks still pass. Actual iPhone visual QA remains unverified.

@@ -103,3 +103,24 @@ test("Skyborne variants preserve mechanics and normal characters retain their ow
 test("named shifts recognize Skyborne names, ordinary form names and explicit IDs",()=>{
  const x=setup();assert.equal(x.d.shiftFrom({text:"Transform into Great Ironfeather Guardian Form"}),"dire_bear");assert.equal(x.d.shiftFrom({text:"Shapeshift into Cat Form"}),"cat");assert.equal(x.d.shiftFrom({ability:"shift_bear"}),"bear");assert.equal(x.d.shiftFrom({text:"Inspect a bear's tracks"}),null);
 });
+
+test("form menu reveals only earned forms, their resources and eligible training",()=>{
+ const x=setup(10);
+ function element(tag){return {tag,children:[],dataset:{},style:{},attributes:{},textContent:"",append(...items){this.children.push(...items)},setAttribute(k,v){this.attributes[k]=v;}};}
+ x.context.document.createElement=element;
+ const walk=node=>[node,...node.children.flatMap(walk)],draw=level=>walk(x.d.panel(x.s,x.c,x.profile,level,()=>{}));
+ let nodes=draw(1);
+ assert.deepEqual(nodes.filter(n=>n.className==="soa-druid-pool").map(n=>n.dataset.resource),["mana"]);
+ assert.equal(nodes.filter(n=>n.dataset.form).length,0);
+ assert.ok(!nodes.some(n=>/Great Cat Spirit|Trial of the Sea Lion|Wings of the Wild/.test(n.textContent)));
+ nodes=draw(10);assert.ok(nodes.some(n=>n.textContent.includes("Body and Heart")));assert.equal(nodes.filter(n=>n.dataset.form).length,0);
+ // Accepting a quest must not reveal the locked form or its Rage bar.
+ x.c.druidQuests={bear:{state:"active",step:0,proof:[]}};nodes=draw(10);
+ assert.equal(nodes.filter(n=>n.dataset.form).length,0);assert.deepEqual(nodes.filter(n=>n.className==="soa-druid-pool").map(n=>n.dataset.resource),["mana"]);
+ x.unlock("bear");nodes=draw(10);
+ assert.deepEqual(nodes.filter(n=>n.dataset.form).map(n=>n.dataset.form),["caster","bear"]);
+ assert.deepEqual(nodes.filter(n=>n.className==="soa-druid-pool").map(n=>n.dataset.resource),["mana","rage"]);
+ assert.ok(!nodes.some(n=>n.textContent.includes("Quest locked")));
+ assert.ok(!nodes.some(n=>/Windstalker|Frenzied Regeneration|Dire Bear/.test(n.textContent)));
+ assert.ok(nodes.filter(n=>n.tag==="details").every(n=>n.className==="soa-collapsible-quests"));
+});

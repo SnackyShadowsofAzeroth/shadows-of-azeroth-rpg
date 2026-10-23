@@ -220,30 +220,40 @@ function resetEncounter(s){const d=state(s);d.combo={target:null,points:0};d.dot
 function context(){const d=current();if(!d||!binding)return null;const c=binding.campaign()||{},p=hero(),level=window.soaProgression?.level?.()||1;return {form:d.form,appearance:name(d.form,p),pools:{...d.pools},combo:{...d.combo},prowl:d.prowl,unlocked:Object.keys(FORMS).filter(id=>unlocked(c,id,p,level)),learned:window.soaClassAbilities?.available?.("Druid",level).map(a=>({name:a.name,cost:a.cost,effect:a.effect})),quests:Object.entries(quests(c)).map(([id,r])=>({id,title:QUESTS[id]?.title,state:r.state,next:QUESTS[id]?.steps[r.step]?.text||"Return to mentor"}))}}
 function panel(s,c,p,level,choose,locked=false){
  const box=document.createElement("section");box.className="soa-druid-panel";box.setAttribute("aria-label","Druid forms and training");
- const add=(tag,text,parent=box)=>{const e=document.createElement(tag);e.textContent=text;parent.append(e);return e;};
- const d=state(s),combat=(c.enemies||[]).some(e=>e.hp>0);
- add("h4","Shapeshifting · "+name(d.form,p));add("p",FORMS[d.form].description+" Shifting costs 20 Mana and one turn; returning to humanoid is free but still takes a turn.");
- for(const key of ["mana","energy","rage"]){const wrap=document.createElement("div");wrap.className="soa-druid-pool";wrap.dataset.resource=key;add("strong",key.toUpperCase()+" · "+d.pools[key]+" / 100",wrap);const rail=add("div","",wrap);rail.className="soa-druid-rail";rail.setAttribute("role","progressbar");rail.setAttribute("aria-label",key+" reserve");rail.setAttribute("aria-valuemin","0");rail.setAttribute("aria-valuemax","100");rail.setAttribute("aria-valuenow",String(d.pools[key]));const fill=add("i","",rail);fill.style.width=d.pools[key]+"%";box.append(wrap);}
- add("p","Mana +25 in caster forms; inactive Mana +5. Cat Energy +20 per exchange. Bear Rage +5 per landed attack and +5 when hit; -5 outside combat. Shifts never refill a pool.");
+ const add=(tag,text,parent=box)=>{const e=document.createElement(tag);e.textContent=text;if(tag==="details")e.className="soa-collapsible-quests";parent.append(e);return e;};
+ const d=state(s),combat=(c.enemies||[]).some(e=>e.hp>0),learnedForms=Object.keys(FORMS).filter(id=>unlocked(c,id,p,level)),resources=[...new Set(learnedForms.map(id=>FORMS[id].resource))];
+ add("h4","Shapeshifting · "+name(d.form,p));add("p",FORMS[d.form].description);
+ if(learnedForms.length>1)add("p","Changing form takes one turn. Entering a form costs 20 Mana; returning to humanoid costs no Mana.");
+ for(const key of resources){const wrap=document.createElement("div");wrap.className="soa-druid-pool";wrap.dataset.resource=key;add("strong",key.toUpperCase()+" · "+d.pools[key]+" / 100",wrap);const rail=add("div","",wrap);rail.className="soa-druid-rail";rail.setAttribute("role","progressbar");rail.setAttribute("aria-label",key+" reserve");rail.setAttribute("aria-valuemin","0");rail.setAttribute("aria-valuemax","100");rail.setAttribute("aria-valuenow",String(d.pools[key]));const fill=add("i","",rail);fill.style.width=d.pools[key]+"%";box.append(wrap);}
+ const rules=add("details","");add("summary","Resource rules",rules);add("p","Mana recovers up to 25 in caster forms; inactive Mana recovers 5 per ordinary action.",rules);
+ if(resources.includes("energy"))add("p","Cat Energy recovers 20 per exchange.",rules);
+ if(resources.includes("rage"))add("p","Bear Rage gains 5 per landed attack and 5 when hit; it loses 5 outside combat.",rules);
+ if(learnedForms.length>1)add("p","Shifting never refills a resource pool.",rules);
  if(d.form==="cat")add("p","Combo points: "+d.combo.points+" / 5"+(d.combo.target?" on "+d.combo.target:"")+(d.prowl?" · Prowl active":""));
+ if(learnedForms.length>1){
  const formPicker=add("details","");add("summary","Change form · one full turn",formPicker);
- for(const id of Object.keys(FORMS)){
-  const f=FORMS[id],reason=shiftError(s,c,p,level,id,combat),button=add("button",name(id,p)+(id!=="caster"?" · Level "+f.level:"")+(unlocked(c,id,p,level)?" · "+(id===d.form?"Active":"Shift"):" · Quest locked"),formPicker);button.type="button";button.disabled=locked||!!reason;button.title=reason||f.description;button.onclick=()=>choose({text:"Shapeshift into "+name(id,p)+" Form",type:combat?"combat":"move",ability:"shift_"+id,form:id,difficulty:"easy"});
+ for(const id of learnedForms){
+  const f=FORMS[id],reason=shiftError(s,c,p,level,id,combat),button=add("button",name(id,p)+(id!=="caster"?" · Level "+f.level:"")+" · "+(id===d.form?"Active":"Shift"),formPicker);button.type="button";button.dataset.form=id;button.setAttribute("aria-pressed",String(id===d.form));button.disabled=locked||!!reason;button.title=reason||f.description;button.onclick=()=>choose({text:"Shapeshift into "+name(id,p)+" Form",type:combat?"combat":"move",ability:"shift_"+id,form:id,difficulty:"easy"});
  }
- const spellbook=add("details","");add("summary","Form abilities & unlock levels",spellbook);
- for(const a of KIT)add("p",a.name+" · Level "+a.level+" · "+a.forms.map(id=>name(id,p)).join(" / ")+" · "+a.cost+" "+FORMS[a.forms[0]].resource+" · "+a.description,spellbook);
+ }
+ const techniques=KIT.filter(a=>a.level<=level&&a.forms.some(id=>learnedForms.includes(id)));
+ if(techniques.length){const spellbook=add("details","");add("summary","Learned form abilities",spellbook);
+ for(const a of techniques)add("p",a.name+" · Level "+a.level+" · "+a.forms.filter(id=>learnedForms.includes(id)).map(id=>name(id,p)).join(" / ")+" · "+a.cost+" "+FORMS[a.forms[0]].resource+" · "+a.description,spellbook);}
  if(!combat){
   const learned=window.soaClassAbilities?.available?.("Druid",level)||[];
   for(const a of learned.filter(a=>a.prowl||a.effect==="heal")){const button=add("button",a.name+" · "+a.cost+" "+FORMS[d.form].resource);button.disabled=locked||!!errorFor(a,s,c,false);button.onclick=()=>choose({text:"Use "+a.name,type:"druid",ability:a.id});}
  }
- const journal=add("details","");add("summary","Druid form quests",journal);
- for(const [id,q] of Object.entries(QUESTS)){
+ const visibleQuests=Object.entries(QUESTS).filter(([id,q])=>{const f=FORMS[id],record=quests(c)[id],required=q.requires||f.requires;return !!record||(level>=f.level&&(!f.spec||p.specialization===f.spec)&&(!required||unlocked(c,required,p,level)));});
+ if(!visibleQuests.length&&learnedForms.length===1)add("p","No animal forms learned yet. Druid training begins at level 10.");
+ if(visibleQuests.length){const journal=add("details","");add("summary","Druid training quests",journal);
+ for(const [id,q] of visibleQuests){
   const record=quests(c)[id],f=FORMS[id];const row=add("div","",journal);add("strong",q.title+" · Level "+f.level+(f.spec?" · "+f.spec:""),row);add("small",q.source,row);
   const next=q.steps[record?.step||0];add("p",record?.state==="claimed"?"Completed · "+name(id,p)+" Form learned":record?"Objectives "+record.step+" / "+q.steps.length+" · "+(next?.text||"Return to a mentor"):"Speak with a Druid mentor in Moonglade, Darnassus or Thunder Bluff.",row);
   const op=!record?"accept":record.step===q.steps.length?"claim":"step";
   const button=add("button",record?.state==="claimed"?"Learned":op==="accept"?"Accept form quest":op==="claim"?"Return quest to mentor":record.fighting?"Trial in progress":"Attempt next objective",row);button.type="button";
   button.disabled=locked||combat||record?.state==="claimed"||level<f.level||!!f.spec&&p.specialization!==f.spec||((op==="accept"||op==="claim")?!MENTOR.test(c.scene?.location||""):!next?.region.test(c.scene?.location||""));
   button.onclick=()=>choose({text:q.title+": "+op,type:"druid_quest",quest:id,operation:op});
+ }
  }
  return box;
 }
