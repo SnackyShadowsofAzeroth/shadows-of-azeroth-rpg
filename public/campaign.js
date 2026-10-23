@@ -124,7 +124,7 @@ function actionOdds(action){
  const t=action.type, text=String(action.text||"").toLowerCase();
  const costs={stealth:20,engineering:10,social:0,combat:20,investigate:10,move:0,rest:0};
  const relevant=/\b(?:pick|lock|tinker|wire|mechanism|repair|device|engineer|disable trap)\b/.test(text)?"engineering":/\b(?:hide|sneak|stealth|shadow|slip past|ambush|conceal|pickpocket)\b/.test(text)?"stealth":/\b(?:search|inspect|investigate|examine|study|track|deduce|analyze|observe)\b/.test(text)?"investigate":/\b(?:climb|leap|jump|sprint|run|swim|dodge|balance)\b/.test(text)?"move":/\b(?:persuade|convince|negotiate|discuss|appeal|talk)\b/.test(text)?"social":/\b(?:rest|sleep|recover)\b/.test(text)?"rest":t;
- const base={stealth:68,engineering:64,social:65,combat:55,investigate:70,move:76,rest:83}[relevant]??65;
+ const base={stealth:68,engineering:64,social:65,combat:55,investigate:70,move:76,rest:83}[relevant]??65,form=window.soaDruid?.current?.()?.form,rageForm=window.soaCharacters?.profile?.()?.className==="Druid"&&window.soaDruid?.FORMS?.[form]?.resource==="rage",cost=rageForm&&t!=="combat"?0:costs[relevant]??costs[t]??0;
  const modifier=window.soaAbilities?.modifier?.(relevant)||0;
  const trained=window.soaProgression?.bonus?.(relevant)||0;
  const level=window.soaProgression?.level?.()||1;
@@ -132,7 +132,7 @@ function actionOdds(action){
  const racialFocus=campaign?.racialFocus?.skill===relevant?Math.max(0,Number(campaign.racialFocus.bonus)||0):0;
  const classBonus=((({Shaman:{combat:10,stealth:-25}}[window.soaCharacters?.profile?.()?.className]||{})[relevant])||0)+(window.soaDruid?.skillBonus?.(relevant)||0);
  const target=Math.max(10,Math.min(95,Math.round(base+modifier*3+trained*2+Math.max(0,level-1)*.2+difficulty-(s.alert||0)*5+racialFocus+classBonus)));
- return {cost:costs[relevant]??costs[t]??0,target,skill:relevant,modifier,trained,classBonus};
+ return {cost,target,skill:relevant,modifier,trained,classBonus};
 }
 function heroHealthCap(){const hero=window.soaCharacters?.profile?.();return 100+(window.soaRacialAbilities?.passives?.(hero?.race)?.maxHp||0)}
 function racialRegeneration(){const hero=window.soaCharacters?.profile?.();return window.soaRacialAbilities?.passives?.(hero?.race)?.regeneration||0}
@@ -266,8 +266,8 @@ function resourceForecast(action){
  if(window.soaDruid?.current?.()){
   const d=window.soaDruid.current(),shift=window.soaDruid.shiftFrom(action);
   if(shift!==null){const current=d.pools.mana,cost=shift==="caster"?0:20,after=Math.max(0,current-cost);return {label:"Mana",current,max:100,cost,after,affordable:current>=cost,cooldown:0,abilityId:"shift_"+shift,text:"Mana "+current+" → "+after+"/100 · "+(cost?cost+" cost":"No Mana cost")+" · One full turn"};}
-  const key=window.soaDruid.FORMS[d.form].resource,level=window.soaProgression?.level?.()||1,a=window.soaClassAbilities.available("Druid",level).find(x=>x.id===resolvedCombatAbility(action)),cost=a?.cost??(action.type==="combat"?0:actionOdds(action).cost),current=s.en,gain=key==="rage"?0:key==="energy"?20:25,after=Math.min(100,current-cost+gain),label=resourceName();
-  return {label,current,max:100,cost,after,affordable:current>=cost,cooldown:a?classCooldownLeft(a):0,abilityId:a?.id,text:label+" "+current+" → "+Math.max(0,after)+"/100 · "+cost+" cost"+(key==="rage"?" · +5 per landed attack and each enemy attack aimed at you, even if it misses":" · +"+gain+" recovery")};
+  const key=window.soaDruid.FORMS[d.form].resource,level=window.soaProgression?.level?.()||1,a=window.soaClassAbilities.available("Druid",level).find(x=>x.id===resolvedCombatAbility(action)),storyPlan=window.soaStoryActions?storyActionPlan(action):null,genericRageAction=key==="rage"&&action.type!=="combat"&&!a&&!storyPlan?.ability,cost=a?.cost??storyPlan?.ability?.cost??(genericRageAction?0:action.type==="combat"?0:actionOdds(action).cost),current=s.en,gain=key==="rage"?0:key==="energy"?20:25,fade=genericRageAction&&!livingEnemies().length?5:0,after=Math.max(0,Math.min(100,current-cost+gain-fade)),label=resourceName();
+  return {label,current,max:100,cost,after,affordable:current>=cost,cooldown:a?classCooldownLeft(a):0,abilityId:a?.id,text:label+" "+current+" → "+after+"/100 · "+(cost?cost+" cost":"No "+label+" cost")+(key==="rage"?" · +5 per landed attack and each enemy attack aimed at you, even if it misses"+(fade?" · 5 Rage fades outside combat":""):" · +"+gain+" recovery")};
  }
  const profile=window.soaCharacters?.profile?.(),label=resourceName(),current=Math.max(0,Math.min(100,Number(s.en)||0)),storyAbility=resolvedStoryVanish(action);
  const storyPlan=window.soaStoryActions?storyActionPlan(action):null;

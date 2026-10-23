@@ -18,6 +18,23 @@ test("combat resource mapping covers each selectable class and Druid forms",()=>
  assert.equal(resources.forClass("Druid","bear").label,"Rage");
 });
 
+test("Bear Form noncombat choices do not require Rage and preview its normal out-of-combat fade",()=>{
+ const functionSource=name=>{const start=campaign.indexOf("function "+name+"("),end=campaign.indexOf(String.fromCharCode(10)+"function ",start+1);assert.ok(start>=0&&end>start,name);return campaign.slice(start,end)};
+ const druid={form:"bear"},context={window:{
+  soaDruid:{current:()=>druid,FORMS:{bear:{resource:"rage"}},skillBonus:()=>0},
+  soaCharacters:{profile:()=>({className:"Druid",form:"bear"})},
+  soaProgression:{level:()=>10,bonus:()=>0},
+  soaClassAbilities:{available:()=>[]},
+  soaAbilities:{modifier:()=>0}
+ },campaign:{},s:{en:0,alert:0},resourceName:()=>"Rage",resolvedCombatAbility:()=>"strike",classCooldownLeft:()=>0,livingEnemies:()=>[]};
+ vm.createContext(context);
+ vm.runInContext(functionSource("actionOdds")+String.fromCharCode(10)+functionSource("resourceForecast")+";globalThis.odds=actionOdds;globalThis.forecast=resourceForecast;",context);
+ const action={type:"investigate",text:"Inspect the nearby void crystals for signs of instability",difficulty:"medium"};
+ assert.equal(context.odds(action).cost,0);
+ const forecast=context.forecast(action);
+ assert.equal(forecast.cost,0);assert.equal(forecast.affordable,true);assert.equal(forecast.after,0);assert.match(forecast.text,/No Rage cost/);assert.match(forecast.text,/5 Rage fades outside combat/);
+});
+
 test("the allied player combat card displays the class resource as a live progress bar",()=>{
  assert.match(campaign,/resource:s\.en,maxResource:100/);
  assert.match(campaign,/const actor=window\.soaAbilities\?\.get\?\.\("hero"\),resource=window\.soaResources\?\.forClass\?\.\(actor\?\.className,actor\?\.form\)/);
