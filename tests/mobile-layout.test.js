@@ -168,6 +168,14 @@ test("tab selection displays only its screen and maps old saved tab names", () =
 });
 
 
+test("long story generation status is rendered in Adventure, not only Settings", () => {
+  assert.match(campaign, /id="campaign-progress-status"/);
+  assert.match(campaign, /isProgress=\/\^Gemini is \(\?:writing\|still generating\)\//);
+  assert.match(campaign, /mode==="status"\?get\("campaign-progress-status"\)\|\|get\("campaign-status"\)/);
+  assert.match(campaign, /if\(busy\)\{status\("Gemini is still generating the scene/);
+  assert.match(campaign, /returnToAdventure\("status"\)\}\},20000\)/);
+});
+
 test("Living Campaign controls are in Settings while its active scene stays in Adventure", () => {
   assert.match(campaign, /const el=document\.createElement\("section"\);el\.className="panel";el\.id="campaign-box";el\.style\.display="none"/);
   assert.match(campaign, /const scene=document\.createElement\("div"\);scene\.id="campaign-scene";el\.append\(scene\)/);

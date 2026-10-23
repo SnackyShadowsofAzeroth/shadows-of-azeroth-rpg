@@ -49,7 +49,7 @@ function normalizeCampaignState(value){
 function safe(text){return String(text||"").slice(0,2600)}
 function readableStory(text){return String(text||"").replace(/\bPipprained in her satchel\b/gi,"Pippa rummaged in her satchel").replace(/\bPipprained\b/gi,"Pippa")}
 
-function status(message){statusMessage=message;const el=get("campaign-status");if(el)el.textContent=campaignLoadBlocked?"Stored Living Campaign could not be read. Restore a valid all-character backup before starting it again.":campaignStorageReadFailed?"Device storage could not be read. Reload after enabling browser storage; no new campaign was started.":campaignSaveFailed?"Campaign save failed. Retry saving before continuing. "+message:message}
+function status(message){statusMessage=message;const displayMessage=campaignLoadBlocked?"Stored Living Campaign could not be read. Restore a valid all-character backup before starting it again.":campaignStorageReadFailed?"Device storage could not be read. Reload after enabling browser storage; no new campaign was started.":campaignSaveFailed?"Campaign save failed. Retry saving before continuing. "+message:message;const el=get("campaign-status");if(el)el.textContent=displayMessage;const progress=get("campaign-progress-status"),isProgress=/^Gemini is (?:writing|still generating)/.test(displayMessage);if(progress){progress.hidden=!isProgress;progress.textContent=isProgress?displayMessage:""}}
 function accessCode(){return get("ai-code")?.value.trim()||""}
 function focusAccess(){const message="Enter your private AI access code in the AI Story Director panel to continue.";status(message);window.soaAiDirector?.showSetup?.(message,true);const f=get("ai-code");if(f){f.scrollIntoView({behavior:"smooth",block:"center"});f.focus()}}
 function refreshDisplay(){render();draw();window.soaCharacters?.refreshProfessions?.()}
@@ -61,7 +61,7 @@ function originOfCampaign(){
 }
 
 function returnToAdventure(mode="scene"){
- const destination=mode==="status"?get("campaign-status"):get("campaign-scene")?.querySelector("h3")||get("campaign-status");
+ const destination=mode==="status"?get("campaign-progress-status")||get("campaign-status"):get("campaign-scene")?.querySelector("h3")||get("campaign-status");
  if(!destination?.scrollIntoView)return;
  const reduced=window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches===true;
  destination.scrollIntoView({behavior:reduced?"instant":"smooth",block:"start"});
@@ -1045,7 +1045,8 @@ function result(action){
 function interfaceUI(){
  if(get("campaign-box"))return;
  const el=document.createElement("section");el.className="panel";el.id="campaign-box";el.style.display="none";
- const scene=document.createElement("div");scene.id="campaign-scene";el.append(scene);
+ const progress=document.createElement("p");progress.id="campaign-progress-status";progress.className="soa-pending";progress.hidden=true;progress.setAttribute("role","status");progress.setAttribute("aria-live","polite");
+ const scene=document.createElement("div");scene.id="campaign-scene";el.append(progress,scene);
  document.querySelector("header").after(el);
  const disclosure=document.createElement("details");disclosure.className="soa-panel-disclosure soa-campaign-disclosure";
  disclosure.open=localGet("soa-campaign-panel-open")==="1";
@@ -1345,11 +1346,11 @@ async function advance(action,resolution,retry){
  if(busy)return;if(!navigator.onLine){get("campaign-status").textContent="Offline: saved scene available; new scenes require internet.";draw();return}
  const code=accessCode();
  if(!code){focusAccess();draw();return}
- busy=true;status("Gemini is writing the next scene…");draw();
+ busy=true;status("Gemini is writing the next scene…");draw();returnToAdventure("status");
  let requestTimeout,progressNotice;
  try{
  const controller=new AbortController();requestTimeout=setTimeout(()=>controller.abort(),85000);
- progressNotice=setTimeout(()=>{if(busy)status("Gemini is still generating the scene. Your action is saved; please keep this page open.")},20000);
+ progressNotice=setTimeout(()=>{if(busy){status("Gemini is still generating the scene. Your action is saved; please keep this page open.");returnToAdventure("status")}},20000);
  const response=await fetch("./api/campaign",{method:"POST",headers:{"content-type":"application/json","x-story-access":code},signal:controller.signal,body:JSON.stringify({context:{location:campaign.scene?.location||(window.soaCharacters?.profile?.()?.startingZone||"Current starting area"),previousTitle:campaign.scene?.title||"",previousScene:campaign.scene?.story||"",campaignOrigin:originOfCampaign(),startingZone:window.soaCharacters?.profile?.()?.startingZone||null,recentDiscoveries:campaign.journal.slice(-12),action,resolution,hp:s.hp,energy:s.en,resourceLabel:resourceName(),druid:window.soaDruid?.context?.()||null,gold:fmtMoney(s.money),alarm:s.alert,turn:campaign.turn,history:campaign.history.slice(-20),flags:Object.keys(s.flags||{}),companionMoments:window.soaCompanions?.getRecent?.()||[],companionProfiles:window.soaCompanions?.getProfiles?.()||{},relationships:window.soaCompanions?.getRelationships?.()||{},conversationContext:window.soaCompanions?.getConversationContext?.()||{},character:window.soaCharacters?.profile?.()||null,abilityScores:window.soaAbilities?.get?.("hero")?.stats||null,reputation:window.soaReputation?.getStandings?.()||{},reputationDevelopments:window.soaReputation?.getDevelopments?.()||[],enemies:livingEnemies().map(e=>({name:e.name,hp:e.hp,maxHp:e.maxHp})),allies:combatParty().map(e=>({name:e.name,hp:e.hp,maxHp:e.maxHp})),questRewards:{last:campaign.quests?.lastReward||null,activeMissions:Object.entries(campaign.quests?.missions||{}).filter(([,v])=>v.state!=="claimed").map(([id,v])=>({id,state:v.state}))},combatAction:campaign.pending?.combatExchangeResolved===true&&campaign.xpEncounter?.active===true,
 encounterId:campaign.pending?.combatExchangeResolved===true?campaign.xpEncounter?.id||null:null,
 combatRound:Number(campaign.combatRound)||0,
