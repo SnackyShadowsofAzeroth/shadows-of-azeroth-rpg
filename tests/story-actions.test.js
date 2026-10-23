@@ -50,6 +50,11 @@ test("unlearned spells, foreign spells, insufficient resource and invalid forms 
 test("blocked combat choices become a free strike instead of a free rest exchange",()=>{
  const x=setup();x.ctx.campaign.enemies=[{name:"Satyr",hp:50,maxHp:50}];x.ctx.s.en=0;const fallback=x.ctx.playableStoryChoice(x.cast("Cast Wrath at the satyr","wrath"),0);assert.equal(fallback.ability,"strike");assert.equal(fallback.type,"combat");assert.equal(x.plan(fallback).error,undefined);
 });
+test("Druid free basic attacks are recorded as Natural Strike, not Maul",async()=>{
+ const x=setup("Druid",10),ctx=x.ctx;ctx.campaign.druidQuests={bear:{state:"claimed"}};ctx.s.druid.form="bear";ctx.s.en=0;ctx.s.druid.pools.rage=0;ctx.campaign.enemies=[{name:"Satyr",hp:50,maxHp:50}];ctx.campaign.enemyLocation=ctx.campaign.scene.location;
+ await ctx.select({text:"Use a free basic attack against the Satyr",type:"combat",difficulty:"easy",ability:"strike"});
+ assert.equal(ctx.campaign.lastExchange.ability,"druid_strike");assert.equal(ctx.campaign.lastExchange.abilityName,"Natural Strike");assert.match(ctx.campaign.pending.resolution,/Natural Strike/);
+});
 test("environment actions cannot silently hit an engaged foe instead",()=>{
  const x=setup();x.ctx.campaign.enemies=[{name:"Satyr",hp:50,maxHp:50}];assert.ok(x.plan(x.cast("Cast Wrath at the root knot","wrath")).error);
 });
