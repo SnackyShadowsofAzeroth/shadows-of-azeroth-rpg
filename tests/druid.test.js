@@ -34,6 +34,16 @@ test("combat shifting spends exactly one exchange and allows retaliation, with z
  assert.equal(out.event.shapeshift,true);assert.equal(out.event.dealt,0);assert.equal(target.hp,500);assert.equal(x.s.time,1);assert.equal(x.c.combatRound,1);assert.ok(x.s.hp<before);assert.equal(x.s.druid.pools.mana,80);assert.equal(x.s.en,0);assert.equal(out.event.defenderAC,15);
  const old=JSON.stringify(x.s);assert.match(x.d.exchange(x.s,x.c,x.profile,60,{form:"bear"},null,target,x.rules,x.actor).error,/Already/);assert.equal(JSON.stringify(x.s),old);
 });
+test("combat retaliation uses the destination form's live armor, including Cat dexterity",()=>{
+ const x=setup(20);x.unlock("bear");x.unlock("cat");x.foe();
+ x.context.window.soaCharacters.profile=()=>({...x.profile,form:x.d.form()});
+ vm.runInContext(src("public/abilities.js"),x.context);
+ const get=()=>x.context.window.soaAbilities.get("hero");
+ for(const form of ["bear","caster","cat","bear","caster"]){
+  const before=get(),out=x.d.exchange(x.s,x.c,x.profile,20,{form},null,x.c.enemies[0],x.rules,before);
+  assert.equal(out.event.defenderAC,get().armorClass,"retaliation after shifting to "+form);
+ }
+});
 test("Cat, Bear, Moonkin, Tree and utility forms enforce their actual spellbooks",()=>{
  const x=setup();for(const id of ["bear","cat","moonkin","tree","travel"])x.unlock(id);
  x.d.shift(x.s,x.c,x.profile,60,"bear");let ids=x.learned().map(a=>a.id);assert.ok(ids.includes("maul"));assert.ok(ids.includes("spec_druid_feral"));assert.ok(!ids.includes("wrath"));assert.ok(!ids.includes("rejuvenation"));

@@ -199,7 +199,12 @@ function exchange(s,c,profile,level,action,ability,target,rules,actor){
  }
  if(!target)return {error:"No hostile target is engaged."};
  const round=(Number(c.combatRound)||0)+1,beforeHP=s.hp,oldResource=s.en,maxHP=100+(window.soaRacialAbilities?.passives?.(profile.race)?.maxHp||0),snap=targets.map(e=>({enemy:e,before:e.hp}));
- if(shifting)shift(s,c,profile,level,shiftId,true);
+ if(shifting){
+  shift(s,c,profile,level,shiftId,true);
+  // The supplied actor describes the source form. Refresh after changing form
+  // so retaliation also uses the destination's armor and Dexterity.
+  if(binding?.state?.()===s){const updated=window.soaAbilities?.get?.("hero");if(updated?.form===d.form)actor=updated;}
+ }
  const mods=modifiers(s),stat=actor?.modifiers?.[ability?.stat]||0,gear=window.soaEquipment?.modifiers?.()||{};
  d.effects||={};d.dots||=[];
  const notes=[],attacks=[];let dealt=0,healed=0,hit=false,interrupted=false,guard=false;

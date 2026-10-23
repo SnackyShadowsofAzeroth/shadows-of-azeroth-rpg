@@ -286,3 +286,17 @@ Added three region-bound, engine-authored missions with immutable reward terms a
   checks still pass. New stylesheet/module included in shell cache v102.
 - Actual browser/iPhone visual rendering remains unverified; no claim of testing
   a live Gemini session or the player's current saved campaign.
+
+## Integrated stability review (2026-10-23)
+- Reviewed crafting/equipment, spell routing, form transitions, combat summaries,
+  persistence and offline assets. Fixed two reproduced regressions: combat shifts
+  retained source-form armor during retaliation, and inventory reindexing lost
+  valid equipment enchantments. Destination-form Dexterity now affects armor
+  immediately; shared inventory-reference remapping preserves remaining enchants
+  and removes destroyed items' enchants.
+- Added live ability-engine coverage for Bear/Humanoid/Cat transitions and
+  enchantment coverage for disenchanting, save reload and inventory repair.
+- 219 Node tests plus 128 faction assertions pass; syntax and static build pass.
+  All referenced interface and cached assets exist. Shell cache v109.
+- Chromium is unavailable here. Actual mobile rendering, the player's saved
+  campaign and a paid live Gemini generation have not been exercised.

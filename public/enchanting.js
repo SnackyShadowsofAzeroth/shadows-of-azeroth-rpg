@@ -72,13 +72,14 @@ function train(c,level,location,wallet){
 function disenchant(c,index){
  const st=getState(c),q=c.quests,item=q?.inventory?.[index];
  if(!owned())return {error:"Train Enchanting first."};
- if(!item)return {error:"No reward item at that index."};
+ if(!Number.isInteger(index)||index<0||!item)return {error:"No reward item at that index."};
  if(Object.values(q.equipped||{}).includes(index))return {error:"Unequip this item before disenchanting."};
  const info=window.soaEquipment?.itemInfo?.(item);
  if(!info||info.slot==="utility")return {error:"This item has no enchantable magical components."};
  const amount=info.rarity==="rare"?3:info.rarity==="uncommon"?2:1;
+ const indexMap=new Map();q.inventory.forEach((_,idx)=>{if(idx!==index)indexMap.set(idx,idx>index?idx-1:idx)});
  q.inventory.splice(index,1);
- for(const [slot,idx] of Object.entries(q.equipped||{})){if(idx>index)q.equipped[slot]=idx-1}
+ window.soaQuests.remapInventoryReferences(c,indexMap);
  st.materials.ArcaneDust=(st.materials.ArcaneDust||0)+amount;
  st.history.push({item:item.name,disenchanted:true,dust:amount});st.history=st.history.slice(-100);
  return {message:"Disenchanted "+item.name+" into "+amount+" Arcane Dust.",dust:amount};

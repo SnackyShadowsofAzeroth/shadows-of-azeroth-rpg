@@ -46,6 +46,20 @@ for(const board of BOARDS)for(const contract of board.contracts){contract.diffic
 const format=n=>{const c=Math.max(0,Math.floor(n));return [Math.floor(c/10000)+"g",Math.floor(c%10000/100)+"s",c%100+"c"].join(" ")};
 const boardAt=location=>BOARDS.find(b=>b.region.test(String(location||"")));
 const definition=id=>BOARDS.flatMap(b=>b.contracts).find(c=>c.id===id);
+function remapInventoryReferences(campaign,indexMap){
+ const q=campaign.quests;
+ if(q?.equipped&&typeof q.equipped==="object")for(const [slot,index] of Object.entries(q.equipped)){if(indexMap.has(index))q.equipped[slot]=indexMap.get(index);else delete q.equipped[slot]}
+ const enchants=campaign.enchanting?.enchants;
+ if(enchants&&typeof enchants==="object"){
+  const remapped={};
+  for(const [key,entry] of Object.entries(enchants)){
+   const match=/^reward:([^:]+):(\d+)$/.exec(key);
+   if(!match)remapped[key]=entry;
+   else if(indexMap.has(Number(match[2])))remapped["reward:"+match[1]+":"+indexMap.get(Number(match[2]))]=entry;
+  }
+  campaign.enchanting.enchants=remapped;
+ }
+}
 const ensure=campaign=>{
  if(!campaign||typeof campaign!=="object")return null;
  if(!campaign.quests||typeof campaign.quests!=="object"||Array.isArray(campaign.quests))campaign.quests={};
@@ -56,7 +70,7 @@ const ensure=campaign=>{
  // Never evict old equipment when new rewards arrive: equipped slots reference inventory indices.
  const oldInventory=q.inventory,indexMap=new Map();q.inventory=[];
  oldInventory.forEach((item,index)=>{if(!item||typeof item!=="object"||typeof item.name!=="string")return;indexMap.set(index,q.inventory.length);q.inventory.push({name:item.name.slice(0,80),source:typeof item.source==="string"?item.source.slice(0,90):"Unknown",rarity:typeof item.rarity==="string"?item.rarity:"common"})});
- if(q.equipped&&typeof q.equipped==="object")for(const [slot,index] of Object.entries(q.equipped)){if(indexMap.has(index))q.equipped[slot]=indexMap.get(index);else delete q.equipped[slot]}
+ remapInventoryReferences(campaign,indexMap);
  if(!Array.isArray(q.receipts))q.receipts=[];
  q.receipts=q.receipts.filter(receipt=>typeof receipt==="string").slice(-500);
  if(!Array.isArray(q.rewardHistory))q.rewardHistory=[];
@@ -192,6 +206,6 @@ function panel(campaign,location,wallet,onChange){
 }
 function contracts(){return BOARDS.flatMap(board=>board.contracts.map(contract=>({...contract,items:[...contract.items]})))}
 function missions(){return MISSIONS.map(mission=>({...mission,objective:{...mission.objective},reward:{...mission.reward,items:mission.reward.items.map(item=>({...item}))}}))}
-window.soaQuests={boardAt,definition,contracts,missions,ensure,accept,onDefeat,claim,grantStormwindMission,panel,missionPanel,startMission,claimMission,missionDefeat,journal,format,stableRare,rewardForScene};
+window.soaQuests={boardAt,definition,contracts,missions,ensure,remapInventoryReferences,accept,onDefeat,claim,grantStormwindMission,panel,missionPanel,startMission,claimMission,missionDefeat,journal,format,stableRare,rewardForScene};
 })();
 
