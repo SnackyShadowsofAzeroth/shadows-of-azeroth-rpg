@@ -208,7 +208,14 @@ function playableStoryChoice(choice,index){
  return window.soaStoryActions.fallback(index);
 }
 function dicePreview(action){
- if(window.soaStoryActions){const plan=storyActionPlan(action);if(plan?.error)return {primary:"Action unavailable",secondary:plan.error};if(plan?.kind==="obstacle")return {primary:(plan.ability?.name||"Weapon Strike")+" · d20 + proficiency + "+(plan.ability?.stat||"DEX")+" vs obstacle DC "+plan.dc,secondary:"Environmental target: "+plan.target+" · no enemy required"};if(plan?.kind==="opening")return {primary:(plan.ability?.name||"Weapon Strike")+" · Opening attack on "+plan.target.name,secondary:"Begins combat and resolves one exchange · "+(plan.ability?.cost||0)+" "+resourceName()};if(plan?.kind==="self")return {primary:(plan.ability?.name||"Ability")+" · Self-cast · no enemy required",secondary:plan.ability?.description||"One action"};}
+ if(window.soaStoryActions){
+  const plan=storyActionPlan(action);
+  if(plan?.error)return {primary:"Action unavailable",secondary:plan.error};
+  if(plan?.kind==="shift")return {primary:"Shapeshift into "+window.soaDruid.name(plan.form)+" · one full turn",secondary:(plan.form==="caster"?"No Mana cost":"20 Mana from your Mana reserve")+" · No attack included."};
+  if(plan?.kind==="obstacle")return {primary:(plan.ability?.name||"Weapon Strike")+" · d20 + proficiency + "+(plan.ability?.stat||"DEX")+" vs obstacle DC "+plan.dc,secondary:"Environmental target: "+plan.target+" · no enemy required"};
+  if(plan?.kind==="opening")return {primary:(plan.ability?.name||"Weapon Strike")+" · Opening attack on "+plan.target.name,secondary:"Begins combat and resolves one exchange · "+(plan.ability?.cost||0)+" "+resourceName()};
+  if(plan?.kind==="self")return {primary:(plan.ability?.name||"Ability")+" · Self-cast · no enemy required",secondary:plan.ability?.description||"One action"};
+ }
  if(window.soaDruid?.current?.()){const shift=window.soaDruid.shiftFrom(action);if(shift!==null)return {primary:"Shapeshift · one full turn",secondary:"20 Mana to enter a form; return to humanoid costs no Mana. No attack included."};const a=window.soaClassAbilities.available("Druid",window.soaProgression?.level?.()||1).find(x=>x.id===resolvedCombatAbility(action));if(a&&!livingEnemies().length&&["damage","interrupt"].includes(a.effect)){const target=window.soaDruid.environmentalTarget(action,campaign);return {primary:target?a.name+" · d20 + proficiency + "+a.stat+" vs obstacle DC "+window.soaDruid.obstacleDC(action):a.name+" · Requires a hostile target or visible obstacle",secondary:a.description+" · "+a.cost+" "+resourceName()};}if(a)return {primary:a.name+" · "+(a.periodicHeal?"15 HP per round · 3 rounds":a.effect==="heal"?"Healing roll":a.effect==="guard"?"Defensive action":"d20 + proficiency + "+a.stat+" vs target AC"),secondary:a.description+" · "+a.cost+" "+resourceName()};}
  // Combat takes priority over social keyword detection, matching the resolver.
  const storyAbility=resolvedStoryVanish(action);
@@ -249,7 +256,12 @@ function dicePreview(action){
 }
 function resourceForecast(action){
  if(action.craftRecipe)return {cost:0,affordable:true,current:s.en,after:s.en,text:"Crafting · one action · materials consumed"};
- if(window.soaDruid?.current?.()){const d=window.soaDruid.current(),key=window.soaDruid.FORMS[d.form].resource,level=window.soaProgression?.level?.()||1,shift=window.soaDruid.shiftFrom(action),a=window.soaClassAbilities.available("Druid",level).find(x=>x.id===resolvedCombatAbility(action)),cost=shift!==null?(shift==="caster"?0:20):a?.cost??(action.type==="combat"?0:actionOdds(action).cost),current=shift!==null?d.pools.mana:s.en,gain=shift!==null||key==="rage"?0:key==="energy"?20:25,after=Math.min(100,current-cost+gain),label=shift!==null?"Mana":resourceName();return {label,current,max:100,cost,after,affordable:current>=cost,cooldown:a?classCooldownLeft(a):0,abilityId:a?.id,text:label+" "+current+" → "+Math.max(0,after)+"/100 · "+cost+" cost"+(key==="rage"?" · Rage earned on hits":" · +"+gain+" recovery")};}
+ if(window.soaDruid?.current?.()){
+  const d=window.soaDruid.current(),shift=window.soaDruid.shiftFrom(action);
+  if(shift!==null){const current=d.pools.mana,cost=shift==="caster"?0:20,after=Math.max(0,current-cost);return {label:"Mana",current,max:100,cost,after,affordable:current>=cost,cooldown:0,abilityId:"shift_"+shift,text:"Mana "+current+" → "+after+"/100 · "+(cost?cost+" cost":"No Mana cost")+" · One full turn"};}
+  const key=window.soaDruid.FORMS[d.form].resource,level=window.soaProgression?.level?.()||1,a=window.soaClassAbilities.available("Druid",level).find(x=>x.id===resolvedCombatAbility(action)),cost=a?.cost??(action.type==="combat"?0:actionOdds(action).cost),current=s.en,gain=key==="rage"?0:key==="energy"?20:25,after=Math.min(100,current-cost+gain),label=resourceName();
+  return {label,current,max:100,cost,after,affordable:current>=cost,cooldown:a?classCooldownLeft(a):0,abilityId:a?.id,text:label+" "+current+" → "+Math.max(0,after)+"/100 · "+cost+" cost"+(key==="rage"?" · Rage earned on hits":" · +"+gain+" recovery")};
+ }
  const profile=window.soaCharacters?.profile?.(),label=resourceName(),current=Math.max(0,Math.min(100,Number(s.en)||0)),storyAbility=resolvedStoryVanish(action);
  const storyPlan=window.soaStoryActions?storyActionPlan(action):null;
  const combatAction=(action.type==="combat"||!!storyAbility)&&livingEnemies().length>0||storyPlan?.kind==="opening";
@@ -1248,7 +1260,7 @@ async function choose(choice){
   if(campaign.xpEncounter?.active){if(campaign.xpEncounter.pendingVictory)concludeProgressionEncounter(true);else campaign.xpEncounter.active=false;}
   startProgressionEncounter();selectedCombatTarget=intent.target.name;
  }
- const storyAbility=resolvedStoryVanish(choice),routeCombat=intent&&["opening","combat"].includes(intent.kind),resolvingChoice=routeCombat?{...choice,type:"combat",ability:intent.ability?.id||choice.ability||"strike"}:storyAbility&&livingEnemies().length?{...choice,type:"combat",ability:storyAbility}:choice;
+ const storyAbility=resolvedStoryVanish(choice),routeCombat=intent&&["opening","combat"].includes(intent.kind),resolvingChoice=intent?.kind==="shift"?{...choice,type:intent.combat?"combat":"move",form:intent.form,ability:"shift_"+intent.form}:routeCombat?{...choice,type:"combat",ability:intent.ability?.id||choice.ability||"strike"}:storyAbility&&livingEnemies().length?{...choice,type:"combat",ability:storyAbility}:choice;
  const combatRoundBefore=Number(campaign.combatRound)||0;
  const craftingBefore=choice.craftRecipe?{s:structuredClone(s),c:structuredClone(campaign)}:null;
  const druidBefore=window.soaDruid?.current?.()?{s:structuredClone(s),c:structuredClone(campaign),energy:s.en,cost:resourceForecast(resolvingChoice).cost}:null;

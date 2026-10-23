@@ -13,7 +13,7 @@ function setup(className="Druid",level=10){
  if(className==="Druid"){ctx.window.soaDruid.bind({state:()=>ctx.s,campaign:()=>ctx.campaign});ctx.window.soaDruid.state(ctx.s);}else delete ctx.window.soaDruid;
  Object.assign(ctx,{livingEnemies:()=>ctx.campaign.enemies.filter(e=>e.hp>0),partyExperienceIds:()=>["hero"],recordCombatDelta(){},concludeProgressionEncounter(){},resourceName:()=>"Mana",heroHealthCap:()=>100,status:m=>ctx.notice=m,save:()=>true,store:()=>true,pending:()=>ctx.campaign.pending,accessCode:()=>true,dialogueFromCustom:()=>null,socialSkill:()=>null,resolvedStoryVanish:()=>null,unavailableClassAbility:()=>null,resolvedCombatAbility:a=>a.ability||ctx.window.soaStoryActions.named(a,hero,level)?.id||"strike",recordActionPractice(){},refreshDisplay(){},returnToAdventure(){},safe:String,advance:async()=>ctx.generations=(ctx.generations||0)+1,hasRecentCorpse:()=>false,actionOdds:()=>({cost:0,skill:"rest",target:100}),scavengeFallenEnemy:()=>null,canonicalStoryChoice:c=>c,selectedAllyTarget:null});
  // Execute production routing and exchange functions, not a replacement implementation.
- for(const name of ["classCooldownLeft","storyActionPlan","playableStoryChoice","resetEncounterCombatState","startProgressionEncounter","classAbilityExchange","druidResult","result","resourceForecast"])vm.runInContext(block(name),ctx);
+ for(const name of ["classCooldownLeft","storyActionPlan","playableStoryChoice","dicePreview","resetEncounterCombatState","startProgressionEncounter","classAbilityExchange","druidResult","result","resourceForecast"])vm.runInContext(block(name),ctx);
  ctx.fightExchange=a=>ctx.classAbilityExchange(a,ctx.window.soaClassAbilities.get(a.ability,className,level)||{id:"strike",name:"Weapon Strike",cost:0,effect:"damage",stat:"DEX",die:6,flat:3},ctx.livingEnemies());
  const start=campaignSource.indexOf("async function choose("),end=campaignSource.indexOf("\nasync function advance(",start);vm.runInContext(campaignSource.slice(start,end)+"\nglobalThis.select=choose;",ctx);
  const plan=action=>ctx.storyActionPlan(action),cast=(text,ability)=>({text,ability,type:"combat",difficulty:"easy"});
@@ -79,4 +79,27 @@ test("Bear Enrage can be prepared without a target and retains its Rage for the 
 });
 test("Druid roars are not offered without enemies for their debuff",()=>{
  const x=setup(),ctx=x.ctx;ctx.campaign.druidQuests={bear:{state:"claimed"}};ctx.s.druid.form="bear";ctx.s.en=50;ctx.s.druid.pools.rage=50;assert.match(x.plan(x.cast("Use Demoralizing Roar","demoralizing_roar")).error,/engaged enemies/);
+});
+function bearReturnSetup(combat=false){
+ const x=setup(),ctx=x.ctx;ctx.campaign.druidQuests={bear:{state:"claimed"}};ctx.s.druid.form="bear";ctx.s.en=0;ctx.s.druid.pools.rage=0;ctx.s.druid.pools.mana=7;
+ if(combat){ctx.campaign.enemies=[{name:"Satyr",hp:50,maxHp:50}];ctx.campaign.enemyLocation=ctx.campaign.scene.location;}
+ const action={text:"Shift out of bear form into your natural Night Elf shape",type:"move",difficulty:"easy"};return {...x,action};
+}
+test("reported Bear return choice previews zero Mana and shifts to Humanoid exactly once",async()=>{
+ const x=bearReturnSetup(),ctx=x.ctx;assert.equal(x.plan(x.action).kind,"shift");assert.equal(x.plan(x.action).form,"caster");const preview=ctx.dicePreview(x.action);assert.match(preview.primary,/Humanoid/);assert.match(preview.secondary,/No Mana cost/);
+ const forecast=ctx.resourceForecast(x.action);assert.equal(forecast.cost,0);assert.equal(forecast.current,7);assert.equal(forecast.after,7);assert.equal(forecast.affordable,true);assert.doesNotMatch(forecast.text,/20 cost|Rage earned/);
+ await ctx.select(x.action);assert.equal(ctx.s.druid.form,"caster");assert.equal(ctx.s.druid.pools.mana,7);assert.equal(ctx.s.en,7);assert.equal(ctx.s.time,1);assert.equal(ctx.generations,1);assert.match(ctx.campaign.pending.resolution,/Humanoid.*No Mana cost/);await ctx.select(x.action);assert.equal(ctx.s.time,1);assert.equal(ctx.generations,1);
+});
+test("returning to natural form is possible at zero Mana",async()=>{
+ const x=bearReturnSetup(),ctx=x.ctx;ctx.s.druid.pools.mana=0;assert.equal(ctx.resourceForecast(x.action).affordable,true);await ctx.select(x.action);assert.equal(ctx.s.druid.form,"caster");assert.equal(ctx.s.druid.pools.mana,0);assert.equal(ctx.s.time,1);
+});
+test("a return story choice in combat is one recorded shift exchange with retaliation",async()=>{
+ const x=bearReturnSetup(true),ctx=x.ctx,hp=ctx.s.hp;await ctx.select(x.action);assert.equal(ctx.s.druid.form,"caster");assert.equal(ctx.campaign.combatRound,1);assert.equal(ctx.campaign.enemies[0].hp,50);assert.equal(ctx.campaign.lastExchange.dealt,0);assert.equal(ctx.campaign.lastExchange.shapeshift,true);assert.equal(ctx.campaign.lastExchange.ability,"shift_caster");assert.equal(ctx.campaign.pending.combat,true);assert.equal(ctx.campaign.pending.combatExchangeResolved,true);assert.ok(ctx.s.hp<hp);assert.equal(ctx.s.druid.pools.mana,7);
+});
+test("already-natural and unaffordable form choices are filtered before selection",async()=>{
+ const x=bearReturnSetup(),ctx=x.ctx;ctx.s.druid.form="caster";ctx.s.en=7;assert.match(x.plan(x.action).error,/Already in Humanoid Form/);assert.equal(ctx.playableStoryChoice(x.action,0).type,"rest");const before=JSON.stringify(ctx.s);await ctx.select(x.action);assert.equal(JSON.stringify(ctx.s),before);assert.equal(ctx.generations,undefined);
+ const entry={text:"Shapeshift into Bear Form",type:"move"};assert.match(x.plan(entry).error,/20 Mana/);assert.equal(ctx.playableStoryChoice(entry,1).type,"rest");
+});
+test("form-change persistence failure restores the prior Bear form and Mana pool",async()=>{
+ const x=bearReturnSetup(),ctx=x.ctx;ctx.store=()=>false;const before=JSON.stringify(ctx.s);await ctx.select(x.action);assert.equal(JSON.stringify(ctx.s),before);assert.equal(ctx.campaign.pending,undefined);assert.equal(ctx.generations,undefined);
 });

@@ -142,6 +142,13 @@ test("Skyborne variants preserve mechanics and normal characters retain their ow
 test("named shifts recognize Skyborne names, ordinary form names and explicit IDs",()=>{
  const x=setup();assert.equal(x.d.shiftFrom({text:"Transform into Great Ironfeather Guardian Form"}),"dire_bear");assert.equal(x.d.shiftFrom({text:"Shapeshift into Cat Form"}),"cat");assert.equal(x.d.shiftFrom({ability:"shift_bear"}),"bear");assert.equal(x.d.shiftFrom({text:"Inspect a bear's tracks"}),null);
 });
+test("leaving a form resolves its destination instead of the form being left",()=>{
+ const x=setup();
+ for(const text of ["Shift out of bear form into your natural Night Elf shape","Shift out of Bear Form","Leave Bear Form","Revert to your original form","Return to humanoid form","Change back to my natural shape","Return to Night Elf form","Cancel shapeshift","Shift back"]){assert.equal(x.d.shiftFrom({text}),"caster",text);}
+ for(const [text,form] of [["Shift from Bear Form into Cat Form","cat"],["Shift out of Cat Form into Bear Form","bear"],["Transform from Bear Form to Dire Bear Form","dire_bear"],["Shift out of Windstalker Raptor into Great Ironfeather Guardian Form","dire_bear"]])assert.equal(x.d.shiftFrom({text}),form,text);
+ assert.equal(x.d.shiftFrom({text:"Shift out of Bear Form",form:"cat"}),"cat","explicit destination remains authoritative");
+ for(const text of ["Do not shift out of bear form","Inspect a bear's tracks","Return to camp after watching a bear","Leave the forest quietly","Return to the Druid trainer to discuss Bear Form","Return to Darnassus in Cat Form"]){assert.equal(x.d.shiftFrom({text}),null,text);}
+});
 
 test("form menu reveals only earned forms, their resources and eligible training",()=>{
  const x=setup(10);

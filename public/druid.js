@@ -63,7 +63,7 @@ function environment(location){const l=String(location||"");const indoors=/\b(?:
 function shiftError(s,c,profile,level,id,inCombat=false){
  const d=state(s),f=FORMS[id];
  if(profile?.className!=="Druid"||!f)return "Only Druids can shapeshift.";
- if(d.form===id)return "Already in that form.";
+ if(d.form===id)return "Already in "+name(id,profile)+" Form.";
  if(!unlocked(c,id,profile,level))return "Requires level "+f.level+(f.spec?" and "+f.spec:"")+" and the completed "+(QUESTS[id]?.title||"form")+" quest.";
  const env=environment(c.scene?.location);
  if(f.water&&!env.water)return "Aquatic Form requires a water location.";
@@ -99,9 +99,28 @@ function named(action,base=[]){const t=" "+String(action.text||"").toLowerCase()
 function shiftFrom(action){
  if(action.form)return action.form;
  if(String(action.ability||"").startsWith("shift_"))return action.ability.slice(6);
- const text=String(action.text||"");if(!/\b(?:shift|shapeshift|transform|return to humanoid|leave .+form)\b/i.test(text))return null;
- const aliases=Object.entries(FORMS).flatMap(([id,f])=>[[id,id.replaceAll("_"," ")],[id,f.name],[id,SKY[id]]]).sort((a,b)=>b[1].length-a[1].length);
- return aliases.find(([,label])=>new RegExp("\\b"+label.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"(?: form)?\\b","i").test(text))?.[0]||null;
+ const text=String(action.text||"").toLowerCase().replace(/[’']/g,"").replace(/[-_]/g," ");
+ if(/\b(?:do not|dont|without|avoid)\b.{0,45}\b(?:shift|shapeshift|transform|revert|leave|return)\b/.test(text))return null;
+ const leaving=/\b(?:shift|shapeshift|transform)\s+out of\b|\b(?:leave|exit|cancel|drop|end|shed)\b.{0,45}\b(?:form|shape|shapeshift|transformation)\b/.test(text);
+ const aliases=Object.entries(FORMS).flatMap(([id,f])=>[[id,id.replaceAll("_"," ")],[id,f.name],[id,SKY[id]]]);
+ aliases.push(["caster","human"],["caster","yourself"],["caster","myself"]);
+ const race=hero()?.race;if(race)aliases.push(["caster",race+" form"],["caster",race+" shape"]);
+ const returnPrefix="\\b(?:return|change|resume)(?:\\s+back)?\\s+(?:to\\s+)?(?:(?:your|my|the|our)\\s+)?";
+ const naturalReturn=new RegExp(returnPrefix+"(?:(?:humanoid|caster|yourself|myself)\\b|human\\s+(?:form|shape)\\b|(?:natural|normal|original|native|true)(?:\\s+\\w+){0,4}?\\s+(?:form|shape|body|self)\\b)").test(text);
+ const returningForm=aliases.some(([,label])=>new RegExp(returnPrefix+label.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"(?:\\s+(?:form|shape)\\b|\\s*(?:[.!?,]|$))").test(text));
+ if(!leaving&&!naturalReturn&&!returningForm&&!/\b(?:shift|shapeshift|transform|revert)\b/.test(text))return null;
+ const findTarget=fragment=>{
+  const matches=aliases.map(([id,label])=>{const match=new RegExp("\\b"+label.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"\\b").exec(fragment);return match?{id,index:match.index,length:label.length}:null;}).filter(Boolean);
+  const natural=/\b(?:natural|normal|original|native|true)(?:\s+\w+){0,4}?\s+(?:form|shape|body|self)\b/.exec(fragment);
+  if(natural)matches.push({id:"caster",index:natural.index,length:natural[0].length});
+  return matches.sort((a,b)=>a.index-b.index||b.length-a.length)[0]?.id||null;
+ };
+ // Read the destination before considering the form being left.
+ for(const marker of text.matchAll(/\b(?:into|to)\s+/g)){
+  const destination=findTarget(text.slice(marker.index+marker[0].length).split(/[.!?;,]/)[0]);if(destination)return destination;
+ }
+ if(leaving||/\b(?:shift|change|transform|revert)\s+back\b/.test(text))return "caster";
+ return findTarget(text);
 }
 function errorFor(ability,s,c,combat=true,target){
  const d=state(s);

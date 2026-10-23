@@ -39,7 +39,10 @@ function named(action,hero,level){
 }
 function plan({action,s,c,hero,level,enemies=[],selected=null,cooldown=()=>0,maxHP=100}){
  if(!action||["racial","druid_quest"].includes(action.type)||action.craftRecipe||action.survey||["bromli_guard","pippa_snare","lethariel_heal"].includes(action.ability)||/\b(?:don't|do not|avoid|without)\b.{0,45}\b(?:cast|use|vanish)\b/i.test(action.text||""))return null;
- if(hero.className==="Druid"&&window.soaDruid?.shiftFrom&&window.soaDruid.shiftFrom(action)!==null)return null;
+ if(hero.className==="Druid"&&window.soaDruid?.shiftFrom){
+  const form=window.soaDruid.shiftFrom(action);
+  if(form!==null){const combat=enemies.length>0,error=window.soaDruid.shiftError(s,c,hero,level,form,combat);return error?{error}:{kind:"shift",form,combat};}
+ }
  const known=named(action,hero,level);
  if(known&&!action.ability&&action.type!=="combat"&&!/\b(?:cast|use|channel|invoke|call|unleash|heal|strike|attack|blast|burn|freeze|bind|blink|vanish|prowl|enter|activate)\b/i.test(action.text||"")&&!normalize(action.text).startsWith(normalize(known.name)))return null;
  const ability=known?window.soaClassAbilities?.get?.(known.id,hero.className,level):null;
