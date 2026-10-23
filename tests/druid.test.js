@@ -63,6 +63,40 @@ test("Druid area attacks record named abilities and complete per-target HP and r
  const out=x.cast("swipe");assert.equal(out.event.abilityName,"Swipe");assert.equal(out.event.effect,"damage");assert.equal(out.event.strikes.length,2);
  out.event.strikes.forEach((strike,i)=>{assert.equal(strike.index,i+1);assert.equal(strike.criticalOn,20);assert.equal(strike.before-strike.damage,strike.after);assert.equal(strike.after,x.c.enemies[i].hp);assert.equal(strike.maxHp,x.c.enemies[i].maxHp);});
 });
+test("Bear Mangle costs 20 Rage and doubles Strength for damage, not accuracy",()=>{
+ const x=setup(10);x.unlock("bear");x.d.shift(x.s,x.c,x.profile,10,"bear");x.foe();x.s.en=50;x.s.druid.pools.rage=50;
+ const mangle=x.learned().find(a=>a.id==="spec_druid_feral"),calls=[];assert.equal(mangle.cost,20);assert.equal(mangle.stat,"STR");assert.equal(mangle.cooldown,2);
+ x.rules.attack=(bonus,ac,options)=>{calls.push({bonus,options});return {die:15,total:15+bonus,bonus,hit:true,critical:false};};
+ const before=x.c.enemies[0].hp,out=x.cast("spec_druid_feral");assert.equal(before-x.c.enemies[0].hp,4+7+2*x.actor.modifiers.STR);assert.equal(calls[0].bonus,x.actor.proficiency+x.actor.modifiers.STR);assert.equal(calls[0].options.criticalOn,20);assert.equal(x.s.en,40,"50 - 20 + 5 landed + 5 damage taken");assert.equal(out.event.abilityName,"Mangle");assert.equal(x.s.druid.combo.points,0);
+});
+test("Maul remains a cheaper repeatable Bear attack and Dire Bear adds its flat bonus once",()=>{
+ const x=setup();x.unlock("bear");x.unlock("dire_bear");x.d.shift(x.s,x.c,x.profile,60,"dire_bear");x.foe();x.s.en=100;x.s.druid.pools.rage=100;
+ x.context.window.soaEquipment.modifiers=()=>({damage:3});const before=x.c.enemies[0].hp;x.cast("spec_druid_feral");assert.equal(before-x.c.enemies[0].hp,4+7+2*x.actor.modifiers.STR+2+3);
+ const maul=x.learned().find(a=>a.id==="maul");assert.equal(maul.cost,15);assert.equal(maul.cooldown,0);const hp=x.c.enemies[0].hp;assert.ok(!x.cast("maul").error);assert.equal(hp-x.c.enemies[0].hp,4+5+x.actor.modifiers.STR+2+3);
+});
+test("Cat Mangle costs 35 Energy, builds one target-bound combo point and caps at five",()=>{
+ const x=setup(24);x.unlock("cat");x.d.shift(x.s,x.c,x.profile,24,"cat");x.foe();const m=x.learned().find(a=>a.id==="spec_druid_feral");assert.equal(m.cost,35);assert.equal(m.stat,"DEX");assert.equal(m.die,12);assert.equal(m.cooldown,1);assert.equal(m.criticalOn,19);
+ const before=x.c.enemies[0].hp;x.cast(m.id);assert.equal(before-x.c.enemies[0].hp,4+7+x.actor.modifiers.DEX);assert.equal(x.s.en,85);assert.equal(x.s.druid.combo.points,1);assert.equal(x.s.druid.combo.target,x.c.enemies[0].name);
+ x.s.time=x.s.druid.cooldowns[m.id];x.s.druid.combo.points=5;x.s.en=100;x.cast(m.id);assert.equal(x.s.druid.combo.points,5);
+ x.s.time=x.s.druid.cooldowns[m.id];x.s.en=100;const other={name:"Second Guard",hp:500,maxHp:500};x.c.enemies.push(other);x.cast(m.id,other);assert.equal(x.s.druid.combo.target,other.name);assert.equal(x.s.druid.combo.points,1);
+});
+test("only Cat Mangle critically hits on natural 19; its critical doubles dice only",()=>{
+ for(const form of ["bear","cat"]){const x=setup(20);x.unlock(form);x.d.shift(x.s,x.c,x.profile,20,form);x.foe();x.s.en=100;x.s.druid.pools[form==="bear"?"rage":"energy"]=100;
+  const actual=x.context.window.soaCombatRules;x.rules.statBlock=()=>({ac:100,bonus:3,die:6,resist:[],vulnerable:[]});x.rules.attack=(bonus,ac,options)=>actual.attack(bonus,ac,{...options,rng:()=>.9});x.rules.damage=(die,flat,critical)=>actual.damage(die,flat,critical,()=>0);
+  const before=x.c.enemies[0].hp,out=x.cast("spec_druid_feral");assert.equal(out.event.hit,form==="cat");assert.equal(out.event.strikes[0].critical,form==="cat");assert.equal(out.event.strikes[0].criticalOn,form==="cat"?19:20);assert.equal(before-x.c.enemies[0].hp,form==="cat"?2+7+x.actor.modifiers.DEX:0);assert.equal(x.s.druid.combo.points,form==="cat"?1:0);
+ }
+});
+test("Mangle cooldowns require exactly two intervening Bear turns or one Cat turn",()=>{
+ for(const form of ["bear","cat"]){const x=setup(20);x.unlock(form);x.d.shift(x.s,x.c,x.profile,20,form);x.foe();x.s.en=100;x.cast("spec_druid_feral");const wait=form==="bear"?2:1;
+  const basic={id:"druid_strike",name:"Natural Strike",cost:0,effect:"damage",stat:form==="bear"?"STR":"DEX",die:6,flat:3};
+  for(let i=0;i<wait;i++){const before=JSON.stringify(x.s);assert.match(x.cast("spec_druid_feral").error,/cooldown/);assert.equal(JSON.stringify(x.s),before);x.d.exchange(x.s,x.c,x.profile,20,{},basic,x.c.enemies[0],x.rules,x.actor);}
+  x.s.en=100;assert.ok(!x.cast("spec_druid_feral").error);
+ }
+});
+test("form variants do not mutate the signature or bypass learned-form and Feral requirements",()=>{
+ const x=setup(20),signature=x.context.window.soaSpecializations.ability(x.profile,20);x.unlock("bear");x.unlock("cat");x.d.shift(x.s,x.c,x.profile,20,"cat");assert.equal(x.learned().find(a=>a.id===signature.id).cost,35);assert.equal(signature.cost,20);assert.equal(signature.damageStatMultiplier,2);
+ x.d.shift(x.s,x.c,x.profile,20,"bear");assert.equal(x.learned().find(a=>a.id===signature.id).cost,20);x.profile.specialization="Balance";assert.ok(!x.learned().some(a=>a.id===signature.id));x.d.shift(x.s,x.c,x.profile,20,"caster");x.profile.specialization="Feral";assert.ok(!x.learned().some(a=>a.id===signature.id));
+});
 test("bleeds tick once per future exchange and cannot tick while viewing or retrying",()=>{
  const x=setup();x.unlock("cat");x.d.shift(x.s,x.c,x.profile,60,"cat");const target=x.foe();x.cast("rake");const after=target.hp;assert.equal(x.s.druid.dots.length,1);x.d.context();x.d.context();assert.equal(target.hp,after);
  const basic={id:"test_guard",name:"Wait",cost:0,effect:"guard",stat:"DEX",die:0,flat:0};

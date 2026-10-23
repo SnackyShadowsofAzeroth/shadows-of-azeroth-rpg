@@ -1,5 +1,5 @@
 // Static-shell offline cache. API requests are network-only and are never cached.
-const CACHE="shadows-of-azeroth-v106";
+const CACHE="shadows-of-azeroth-v107";
 const CRAFTING_FILE="./crafting.js";
 const FILES=["./","./index.html","./manifest.webmanifest","./icon.svg","./campaign.js","./racial-abilities.js","./specializations.js","./class-abilities.js","./druid.js","./druid-vines.svg","./class-themes.js","./class-themes.css","./quests.js","./equipment.js","./forever-items.js","./enchanting.js","./combat-rules.js","./companions.js","./theme.css","./characters.css","./characters.js","./character-rules.js","./resource-rules.js","./save-rules.js","./reputation.css","./reputation.js","./portraits.css","./portraits.js","./chronicle.css","./chapters.css","./chronicle.js","./progression.js","./progression.css","./abilities.js","./abilities.css","./mobile-layout.js","./mobile-layout.css"];
 self.addEventListener("install",event=>{

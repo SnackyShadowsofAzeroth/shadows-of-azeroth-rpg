@@ -364,12 +364,15 @@ function specializationCard(){
  if(choices.some(x=>x.name===chosen)){
   const spec=choices.find(x=>x.name===chosen);
   box.append(make("p",chosen+" · "+spec.description));
-  const signature=spec.ability,row=make("div",undefined,"soa-class-ability");row.append(make("strong",signature.name),make("span",signature.description+" · "+signature.cost+" "+(window.soaResources?.forClass?.(active.className)?.label||"Resource")+" · signature ability"));box.append(row);
+  const signature=window.soaClassAbilities?.get?.(spec.ability.id,active.className,level)||spec.ability,row=make("div",undefined,"soa-class-ability");
+  const form=active.className==="Druid"?window.soaDruid?.form?.():undefined;
+  const description=signature.id==="spec_druid_feral"&&!["bear","dire_bear","cat"].includes(form)?"Mangle requires a learned Feral combat form · Bear: 20 Rage, 2-round cooldown · Cat: 35 Energy, 1-round cooldown":signature.description+" · "+signature.cost+" "+(window.soaResources?.forClass?.(active.className,form)?.label||"Resource")+(signature.cooldown?" · "+signature.cooldown+"-round cooldown":"");
+  row.append(make("strong",signature.name),make("span",description+" · signature ability"));box.append(row);
   return box
  }
  box.append(make("p","Choose a talent tree. Your choice unlocks its signature ability and is saved to this character."));
  const list=make("div",undefined,"soa-specialization-choices");
- for(const spec of choices){const button=make("button");button.type="button";button.className="soa-specialization-choice";button.append(make("strong",spec.name),make("span",spec.description),make("em","Signature · "+spec.ability.name+" · "+spec.ability.cost+" "+(window.soaResources?.forClass?.(active.className)?.label||"Resource")));button.onclick=()=>{const old=active.specialization;active.specialization=spec.name;if(!commitRoster()){active.specialization=old;window.alert?.("Could not save specialization. Check available device storage.");return}drawProfessions()};list.append(button)}
+ for(const spec of choices){const button=make("button");button.type="button";button.className="soa-specialization-choice";button.append(make("strong",spec.name),make("span",spec.description),make("em","Signature · "+spec.ability.name+" · "+(spec.ability.id==="spec_druid_feral"?"20 Rage / 35 Energy by form":spec.ability.cost+" "+(window.soaResources?.forClass?.(active.className)?.label||"Resource"))));button.onclick=()=>{const old=active.specialization;active.specialization=spec.name;if(!commitRoster()){active.specialization=old;window.alert?.("Could not save specialization. Check available device storage.");return}drawProfessions()};list.append(button)}
  box.append(list);return box
 }
 function professionRow(name,record,label,onClick){

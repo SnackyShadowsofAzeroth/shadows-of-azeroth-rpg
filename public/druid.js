@@ -86,7 +86,12 @@ function abilities(base,signature,level,s,c,profile){
  const spellForms=["caster","moonkin","tree"];
  const caster=spellForms.includes(f)?base.filter(a=>a.level<=level).filter(a=>f!=="tree"||a.effect==="heal").filter(a=>f!=="moonkin"||a.effect!=="heal"):[];
  const sig=signature&&((signature.id==="spec_druid_feral"&&BEARS.concat("cat").includes(f))||(signature.id==="spec_druid_balance"&&["caster","moonkin"].includes(f))||(signature.id==="spec_druid_restoration"&&["caster","tree"].includes(f)))?[signature]:[];
- return [...caster,...KIT.filter(a=>a.level<=level&&a.forms.includes(f)),...sig].map(a=>({...a,stat:a.id==="spec_druid_feral"&&BEARS.includes(f)?"STR":a.stat,cost:f==="tree"&&a.effect==="heal"&&a.id!=="rejuvenation"?Math.max(0,a.cost-5):a.cost}));
+ return [...caster,...KIT.filter(a=>a.level<=level&&a.forms.includes(f)),...sig].map(a=>{
+  if(a.id==="spec_druid_feral")return f==="cat"
+   ?{...a,stat:"DEX",die:12,flat:7,damageStatMultiplier:1,cost:35,cooldown:1,criticalOn:19,builder:true,description:"A ferocious strike: 1d12 + 7 + Dexterity modifier. A hit builds 1 combo point; natural 19–20 critically hits."}
+   :{...a,stat:"STR",die:12,flat:7,damageStatMultiplier:2,cost:20,cooldown:2,criticalOn:20,builder:false,description:"A crushing strike: 1d12 + 7 + twice your Strength modifier."};
+  return {...a,cost:f==="tree"&&a.effect==="heal"&&a.id!=="rejuvenation"?Math.max(0,a.cost-5):a.cost};
+ });
 }
 function available(base,signature,level){const p=hero();return binding&&p?.className==="Druid"?abilities(base,signature,level,binding.state(),binding.campaign()||{},p):base.filter(a=>a.level<=level)}
 function all(){return KIT.map(x=>({...x}))}
@@ -189,11 +194,11 @@ function exchange(s,c,profile,level,action,ability,target,rules,actor){
   }else if(["damage","interrupt"].includes(ability.effect)){
    const victims=ability.aoe?targets.slice(0,3):[target];
    for(const enemy of victims){
-    const block=rules.statBlock(enemy),roll=rules.attack((actor?.proficiency||2)+stat+(gear.attack||0),block.ac,{advantage:d.prowl?1:0});
+    const block=rules.statBlock(enemy),roll=rules.attack((actor?.proficiency||2)+stat+(gear.attack||0),block.ac,{advantage:d.prowl?1:0,criticalOn:ability.criticalOn||20});
     const cp=ability.finisher?d.combo.points:0,bonus=ability.finisher&&!ability.bleed?cp*3:0;
-    const raw=rules.damage(ability.die,ability.flat+stat+(d.form!=="moonkin"||["nature","arcane"].includes(ability.damageType)?mods.damage:0)+(gear.damage||0)+bonus+(d.form==="cat"&&d.effects.furyUntil>=round?4:0),roll.critical);
+    const raw=rules.damage(ability.die,ability.flat+stat*(ability.damageStatMultiplier||1)+(d.form!=="moonkin"||["nature","arcane"].includes(ability.damageType)?mods.damage:0)+(gear.damage||0)+bonus+(d.form==="cat"&&d.effects.furyUntil>=round?4:0),roll.critical);
     const before=enemy.hp,damage=roll.hit?Math.min(enemy.hp,rules.mitigate(raw,ability.damageType,block)):0;enemy.hp-=damage;dealt+=damage;hit=hit||roll.hit;
-    attacks.push({index:attacks.length+1,target:enemy.name,die:roll.die,total:roll.total,bonus:roll.bonus,ac:block.ac,hit:roll.hit,damage,critical:roll.critical,criticalOn:20,before,after:enemy.hp,maxHp:enemy.maxHp});
+    attacks.push({index:attacks.length+1,target:enemy.name,die:roll.die,total:roll.total,bonus:roll.bonus,ac:block.ac,hit:roll.hit,damage,critical:roll.critical,criticalOn:ability.criticalOn||20,before,after:enemy.hp,maxHp:enemy.maxHp});
     if(roll.hit&&ability.bleed)d.dots=[...d.dots.filter(x=>!(x.target===enemy.name&&x.id===ability.id)),{id:ability.id,target:enemy.name,amount:ability.finisher?2+cp*2:3,until:round+3,start:round+1}];
     if(roll.hit&&ability.builder){if(d.combo.target!==enemy.name)d.combo={target:enemy.name,points:0};d.combo.points=Math.min(5,d.combo.points+1);}
    }
