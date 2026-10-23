@@ -888,11 +888,33 @@ function drawCombatActions(box){
    button.textContent=ability.name+" · No cost"+(left?" · "+left+" actions":"");
    button.title=ability.description;button.disabled=busy||!!pending()||!!left||s.hp>=heroHealthCap()&&ability.effect==="heal"||ability.requiresCorpse&&!hasRecentCorpse();
    button.onclick=()=>choose({text:(hero?.name||"Your hero")+" uses "+ability.name+" against "+target.value,type:"combat",difficulty:"medium",ability:ability.id});
-   const note=document.createElement("small");const mechanics=ability.id==="berserking"?" · 3 separate melee rolls · first hit full, follow-ups half · 3-action cooldown":"";note.textContent=(left?"Cooldown · "+left+" actions":"Ready · No resource cost")+mechanics;button.append(note);grid.append(button);
+   const note=document.createElement("small");const mechanics=ability.id==="berserking"?" · 3 separate melee rolls · first hit full, follow-ups half · 4-action cooldown":"";note.textContent=(left?"Cooldown · "+left+" actions":"Ready · No resource cost")+mechanics;button.append(note);grid.append(button);
   }
   more.append(grid);section.append(more);
  }
  box.append(section);
+}
+function scavengeFallenEnemy(action,success){
+ if(!success)return null;
+ const text=String(action?.text||"").toLowerCase();
+ const searching=/\b(?:scaveng\w*|loot\w*|rifl\w*|ransack\w*|search\w*|pocket\w*)\b/.test(text);
+ const corpse=/\b(?:fallen|dead|defeated|corpse|body|bodies|remains|foe|enemy|enemies)\b/.test(text);
+ const records=Array.isArray(campaign.defeatedEnemies)?campaign.defeatedEnemies:[];
+ const location=String(campaign.scene?.location||campaign.enemyLocation||"").toLowerCase()+"|";
+ const nearby=records.filter(id=>id.toLowerCase().startsWith(location)&&!/(?:beast|wolf|worg|spider|scorp\w*|boar|serpent|raptor|crocolisk|construct|elemental)/i.test(id.slice(location.length)));
+ if(!searching||(!corpse&&!nearby.some(id=>text.includes(id.slice(location.length)))))return null;
+ s.flags||={};
+ const claimed=Array.isArray(s.flags.lootReceipts)?s.flags.lootReceipts:[];
+ const unsearched=nearby.filter(id=>!claimed.includes(id));
+ const named=unsearched.findLast(id=>text.includes(id.slice(location.length)));
+ const id=named||unsearched.at(-1);
+ if(!id)return "No unsearched fallen enemy here yielded coins.";
+ const amount=6+Math.floor(Math.random()*19)+(Math.random()<0.1?100:0);
+ s.money+=amount;
+ s.flags.lootReceipts=[...claimed,id].slice(-80);
+ const silver=Math.floor(amount/100),copper=amount%100;
+ const coins=(silver?silver+" silver"+(copper?" and ":""):"")+(copper?copper+" copper":"");
+ return "Loot: found "+coins+" on "+id.slice(location.length)+". Wallet now "+fmtMoney(s.money)+".";
 }
 function result(action){
  const unavailable=unavailableClassAbility(action);
@@ -910,10 +932,11 @@ function result(action){
  s.en=Math.min(100,s.en-cost+ACTION_RESOURCE_RECOVERY);s.time++; if(!ok&&["stealth","engineering","combat"].includes(t)){s.alert=Math.min(3,s.alert+1);damage=t==="combat"?8:t==="stealth"?3:0;s.hp=Math.max(1,s.hp-damage)}
  let healed=0;
  if(ok&&(t==="rest"||woundCare)){const before=s.hp;s.hp=Math.min(heroHealthCap(),s.hp+4);healed=s.hp-before}
- // Defeating an opponent does not itself loot them: currency changes require explicit search/loot actions.
+ // Only an explicit successful search can credit one tracked fallen foe.
+ const scavenged=scavengeFallenEnemy(action,ok);
  const msg=ok?"Success":"Complication";
  let effect=woundCare?(ok?"You bind your wounds and restore "+healed+" HP; the bleeding subsides.":"Your attempt to bind your wounds fails; no HP is restored."):t==="combat"?(ok?"The immediate opponent is overcome in a single abstract skirmish.":"The opponent remains a threat; Snacky takes "+damage+" damage."):t==="stealth"?(ok?"Snacky remains concealed.":"A noise attracts nearby attention."):t==="engineering"?(ok?"Pippa's mechanism works as intended.":"The apparatus sparks and raises suspicion."):t==="social"?(ok?"The approach is received favorably.":"The target refuses to cooperate."):t==="rest"?(ok?"The party regains composure.":"The party cannot safely rest."):ok?"The action achieves its immediate intent.":"The action encounters resistance.";
- return msg+": d100 roll "+rolled+" vs target "+target+" ("+(ok?"success":"failure")+"). "+effect+" Result is authoritative; do not invent additional mechanical effects.";
+ return msg+": d100 roll "+rolled+" vs target "+target+" ("+(ok?"success":"failure")+"). "+effect+(scavenged?" "+scavenged:"")+" Result is authoritative; do not invent additional mechanical effects.";
 }
 function interfaceUI(){
  if(get("campaign-box"))return;
@@ -999,6 +1022,8 @@ function draw(){
   notice.textContent="Payment mentioned in narration · Amount not verified · No currency credited by the game engine.";
   box.append(notice);
  }
+ const lootText=String(campaign.lastResult||"").match(/Loot: found ([^.]+)\. Wallet now ([^.]+)\./);
+ if(lootText){const notice=document.createElement("p");notice.className="soa-level-toast";notice.textContent="COINS FOUND · "+lootText[1]+" · Wallet "+lootText[2];box.append(notice)}
  if(campaign.lastProgression){const gained=document.createElement("p");gained.className="soa-level-toast";gained.textContent=campaign.lastProgression;box.append(gained)}
  const moments=window.soaCompanions?.getAdventureMoments?.()||[];
  if(moments.length){

@@ -54,9 +54,9 @@ const kits={
   ["entangling_roots","Entangling Roots",10,35,"interrupt","WIS",8,4,"nature","Roots hinder and can interrupt your foe.",2]
  ],
  Shaman:[
-  ["lightning_bolt","Lightning Bolt",1,30,"damage","WIS",8,5,"lightning","Hurl a focused bolt of lightning.",0],
-  ["healing_wave","Healing Wave",1,35,"heal","WIS",8,5,"nature","Restore health with a surge of healing energy.",2],
-  ["earth_shock","Earth Shock",5,35,"interrupt","WIS",10,5,"lightning","A burst of elemental force that can interrupt.",1],
+  ["lightning_bolt","Lightning Bolt",1,40,"damage","WIS",8,5,"lightning","Hurl a focused bolt of lightning.",0],
+  ["healing_wave","Healing Wave",1,45,"heal","WIS",8,5,"nature","Restore health with a surge of healing energy.",2],
+  ["earth_shock","Earth Shock",5,40,"interrupt","WIS",10,5,"lightning","A burst of elemental force that can interrupt.",1],
   ["chain_lightning","Chain Lightning",10,45,"damage","WIS",12,7,"lightning","Unleash a powerful lightning strike.",2]
  ]
 };
