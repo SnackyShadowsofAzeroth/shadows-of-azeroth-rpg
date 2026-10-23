@@ -85,3 +85,9 @@ test("all ability effects, costs, and level ranges are valid", () => {
     }
   }
 });
+
+test("Shaman spell costs reflect the stronger elemental and healing kit", () => {
+  assert.equal(kits.get("lightning_bolt", "Shaman", 1).cost, 40);
+  assert.equal(kits.get("healing_wave", "Shaman", 1).cost, 45);
+  assert.equal(kits.get("earth_shock", "Shaman", 5).cost, 40);
+});
