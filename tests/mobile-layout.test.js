@@ -178,7 +178,7 @@ test("long story generation status is rendered in Adventure, not only Settings",
 
 test("Living Campaign controls are in Settings while its active scene stays in Adventure", () => {
   assert.match(campaign, /const el=document\.createElement\("section"\);el\.className="panel";el\.id="campaign-box";el\.style\.display="none"/);
-  assert.match(campaign, /const scene=document\.createElement\("div"\);scene\.id="campaign-scene";el\.append\(scene\)/);
+  assert.match(campaign, /const progress=document\.createElement\("p"\);progress\.id="campaign-progress-status"[\s\S]*const scene=document\.createElement\("div"\);scene\.id="campaign-scene";el\.append\(progress,scene\)/);
   assert.match(campaign, /const settings=get\("soa-save-settings"\);\s*if\(settings\)settings\.insertBefore\(disclosure,get\("export"\)\)/);
   assert.match(campaign, /get\("campaign-mode"\)/);
   assert.match(campaign, /get\("campaign-start"\)/);
