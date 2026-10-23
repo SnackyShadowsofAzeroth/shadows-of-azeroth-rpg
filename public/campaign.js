@@ -198,7 +198,7 @@ function d20SuccessChance(bonus,dc,advantage=0,criticalOn=20){
 }
 function chanceLabel(value){const rounded=Math.round(value*10)/10;return (Number.isInteger(rounded)?String(rounded):rounded.toFixed(1))+"%"}
 function dicePreview(action){
- if(window.soaDruid?.current?.()){const shift=window.soaDruid.shiftFrom(action);if(shift!==null)return {primary:"Shapeshift · one full turn",secondary:"20 Mana to enter a form; return to humanoid costs no Mana. No attack included."};const a=window.soaClassAbilities.available("Druid",window.soaProgression?.level?.()||1).find(x=>x.id===resolvedCombatAbility(action));if(a)return {primary:a.name+" · "+(a.effect==="heal"?"Healing roll":a.effect==="guard"?"Defensive action":"d20 + proficiency + "+a.stat+" vs target AC"),secondary:a.description+" · "+a.cost+" "+resourceName()};}
+ if(window.soaDruid?.current?.()){const shift=window.soaDruid.shiftFrom(action);if(shift!==null)return {primary:"Shapeshift · one full turn",secondary:"20 Mana to enter a form; return to humanoid costs no Mana. No attack included."};const a=window.soaClassAbilities.available("Druid",window.soaProgression?.level?.()||1).find(x=>x.id===resolvedCombatAbility(action));if(a&&!livingEnemies().length&&["damage","interrupt"].includes(a.effect)){const target=window.soaDruid.environmentalTarget(action,campaign);return {primary:target?a.name+" · d20 + proficiency + "+a.stat+" vs obstacle DC "+window.soaDruid.obstacleDC(action):a.name+" · Requires a hostile target or visible obstacle",secondary:a.description+" · "+a.cost+" "+resourceName()};}if(a)return {primary:a.name+" · "+(a.effect==="heal"?"Healing roll":a.effect==="guard"?"Defensive action":"d20 + proficiency + "+a.stat+" vs target AC"),secondary:a.description+" · "+a.cost+" "+resourceName()};}
  // Combat takes priority over social keyword detection, matching the resolver.
  const storyAbility=resolvedStoryVanish(action);
  if((action.type==="combat"||storyAbility)&&livingEnemies().length){
@@ -940,7 +940,11 @@ function druidResult(action){
  if(known&&!ability)return fail(known.name+" is not learned or cannot be used in "+druid.name(d.form)+" Form");
  if(ability&&!combat){
   const err=druid.errorFor(ability,s,campaign,false);if(err)return fail(err);
-  if(!ability.prowl&&ability.effect!=="heal")return fail("That ability requires a hostile target");
+  if(!ability.prowl&&ability.effect!=="heal"){
+   const outcome=druid.castAtEnvironment(s,campaign,profile,level,action,ability,window.soaCombatRules,window.soaAbilities.get("hero"));
+   if(outcome.error)return fail(outcome.error);
+   campaign.druidResolvedTime=s.time;return outcome.message;
+  }
   if(ability.prowl){if(d.prowl)return fail("Prowl is already active");d.prowl=true;}
   else {const actor=window.soaAbilities.get("hero"),amount=window.soaCombatRules.damage(ability.die,ability.flat+(actor.modifiers[ability.stat]||0)+druid.modifiers(s).heal);const before=s.hp;s.hp=Math.min(heroHealthCap(),s.hp+amount);campaign.druidResolvedTime=s.time+1;druid.recover(s,{cost:ability.cost,combat:false});s.time++;if(ability.hot){d.effects||={};d.effects.regrowth={until:(campaign.combatRound||0)+3};}d.cooldowns||={};d.cooldowns[ability.id]=s.time+ability.cooldown;return "Success: "+ability.name+" restores "+(s.hp-before)+" HP. "+resourceName()+" now "+s.en+"/100. One turn resolved.";}
   druid.recover(s,{cost:ability.cost,combat:false});s.time++;campaign.druidResolvedTime=s.time;return "Success: Prowl active. Your next cat opener gains advantage. One turn resolved.";

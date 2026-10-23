@@ -220,3 +220,20 @@ Added three region-bound, engine-authored missions with immutable reward terms a
 - 146 tests pass. DOM checks confirm earned-only forms/resources and independent
   dark/parchment text contrast of at least 4.5:1. Existing full DOM combat, save and
   pending-retry checks still pass. Actual iPhone visual QA remains unverified.
+
+## Druid spell use on environmental obstacles (2026-10-22)
+- Fixed a regression from the form engine: a named offensive spell in a story
+  choice was rejected whenever no living enemy was tracked, including Wrath
+  against a fragile root knot. The ordinary choice button was not disabled;
+  the resolver refused its non-hostile target after tapping.
+- Added a distinct environmental cast path for visible obstacles named in the
+  scene/choices. It uses d20 + proficiency + spell stat vs difficulty DC 10/13/17,
+  the learned ability's actual cost, form restrictions and persistent cooldown.
+- Success/failure spends one ordinary action with form-specific recovery. It
+  does not create an enemy, resolve a combat exchange, inflict retaliation,
+  award a defeat, generate loot or bypass verified form quest objectives.
+- Previews now say obstacle DC instead of enemy AC when no enemy is engaged.
+  Arbitrary scenery and untracked creatures still cannot be silently defeated.
+- 149 tests pass; full DOM regression clicks the exact screenshot's Option A,
+  confirms 100 -> 95 Mana, one saved turn, no enemy/retaliation, and no double
+  charge after story retry. Cache v99 forces updated client scripts.

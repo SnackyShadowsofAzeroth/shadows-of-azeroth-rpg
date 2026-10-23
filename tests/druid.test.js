@@ -124,3 +124,22 @@ test("form menu reveals only earned forms, their resources and eligible training
  assert.ok(!nodes.some(n=>/Windstalker|Frenzied Regeneration|Dire Bear/.test(n.textContent)));
  assert.ok(nodes.filter(n=>n.tag==="details").every(n=>n.className==="soa-collapsible-quests"));
 });
+
+test("Wrath can resolve an environmental root-knot choice without spawning an enemy",()=>{
+ const x=setup(1),action={text:"Channel Wrath to blast the fragile root knot",type:"combat",difficulty:"easy"};
+ x.c.scene.story="A fragile root knot obstructs the trail.";x.c.scene.choices=[action];
+ const wrath=x.learned().find(a=>a.id==="wrath"),beforeHP=x.s.hp;
+ assert.equal(x.d.environmentalTarget(action,x.c),"root knot");
+ const out=x.d.castAtEnvironment(x.s,x.c,x.profile,1,action,wrath,x.rules,x.actor);
+ assert.equal(out.success,true);assert.equal(out.dc,10);assert.equal(x.s.en,95);assert.equal(x.s.druid.pools.mana,95);assert.equal(x.s.time,1);assert.equal(x.c.combatRound,0);assert.equal(x.c.enemies.length,0);assert.equal(x.s.hp,beforeHP);assert.match(out.message,/No hostile was attacked or defeated/);
+});
+test("failed obstacle casts spend one action, never retaliate, and respect resource gates",()=>{
+ const x=setup(1),action={text:"Use Wrath on the root knot",difficulty:"hard"};x.c.scene.story="A root knot blocks the way.";const wrath=x.learned().find(a=>a.id==="wrath");
+ const out=x.d.castAtEnvironment(x.s,x.c,x.profile,1,action,wrath,{...x.rules,roll:()=>1},x.actor);assert.equal(out.success,false);assert.equal(x.s.en,95);assert.equal(x.s.hp,80);assert.match(out.message,/obstacle remains unresolved/);
+ x.s.en=20;x.s.druid.pools.mana=20;const before=JSON.stringify(x.s);assert.match(x.d.castAtEnvironment(x.s,x.c,x.profile,1,action,wrath,x.rules,x.actor).error,/Not enough/);assert.equal(JSON.stringify(x.s),before);
+});
+test("environmental casting cannot invent scenery or defeat an untracked enemy",()=>{
+ const x=setup(1),wrath=x.learned().find(a=>a.id==="wrath");x.c.scene.story="A wolf prowls the path.";
+ const before=JSON.stringify(x.s);assert.ok(x.d.castAtEnvironment(x.s,x.c,x.profile,1,{text:"Cast Wrath on the wolf"},wrath,x.rules,x.actor).error);assert.ok(x.d.castAtEnvironment(x.s,x.c,x.profile,1,{text:"Cast Wrath on a root knot"},wrath,x.rules,x.actor).error);assert.equal(JSON.stringify(x.s),before);
+ x.c.scene.story="A root knot blocks the path.";x.foe();assert.match(x.d.castAtEnvironment(x.s,x.c,x.profile,1,{text:"Cast Wrath on the root knot"},wrath,x.rules,x.actor).error,/combat target/);
+});

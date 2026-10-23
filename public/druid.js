@@ -115,6 +115,27 @@ function recover(s,{cost=0,hit=false,taken=0,shifted=false,combat=true}={}){
  if(!combat&&key==="rage"){s.en=Math.max(0,s.en-5);d.pools.rage=s.en;}
  return s.en;
 }
+// Story choices may aim a learned spell at scenery without creating an enemy.
+function environmentalTarget(action,c){
+ const text=String(action?.text||""),match=text.match(/\b(?:root[ -]knot|tangled roots|vines?|brambles?|barricade|wooden door|door|padlock|lock|chains?|webbing|spiderweb|boulder|fallen branch|fallen log|obstruction|obstacle)\b/i);
+ if(!match)return null;
+ const target=match[0].toLowerCase().replace(/-/g," ");
+ const scene=String(c.scene?.story||"")+" "+(c.scene?.choices||[]).map(x=>x.text||"").join(" ");
+ return scene.toLowerCase().replace(/-/g," ").includes(target)?target:null;
+}
+function obstacleDC(action){return action?.difficulty==="easy"?10:action?.difficulty==="hard"?17:13}
+function castAtEnvironment(s,c,profile,level,action,ability,rules,actor){
+ const target=environmentalTarget(action,c);
+ if((c.enemies||[]).some(e=>e.hp>0))return {error:"Use the combat target controls while an enemy is engaged."};
+ if(!target||!["damage","interrupt"].includes(ability?.effect))return {error:"That ability requires a hostile target or a visible environmental obstacle."};
+ const d=state(s),err=errorFor(ability,s,c,false);if(err)return {error:err};
+ if(!unlocked(c,d.form,profile,level)||FORMS[d.form].utility)return {error:"That spell cannot be used in your current form."};
+ const before=s.en,dc=obstacleDC(action),die=rules.roll(20),bonus=(actor?.proficiency||2)+(actor?.modifiers?.[ability.stat]||0),success=die===20||die!==1&&die+bonus>=dc;
+ recover(s,{cost:ability.cost,combat:false});s.time++;
+ if(ability.cooldown){d.cooldowns||={};d.cooldowns[ability.id]=s.time+ability.cooldown;}
+ d.prowl=false;
+ return {success,target,die,dc,message:(success?"Success: ":"Complication: ")+"Used "+ability.name+" on the "+target+". d20 "+die+" + "+bonus+" vs obstacle DC "+dc+". "+(success?"The spell achieves the selected effect on this environmental obstacle.":"The attempt fails; the obstacle remains unresolved.")+" "+FORMS[d.form].resource+" "+before+" → "+s.en+"/100; "+ability.cost+" spent. One action resolved. No hostile was attacked or defeated; no enemy damage, retaliation, loot or quest proof was awarded."};
+}
 function modifiers(s){const d=state(s);return {ac:FORMS[d.form].ac,damage:d.form==="dire_bear"?2:d.form==="moonkin"?3:0,heal:d.form==="tree"?3:0}}
 function skillBonus(skill){const d=current();if(!d)return 0;const env=environment(binding?.campaign()?.scene?.location);if((FORMS[d.form].outdoors&&!env.outdoors)||(FORMS[d.form].water&&!env.water))return 0;return skill==="stealth"&&d.prowl?20:skill==="move"&&d.effects?.dashActions>0?15:skill==="move"?(d.form==="travel"?15:d.form==="aquatic"?20:d.form==="flight"?25:0):0}
 // All effects tick only on a resolved exchange, never on rendering/retries.
@@ -257,5 +278,5 @@ function panel(s,c,p,level,choose,locked=false){
  }
  return box;
 }
-window.soaDruid={FORMS,QUESTS,state,current,form,name,bind:callbacks=>{binding=callbacks;},unlocked,environment,shiftError,shift,abilities,available,all,named,shiftFrom,errorFor,recover,modifiers,skillBonus,exchange,questAction,onDefeat,resetEncounter,context,panel};
+window.soaDruid={FORMS,QUESTS,state,current,form,name,bind:callbacks=>{binding=callbacks;},unlocked,environment,shiftError,shift,abilities,available,all,named,shiftFrom,errorFor,recover,environmentalTarget,obstacleDC,castAtEnvironment,modifiers,skillBonus,exchange,questAction,onDefeat,resetEncounter,context,panel};
 })();
