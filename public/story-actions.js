@@ -57,9 +57,10 @@ function plan({action,s,c,hero,level,enemies=[],selected=null,cooldown=()=>0,max
  if(self&&(c.combatAllies||[]).some(ally=>(mentions(action.text,ally.name)||mentions(action.text,ally.name.split(" ")[0]))&&ally.name!==hero.name))return {error:"This ability currently supports self-casting only."};
  if(enemies.length){
   const matches=enemies.filter(e=>mentions(action.text,e.name));
-  if(matches.length>1&&!self&&!ability?.aoe)return {error:"Name one enemy or choose a single combat target."};
+  const selectedTarget=enemies.find(e=>e.name===selected)||null;
+  if(matches.length>1&&!self&&!ability?.aoe&&!selectedTarget)return {error:"Name one enemy or choose a single combat target."};
   if(obstacle(action,c)&&!matches.length&&!self)return {error:"Resolve or leave the engaged fight before working on this obstacle."};
-  const target=matches.length===1?matches[0]:enemies.find(e=>e.name===selected)||(enemies.length===1?enemies[0]:null);
+  const target=matches.length===1?matches[0]:selectedTarget||(enemies.length===1?enemies[0]:null);
   if(!target&&!self)return {error:"Choose a combat target first."};
   if(hero.className==="Druid"&&ability){const error=window.soaDruid?.errorFor?.(ability,s,c,true,target||enemies[0]);if(error)return {error};}
   if(ability?.effect==="riposte"&&!c.parryReady)return {error:"Riposte requires a parry."};

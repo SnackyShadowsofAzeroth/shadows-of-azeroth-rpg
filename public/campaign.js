@@ -204,7 +204,7 @@ function d20SuccessChance(bonus,dc,advantage=0,criticalOn=20){
  return hits*100/rolls;
 }
 function chanceLabel(value){const rounded=Math.round(value*10)/10;return (Number.isInteger(rounded)?String(rounded):rounded.toFixed(1))+"%"}
-function storyActionPlan(action){return window.soaStoryActions?.plan?.({action,s,c:campaign,hero:window.soaCharacters?.profile?.()||{},level:window.soaProgression?.level?.()||1,enemies:livingEnemies(),selected:selectedCombatTarget,cooldown:classCooldownLeft,maxHP:heroHealthCap()})||null;}
+function storyActionPlan(action){const enemies=livingEnemies(),selected=enemies.some(enemy=>enemy.name===selectedCombatTarget)?selectedCombatTarget:enemies[0]?.name||null;return window.soaStoryActions?.plan?.({action,s,c:campaign,hero:window.soaCharacters?.profile?.()||{},level:window.soaProgression?.level?.()||1,enemies,selected,cooldown:classCooldownLeft,maxHP:heroHealthCap()})||null;}
 function playableStoryChoice(choice,index){
  const candidate=canonicalStoryChoice(choice),plan=storyActionPlan(candidate);
  // Validate the original too: replacing a locked spell must not silently change its target or intent.
@@ -894,7 +894,7 @@ function drawCombatActions(box){
  if(evasionRemaining>0){const evasionStatus=document.createElement("p");evasionStatus.className="soa-evasion-status";evasionStatus.textContent="Evasion active · 50% dodge chance per incoming hit · "+evasionRemaining+" round"+(evasionRemaining===1?"":"s")+" remaining";section.append(evasionStatus)}
  const targetLabel=document.createElement("label");targetLabel.className="soa-combat-target-label";targetLabel.textContent="Target";
  const target=document.createElement("select");target.className="soa-combat-target-select";target.setAttribute("aria-label","Combat target");
- const selected=enemies.find(e=>e.name===selectedCombatTarget)||enemies[0];
+ const selected=enemies.find(e=>e.name===selectedCombatTarget)||enemies[0];selectedCombatTarget=selected.name;
  for(const enemy of enemies){const option=document.createElement("option");option.value=enemy.name;option.textContent=enemy.name+" · "+enemy.hp+"/"+enemy.maxHp+" HP";target.append(option)}
  target.value=selected.name;
  target.onchange=()=>{selectedCombatTarget=target.value;draw()};
