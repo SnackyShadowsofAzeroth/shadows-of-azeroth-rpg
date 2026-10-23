@@ -1168,8 +1168,9 @@ function draw(){
   reserve.append(reserveHeading,reserveTrack,reserveHint);box.append(reserve);
  }
  const choicesHeader=document.createElement("div");choicesHeader.className="soa-choices-heading";
+ const arenaPanel=window.soaArena?.panel?.(campaign,s,window.soaCharacters?.profile?.(),choose,busy||!!pending());if(arenaPanel)box.append(arenaPanel);
  const dungeonPanel=window.soaDungeons?.panel?.(campaign,s,window.soaCharacters?.profile?.(),window.soaProgression?.level?.()||1,choose,busy||!!pending());if(dungeonPanel)box.append(dungeonPanel);
- if(window.soaDungeons?.current?.(campaign)){drawCombatActions(box);const foot=document.createElement("p");foot.className="muted soa-scene-footer";foot.textContent="Turn "+campaign.turn+" · Dungeon progress saved on this device · Local encounters";box.append(foot);return;}
+ if(window.soaDungeons?.current?.(campaign)||window.soaArena?.current?.(campaign)){drawCombatActions(box);const foot=document.createElement("p");foot.className="muted soa-scene-footer";foot.textContent="Turn "+campaign.turn+" · Local challenge progress saved on this device";box.append(foot);return;}
  const title=document.createElement("strong");title.textContent="Choose your next move";
  const count=document.createElement("span");count.textContent=sc.choices.length+" story paths"+(livingEnemies().length?" · combat actions above":" + resources + custom");
  choicesHeader.append(title,count);box.append(choicesHeader);
@@ -1243,12 +1244,44 @@ async function chooseDungeon(choice){
  }catch(error){rollback("Dungeon action could not be completed: "+error.message+". No turn committed.");}
  finally{busy=false;refreshDisplay();}
 }
+async function chooseArena(choice){
+ if(busy)return;busy=true;
+ const engine=window.soaArena,hero=window.soaCharacters.profile(),level=window.soaProgression?.level?.()||hero.startLevel||1;
+ const before={s:structuredClone(s),c:structuredClone(campaign),selected:selectedCombatTarget},roundBefore=Number(campaign.combatRound)||0,oldEnergy=s.en;
+ const rollback=message=>{s=before.s;campaign=before.c;selectedCombatTarget=before.selected;status(message);refreshDisplay();};
+ let resolution,out,spent=true;
+ try{
+  if(choice.arenaAction){out=engine.command(campaign,s,choice,hero,level);if(out.error){rollback(out.error);return;}resolution="Success: "+out.message;spent=out.spent;
+   if(out.startEncounter){if(campaign.xpEncounter?.active){if(campaign.xpEncounter.pendingVictory)concludeProgressionEncounter(true);campaign.xpEncounter.active=false;}selectedCombatTarget=campaign.enemies.find(e=>e.hp>0)?.name||null;startProgressionEncounter();}
+   if(out.abandonEncounter)selectedCombatTarget=null;
+  }else{
+   const active=engine.current(campaign);if(!active||active.status!=="fighting"){rollback("Use the arena board to start a bout or leave the challenge.");return;}
+   const intent=window.soaStoryActions?storyActionPlan(choice):null,shift=window.soaDruid?.shiftFrom?.(choice);
+   if(intent?.error||intent?.kind==="opening"||choice.type==="druid_quest"||choice.craftRecipe||(!["combat","racial"].includes(choice.type)&&shift==null&&!intent?.ability)){rollback(intent?.error||"Use learned spells or combat actions during an arena bout.");return;}
+   const cost=window.soaDruid?.current?.()?resourceForecast(choice).cost:0;
+   resolution=result(choice);if(!resolution){rollback("That action is unavailable. No turn spent.");return;}
+   if(window.soaDruid?.current?.()&&campaign.druidResolvedTime!==s.time){s.en=oldEnergy;window.soaDruid.recover(s,{cost,hit:campaign.lastExchange?.hit===true,taken:campaign.lastExchange?.taken||0,takenHits:campaign.lastExchange?.enemyAttacks?.filter(row=>row.damage>0&&row.recipient===hero.name).length,combat:livingEnemies().length>0});}
+   const tick=window.soaDruid?.tickRejuvenation?.(s);if(tick){resolution+=" "+tick.message;if(campaign.lastExchange&&campaign.combatRound>roundBefore){campaign.lastExchange.healed=(campaign.lastExchange.healed||0)+tick.amount;campaign.lastExchange.heroAfter=s.hp;}}
+   if((Number(campaign.combatRound)||0)>roundBefore){out=engine.settle(campaign,s,campaign.lastExchange);if(out.error){rollback(out.error);return;}if(out.message)resolution+=" "+out.message;if(out.lost)selectedCombatTarget=null;}
+  }
+  if(choice.arenaAction){const tick=window.soaDruid?.tickRejuvenation?.(s);if(tick)resolution+=" "+tick.message;}
+  if(spent){campaign.turn++;campaign.actionSerial=(Number(campaign.actionSerial)||0)+1;}
+  campaign.lastAction=String(choice.text||choice.arenaAction||"Arena action");campaign.lastResult=resolution;
+  campaign.history.push("Arena: "+campaign.lastAction+" | "+resolution);campaign.history=campaign.history.slice(-MAX);
+  window.soaChronicle?.receive?.(campaign,campaign.scene);
+  if(!(save()&&store())){rollback("Arena action could not be saved. No turn committed; retry after restoring storage.");save();store();return;}
+  if(out?.waveCleared)concludeProgressionEncounter();
+  store();window.soaChronicle?.render?.(campaign);refreshDisplay();status(resolution);returnToAdventure("scene");
+ }catch(error){rollback("Arena action could not be completed: "+error.message+". No turn committed.");}
+ finally{busy=false;refreshDisplay();}
+}
 async function choose(choice){
  if(busy||pending())return;
  if(window.soaSaveRules.isIntegrityBlocked()){status("Saved data could not be read. Restore a valid backup before continuing.");return}
  if(campaignLoadBlocked||campaignStorageReadFailed){status("");return}
  if(campaignSaveFailed&&!store()){draw();return}
  if(window.soaDungeons&&(choice.dungeonAction||window.soaDungeons.current(campaign)))return chooseDungeon(choice);
+ if(window.soaArena&&(choice.arenaAction||window.soaArena.current(campaign)))return chooseArena(choice);
  if(!navigator.onLine){status("Offline: your saved scene is available. Reconnect to generate another.");return}
  if(!accessCode()){focusAccess();return}
  const detected=dialogueFromCustom(choice);if((detected||socialSkill(choice))&&choice.custom&&choice.type==="investigate")choice={...choice,type:"social"};

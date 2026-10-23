@@ -21,6 +21,7 @@ function deployParty(c,run){
 function entryError(c,s,d,hero,level){
  if(!d)return "Unknown dungeon.";
  if(current(c))return "Finish or leave your current dungeon first.";
+ if(window.soaArena?.current?.(c))return "Leave your arena challenge before entering a dungeon.";
  if(living(c).length)return "Disengage from the current encounter first.";
  if(level<d.level)return "Requires level "+d.level+"; recommended "+d.low+"–"+d.high+".";
  if(!data().CLASSES.includes(hero?.className))return "Select a supported character first.";

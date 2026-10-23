@@ -373,3 +373,18 @@ Added three region-bound, engine-authored missions with immutable reward terms a
   build pass. Added full RFC full-clear/claim coverage, loot/reload/overflow,
   no-skip guards, equipment bonuses, retreat/camp and malformed-save checks.
   Actual mobile rendering/live Gemini generation remain unverified. Shell v114.
+
+## Faction arena challenges (2026-10-23)
+- `public/arena.js` adds the Alliance arena in Stormwind City and Horde arena in
+  Orgrimmar. Faction and venue gates prevent cross-faction entry. The activity is
+  optional and exclusive with an active dungeon; bouts use the normal local combat
+  actions and enemy turn resolution.
+- Career wins and the latest 20 bout results live in the campaign save. Rank starts
+  at 1 and increases once per 20 lifetime wins; rank 20 is Arena Grand Champion.
+  Wins continue to accumulate at the cap. Challengers scale with level and rank.
+  Players choose each next bout, may leave between bouts, and retain wins after
+  defeat. A live forfeit does not erase the career record.
+- UI, campaign routing, save validation, faction checks and service-worker shell
+  include the arena. Validation: 7 arena tests cover venues, ranks through 401 wins,
+  idempotent results, scaling, defeat, persistence and save validation. Full suite
+  and production workflow still need to be run for this update. Shell v115.

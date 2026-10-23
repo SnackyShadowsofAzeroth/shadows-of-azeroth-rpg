@@ -9,6 +9,11 @@
 .soa-dungeon-party h4{margin:0 0 8px;color:#e5d8a8}
 .soa-dungeon-recruit{margin:12px 0;padding:12px;border:1px solid #687b58;border-radius:10px;background:#13221b}
 .soa-dungeon-recruit p{margin:5px 0 8px}
+.soa-arena-panel{margin:16px 0;padding:14px;border:1px solid #a8915e;border-radius:12px;background:linear-gradient(145deg,#1b2b20,#142119);color:#eee4c9}
+.soa-arena-panel>summary{min-height:44px;font-weight:800;color:#e6d6a4;cursor:pointer;line-height:1.6}
+.soa-arena-panel p{font:600 14px/1.6 system-ui;overflow-wrap:anywhere}
+.soa-arena-panel button{width:100%;min-height:46px;margin:7px 0;text-align:left}
+body.soa-theme-druid .soa-arena-panel{border-color:#81976b;box-shadow:inset 0 0 0 1px #253d2c}
 body.theme-alternative #campaign-scene>.soa-story-chapter{font:600 clamp(17px,4.5vw,22px)/1.5 Georgia,serif;color:#70502e;margin:7px 0 14px;overflow-wrap:anywhere}
 body.theme-alternative #campaign-scene>.soa-scene-kicker{white-space:normal;overflow-wrap:anywhere;line-height:1.7}
 body.soa-theme-druid #campaign-scene>.soa-story-chapter{color:#c7d8ad}

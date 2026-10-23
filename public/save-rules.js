@@ -93,6 +93,15 @@ function validateCampaignSave(value){
    for(const [key,row] of Object.entries(r.loot))if(key.length>100||!object(row)||typeof row.boss!=="string"||row.boss.length>80||!integer(row.stage)||row.stage%2!==1||row.stage>=total||!Number.isInteger(row.roll)||row.roll<1||row.roll>100||![35,60].includes(row.chance)||typeof row.collected!=="boolean"||(row.item!==null&&(typeof row.item!=="string"||row.item.length>80)))fail("Dungeon loot receipt is invalid.");
   }
  }
+ if(value.arena!==undefined){
+  const a=value.arena,integer=n=>Number.isSafeInteger(n)&&n>=0;
+  if(!object(a)||a.version!==1||!integer(a.serial)||!integer(a.wins)||a.wins>100000000||!Array.isArray(a.history)||a.history.length>20)fail("Arena career record is invalid.");
+  for(const row of a.history)if(!object(row)||!integer(row.bout)||typeof row.opponent!=="string"||row.opponent.length>100||row.win!==true||!integer(row.rank)||row.rank<1||row.rank>20||!integer(row.turn))fail("Arena history is invalid.");
+  if(a.active!==null){const r=a.active,place=r?.faction==="Alliance"?"Stormwind City":r?.faction==="Horde"?"Orgrimmar":null;
+   if(!object(r)||r.id!=="arena-"+a.serial||!place||r.venue!==place||!['ready','fighting','lost'].includes(r.status)||!integer(r.bout)||r.bout!==a.wins+1||!integer(r.startedAtTurn)||!object(r.home)||typeof r.home.title!=="string"||typeof r.home.story!=="string"||typeof r.home.location!=="string"||!Array.isArray(r.home.choices)||(r.fightRound!==undefined&&!integer(r.fightRound))||(r.resolvedRound!==undefined&&!integer(r.resolvedRound))||(r.opponent!==undefined&&r.opponent!==null&&(typeof r.opponent!=="string"||r.opponent.length>100)))fail("Active arena challenge is invalid.");
+  }
+  if(a.active&&value.dungeons?.active)fail("A character cannot be active in a dungeon and arena at the same time.");
+ }
  if(value.druidQuests!==undefined){
   if(!object(value.druidQuests))fail("Druid quest data is invalid.");
   const lengths={bear:2,aquatic:3,cat:3,travel:2,dire_bear:2,moonkin:2,tree:2,flight:2};

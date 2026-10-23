@@ -621,3 +621,17 @@ Reference: [WoWHead Classic dungeon overview](https://www.wowhead.com/classic/gu
 The roster and level ranges are source-informed; SoA encounter counts, rewards,
 gear bonuses, entry gates and combat rules are adaptations.
 Offline shell cache: v114.
+
+### Faction arenas
+
+Alliance characters can enter the arena in Stormwind City; Horde characters use
+the arena in Orgrimmar. The other faction's venue is closed. The arena is
+optional and uses the regular one-exchange combat controls for one-on-one bouts.
+Defeat an opponent to record a career victory, then choose whether to face another
+challenger or leave. Your wins, recent results and rank are saved to the current
+character's campaign. Rank starts at 1 and advances once per 20 victories, up to
+rank 20, **Arena Grand Champion**; you can keep winning after reaching the cap.
+Challengers scale with character level and current rank. A defeat ends the active
+challenge without removing prior victories; you can return after recovering.
+Leaving between bouts preserves the career record. Arena combat is local and does
+not depend on AI narration or an API key. Offline shell cache: v115.
