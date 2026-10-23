@@ -52,6 +52,7 @@ function makeContext({ random = () => 0.5 } = {}) {
     fightExchange: () => null,
     socialCheck: () => null,
     unavailableClassAbility: () => null,
+    scavengeFallenEnemy: () => null,
   };
   vm.createContext(context);
   return context;
