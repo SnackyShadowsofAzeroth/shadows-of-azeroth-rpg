@@ -563,3 +563,25 @@ same enemy phase. Existing nonfatal hero HP behavior is preserved.
 Current saves support the new combat records without a reset; older single-attack
 records remain readable. Pending narration retries reuse the resolved round.
 Offline shell cache: v111.
+
+## Story structure and chapter progression (October 23, 2026)
+
+Adventure now leads with the named Act and Chapter, followed by the current
+scene's stable title. Cumulative generated responses are labeled as Turns in
+save details. Scene numbers are local to a chapter and appear in the Chronicle;
+several combat rounds, conversation choices or inspections can share one scene.
+Travel and meaningful changes of immediate goal can start new scenes.
+
+Newly recorded substantial quest completions (journal quests, mission turn-ins
+and completed Druid form training) open the next chapter after combat ends.
+A significant new journal discovery can also open a chapter when the director
+identifies a different immediate goal and a real scene boundary. Repeated clues,
+ordinary bounty kills, crafting and accumulated turns alone cannot do this.
+Discovery transitions have a minimum six-turn spacing to avoid splitting every
+clue into a chapter. Periodic director reviews assess pacing without forcing a
+transition. Acts remain proposals, with Begin act / Not yet directly in Adventure.
+
+Chapter transitions archive a recap and reset the local scene number. They never
+complete unfinished quests, replace a pinned quest, move the character or grant
+rewards. Older saves retain their chapter/history and begin local scene tracking
+from the current saved situation; no past chapters are invented. Shell v112.

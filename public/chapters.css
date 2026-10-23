@@ -1,4 +1,7 @@
 /* Campaign Chronicle — permanent parchment quest journal, save-bound. */
+body.theme-alternative #campaign-scene>.soa-story-chapter{font:600 clamp(17px,4.5vw,22px)/1.5 Georgia,serif;color:#70502e;margin:7px 0 14px;overflow-wrap:anywhere}
+body.theme-alternative #campaign-scene>.soa-scene-kicker{white-space:normal;overflow-wrap:anywhere;line-height:1.7}
+body.soa-theme-druid #campaign-scene>.soa-story-chapter{color:#c7d8ad}
 body.theme-alternative .soa-chronicle-panel{scroll-margin-top:18px}
 body.theme-alternative .soa-chronicle-kicker{font:700 10px/1.4 system-ui;letter-spacing:.17em;color:#83603b;text-transform:uppercase;margin-bottom:8px}
 body.theme-alternative .soa-chronicle-panel h2{font:700 clamp(23px,6vw,29px)/1.25 Georgia,serif;color:#57331b;margin:3px 0 10px}
@@ -51,3 +54,4 @@ body.theme-alternative .soa-chapter-banner button{background:#6a4d2f;border:1px 
 @media(max-width:380px){body.theme-alternative .soa-quest-objective{align-items:flex-start;flex-direction:column}body.theme-alternative .soa-quest-objective button{align-self:flex-end}body.theme-alternative .soa-journal-tabs button{font-size:11px}}
 
 body.theme-alternative #campaign-scene>.soa-chapter-review{margin:13px 0;padding:12px 14px;min-height:45px;border:1px solid #a98249;border-left:4px solid #d5aa61;border-radius:8px;background:linear-gradient(100deg,#ead4a2,#c8a778);color:#53351e;text-align:left;font:700 13px/1.5 system-ui;box-shadow:0 3px 9px #3b281829}
+

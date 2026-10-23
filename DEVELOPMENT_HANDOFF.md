@@ -319,3 +319,25 @@ Added three region-bound, engine-authored missions with immutable reward terms a
   target-specific control, takedowns, ally recipients, later parries, combat
   shifts, Rage, HOT ticks, multi-enemy rollback/replay, rendering and API context.
   Actual iPhone rendering and live Gemini generation remain unverified here.
+
+## Narrative pacing and named chapters (2026-10-23)
+- Main story header now shows the named Act and Chapter plus stable scene title;
+  the old global Scene counter is labeled Turn in save details. Chronicle scene
+  counts are chapter-local, persist across responses/reloads, stay stable within
+  an ongoing fight, and reset on chapter transitions.
+- Chronicle pacing v1 baselines existing completion records and the current
+  situation on migration. No retrospective chapters, save resets or quest changes.
+  Fresh journal quest completions, claimed missions and verified form training
+  queue a chapter transition until combat is over. Major new discoveries require
+  current non-repeated journal evidence, a changed immediate goal and scene
+  boundary, with six-turn minimum spacing. Director reviews every ~12 turns never
+  force chapter advancement. Minor bounty kills and ordinary crafts do not qualify.
+- Named chapter banners and archived recaps are visible; Act proposals are directly
+  actionable in Adventure and remain player-confirmed. Pinned quests stay intact.
+  API pacing metadata/context are bounded; generation retries are idempotent.
+  Failed progression persistence restores the prior Chronicle state.
+- Validation: 249 tests and 128 faction assertions pass, along with syntax/static
+  build checks. Coverage includes 201-turn migration, multi-round scene continuity,
+  quest/discovery gates, combat deferral, repeat prevention, save rollback/reload,
+  Act confirmation and API metadata. Shell v112. Actual iPhone rendering and live
+  Gemini generation remain unverified here.

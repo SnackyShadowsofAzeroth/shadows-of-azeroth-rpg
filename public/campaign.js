@@ -1084,7 +1084,9 @@ function draw(){
  reconcileAuthorizedMissionReward();
  const questPanel=window.soaQuests?.panel?.(campaign,sc.location,()=>s.money,(result)=>{if(result?.error){status(result.error);return}if(Number.isSafeInteger(result?.wallet)){s.money=result.wallet;save()}store();render();draw();status(result?.description||result?.message||"Contract updated.");}) || null;
  const transition=window.soaChronicle?.banner?.(campaign);if(transition)box.append(transition);
- const kicker=document.createElement("div");kicker.className="soa-scene-kicker";const position=window.soaChronicle?.progress?.(campaign);kicker.textContent=position?"ACT "+position.actRoman+" · CHAPTER "+position.chapterRoman+" · SCENE "+position.scene:"FIELD CHRONICLE · SCENE "+campaign.turn;box.append(kicker);head.textContent=sc.title||"The Current Scene";where.className="muted";where.textContent=sc.location||"Current Location";text.className="soa-story-prose";text.style.whiteSpace="pre-line";text.textContent=readableStory(sc.story);box.append(head,where,text);
+ const kicker=document.createElement("div");kicker.className="soa-scene-kicker";const position=window.soaChronicle?.progress?.(campaign);kicker.textContent=position?"ACT "+position.actRoman+" · "+position.actTitle:"YOUR ADVENTURE";box.append(kicker);
+ if(position){const chapter=document.createElement("p");chapter.className="soa-story-chapter";chapter.textContent="Chapter "+position.chapterRoman+" — "+position.chapterTitle;box.append(chapter)}
+ head.textContent=position?.sceneTitle||sc.title||"The Current Scene";where.className="muted";where.textContent=sc.location||"Current Location";text.className="soa-story-prose";text.style.whiteSpace="pre-line";text.textContent=readableStory(sc.story);box.append(head,where,text);
  const sceneReward=window.soaQuests?.rewardForScene?.(campaign);
  if(sceneReward?.receipt==="mission:stormwind-explosives-defused:v1"){const receipt=document.createElement("p");receipt.className="soa-level-toast";receipt.textContent="MISSION PAID · Stormwind explosives defused · Total party reward: +5g 00s 00c · Credited to shared wallet once.";box.append(receipt)}
  const missions=window.soaQuests?.missionPanel?.(campaign,sc.location,()=>s.money,(result)=>{if(result?.error){status(result.error);return}if(Number.isSafeInteger(result?.wallet)){s.money=result.wallet;save()}store();render();draw();status(result?.description||result?.message||"Mission updated.");});
@@ -1148,12 +1150,6 @@ function draw(){
  drawRacialActions(box);
  const druidStatusPanel=window.soaCharacters?.profile?.()?.className==="Druid"&&window.soaDruid?window.soaDruid.panel(s,campaign,window.soaCharacters.profile(),window.soaProgression?.level?.()||1,choose,busy||!!pending()):null;
  if(druidStatusPanel)box.append(druidStatusPanel);
- if(campaign?.chronicle?.pendingMilestone){
-  const notice=document.createElement("button");notice.type="button";notice.className="soa-chapter-review";
-  notice.textContent="✦ A chapter milestone is ready for your review · Open Journal";
-  notice.onclick=()=>get("soa-chronicle")?.scrollIntoView({behavior:window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches?"auto":"smooth",block:"start"});
-  box.append(notice);
- }
  if(!livingEnemies().length&&sc.choices?.some(choice=>choice.type==="combat")){
   const cue=document.createElement("p");cue.className="soa-precombat-cue";
   cue.textContent="Spell choices can affect visible obstacles or yourself without an enemy. An opening attack on a visible foe begins combat and resolves one exchange.";
@@ -1210,7 +1206,7 @@ function draw(){
  help.id="campaign-custom-help";help.className="muted";help.textContent="Bluff, Bribe, Romance and Threaten use d20 + skill against difficulty DC. Bribes require an explicit amount (e.g. offer 50 silver); coins are paid only when accepted. A successful romance check never overrides consent. Other custom actions use their selected type.";;;input.setAttribute("aria-describedby",help.id);
  submit.type="submit";submit.textContent="Take custom action";submit.disabled=busy||!!pending()||!navigator.onLine||!customDraft.trim();
  form.onsubmit=e=>{e.preventDefault();const text=input.value.trim();if(!text||busy||pending())return;choose({text,type:type.value,difficulty:"medium",custom:true,socialSkill:skillSelect.value==="auto"?undefined:skillSelect.value})};form.append(label,input,typeLabel,type,skillLabel,skillSelect,customRoll,customResource,help,submit);box.append(form);
- const foot=document.createElement("p");foot.className="muted";foot.className="muted soa-scene-footer";foot.textContent="Scene "+campaign.turn+" · Saved on this device · "+(navigator.onLine?"Online":"Offline reading");box.append(foot)
+ const foot=document.createElement("p");foot.className="muted soa-scene-footer";foot.textContent="Turn "+campaign.turn+" · Saved on this device · "+(navigator.onLine?"Online":"Offline reading");box.append(foot)
 }
 async function choose(choice){
  if(busy||pending())return;

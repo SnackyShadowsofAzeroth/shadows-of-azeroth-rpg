@@ -1,6 +1,6 @@
 (()=>{"use strict";
-/* Chronicle v1: save-bound act/chapter and quest journal. No automatic quest
-   completion or teleportation. Player confirms each milestone explicitly. */
+/* Chapters follow recorded milestones. Acts remain player-confirmed.
+   Narrative pacing never completes quests, moves the player or grants rewards. */
 const clean=(value,n=120)=>String(value??"").trim().slice(0,n);
 const MAX_COMPLETED_QUESTS=20;
 const roman=n=>{const vals=[["X",10],["IX",9],["V",5],["IV",4],["I",1]];let out="";for(const [symbol,v] of vals){while(n>=v){out+=symbol;n-=v}}return out||"I"};
@@ -8,6 +8,23 @@ const el=(tag,value,cls)=>{const e=document.createElement(tag);if(value!==undefi
 const get=id=>document.getElementById(id);
 let save=()=>{},current=null;
 const integrityBlocked=()=>window.soaSaveRules?.isIntegrityBlocked?.()===true;
+const normalized=value=>clean(value,240).toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
+function completedMilestones(c,d){
+ const items=d.quests.filter(q=>q?.status==="completed"&&q.id!=="personal-quest").map(q=>({id:"journal:"+q.id,title:clean(q.title)}));
+ for(const [id,q] of Object.entries(c.quests?.missions||{}))if(q?.state==="claimed")items.push({id:"mission:"+id,title:clean(window.soaQuests?.missions?.().find(m=>m.id===id)?.title||id.replaceAll("-"," "))});
+ for(const [id,q] of Object.entries(c.druidQuests||{}))if(q?.state==="claimed"&&q.receipt)items.push({id:"druid:"+id,title:clean(window.soaDruid?.QUESTS?.[id]?.title||id.replaceAll("_"," ")+" form training")});
+ return items;
+}
+function pacing(c,d){
+ if(!d.pacing||d.pacing.version!==1){
+  // Existing turn totals are history, not evidence of invented past chapters.
+  d.pacing={version:1,scene:1,title:clean(c.scene?.title,95),location:normalized(c.scene?.location),focus:clean(d.primaryQuest?.objective,120),lastTurn:Number(c.turn)||0,sceneStartedAtTurn:Number(c.turn)||0,chapterStartedAtTurn:Number(d.startedAtTurn)||0,reviewedAtTurn:Math.max(Number(d.startedAtTurn)||0,(Number(c.turn)||0)-12),seenCompletions:completedMilestones(c,d).map(x=>x.id),queuedCompletions:[],usedEvidence:[],inCombat:(c.enemies||[]).some(e=>e.hp>0)};
+ }
+ const p=d.pacing;
+ p.scene=Math.max(1,Math.floor(Number(p.scene)||1));
+ for(const key of ["seenCompletions","queuedCompletions","usedEvidence"])if(!Array.isArray(p[key]))p[key]=[];
+ return p;
+}
 function makeQuest(id,title,objectives,complete=false){
  return {id,title,status:complete?"completed":"active",objectives:objectives.map((label,i)=>({id:id+"-"+i,label,done:complete}))};
 }
@@ -58,6 +75,7 @@ function attach(c){
   d.primaryQuest=quest&&objective?{title:clean(quest.title,120),objective:clean(objective.label,240),updatedAtTurn:0}:null;
  }
  trimCompletedQuests(d);
+ pacing(c,d);
  current=c;
  if(migrated)save();
  return d;
@@ -77,40 +95,65 @@ function trimCompletedQuests(d){
 }
 function context(c){
  const d=attach(c);if(!d)return null;
- return {act:d.act,actTitle:d.actTitle,chapter:d.chapter,chapterTitle:d.chapterTitle,primaryQuest:d.primaryQuest?{title:clean(d.primaryQuest.title,120),objective:clean(d.primaryQuest.objective,240)}:null,activeQuests:d.quests.filter(q=>q&&q.status==="active"&&Array.isArray(q.objectives)&&!(q.id==="personal-quest"&&q.title==="The First Adventure")).slice(0,8).map(q=>({title:clean(q.title),objectives:q.objectives.filter(o=>o&&o.done!==true).map(o=>clean(o.label))})),completedQuests:d.quests.filter(q=>q&&q.status==="completed").sort((a,b)=>completedTime(b)-completedTime(a)).slice(0,6).map(q=>clean(q.title)),recentArchives:d.archives.slice(-4).map(x=>({act:x.act,chapter:x.chapter,title:clean(x.chapterTitle),summary:clean(x.summary,180)}))};
+ const p=pacing(c,d),turn=Number(c.turn)||0;
+ return {act:d.act,actTitle:d.actTitle,chapter:d.chapter,chapterTitle:d.chapterTitle,pacing:{scene:p.scene,sceneTitle:p.title,focus:p.focus,chapterTurns:Math.max(0,turn-p.chapterStartedAtTurn),reviewDue:turn-p.reviewedAtTurn>=12,availableMilestones:completedMilestones(c,d).filter(x=>!p.seenCompletions.includes(x.id)).concat(p.queuedCompletions).slice(0,8)},primaryQuest:d.primaryQuest?{title:clean(d.primaryQuest.title,120),objective:clean(d.primaryQuest.objective,240)}:null,activeQuests:d.quests.filter(q=>q&&q.status==="active"&&Array.isArray(q.objectives)&&!(q.id==="personal-quest"&&q.title==="The First Adventure")).slice(0,8).map(q=>({title:clean(q.title),objectives:q.objectives.filter(o=>o&&o.done!==true).map(o=>clean(o.label))})),completedQuests:d.quests.filter(q=>q&&q.status==="completed").sort((a,b)=>completedTime(b)-completedTime(a)).slice(0,6).map(q=>clean(q.title)),recentArchives:d.archives.slice(-4).map(x=>({act:x.act,chapter:x.chapter,title:clean(x.chapterTitle),summary:clean(x.summary,180)}))};
+}
+function transition(c,d,m){
+ const p=pacing(c,d),archive={id:"archive-"+d.act+"-"+d.chapter,act:d.act,actTitle:d.actTitle,chapter:d.chapter,chapterTitle:d.chapterTitle,summary:clean(m.reason,220),completed:true,startedAtTurn:d.startedAtTurn||0,endedAtTurn:Number(c.turn)||0,scenes:p.scene};
+ if(!d.archives.some(x=>x.id===archive.id))d.archives.push(archive);
+ d.archives=d.archives.slice(-75);
+ if(m.kind==="act"){d.act=Math.min(99,d.act+1);d.chapter=1;d.actTitle=m.title;d.chapterTitle=clean(m.chapterTitle,90)||"Opening Moves";}
+ else {d.chapter=Math.min(99,d.chapter+1);d.chapterTitle=m.title;}
+ d.startedAtTurn=Number(c.turn)||0;p.chapterStartedAtTurn=d.startedAtTurn;p.reviewedAtTurn=d.startedAtTurn;p.scene=1;p.sceneStartedAtTurn=d.startedAtTurn;p.title=clean(c.scene?.title,95);p.queuedCompletions=[];
+ d.banner={act:d.act,chapter:d.chapter,title:m.title,reason:m.reason,kind:m.kind};d.pendingMilestone=null;
 }
 function receive(c,scene){
  if(integrityBlocked())return;
- const d=attach(c);if(!d||!scene||d.pendingMilestone)return;
- const candidate=scene.chapterMilestone;
- if(!candidate||candidate.propose!==true||typeof candidate.title!=="string")return;
- // An AI suggestion is review-only; no scene result may silently advance a chapter.
- const title=clean(candidate.title,90),reason=clean(candidate.reason,220);
- if(!title||!reason)return;
- d.pendingMilestone={id:"milestone-"+String(c.turn||0)+"-"+title.toLowerCase(),title,reason,kind:candidate.kind==="act"?"act":"chapter",sceneTitle:clean(scene.title,90)};
- save();render(c);
+ const d=attach(c);if(!d||!scene)return;
+ const before=JSON.parse(JSON.stringify(d)),p=pacing(c,d),turn=Number(c.turn)||0,previousFocus=p.focus;
+ if(turn<=p.lastTurn)return;
+ const inCombat=(c.enemies||[]).some(e=>e.hp>0),location=normalized(scene.location),beat=scene.storyBeat||{};
+ const newFocus=clean(beat.focus,120),sceneChange=(!p.inCombat||!inCombat)&&(location!==p.location&&!!p.location||!p.inCombat&&inCombat||beat.startScene===true&&!!clean(beat.reason)&&!!newFocus&&normalized(newFocus)!==normalized(p.focus));
+ if(sceneChange){p.scene++;p.sceneStartedAtTurn=turn;p.title=clean(scene.title,95);}
+ if(!p.title)p.title=clean(scene.title,95);
+ if(!p.inCombat||!inCombat){p.location=location;if(newFocus&&(sceneChange||!p.focus))p.focus=newFocus;}
+ p.inCombat=inCombat;p.lastTurn=turn;
+ const completions=completedMilestones(c,d),fresh=completions.filter(x=>!p.seenCompletions.includes(x.id));
+ p.queuedCompletions.push(...fresh);p.seenCompletions=[...new Set([...p.seenCompletions,...fresh.map(x=>x.id)])].slice(-200);
+ const candidate=scene.chapterMilestone||{},title=clean(candidate.title,90),reason=clean(candidate.reason,220),valid=candidate.propose===true&&!!title&&!!reason;
+ const discovery=clean(scene.journal,200),evidence=normalized(candidate.evidence),discoveryKey="discovery:"+normalized(discovery);
+ const discoveryBoundary=valid&&candidate.basis==="discovery"&&!!discovery&&evidence===normalized(discovery)&&!(c.journal||[]).some(entry=>normalized(entry)===normalized(discovery))&&!!clean(candidate.nextObjective)&&beat.startScene===true&&!!clean(beat.reason)&&normalized(candidate.nextObjective)!==normalized(previousFocus)&&turn-p.chapterStartedAtTurn>=6&&!p.usedEvidence.includes(discoveryKey);
+ if(!inCombat&&!d.pendingMilestone){
+  if(valid&&candidate.kind==="act")d.pendingMilestone={id:"milestone-"+turn+"-"+normalized(title),title,reason,kind:"act",chapterTitle:clean(candidate.chapterTitle,90),sceneTitle:clean(scene.title,90)};
+  else if(p.queuedCompletions.length||discoveryBoundary){
+   const verified=p.queuedCompletions.length>0;
+   const recap=verified?"Completed: "+p.queuedCompletions.map(x=>x.title).join("; ")+".":discovery;
+   transition(c,d,{kind:"chapter",title:valid?title:"The Road Ahead",reason:recap});
+   if(discoveryBoundary){p.usedEvidence.push(discoveryKey);p.usedEvidence=p.usedEvidence.slice(-40);p.focus=clean(candidate.nextObjective,120);}
+  }
+ }
+ if(turn-p.reviewedAtTurn>12)p.reviewedAtTurn=turn;
+ if(save()===false){c.chronicle=before;return;}
+ render(c);
 }
 function confirm(c){
  if(integrityBlocked())return;
  const d=attach(c);if(!d?.pendingMilestone)return;
- const m=d.pendingMilestone,archive={id:"archive-"+d.act+"-"+d.chapter,act:d.act,actTitle:d.actTitle,chapter:d.chapter,chapterTitle:d.chapterTitle,summary:clean(m.reason,220),completed:true};
- if(!d.archives.some(x=>x.id===archive.id))d.archives.push(archive);
- d.archives=d.archives.slice(-75);
- if(m.kind==="act"){d.act++;d.chapter=1;d.actTitle=m.title;d.chapterTitle="Opening Moves"}
- else{d.chapter++;d.chapterTitle=m.title}
- d.startedAtTurn=Number(c.turn)||0;d.banner={act:d.act,chapter:d.chapter,title:m.title,reason:m.reason};
- d.pendingMilestone=null;save();render();window.soaLivingCampaign?.refreshUI?.();
+ if((c.enemies||[]).some(e=>e.hp>0)||c.pending)return;
+ const before=JSON.parse(JSON.stringify(d));transition(c,d,d.pendingMilestone);
+ if(save()===false){c.chronicle=before;render(c);return;}
+ render(c);window.soaLivingCampaign?.refreshUI?.();
 }
-function dismiss(c){if(integrityBlocked())return;const d=attach(c);if(!d)return;d.pendingMilestone=null;save();render();window.soaLivingCampaign?.refreshUI?.()}
+function dismiss(c){if(integrityBlocked()||c.pending)return;const d=attach(c);if(!d)return;const before=d.pendingMilestone;d.pendingMilestone=null;if(save()===false){d.pendingMilestone=before;return;}render(c);window.soaLivingCampaign?.refreshUI?.()}
 function completeObjective(c,questId,objectiveId){
  if(integrityBlocked())return;
  const d=attach(c),q=d?.quests.find(x=>x.id===questId&&x.status==="active");
  if(!q)return;
  const o=q.objectives.find(x=>x.id===objectiveId&&!x.done);if(!o)return;
  if(!window.confirm("Mark this objective complete? Only confirm if it actually happened in your adventure."))return;
- o.done=true;if(q.objectives.every(x=>x.done)){q.status="completed";q.completedAt=Date.now()}
+ const before=JSON.parse(JSON.stringify(d));o.done=true;if(q.objectives.every(x=>x.done)){q.status="completed";q.completedAt=Date.now()}
  trimCompletedQuests(d);
- save();render();
+ if(save()===false)c.chronicle=before;render(c);
 }
 function journalPanel(c,d){
  const panel=el("div",undefined,"soa-personal-journal");
@@ -188,6 +231,10 @@ function render(c=current){
  root.append(el("div","QUEST JOURNAL · "+(window.soaCharacters?.profile?.()?.name||"Adventurer"),"soa-chronicle-kicker"));
  root.append(el("h2","The Campaign Chronicle"));
  root.append(el("p","Act "+roman(d.act)+" — "+d.actTitle+" · Chapter "+roman(d.chapter)+": "+d.chapterTitle,"soa-current-chapter"));
+ root.append(el("p","Scene "+d.pacing.scene+" in this chapter · Turn "+(Number(c.turn)||0)+" across your journey","soa-story-focus-hint"));
+ const chapters=el("details",undefined,"soa-collapsible-quests");chapters.append(el("summary","Completed chapters · "+d.archives.length));
+ for(const archive of d.archives.slice().reverse()){const entry=el("section",undefined,"soa-quest-entry");entry.append(el("h4","Act "+roman(archive.act)+" · Chapter "+roman(archive.chapter)+" — "+archive.chapterTitle),el("p",archive.summary||"Chapter archived."));chapters.append(entry)}
+ root.append(chapters);
  const tabs=el("div",undefined,"soa-journal-tabs");const quest=el("button","Quests"),archive=el("button","Journal"),notes=el("button","Discoveries");
  const body=el("div",undefined,"soa-journal-body");
  let selected=root.dataset.view||"quests";
@@ -195,29 +242,28 @@ function render(c=current){
   for(const [b,n] of [[quest,"quests"],[archive,"archive"],[notes,"notes"]])b.setAttribute("aria-pressed",String(name===n))}
  for(const [b,n] of [[quest,"quests"],[archive,"archive"],[notes,"notes"]]){b.type="button";b.onclick=()=>view(n);tabs.append(b)}
  root.append(tabs,body);view(selected);
- if(d.pendingMilestone){
-  const offer=el("div",undefined,"soa-chapter-proposal");
-  offer.append(el("strong","Suggested "+(d.pendingMilestone.kind==="act"?"new act":"chapter")+": "+d.pendingMilestone.title));
-  offer.append(el("p",d.pendingMilestone.reason));
-  const actions=el("div",undefined,"soa-milestone-actions");
-  const accept=el("button","Begin chapter");accept.type="button";accept.onclick=()=>confirm(c);
-  const decline=el("button","Not yet");decline.type="button";decline.onclick=()=>dismiss(c);
-  actions.append(accept,decline);offer.append(actions);root.append(offer);
- }
+ if(d.pendingMilestone)root.append(milestonePanel(c,d));
+}
+function milestonePanel(c,d){
+ const offer=el("section",undefined,"soa-chapter-proposal"),act=d.pendingMilestone.kind==="act";
+ offer.append(el("strong",(act?"A new act awaits: ":"Chapter milestone: ")+d.pendingMilestone.title),el("p",d.pendingMilestone.reason));
+ const actions=el("div",undefined,"soa-milestone-actions"),accept=el("button",act?"Begin act":"Begin chapter"),decline=el("button","Not yet");
+ accept.type=decline.type="button";accept.disabled=decline.disabled=!!c.pending||(c.enemies||[]).some(e=>e.hp>0);
+ accept.onclick=()=>confirm(c);decline.onclick=()=>dismiss(c);actions.append(accept,decline);offer.append(actions);return offer;
 }
 function banner(c){
- const d=attach(c);if(!d?.banner)return null;
+ const d=attach(c);if(!d)return null;if(!d.banner)return d.pendingMilestone?milestonePanel(c,d):null;
  // The transition is shown until the next player acknowledgement; dismissing is visual only.
  const wrap=el("section",undefined,"soa-chapter-banner");
- wrap.append(el("span","A NEW CHAPTER BEGINS","soa-chapter-eyebrow"));
+ wrap.append(el("span",d.banner.kind==="act"?"A NEW ACT BEGINS":"A NEW CHAPTER BEGINS","soa-chapter-eyebrow"));
  wrap.append(el("h3","ACT "+roman(d.banner.act)+" · CHAPTER "+roman(d.banner.chapter)));
  wrap.append(el("h4",d.banner.title));
  wrap.append(el("p",d.banner.reason));
- const button=el("button","Continue the adventure");button.type="button";button.onclick=()=>{if(integrityBlocked())return;d.banner=null;save();render();wrap.remove()};
- wrap.append(button);return wrap;
+ const button=el("button","Continue the adventure");button.type="button";button.onclick=()=>{if(integrityBlocked())return;const before=d.banner;d.banner=null;if(save()===false){d.banner=before;return;}render(c);window.soaLivingCampaign?.refreshUI?.();wrap.remove()};
+ wrap.append(button);if(d.pendingMilestone)wrap.append(milestonePanel(c,d));return wrap;
 }
 function progress(c){
- const d=attach(c);return d?{act:d.act,actRoman:roman(d.act),actTitle:d.actTitle,chapter:d.chapter,chapterRoman:roman(d.chapter),chapterTitle:d.chapterTitle,scene:Number(c.turn)||0}:null;
+ const d=attach(c);return d?{act:d.act,actRoman:roman(d.act),actTitle:d.actTitle,chapter:d.chapter,chapterRoman:roman(d.chapter),chapterTitle:d.chapterTitle,scene:d.pacing.scene,sceneTitle:d.pacing.title,turn:Number(c.turn)||0}:null;
 }
 window.soaChronicle={attach,context,receive,render,banner,progress,setPrimaryQuest};
 document.addEventListener("DOMContentLoaded",()=>{
@@ -232,3 +278,4 @@ document.addEventListener("DOMContentLoaded",()=>{
 window.addEventListener("soa-chronicle-display",()=>render());
 window.soaChronicleSetSave=fn=>{if(typeof fn==="function")save=fn};
 })();
+
