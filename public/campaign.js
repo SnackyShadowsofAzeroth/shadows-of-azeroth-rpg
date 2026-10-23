@@ -295,7 +295,7 @@ function socialCheck(action,skill){
 }
 function livingEnemies(){return Array.isArray(campaign?.enemies)?campaign.enemies.filter(e=>e&&e.hp>0&&e.maxHp>0):[]}
 function partyExperienceIds(){
- const names=Array.isArray(campaign?.combatAllies)?campaign.combatAllies.map(a=>a?.name).filter(Boolean):[];
+ const names=Array.isArray(campaign?.combatAllies)?campaign.combatAllies.filter(a=>!a?.dungeonGuest).map(a=>a?.name).filter(Boolean):[];
  return [...new Set(names.map(name=>window.soaProgression?.register?.(name)).filter(Boolean))];
 }
 function resetEncounterCombatState(){
@@ -1230,7 +1230,7 @@ async function chooseDungeon(choice){
    resolution=result(choice);if(!resolution){rollback("That action is unavailable. No turn spent.");return;}
    if(window.soaDruid?.current?.()&&campaign.druidResolvedTime!==s.time){s.en=oldEnergy;window.soaDruid.recover(s,{cost,hit:campaign.lastExchange?.hit===true,taken:campaign.lastExchange?.taken||0,takenHits:campaign.lastExchange?.enemyAttacks?.filter(row=>row.damage>0&&row.recipient===hero.name).length,combat:livingEnemies().length>0});}
    const tick=window.soaDruid?.tickRejuvenation?.(s);if(tick){resolution+=" "+tick.message;if(campaign.lastExchange&&campaign.combatRound>roundBefore){campaign.lastExchange.healed=(campaign.lastExchange.healed||0)+tick.amount;campaign.lastExchange.heroAfter=s.hp;}}
-   if((Number(campaign.combatRound)||0)>roundBefore){out=engine.settle(campaign,s,campaign.lastExchange);if(out.error){rollback(out.error);return;}if(out.message)resolution+=" "+out.message;}
+   if((Number(campaign.combatRound)||0)>roundBefore){const partyAction=engine.resolveParty?.(campaign,s,campaign.lastExchange,hero,window.soaCombatRules);if(partyAction)resolution+=" Adventurers: "+partyAction;if(selectedCombatTarget&&!livingEnemies().some(enemy=>enemy.name===selectedCombatTarget))selectedCombatTarget=livingEnemies()[0]?.name||null;out=engine.settle(campaign,s,campaign.lastExchange);if(out.error){rollback(out.error);return;}if(out.message)resolution+=" "+out.message;}
   }
   if(choice.dungeonAction){const tick=window.soaDruid?.tickRejuvenation?.(s);if(tick)resolution+=" "+tick.message;}
   if(spent){campaign.turn++;campaign.actionSerial=(Number(campaign.actionSerial)||0)+1;}

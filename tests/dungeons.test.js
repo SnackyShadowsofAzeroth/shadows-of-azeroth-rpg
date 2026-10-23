@@ -24,6 +24,34 @@ test("entry is gated by level, travel, combat and health without changing the ch
  for(const mode of ["level","location","combat","health"]){const x=setup({level:mode==="level"?1:60,location:mode==="location"?"Stormwind":"Orgrimmar"});if(mode==="combat")x.campaign.enemies=[{name:"Guard",hp:4}];if(mode==="health")x.save.hp=1;const before={scene:JSON.stringify(x.campaign.scene),enemies:JSON.stringify(x.campaign.enemies),serial:x.campaign.dungeons?.serial||0,hp:x.save.hp,time:x.save.time};const out=x.command("enter");assert.ok(out.error,mode);assert.equal(JSON.stringify(x.campaign.scene),before.scene,mode);assert.equal(JSON.stringify(x.campaign.enemies),before.enemies,mode);assert.equal(x.campaign.dungeons.serial,before.serial,mode);assert.equal(x.save.hp,before.hp,mode);assert.equal(x.save.time,before.time,mode);}
 });
 
+test("adventurers can be recruited or dismissed at dungeon entrances, with a two-person cap",()=>{
+ const x=setup({location:"Orgrimmar"});assert.equal(x.command("recruit","rfc",{adventurer:"mira-stoneward"}).spent,false);assert.equal(x.campaign.dungeons.party[0],"mira-stoneward");
+ x.command("recruit","rfc",{adventurer:"kael-quickbranch"});assert.equal(x.campaign.dungeons.party.length,2);assert.ok(x.command("recruit","rfc",{adventurer:"yselle-dawnmere"}).error);
+ assert.ok(x.command("recruit","rfc",{adventurer:"unknown"}).error);x.campaign.scene.location="Elwynn Forest";assert.ok(x.command("recruit","rfc",{adventurer:"yselle-dawnmere"}).error);x.campaign.scene.location="Orgrimmar";
+ assert.ok(x.command("dismiss","rfc",{adventurer:"mira-stoneward"}).message);assert.deepEqual(Array.from(x.campaign.dungeons.party),["kael-quickbranch"]);
+});
+
+test("the dungeon board shows recruit controls at an entrance and identifies the active group",()=>{
+ const x=setup(),{campaign:c,api}=x;
+ class Element{constructor(tag){this.tag=tag;this.children=[];this.style={};this.dataset={};this.textContent="";this.disabled=false;}append(...nodes){this.children.push(...nodes)}setAttribute(){} }
+ x.ctx.document={createElement:tag=>new Element(tag)};const choices=[],panel=api.panel(c,x.save,x.hero,60,choice=>choices.push(choice));
+ const flatten=node=>[node,...(node.children||[]).flatMap(flatten)],nodes=flatten(panel),buttons=nodes.filter(node=>node.tag==="button");assert.ok(nodes.some(node=>node.textContent==="Adventurers at the entrance"));assert.equal(buttons.filter(b=>b.textContent.startsWith("Recruit ")).length,3);buttons.find(b=>b.textContent==="Recruit Mira Stoneward").onclick();assert.equal(choices[0].dungeonAction,"recruit");assert.equal(choices[0].adventurer,"mira-stoneward");
+ x.command("recruit","rfc",{adventurer:"mira-stoneward"});x.command("enter");const active=api.panel(c,x.save,x.hero,60,()=>{}),activeText=flatten(active).map(n=>n.textContent).join(" ");assert.match(activeText,/Your group · Mira Stoneward/);
+});
+
+test("a recruited party joins the run, contributes one local action each round, and persists health",()=>{
+ const x=setup({className:"Rogue"}),{campaign:c,api,ctx}=x;vm.runInContext(source("combat-rules.js"),ctx);x.command("recruit","rfc",{adventurer:"mira-stoneward"});x.command("recruit","rfc",{adventurer:"kael-quickbranch"});x.command("enter");assert.equal(api.current(c).party.length,2);assert.equal(c.combatAllies.filter(a=>a.dungeonGuest).length,2);
+ x.command("pull");c.xpEncounter={active:true,pendingVictory:false,defeated:[]};c.combatRound=1;c.combatLog=[{round:1,events:[]}];c.enemies[0].hp=1;c.enemies[1].hp=20;
+ const event={round:1,target:c.enemies[0].name,details:[]},out=api.resolveParty(c,{hp:80},event,x.hero,ctx.window.soaCombatRules);assert.ok(out);assert.equal(event.partyActions.length,2);assert.equal(c.enemies[0].hp,0);assert.equal(c.xpEncounter.defeated.some(e=>e.name===event.partyActions[0].target),true);assert.equal(c.xpEncounter.pendingVictory,false);assert.equal(c.combatLog[0].events.length,2);
+ const hp=c.combatAllies.find(a=>a.dungeonMemberId==="kael-quickbranch").hp;assert.equal(api.resolveParty(c,{hp:80},event,x.hero,ctx.window.soaCombatRules),null,"same round cannot grant a second free action");assert.equal(api.current(c).partyRound,1);assert.equal(c.combatAllies.find(a=>a.dungeonMemberId==="kael-quickbranch").hp,hp);
+ const valid=ctx.window.soaSaveRules.validateCampaignSave(JSON.parse(JSON.stringify(c)));assert.equal(valid.dungeons.active.party.length,2);
+});
+
+test("a field healer chooses the most wounded party member and camp restores surviving recruits",()=>{
+ const x=setup({className:"Warrior"}),{campaign:c,api,ctx}=x;vm.runInContext(source("combat-rules.js"),ctx);x.command("recruit","rfc",{adventurer:"yselle-dawnmere"});x.command("enter");x.command("pull");c.xpEncounter={active:true,pendingVictory:false,defeated:[]};c.combatRound=1;c.combatLog=[{round:1,events:[]}];x.save.hp=30;const event={round:1,target:c.enemies[0].name,details:[]};const out=api.resolveParty(c,x.save,event,x.hero,ctx.window.soaCombatRules);assert.match(out,/heals Test Hero/);assert.ok(x.save.hp>30);
+ for(const foe of c.enemies)foe.hp=0;c.combatRound++;assert.ok(api.settle(c,x.save,{round:c.combatRound}).waveCleared);x.save.hp=50;const healer=c.combatAllies.find(a=>a.dungeonGuest);healer.hp=20;assert.ok(x.command("rest").spent);assert.ok(healer.hp>20);assert.equal(c.dungeons.active.rested.length,1);
+});
+
 test("patrols and bosses require every foe; stages cannot be skipped",()=>{
  const x=setup(),{campaign:c,save:s,api}=x;assert.equal(x.command("accept").spent,false);assert.equal(x.command("enter").spent,true);
  assert.ok(x.command("next").error);assert.ok(x.command("claim").error);assert.ok(x.command("pull").startEncounter);assert.equal(c.enemies.length,2);assert.ok(c.enemies.every(e=>e.dungeonRun===api.current(c).runId));

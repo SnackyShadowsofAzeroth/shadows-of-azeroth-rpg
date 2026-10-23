@@ -360,11 +360,16 @@ Added three region-bound, engine-authored missions with immutable reward terms a
   campaign local routing, save validation and offline assets. Normal combat handles
   groups and boss every-third-round attacks. AI narration and API credentials are
   not required for the dungeon loop.
+- At entrances, optionally recruit up to two of a shieldbearer, ranger and field
+  healer. Recruits join existing story companions, act once after enemy responses
+  each exchange, can take damage or be downed, heal when the party camps, and
+  remain selected between runs. Recruited NPCs do not receive player XP. Group
+  choices and run health survive save/reload; retreat restores the prior story-party.
 - The catalog is informed by the Wowhead Classic overview; random rare spawns,
   class summons, keys and some original event mechanics are intentionally not
   simulated. Entry levels, encounter counts, SoA item names/stats, and drop rates
   are game adaptations rather than original WoW values.
-- Validation: 257 Node tests and 128 faction assertions pass; syntax and static
+- Validation: 264 Node tests and 128 faction assertions pass; syntax and static
   build pass. Added full RFC full-clear/claim coverage, loot/reload/overflow,
   no-skip guards, equipment bonuses, retreat/camp and malformed-save checks.
-  Actual mobile rendering/live Gemini generation remain unverified.
+  Actual mobile rendering/live Gemini generation remain unverified. Shell v114.

@@ -610,6 +610,14 @@ unfinished run requires confirmation; already collected gear and character
 progress remain saved. Encounters use the local combat engine, including the
 normal multi-enemy attack phase, and do not require AI narration or an API key.
 
+At an entrance, recruit up to two of three adventurers: a shieldbearer, a ranger,
+or a field healer. They join the run's combat roster and act once after enemies
+respond each round; the healer tends the most wounded ally or casts Smite. Recruits
+can be hurt or downed, recover some HP when the party camps, and can be changed at
+an entrance between runs. Their modest combat stats scale with dungeon tier. Solo
+entry remains available, and existing story companions stay with the group.
+
 Reference: [WoWHead Classic dungeon overview](https://www.wowhead.com/classic/guide/classic-dungeons-overview).
 The roster and level ranges are source-informed; SoA encounter counts, rewards,
 gear bonuses, entry gates and combat rules are adaptations.
+Offline shell cache: v114.

@@ -5,6 +5,10 @@
 .soa-dungeon-panel details>summary{min-height:44px;font-weight:700;cursor:pointer;line-height:1.6}
 .soa-dungeon-panel p{font:500 14px/1.6 system-ui;overflow-wrap:anywhere}
 .soa-dungeon-panel button{width:100%;min-height:46px;margin:7px 0;text-align:left}
+.soa-dungeon-party{margin:18px 0;padding:14px;border:1px solid #8c9769;border-radius:12px;background:#1b2b20}
+.soa-dungeon-party h4{margin:0 0 8px;color:#e5d8a8}
+.soa-dungeon-recruit{margin:12px 0;padding:12px;border:1px solid #687b58;border-radius:10px;background:#13221b}
+.soa-dungeon-recruit p{margin:5px 0 8px}
 body.theme-alternative #campaign-scene>.soa-story-chapter{font:600 clamp(17px,4.5vw,22px)/1.5 Georgia,serif;color:#70502e;margin:7px 0 14px;overflow-wrap:anywhere}
 body.theme-alternative #campaign-scene>.soa-scene-kicker{white-space:normal;overflow-wrap:anywhere;line-height:1.7}
 body.soa-theme-druid #campaign-scene>.soa-story-chapter{color:#c7d8ad}
