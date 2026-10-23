@@ -21,7 +21,7 @@ test("combat resource mapping covers each selectable class and Druid forms",()=>
 test("Bear Form noncombat choices do not require Rage and preview its normal out-of-combat fade",()=>{
  const functionSource=name=>{const start=campaign.indexOf("function "+name+"("),end=campaign.indexOf(String.fromCharCode(10)+"function ",start+1);assert.ok(start>=0&&end>start,name);return campaign.slice(start,end)};
  const druid={form:"bear"},context={window:{
-  soaDruid:{current:()=>druid,FORMS:{bear:{resource:"rage"}},skillBonus:()=>0},
+  soaDruid:{current:()=>druid,shiftFrom:()=>null,FORMS:{bear:{resource:"rage"}},skillBonus:()=>0},
   soaCharacters:{profile:()=>({className:"Druid",form:"bear"})},
   soaProgression:{level:()=>10,bonus:()=>0},
   soaClassAbilities:{available:()=>[]},
