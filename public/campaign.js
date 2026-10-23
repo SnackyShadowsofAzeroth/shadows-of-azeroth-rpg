@@ -123,14 +123,14 @@ function actionOdds(action){
  const level=window.soaProgression?.level?.()||1;
  const difficulty=action.difficulty==="easy"?12:action.difficulty==="hard"?-22:0;
  const racialFocus=campaign?.racialFocus?.skill===relevant?Math.max(0,Number(campaign.racialFocus.bonus)||0):0;
- const classBonus=({Shaman:{combat:10,stealth:-25}}[window.soaCharacters?.profile?.()?.className]||{})[relevant]||0;
+ const classBonus=((({Shaman:{combat:10,stealth:-25}}[window.soaCharacters?.profile?.()?.className]||{})[relevant])||0)+(window.soaDruid?.skillBonus?.(relevant)||0);
  const target=Math.max(10,Math.min(95,Math.round(base+modifier*3+trained*2+Math.max(0,level-1)*.2+difficulty-(s.alert||0)*5+racialFocus+classBonus)));
  return {cost:costs[relevant]??costs[t]??0,target,skill:relevant,modifier,trained,classBonus};
 }
 function heroHealthCap(){const hero=window.soaCharacters?.profile?.();return 100+(window.soaRacialAbilities?.passives?.(hero?.race)?.maxHp||0)}
 function racialRegeneration(){const hero=window.soaCharacters?.profile?.();return window.soaRacialAbilities?.passives?.(hero?.race)?.regeneration||0}
 function resourceName(){const hero=window.soaCharacters?.profile?.();return window.soaResources?.forClass?.(hero?.className,hero?.form)?.label||"Energy"}
-function classCooldownLeft(ability){const readyAt=Number(campaign?.classCooldowns?.[ability?.id])||0;return Math.max(0,readyAt-((Number(campaign?.combatRound)||0)+1))}
+function classCooldownLeft(ability){if(window.soaDruid?.current?.())return Math.max(0,(window.soaDruid.current().cooldowns?.[ability?.id]||0)-(Number(s.time)||0));const readyAt=Number(campaign?.classCooldowns?.[ability?.id])||0;return Math.max(0,readyAt-((Number(campaign?.combatRound)||0)+1))}
 function resourceKey(){const hero=window.soaCharacters?.profile?.();return window.soaResources?.forClass?.(hero?.className,hero?.form)?.key||"energy"}
 function resolvedCombatAbility(action){
  const hero=window.soaCharacters?.profile?.(),level=window.soaProgression?.level?.()||hero?.startLevel||1;
@@ -156,6 +156,7 @@ function resolvedRacialCombatAbility(action){
 function unavailableClassAbility(action){
  const hero=window.soaCharacters?.profile?.(),level=window.soaProgression?.level?.()||hero?.startLevel||1;
  const all=window.soaClassAbilities?.all?.(hero?.className)||[];
+ if(hero?.className==="Druid"&&window.soaDruid){const named=window.soaDruid.named(action,all);if(named&&!window.soaClassAbilities.get(named.id,"Druid",level))return {...named,level:null};}
  const locked=all.filter(ability=>ability.level>level);
  const explicit=locked.find(ability=>ability.id===action?.ability);
  if(explicit)return explicit;
@@ -197,6 +198,7 @@ function d20SuccessChance(bonus,dc,advantage=0,criticalOn=20){
 }
 function chanceLabel(value){const rounded=Math.round(value*10)/10;return (Number.isInteger(rounded)?String(rounded):rounded.toFixed(1))+"%"}
 function dicePreview(action){
+ if(window.soaDruid?.current?.()){const shift=window.soaDruid.shiftFrom(action);if(shift!==null)return {primary:"Shapeshift · one full turn",secondary:"20 Mana to enter a form; return to humanoid costs no Mana. No attack included."};const a=window.soaClassAbilities.available("Druid",window.soaProgression?.level?.()||1).find(x=>x.id===resolvedCombatAbility(action));if(a)return {primary:a.name+" · "+(a.effect==="heal"?"Healing roll":a.effect==="guard"?"Defensive action":"d20 + proficiency + "+a.stat+" vs target AC"),secondary:a.description+" · "+a.cost+" "+resourceName()};}
  // Combat takes priority over social keyword detection, matching the resolver.
  const storyAbility=resolvedStoryVanish(action);
  if((action.type==="combat"||storyAbility)&&livingEnemies().length){
@@ -235,6 +237,7 @@ function dicePreview(action){
  const {cost,target}=odds;return {primary:"🎲 "+odds.skill+" · d100 ≤ "+target+" ("+target+"%)",secondary:cost+" "+resourceName()+" cost · up to +"+ACTION_RESOURCE_RECOVERY+" recovery · ability modifier "+(odds.modifier>=0?"+":"")+odds.modifier+" · training +"+odds.trained+(odds.classBonus?" · class aptitude "+(odds.classBonus>0?"+":"")+odds.classBonus:"")};
 }
 function resourceForecast(action){
+ if(window.soaDruid?.current?.()){const d=window.soaDruid.current(),key=window.soaDruid.FORMS[d.form].resource,level=window.soaProgression?.level?.()||1,shift=window.soaDruid.shiftFrom(action),a=window.soaClassAbilities.available("Druid",level).find(x=>x.id===resolvedCombatAbility(action)),cost=shift!==null?(shift==="caster"?0:20):a?.cost??(action.type==="combat"?0:actionOdds(action).cost),current=shift!==null?d.pools.mana:s.en,gain=shift!==null||key==="rage"?0:key==="energy"?20:25,after=Math.min(100,current-cost+gain),label=shift!==null?"Mana":resourceName();return {label,current,max:100,cost,after,affordable:current>=cost,cooldown:a?classCooldownLeft(a):0,abilityId:a?.id,text:label+" "+current+" → "+Math.max(0,after)+"/100 · "+cost+" cost"+(key==="rage"?" · Rage earned on hits":" · +"+gain+" recovery")};}
  const profile=window.soaCharacters?.profile?.(),label=resourceName(),current=Math.max(0,Math.min(100,Number(s.en)||0)),storyAbility=resolvedStoryVanish(action);
  const combatAction=(action.type==="combat"||!!storyAbility)&&livingEnemies().length>0;
  let abilityId=null,cost=0;
@@ -270,6 +273,7 @@ function partyExperienceIds(){
  return [...new Set(names.map(name=>window.soaProgression?.register?.(name)).filter(Boolean))];
 }
 function resetEncounterCombatState(){
+ if(window.soaCharacters?.profile?.()?.className==="Druid")window.soaDruid?.resetEncounter?.(s);
  campaign.classCooldowns={};campaign.supportCooldowns={};
  campaign.combatRound=0;campaign.evasionUntil=0;campaign.guardUntil=0;campaign.snareUntil=0;
  campaign.snaredEnemy=null;campaign.parryReady=false;
@@ -789,10 +793,11 @@ function drawEnemyStatus(box){
    dealt.textContent="Vanish succeeded · guaranteed 100% evade"+(exchange.evaded?"; incoming attack avoided.":"; no enemy attack reached you.");
   }else{
    const evasionNote=exchange.evasionActive?(Number.isInteger(exchange.evasionRoll)?exchange.evaded?" · Evasion succeeds (d100 "+exchange.evasionRoll+" ≤ 50).":" · Evasion fails (d100 "+exchange.evasionRoll+" > 50).":" · Evasion active; no dodge roll was needed."):"";
-   dealt.textContent=exchange.ability==="evasion"?"Evasion activated · 50% dodge chance per incoming hit for 2 rounds · 2-round cooldown"+evasionNote+".":exchange.healed?"Used "+String(exchange.ability||"ability").replaceAll("_"," ")+" · restored "+exchange.healed+" HP."+evasionNote:exchange.ability==="sprint"?"Used Sprint · incoming attack disadvantaged."+evasionNote:exchange.hit?"Hit · "+exchange.dealt+" damage to "+exchange.target+" · HP "+exchange.enemyBefore+"/"+exchange.enemyMax+" → "+exchange.enemyAfter+"/"+exchange.enemyMax+"."+evasionNote:"Miss · 0 damage to "+exchange.target+"."+evasionNote;
+   dealt.textContent=exchange.shapeshift?"Shapeshifted into "+window.soaDruid.name(exchange.form)+" · full turn · no attack.":exchange.ability==="evasion"?"Evasion activated · 50% dodge chance per incoming hit for 2 rounds · 2-round cooldown"+evasionNote+".":exchange.healed?"Used "+String(exchange.ability||"ability").replaceAll("_"," ")+" · restored "+exchange.healed+" HP."+evasionNote:exchange.ability==="sprint"?"Used Sprint · incoming attack disadvantaged."+evasionNote:exchange.hit?"Hit · "+exchange.dealt+" damage to "+exchange.target+" · HP "+exchange.enemyBefore+"/"+exchange.enemyMax+" → "+exchange.enemyAfter+"/"+exchange.enemyMax+"."+evasionNote:"Miss · 0 damage to "+exchange.target+"."+evasionNote;
   }
   const taken=document.createElement("p");taken.textContent="Damage received · "+(exchange.recipient||"you")+" "+exchange.taken+" HP ("+(exchange.recipientBefore??exchange.heroBefore)+" → "+(exchange.recipientAfter??exchange.heroAfter)+" HP).";
   summary.append(title,dealt,taken);
+  if(exchange.resourceReport){const report=document.createElement("p");report.textContent=exchange.resourceReport;summary.append(report)}
   if(exchange.regenerated>0){const healing=document.createElement("p");healing.textContent="Troll Regeneration · "+(window.soaCharacters?.profile?.()?.name||"Your hero")+" recovers "+exchange.regenerated+" HP (up to maximum).";summary.append(healing)}
   const details=document.createElement("details");details.className="soa-exchange-details";
   const detailsLabel=document.createElement("summary");detailsLabel.textContent="Roll & event details";details.append(detailsLabel);
@@ -845,7 +850,7 @@ function drawCombatActions(box){
  const section=document.createElement("section");section.className="soa-combat-move-panel";
  const heading=document.createElement("div");heading.className="soa-combat-move-heading";
  const title=document.createElement("strong");title.textContent="Combat actions";
- const hint=document.createElement("span");hint.textContent="+"+COMBAT_RESOURCE_RECOVERY+" "+resourceName()+" each exchange";
+ const hint=document.createElement("span");hint.textContent=hero?.className==="Druid"?(resourceKey()==="rage"?"Rage builds from combat":resourceKey()==="energy"?"+20 Energy per exchange":"+25 Mana per exchange"):"+"+COMBAT_RESOURCE_RECOVERY+" "+resourceName()+" each exchange";
  heading.append(title,hint);section.append(heading);
  const evasionRemaining=Math.max(0,(Number(campaign.evasionUntil)||0)-(Number(campaign.combatRound)||0));
  if(evasionRemaining>0){const evasionStatus=document.createElement("p");evasionStatus.className="soa-evasion-status";evasionStatus.textContent="Evasion active · 50% dodge chance per incoming hit · "+evasionRemaining+" round"+(evasionRemaining===1?"":"s")+" remaining";section.append(evasionStatus)}
@@ -857,11 +862,11 @@ function drawCombatActions(box){
  target.onchange=()=>{selectedCombatTarget=target.value;draw()};
  targetLabel.append(target);section.append(targetLabel);
  const basic=document.createElement("button");basic.type="button";basic.className="soa-ability-button soa-combat-basic";
- basic.textContent="Weapon Strike · Free";
+ basic.textContent=hero?.className==="Druid"&&hero.form!=="caster"?"Natural Strike · Free":"Weapon Strike · Free";
  basic.title="A reliable attack that is always available.";
- basic.disabled=busy||!!pending();
+ basic.disabled=busy||!!pending()||hero?.className==="Druid"&&window.soaDruid?.FORMS?.[hero.form]?.utility;
  basic.onclick=()=>choose({text:(hero?.name||"Hero")+" uses Weapon Strike against "+target.value,type:"combat",difficulty:"medium",ability:"strike"});
- const basicNote=document.createElement("small");basicNote.className="soa-combat-basic-note";basicNote.textContent="Always available · combat exchange restores up to +"+COMBAT_RESOURCE_RECOVERY+" "+resourceName();
+ const basicNote=document.createElement("small");basicNote.className="soa-combat-basic-note";basicNote.textContent=hero?.className==="Druid"?"One exchange · form resource rules shown above":"Always available · combat exchange restores up to +"+COMBAT_RESOURCE_RECOVERY+" "+resourceName();
  const basicWrap=document.createElement("div");basicWrap.className="soa-combat-basic-wrap";basicWrap.append(basic,basicNote);section.append(basicWrap);
  const learned=window.soaClassAbilities?.available?.(hero?.className,level)||[];
  const racial=(window.soaRacialAbilities?.list?.(hero?.race)||[]).filter(a=>a.mode==="combat"&&(!a.requiresCorpse||hasRecentCorpse()));
@@ -876,7 +881,7 @@ function drawCombatActions(box){
    button.textContent=name+" · "+cost+" "+resourceName()+(cooldown?" · "+cooldown+" exchange"+(cooldown===1?"":"s"):"");
    button.title=ability.description||name;
    const needsTarget=!(["guard","heal"].includes(effect));
-   button.disabled=busy||!!pending()||s.en<cost||!!cooldown||(effect==="riposte"&&!campaign.parryReady)||needsTarget&&!target.value;
+   button.disabled=busy||!!pending()||s.en<cost||!!cooldown||(hero?.className==="Druid"&&!!window.soaDruid?.errorFor?.(ability,s,campaign,true,selected))||(effect==="riposte"&&!campaign.parryReady)||needsTarget&&!target.value;
    button.onclick=()=>choose({text:(hero?.name||"Your hero")+" uses "+name+(needsTarget?" against "+target.value:""),type:"combat",difficulty:"medium",ability:id});
    const note=document.createElement("small");
    const mechanics=isKillingSpree?"Two weapon strikes · crits on 19–20":isGuaranteedVanish?"Guaranteed evade · 100% success":isEvasion?"50% dodge chance · lasts 2 rounds":"";
@@ -916,7 +921,52 @@ function scavengeFallenEnemy(action,success){
  const coins=(silver?silver+" silver"+(copper?" and ":""):"")+(copper?copper+" copper":"");
  return "Loot: found "+coins+" on "+id.slice(location.length)+". Wallet now "+fmtMoney(s.money)+".";
 }
+function druidResult(action){
+ const druid=window.soaDruid,profile=window.soaCharacters?.profile?.();
+ if(!druid||profile?.className!=="Druid")return undefined;
+ const level=window.soaProgression?.level?.()||profile.startLevel||1,d=druid.state(s),enemies=livingEnemies(),combat=enemies.length>0;
+ const shiftId=druid.shiftFrom(action),base=window.soaClassAbilities.all("Druid"),learned=window.soaClassAbilities.available("Druid",level),known=druid.named(action,[...base,...learned]);
+ const ability=known?learned.find(a=>a.id===known.id):null;
+ const fail=message=>{status(message+" No action spent.");return null};
+ if(action.type==="druid_quest"){
+  const outcome=druid.questAction(s,campaign,profile,level,action.quest,action.operation,window.soaCombatRules);
+  if(outcome.error)return fail(outcome.error);
+  campaign.druidResolvedTime=s.time;return outcome.message;
+ }
+ if(shiftId!==null&&!combat){
+  const outcome=druid.shift(s,campaign,profile,level,shiftId);if(outcome.error)return fail(outcome.error);
+  s.time++;campaign.druidResolvedTime=s.time;return "Success: "+outcome.message;
+ }
+ if(known&&!ability)return fail(known.name+" is not learned or cannot be used in "+druid.name(d.form)+" Form");
+ if(ability&&!combat){
+  const err=druid.errorFor(ability,s,campaign,false);if(err)return fail(err);
+  if(!ability.prowl&&ability.effect!=="heal")return fail("That ability requires a hostile target");
+  if(ability.prowl){if(d.prowl)return fail("Prowl is already active");d.prowl=true;}
+  else {const actor=window.soaAbilities.get("hero"),amount=window.soaCombatRules.damage(ability.die,ability.flat+(actor.modifiers[ability.stat]||0)+druid.modifiers(s).heal);const before=s.hp;s.hp=Math.min(heroHealthCap(),s.hp+amount);campaign.druidResolvedTime=s.time+1;druid.recover(s,{cost:ability.cost,combat:false});s.time++;if(ability.hot){d.effects||={};d.effects.regrowth={until:(campaign.combatRound||0)+3};}d.cooldowns||={};d.cooldowns[ability.id]=s.time+ability.cooldown;return "Success: "+ability.name+" restores "+(s.hp-before)+" HP. "+resourceName()+" now "+s.en+"/100. One turn resolved.";}
+  druid.recover(s,{cost:ability.cost,combat:false});s.time++;campaign.druidResolvedTime=s.time;return "Success: Prowl active. Your next cat opener gains advantage. One turn resolved.";
+ }
+ if(!combat||(!ability&&shiftId===null&&action.type!=="combat"))return undefined;
+ // Racial and companion actions retain their existing resolver and settle resource pools afterwards.
+ if(druid.FORMS[d.form].utility&&action.type==="combat")return fail("Return to humanoid or a combat form before attacking");
+ if(action.type==="racial"||window.soaRacialAbilities?.get?.(action.ability,profile.race)||["bromli_guard","pippa_snare","lethariel_heal"].includes(action.ability))return undefined;
+ const target=enemies.find(e=>e.name===selectedCombatTarget)||enemies.find(e=>String(action.text||"").toLowerCase().includes(e.name.toLowerCase()))||enemies[0];
+ const basic={id:"druid_strike",name:druid.FORMS[d.form].resource==="mana"?"Staff Strike":"Natural Strike",cost:0,effect:"damage",stat:["bear","dire_bear"].includes(d.form)?"STR":"DEX",die:6,flat:3,damageType:"slashing",cooldown:0};
+ const beforeExchange=structuredClone(s),beforeCampaign=structuredClone(campaign),encounter=startProgressionEncounter();
+ const outcome=druid.exchange(s,campaign,profile,level,action,ability||basic,target,window.soaCombatRules,window.soaAbilities.get("hero"));
+ if(outcome.error){s=beforeExchange;campaign=beforeCampaign;return fail(outcome.error);}
+ const event=outcome.event;event.encounterId=encounter.id;campaign.lastExchange=event;campaign.parryReady=false;campaign.druidResolvedTime=s.time;
+ for(const row of outcome.rows)if(row.before>0&&row.enemy.hp===0){
+  window.soaQuests?.onDefeat?.(campaign,row.enemy.name);druid.onDefeat(campaign,row.enemy.name);
+  if(!encounter.defeated.some(x=>x.name===row.enemy.name))encounter.defeated.push({name:row.enemy.name,maxHp:row.enemy.maxHp});
+  campaign.defeatedEnemies||=[];campaign.defeatedEnemies.push(String(campaign.enemyLocation||campaign.scene?.location||"")+"|"+row.enemy.name.toLowerCase());
+ }
+ campaign.defeatedEnemies=(campaign.defeatedEnemies||[]).slice(-80);
+ if(!livingEnemies().length&&event.defeatedTargets.length)encounter.pendingVictory=true;
+ const first=outcome.rows[0];recordCombatDelta(first.enemy,first.dealt,event.taken,profile.name,event.heroBefore,s.hp,outcome.rows.slice(1));
+ return outcome.message;
+}
 function result(action){
+ const druidResolution=window.soaDruid?druidResult(action):undefined;if(druidResolution!==undefined)return druidResolution;
  const unavailable=unavailableClassAbility(action);
  if(unavailable){status(unavailable.name+(unavailable.level?" unlocks at level "+unavailable.level:" is not learned")+". No action spent.");return null}
  if(action.type==="racial")return useRacialAbility(action);
@@ -1043,6 +1093,7 @@ function draw(){
 
  drawEnemyStatus(box);
  drawRacialActions(box);
+ if(window.soaCharacters?.profile?.()?.className==="Druid"&&window.soaDruid)box.append(window.soaDruid.panel(s,campaign,window.soaCharacters.profile(),window.soaProgression?.level?.()||1,choose,busy||!!pending()));
  if(campaign?.chronicle?.pendingMilestone){
   const notice=document.createElement("button");notice.type="button";notice.className="soa-chapter-review";
   notice.textContent="✦ A chapter milestone is ready for your review · Open Journal";
@@ -1054,7 +1105,7 @@ function draw(){
   cue.textContent="No hostile target engaged yet · Choose a story action to begin an encounter. Combat actions appear when an opponent enters the fight.";
   box.append(cue);
  }
- const reserve=document.createElement("section");reserve.className="soa-choice-resource";reserve.dataset.resource=resourceKey();reserve.setAttribute("aria-label","Current "+resourceName());const reserveHeading=document.createElement("div");reserveHeading.className="soa-choice-resource-heading";const reserveLabel=document.createElement("strong");reserveLabel.textContent="CURRENT "+resourceName().toUpperCase();const reserveValue=document.createElement("span");const reserveCurrent=Math.max(0,Math.min(100,Number(s.en)||0));reserveValue.textContent=reserveCurrent+" / 100";reserveHeading.append(reserveLabel,reserveValue);const reserveTrack=document.createElement("div");reserveTrack.className="soa-choice-resource-track";reserveTrack.dataset.resource=resourceKey();reserveTrack.setAttribute("role","progressbar");reserveTrack.setAttribute("aria-label",resourceName()+" reserve");reserveTrack.setAttribute("aria-valuemin","0");reserveTrack.setAttribute("aria-valuemax","100");reserveTrack.setAttribute("aria-valuenow",String(reserveCurrent));const reserveFill=document.createElement("div");reserveFill.className="soa-choice-resource-fill";reserveFill.style.width=reserveCurrent+"%";reserveTrack.append(reserveFill);const reserveHint=document.createElement("small");reserveHint.textContent="Combat exchanges and other actions restore up to +25 "+resourceName()+" (maximum 100). Costs below show your projected balance.";reserve.append(reserveHeading,reserveTrack,reserveHint);box.append(reserve);
+ const reserve=document.createElement("section");reserve.className="soa-choice-resource";reserve.dataset.resource=resourceKey();reserve.setAttribute("aria-label","Current "+resourceName());const reserveHeading=document.createElement("div");reserveHeading.className="soa-choice-resource-heading";const reserveLabel=document.createElement("strong");reserveLabel.textContent="CURRENT "+resourceName().toUpperCase();const reserveValue=document.createElement("span");const reserveCurrent=Math.max(0,Math.min(100,Number(s.en)||0));reserveValue.textContent=reserveCurrent+" / 100";reserveHeading.append(reserveLabel,reserveValue);const reserveTrack=document.createElement("div");reserveTrack.className="soa-choice-resource-track";reserveTrack.dataset.resource=resourceKey();reserveTrack.setAttribute("role","progressbar");reserveTrack.setAttribute("aria-label",resourceName()+" reserve");reserveTrack.setAttribute("aria-valuemin","0");reserveTrack.setAttribute("aria-valuemax","100");reserveTrack.setAttribute("aria-valuenow",String(reserveCurrent));const reserveFill=document.createElement("div");reserveFill.className="soa-choice-resource-fill";reserveFill.style.width=reserveCurrent+"%";reserveTrack.append(reserveFill);const reserveHint=document.createElement("small");reserveHint.textContent=window.soaDruid?.current?.()?"Separate Mana, Energy and Rage reserves follow the shapeshifting rules above.":"Combat exchanges and other actions restore up to +25 "+resourceName()+" (maximum 100). Costs below show your projected balance.";reserve.append(reserveHeading,reserveTrack,reserveHint);box.append(reserve);
  const choicesHeader=document.createElement("div");choicesHeader.className="soa-choices-heading";
  const title=document.createElement("strong");title.textContent="Choose your next move";
  const count=document.createElement("span");count.textContent=sc.choices.length+" story paths"+(livingEnemies().length?" · combat actions above":" + resources + custom");
@@ -1108,8 +1159,12 @@ async function choose(choice){
  const detected=dialogueFromCustom(choice);if((detected||socialSkill(choice))&&choice.custom&&choice.type==="investigate")choice={...choice,type:"social"};
  const storyAbility=resolvedStoryVanish(choice),resolvingChoice=storyAbility?{...choice,type:"combat",ability:storyAbility}:choice;
  const combatRoundBefore=Number(campaign.combatRound)||0;
+ const druidBefore=window.soaDruid?.current?.()?{s:structuredClone(s),c:structuredClone(campaign),energy:s.en,cost:resourceForecast(resolvingChoice).cost}:null;
  const resolution=result(resolvingChoice);
- if(!resolution){if(!socialSkill(resolvingChoice)&&resolvingChoice.type!=="combat")status("Not enough "+resourceName()+" for that action.");return}
+ if(resolution&&druidBefore&&campaign.druidResolvedTime!==s.time){s.en=druidBefore.energy;window.soaDruid.recover(s,{cost:druidBefore.cost,hit:(Number(campaign.combatRound)||0)>combatRoundBefore&&campaign.lastExchange?.hit===true,taken:(Number(campaign.combatRound)||0)>combatRoundBefore?campaign.lastExchange?.taken||0:0,combat:livingEnemies().length>0});}
+ 
+ if(!resolution){if(!druidBefore&&!socialSkill(resolvingChoice)&&resolvingChoice.type!=="combat")status("Not enough "+resourceName()+" for that action.");return}
+ if(druidBefore&&window.soaDruid.current()?.effects?.dashActions>0)window.soaDruid.current().effects.dashActions--;
  const combatRoundAfter=Number(campaign.combatRound)||0;
  campaign.lastProgression="";
  campaign.actionSerial=(Number(campaign.actionSerial)||0)+1;
@@ -1118,7 +1173,7 @@ async function choose(choice){
  campaign.lastAction=safe(choice.text);campaign.lastResult=resolution;
  campaign.pending={action:campaign.lastAction,resolution,startedAt:Date.now(),dialogue:detected,survey:choice.survey===true,combat:resolvingChoice.type==="combat",combatRoundBefore,combatRoundAfter,combatExchangeResolved:resolvingChoice.type==="combat"&&combatRoundAfter>combatRoundBefore,actionReceipt};
  campaign.history.push("At "+safe(campaign.scene?.location||"unknown location")+": Player: "+campaign.lastAction+" | "+resolution);
- campaign.history=campaign.history.slice(-MAX);const saved=store();refreshDisplay();if(!saved)return;
+ campaign.history=campaign.history.slice(-MAX);const saved=druidBefore?(save()&&store()):store();if(!saved&&druidBefore){s=druidBefore.s;campaign=druidBefore.c;save();store();status("Druid action could not be saved. No turn committed; retry after restoring device storage.");refreshDisplay();return;}refreshDisplay();if(!saved)return;
  // Release the iPhone keyboard and return to the story while Gemini works.
  if(choice.custom&&document.activeElement?.blur)document.activeElement.blur();
  returnToAdventure("status");
@@ -1134,7 +1189,7 @@ async function advance(action,resolution,retry){
  try{
  const controller=new AbortController();requestTimeout=setTimeout(()=>controller.abort(),85000);
  progressNotice=setTimeout(()=>{if(busy)status("Gemini is still generating the scene. Your action is saved; please keep this page open.")},20000);
- const response=await fetch("./api/campaign",{method:"POST",headers:{"content-type":"application/json","x-story-access":code},signal:controller.signal,body:JSON.stringify({context:{location:campaign.scene?.location||(window.soaCharacters?.profile?.()?.startingZone||"Current starting area"),previousTitle:campaign.scene?.title||"",previousScene:campaign.scene?.story||"",campaignOrigin:originOfCampaign(),startingZone:window.soaCharacters?.profile?.()?.startingZone||null,recentDiscoveries:campaign.journal.slice(-12),action,resolution,hp:s.hp,energy:s.en,resourceLabel:resourceName(),gold:fmtMoney(s.money),alarm:s.alert,turn:campaign.turn,history:campaign.history.slice(-20),flags:Object.keys(s.flags||{}),companionMoments:window.soaCompanions?.getRecent?.()||[],companionProfiles:window.soaCompanions?.getProfiles?.()||{},relationships:window.soaCompanions?.getRelationships?.()||{},conversationContext:window.soaCompanions?.getConversationContext?.()||{},character:window.soaCharacters?.profile?.()||null,abilityScores:window.soaAbilities?.get?.("hero")?.stats||null,reputation:window.soaReputation?.getStandings?.()||{},reputationDevelopments:window.soaReputation?.getDevelopments?.()||[],enemies:livingEnemies().map(e=>({name:e.name,hp:e.hp,maxHp:e.maxHp})),allies:combatParty().map(e=>({name:e.name,hp:e.hp,maxHp:e.maxHp})),questRewards:{last:campaign.quests?.lastReward||null,activeMissions:Object.entries(campaign.quests?.missions||{}).filter(([,v])=>v.state!=="claimed").map(([id,v])=>({id,state:v.state}))},combatAction:campaign.pending?.combatExchangeResolved===true&&campaign.xpEncounter?.active===true,
+ const response=await fetch("./api/campaign",{method:"POST",headers:{"content-type":"application/json","x-story-access":code},signal:controller.signal,body:JSON.stringify({context:{location:campaign.scene?.location||(window.soaCharacters?.profile?.()?.startingZone||"Current starting area"),previousTitle:campaign.scene?.title||"",previousScene:campaign.scene?.story||"",campaignOrigin:originOfCampaign(),startingZone:window.soaCharacters?.profile?.()?.startingZone||null,recentDiscoveries:campaign.journal.slice(-12),action,resolution,hp:s.hp,energy:s.en,resourceLabel:resourceName(),druid:window.soaDruid?.context?.()||null,gold:fmtMoney(s.money),alarm:s.alert,turn:campaign.turn,history:campaign.history.slice(-20),flags:Object.keys(s.flags||{}),companionMoments:window.soaCompanions?.getRecent?.()||[],companionProfiles:window.soaCompanions?.getProfiles?.()||{},relationships:window.soaCompanions?.getRelationships?.()||{},conversationContext:window.soaCompanions?.getConversationContext?.()||{},character:window.soaCharacters?.profile?.()||null,abilityScores:window.soaAbilities?.get?.("hero")?.stats||null,reputation:window.soaReputation?.getStandings?.()||{},reputationDevelopments:window.soaReputation?.getDevelopments?.()||[],enemies:livingEnemies().map(e=>({name:e.name,hp:e.hp,maxHp:e.maxHp})),allies:combatParty().map(e=>({name:e.name,hp:e.hp,maxHp:e.maxHp})),questRewards:{last:campaign.quests?.lastReward||null,activeMissions:Object.entries(campaign.quests?.missions||{}).filter(([,v])=>v.state!=="claimed").map(([id,v])=>({id,state:v.state}))},combatAction:campaign.pending?.combatExchangeResolved===true&&campaign.xpEncounter?.active===true,
 encounterId:campaign.pending?.combatExchangeResolved===true?campaign.xpEncounter?.id||null:null,
 combatRound:Number(campaign.combatRound)||0,
 combatLog:campaign.pending?.combatExchangeResolved===true?(campaign.combatLog||[]).filter(row=>row.encounterId===campaign.xpEncounter?.id).slice(-3):[],
@@ -1167,6 +1222,8 @@ function migrateCompanionDisplayNames(){
 const savedCampaign=localGet(KEY);if(campaignStorageReadFailed)campaignSaveFailed=true;
 if(savedCampaign!==null){try{campaign=normalizeCampaignState(JSON.parse(savedCampaign));if(!campaign)campaignLoadBlocked=true}catch{campaign=null;campaignLoadBlocked=true;window.soaSaveRules.reportCorruption(KEY)}}
 migrateCompanionDisplayNames();
+window.soaDruid?.bind?.({state:()=>s,campaign:()=>campaign});
+if(window.soaCharacters?.profile?.()?.className==="Druid")window.soaDruid?.state?.(s);
 function repairLegacyEncounterBoundary(){
  const encounter=campaign?.xpEncounter;
  if(!encounter?.active||!encounter.pendingVictory||!livingEnemies().length)return;
@@ -1183,3 +1240,4 @@ repairLegacyEncounterBoundary();
 enabled=localGet("soa-campaign-enabled")==="1"&&!campaignLoadBlocked&&!campaignStorageReadFailed;let campaignReady=true;if(campaign){window.soaChronicle?.attach?.(campaign);campaignReady=store();window.soaChronicle?.render?.(campaign)}window.soaChronicleSetSave?.(store);interfaceUI();get("campaign-mode").checked=enabled;
 if(campaignLoadBlocked||campaignStorageReadFailed){status("")}else if(enabled){if(!campaign){campaign=make();campaignReady=store()}draw();if(campaignReady&&!campaign.scene&&navigator.onLine)advance(campaign.lastAction,campaign.lastResult,true)}
 window.soaLivingCampaign={getState:()=>campaign,enabled:()=>enabled,persist:store,refreshUI:()=>{draw();window.soaCharacters?.refreshProfessions?.()}};})();
+

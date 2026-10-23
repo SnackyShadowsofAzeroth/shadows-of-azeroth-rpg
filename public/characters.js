@@ -123,7 +123,7 @@ function socialSkills(){
  const mod=skill=>window.soaAbilities?.modifier?.(skill)||0;
  return {bluff:base.bluff+si7+hidden+(trained?.("bluff")||0)+mod("bluff"),bribe:base.bribe+(trained?.("bribe")||0)+mod("bribe"),romance:base.romance+(trained?.("romance")||0)+mod("romance"),threaten:base.threaten+(trained?.("threaten")||0)+mod("threaten")};
 }
-function selectedProfile(){return {...active,factionPath:active.race==="Skyborne"?skybornePath(active.faction):null,level:window.soaProgression?.level?.()||10,professions:Object.fromEntries(Object.entries(active.professions||{}).map(([k,v])=>[k,v.skill||1]))}}
+function selectedProfile(){return {...active,form:active.className==="Druid"?window.soaDruid?.form?.():undefined,factionPath:active.race==="Skyborne"?skybornePath(active.faction):null,level:window.soaProgression?.level?.()||10,professions:Object.fromEntries(Object.entries(active.professions||{}).map(([k,v])=>[k,v.skill||1]))}}
 function commitRoster(){return write(ROSTER_KEY,roster)}
 function enter(id){
  if(window.soaSaveRules.isIntegrityBlocked()){alert("Character changes are paused until the saved data has been recovered.");return}
@@ -504,3 +504,4 @@ document.addEventListener("DOMContentLoaded",()=>{
  organizeGameSections();
 });
 })();
+

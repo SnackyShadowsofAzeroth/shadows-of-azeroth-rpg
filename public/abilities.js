@@ -26,15 +26,16 @@ const get=id=>{
  KEYS.forEach((k,i)=>{values[k]=Math.min(20,base[i]+(racial[k]||0)+(boon[k]||0)+(k===priority?Math.floor(lv/4):0))});
  const equipment=id==="hero"?(window.soaEquipment?.modifiers?.()||{}):{};
  if(id==="hero")for(const k of KEYS)values[k]=Math.max(1,Math.min(22,values[k]+(Number(equipment[k])||0)));
+ if(id==="hero"&&p.className==="Druid"){if(["bear","dire_bear"].includes(p.form))values.STR=Math.max(values.STR,values.WIS);if(p.form==="cat")values.DEX=Math.max(values.DEX,values.WIS);}
  const hitDie=HIT_DIE[p.className]||8,con=MOD(values.CON);
  const racialHp=id==="hero"?(window.soaRacialAbilities?.passives?.(p.race)?.maxHp||0):0;
  const hp=Math.max(1,hitDie+con+(lv-1)*(Math.ceil(hitDie/2)+1+con)+racialHp);
  const modifiers=Object.fromEntries(KEYS.map(k=>[k,MOD(values[k])]));
  const proficiency=2+Math.floor((lv-1)/4);
  const racialPassive=id==="hero"?window.soaRacialAbilities?.passives?.(p.race):null;
- const armorClass=10+modifiers.DEX+(p.className==="Paladin"||p.className==="Warrior"?4:p.className==="Priest"?1:2)+(id==="hero"?(Number(equipment.ac)||0):0)+(racialPassive?.armorClass||0);
+ const armorClass=10+modifiers.DEX+(p.className==="Paladin"||p.className==="Warrior"?4:p.className==="Priest"?1:2)+(id==="hero"?(Number(equipment.ac)||0):0)+(racialPassive?.armorClass||0)+(id==="hero"&&p.className==="Druid"?(window.soaDruid?.FORMS?.[p.form]?.ac||0):0);
  const savingThrows=Object.fromEntries(KEYS.map(k=>[k,modifiers[k]+(SAVES[p.className]?.includes(k)?proficiency:0)]));
- return {name:p.name||"Adventurer",race:p.race||"",className:p.className||"",level:lv,stats:values,modifiers,proficiency,hitDie,maxHp:hp,armorClass,initiative:modifiers.DEX,passivePerception:10+modifiers.WIS,savingThrows,special:statId(id,p)==="snacky"?"SI:7 field veteran · +2 DEX and WIS":null};
+ return {name:p.name||"Adventurer",form:p.form,race:p.race||"",className:p.className||"",level:lv,stats:values,modifiers,proficiency,hitDie,maxHp:hp,armorClass,initiative:modifiers.DEX,passivePerception:10+modifiers.WIS,savingThrows,special:statId(id,p)==="snacky"?"SI:7 field veteran · +2 DEX and WIS":null};
 };
 const skillAbility={bluff:"CHA",bribe:"CHA",romance:"CHA",threaten:"CHA",social:"CHA",stealth:"DEX",engineering:"INT",investigate:"WIS",combat:"DEX",move:"DEX",rest:"CON"};
 const modifier=(name,id="hero")=>{const p=profileFor(id),ab=name==="combat"&&(p.className==="Paladin"||p.className==="Warrior")?"STR":skillAbility[name],base=ab?get(id).modifiers[ab]:0,racial=id==="hero"?(window.soaRacialAbilities?.passives?.(p.race)?.skills?.[name]||0):0;return base+racial};

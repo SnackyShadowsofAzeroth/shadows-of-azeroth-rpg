@@ -14,8 +14,9 @@ const primaryResources={
 };
 function forClass(className,form){
  if(className==="Druid"&&form==="cat")return {key:"energy",label:"Energy"};
- if(className==="Druid"&&form==="bear")return {key:"rage",label:"Rage"};
+ if(className==="Druid"&&["bear","dire_bear"].includes(form))return {key:"rage",label:"Rage"};
  return primaryResources[className]||primaryResources.Rogue;
 }
 window.soaResources={forClass,primaryResources};
 })();
+

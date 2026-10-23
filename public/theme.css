@@ -64,3 +64,10 @@ details.soa-collapsible-quests>summary::-webkit-details-marker{display:inline-bl
 .soa-choice-resource[data-resource="mana"] .soa-choice-resource-fill{background:linear-gradient(90deg,#397fc8,#8ac9ff);box-shadow:0 0 9px #69b9ff99}
 .soa-choice-resource[data-resource="focus"] .soa-choice-resource-heading strong{color:#8fe1b7}
 .soa-choice-resource[data-resource="focus"] .soa-choice-resource-fill{background:linear-gradient(90deg,#388b67,#8ad8ae);box-shadow:0 0 9px #62d39c99}
+
+
+/* Druid resource pools remain readable at phone width. */
+.soa-druid-panel{border:1px solid #536a51;border-radius:12px;padding:14px;margin:16px 0;background:linear-gradient(145deg,#24352c,#18252d);font:14px/1.5 system-ui}
+.soa-druid-panel h4{color:#d7c08b;margin:0 0 10px}.soa-druid-panel small{display:block;color:#bcc7bb}.soa-druid-panel details{margin-top:14px}.soa-druid-panel details>div{border-top:1px solid #52614d;padding-top:12px;margin-top:12px}
+.soa-druid-pool{margin:10px 0}.soa-druid-rail{height:8px;background:#121a22;border-radius:8px;overflow:hidden;margin-top:5px}.soa-druid-rail i{display:block;height:100%;background:#60a9f0}.soa-druid-pool[data-resource="energy"] i{background:#f0ca23}.soa-druid-pool[data-resource="rage"] i{background:#ec6453}
+#resource-meter[data-resource="mana"] i{background:#60a9f0}#resource-meter[data-resource="rage"] i{background:#ec6453}#resource-meter[data-resource="energy"] i{background:#f0ca23}

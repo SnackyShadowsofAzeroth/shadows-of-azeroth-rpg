@@ -61,15 +61,15 @@ const kits={
  ]
 };
 const normalize=([id,name,level,cost,effect,stat,die,flat,damageType,description,cooldown=0,mechanics={}])=>({id,name,level,cost,effect,stat,die,flat,damageType,description,cooldown,...mechanics});
-function all(className){return (kits[className]||[]).map(normalize)}
-function available(className,level=1){const lv=Math.max(1,Math.min(60,Number(level)||1)),learned=all(className).filter(x=>x.level<=lv),profile=window.soaCharacters?.profile?.();const signature=profile?.className===className?window.soaSpecializations?.ability?.(profile,lv):null;return signature?[...learned,signature]:learned}
+function all(className){return [...(kits[className]||[]).map(normalize),...(className==="Druid"?window.soaDruid?.all?.()||[]:[])]}
+function available(className,level=1){const lv=Math.max(1,Math.min(60,Number(level)||1)),learned=all(className).filter(x=>x.level<=lv),profile=window.soaCharacters?.profile?.();const signature=profile?.className===className?window.soaSpecializations?.ability?.(profile,lv):null;if(className==="Druid"&&window.soaDruid)return window.soaDruid.available((kits.Druid||[]).map(normalize),signature,lv);return signature?[...learned,signature]:learned}
 function get(id,className,level=1){return available(className,level).find(x=>x.id===id)||null}
 const fallbackCosts={strike:0,kick:35,evasion:35,riposte:30};
 function costOf(id,className,level=1){return get(id,className,level)?.cost??fallbackCosts[id]??null}
 function card(className,level=1){
  const box=document.createElement("section");box.className="soa-class-abilities";
  const heading=document.createElement("h3");heading.textContent="Class abilities";box.append(heading);
- const resource=window.soaResources?.forClass?.(className)?.label||"Resource";
+ const resource=window.soaResources?.forClass?.(className,window.soaCharacters?.profile?.()?.form)?.label||"Resource";
  const hint=document.createElement("p");hint.className="soa-ability-caption";hint.textContent="Learned abilities · new techniques unlock automatically as you level · costs use "+resource;box.append(hint);
  const learned=available(className,level),upcoming=all(className).filter(x=>x.level>level);
  for(const ability of learned){const row=document.createElement("div");row.className="soa-class-ability";const name=document.createElement("strong"),detail=document.createElement("span");name.textContent=ability.name;detail.textContent=ability.description+" · "+(ability.cost?ability.cost+" "+resource:"No resource cost")+(ability.cooldown?" · "+ability.cooldown+" exchange cooldown":" · No cooldown");row.append(name,detail);box.append(row)}

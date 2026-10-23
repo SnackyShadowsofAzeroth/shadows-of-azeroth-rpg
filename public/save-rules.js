@@ -47,6 +47,14 @@ function validateOfflineSave(value){
  if(result.equipment!==undefined&&(!Array.isArray(result.equipment)||result.equipment.length>100||result.equipment.some(item=>typeof item!=="string"||item.length>120)))fail("Equipment data is invalid.");
  if(result.enemy!==null&&(!object(result.enemy)||typeof result.enemy.name!=="string"||!result.enemy.name.trim()||result.enemy.name.length>100||!finite(result.enemy.hp,0,10000)||!finite(result.enemy.max,1,10000)||result.enemy.hp>result.enemy.max||!finite(result.enemy.damage,0,10000)))fail("Encounter data is invalid.");
  if(result.id==="combat"&&result.enemy===null)fail("The combat scene has no saved opponent.");
+ 
+ if(result.druid!==undefined){
+  const d=result.druid,forms=["caster","bear","cat","aquatic","travel","dire_bear","moonkin","tree","flight"];
+  if(!object(d)||d.version!==1||!forms.includes(d.form)||!object(d.pools)||["mana","energy","rage"].some(k=>!Number.isInteger(d.pools[k])||!finite(d.pools[k],0,100))||!object(d.combo)||!Number.isInteger(d.combo.points)||!finite(d.combo.points,0,5)||(d.combo.target!==null&&typeof d.combo.target!=="string")||typeof d.prowl!=="boolean")fail("Druid form or resource data is invalid.");
+  if(d.cooldowns!==undefined&&(!object(d.cooldowns)||Object.values(d.cooldowns).some(n=>!Number.isSafeInteger(n)||n<0)))fail("Druid cooldown data is invalid.");
+  if(d.effects!==undefined&&!object(d.effects))fail("Druid effect data is invalid.");
+  if(d.dots!==undefined&&(!Array.isArray(d.dots)||d.dots.length>20||d.dots.some(x=>!object(x)||typeof x.id!=="string"||typeof x.target!=="string"||!finite(x.amount,0,50)||!Number.isInteger(x.start)||!Number.isInteger(x.until)||x.start<0||x.until<x.start)))fail("Druid bleed data is invalid.");
+ }
  return result;
 }
 function freshOfflineSave(){
@@ -72,6 +80,11 @@ function validateChronicle(value){
 }
 function validateCampaignSave(value){
  if(!object(value))fail("Backup campaign data is invalid.");
+ if(value.druidQuests!==undefined){
+  if(!object(value.druidQuests))fail("Druid quest data is invalid.");
+  const lengths={bear:2,aquatic:3,cat:3,travel:2,dire_bear:2,moonkin:2,tree:2,flight:2};
+  for(const [id,r] of Object.entries(value.druidQuests))if(!(id in lengths)||!object(r)||!["active","claimed"].includes(r.state)||!Number.isInteger(r.step)||r.step<0||r.step>lengths[id]||!Array.isArray(r.proof)||r.proof.length!==r.step||r.state==="claimed"&&(r.step!==lengths[id]||r.receipt!=="druid-form:"+id))fail("Druid quest progress is invalid.");
+ }
  if(value.chronicle!==undefined&&value.chronicle!==null)validateChronicle(value.chronicle);
  if(value.quests!==undefined&&value.quests!==null&&!object(value.quests))fail("Backup campaign quests are invalid.");
  return structuredClone(value);
@@ -149,3 +162,4 @@ function validateRosterBackup(value){
 }
 window.soaSaveRules={validateOfflineSave,validateCampaignSave,validateChronicle,validateProgressionSave,validateCompanionsSave,validateReputationSave,validateCharacterRoster,validateRosterBackup,freshOfflineSave,readStoredJSON,reportCorruption,clearCorruption,clearAllCorruption,isIntegrityBlocked:()=>integrityIssues.size>0};
 })();
+

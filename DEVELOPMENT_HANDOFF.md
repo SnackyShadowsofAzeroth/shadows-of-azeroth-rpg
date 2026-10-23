@@ -185,3 +185,24 @@ Added three region-bound, engine-authored missions with immutable reward terms a
 - The mobile navigation script and stylesheet are now linked from the page and precached; invalid saved tabs fall back to Adventure, and storage errors do not interrupt navigation. Campaign turns pause when a campaign save fails and resume through an explicit save retry.
 - Offline cache is v51 and includes `save-rules.js`, `mobile-layout.js` and `mobile-layout.css`. `npm run check` parses the JavaScript and inline page script; `npm test` runs 27 Node tests plus 128 faction-rule assertions. New checks cover corrupt-save preservation, nested journal validation and XP transaction rollback. Live Cloudflare preview/production and iPhone restore verification remain outstanding until this branch is reviewed and merged.
 - The AI endpoint has no server-side request budget yet. Cloudflare rate limiting must be configured in the hosting account; do not count the shared access code as per-player authentication. The account binding or WAF rule needs its actual account-specific configuration before we can verify that protection.
+
+
+## Druid form engine (2026-10-22)
+- Added `public/druid.js`, loaded before class abilities and cached in shell v97.
+- Separate slot-scoped Mana/Energy/Rage state in `s.druid`; form quest proofs in
+  `campaign.druidQuests`. No existing save keys, wallets or unrelated class rules replaced.
+- Every form is level- and quest-gated; Bear/Aquatic use Classic-inspired trials,
+  Cat uses Forever's three-relic structure. Additional forms use explicitly labeled
+  SoA rites. Tree 40 and Flight 60 are custom adaptations, not Classic claims.
+- Combat shifting takes one exchange and exposes the Druid to retaliation; no free
+  attack or refill. Full form restrictions, armor, feral stat scaling, Energy/Rage
+  economy, combo targets, bleed ticks, buffs and persistent cooldowns implemented.
+- Mentor and objective buttons verify locations and proofs; real summoned trial
+  targets must be defeated in the combat engine before mentor turn-in unlocks forms.
+- API receives a bounded Druid state and active spellbook; narrator never grants forms.
+- Validation: 145 Node tests pass, syntax check and static build pass. Full DOM smoke
+  checks exercise actual script load, form controls, resource header, save persistence,
+  combat-shift retaliation and failed-story retry without double charge.
+- Browser visual QA could not run because the available runtime lacked a Chromium
+  binary and its download failed. Live Cloudflare/Gemini and real-iPhone QA are not
+  claimed. README documents mechanics and the existing no-drowning-meter limitation.

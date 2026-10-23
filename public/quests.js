@@ -73,6 +73,7 @@ function onDefeat(campaign,enemy){
  const q=ensure(campaign),name=String(enemy||"").trim().toLowerCase();
  for(const id of Object.keys(q.accepted)){const c=definition(id);if(c&&c.target.toLowerCase()===name&&!q.completed[id])q.completed[id]={turn:campaign.turn||0,target:c.target};}
  missionDefeat(campaign,name);
+ window.soaDruid?.onDefeat?.(campaign,enemy);
 }
 function claim(campaign,id,location,wallet){
  const board=boardAt(location),contract=board?.contracts.find(c=>c.id===id);
@@ -190,3 +191,4 @@ function contracts(){return BOARDS.flatMap(board=>board.contracts.map(contract=>
 function missions(){return MISSIONS.map(mission=>({...mission,objective:{...mission.objective},reward:{...mission.reward,items:mission.reward.items.map(item=>({...item}))}}))}
 window.soaQuests={boardAt,definition,contracts,missions,ensure,accept,onDefeat,claim,grantStormwindMission,panel,missionPanel,startMission,claimMission,missionDefeat,journal,format,stableRare,rewardForScene};
 })();
+

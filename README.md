@@ -468,3 +468,77 @@ The offline shell cache is **v81**. Focused checks verify two attack rolls, expa
 - **Evasion** keeps its 35 Energy cost and two-round cooldown. On use it grants a **50% chance to dodge each incoming hit** during the activation round and the following round. A separate d100 roll of 1–50 dodges; 51–100 allows the hit through. It no longer changes the enemy's d20 attack roll.
 - Combat displays the remaining Evasion duration, and the last-exchange details show each dodge roll. The effect ends when the tracked encounter ends and is saved with the campaign state.
 - The offline shell cache is **v82**. Focused checks cover both sides of the 50% threshold, the two-round duration, and cooldown timing.
+
+
+### Druid shapeshifting and form quests
+
+`public/druid.js` owns Druid forms, separate resource pools, form-restricted techniques,
+combo points, bleeds, short buffs and verified class quest progression. Forms unlock
+only after the required level, objectives and mentor turn-in; an AI scene cannot
+unlock a form. Existing Druid saves start in humanoid form with their existing Mana.
+Other classes and existing saves retain their current rules. All new state lives
+inside the existing character-scoped offline/campaign saves and roster backups.
+
+| Form | Level | Resource | Unlock |
+| --- | --- | --- | --- |
+| Bear | 10 | Rage | Body and Heart: Great Bear Spirit, Lunaclaw, mentor |
+| Aquatic | 16 | Mana | Trial of the Sea Lion: two pendant halves, shrine, mentor |
+| Cat | 20 | Energy | The Great Cat Spirit: three relics in Stormrage Barrow Den, mentor |
+| Travel | 30 | Mana | Trial of the Open Wilds (SoA custom rite) |
+| Dire Bear | 40 | Rage | The Elder Guardian (SoA custom rite) |
+| Moonkin | 40 | Mana | Balance specialization and Balance of Sun and Moon (SoA rite) |
+| Tree of Life | 40 | Mana | Restoration specialization and Roots of Renewal (SoA rite) |
+| Flight | 60 | Mana | Wings of the Wild (SoA capstone; not a Classic level-60 unlock) |
+
+Start and turn in form quests at Druid mentors in Moonglade, Darnassus or Thunder
+Bluff. Quest objectives show their required locations. Travel there through normal
+story choices; use **Druid form quests** to perform each objective. Trials create
+actual tracked enemies and require normal combat exchanges. No checkboxes or
+narrator claims bypass the quest ledger. Custom rites deliberately extend the
+quest requirement to every form. Cat relic objectives follow the Forever quest
+structure rather than Classic's trainer-only Cat unlock.
+
+Shifting into a form costs **20 Mana and one full turn**, including an enemy
+retaliation during combat. Returning to humanoid costs no Mana but still takes a
+turn. No shift includes a free attack, spell or resource refill. Mana, Energy and
+Rage have independent blue, yellow and red bars. Inactive Mana recovers 5 per
+ordinary action/exchange; Cat Energy recovers 20 per exchange. Bear Rage starts
+at zero, earns 5 on an attack hit and 5 when damaged, and decays 5 per noncombat
+action. Leaving the Bear family clears Rage; changing forms never converts pools.
+
+Bear gets Maul/Demoralizing Roar (10), Enrage (12), Bash (14), Swipe (16),
+Challenging Roar (28), and Frenzied Regeneration (36). Cat gets Claw/Rip/Prowl (20),
+Shred (22), Rake/Tiger's Fury (24), Dash (26), Cower (28), Ferocious Bite/Ravage (32),
+and Pounce (36). Combo points belong to one target, builders require a hit, and
+finishers consume points. Shred/Ravage/Pounce require prior Prowl; Prowl can only
+start outside combat. Bleeds tick on three subsequent resolved exchanges, never
+on render/retry. Regrowth (12) adds immediate healing and three future healing ticks.
+The existing core spells and signature skills remain; Mangle requires a combat
+animal form, Starfire is caster/Moonkin, and Swiftmend is caster/Tree. Rejuvenation
+retains its existing immediate heal implementation in this release.
+
+Bear/Dire Bear grant +3/+5 AC; Cat grants +1 AC; Moonkin grants +3 AC and +3 spell
+damage. Tree grants +1 AC, +3 healing, and a 5-Mana healing discount. Bear strength
+and Cat dexterity use at least the Druid's Wisdom score while transformed.
+Aquatic/Travel/Flight cannot attack or cast. Aquatic needs a water location;
+Travel/Flight need confirmed outdoor terrain; Flight cannot start in combat.
+Movement checks receive +20 swimming, +15 land travel or +25 flight respectively.
+The breathing benefit is represented by Aquatic form's narrative identity; this
+game has no timed drowning meter. Travel and Flight do not automatically teleport
+or bypass the story's travel choices. Skyborne use bird-inspired form appearances
+with identical mechanics.
+
+Turn costs, damage, healing, regeneration and quest proof are local engine values;
+Gemini receives a bounded form/ability/quest snapshot and narrates those results.
+Costs and cooldowns survive reloads. Pending story retries do not repeat shifts,
+spells, quest steps or damage. Validation rejects corrupt Druid saves rather than
+resetting them. The offline cache includes `druid.js` (v97).
+
+Reference rulesets (consulted October 22, 2026):
+- https://www.wowhead.com/classic/guide/druid-class-quests-classic-wow
+- https://www.wowhead.com/forever/news/players-struggling-to-complete-druid-cat-form-quest-in-forever-due-to-quest-383152
+- https://www.wowhead.com/classic/guide/classes/druid/healer-rotation-cooldowns-abilities-pve
+- https://www.wowhead.com/classic/spells/abilities/druid
+
+These are turn-based SoA adaptations, not a reproduction of WoW's real-time costs,
+spell ranks, talents, combat clock or server quest scripting.
