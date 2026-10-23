@@ -244,7 +244,7 @@ function exchange(s,c,profile,level,action,ability,target,rules,actor){
  const phase=window.soaEnemyPhase.resolve({s,c,enemies:targets,rules,round,heroAC:ac,heroName:profile.name,interruptedTarget:interrupted?target:null,guard:guard&&!ability?.enrage,attackPenalty:d.effects.roarUntil>=round?3:0,guaranteedEvade:c.preparedVanish===true});
  c.preparedVanish=false;
  const enemyRoll=phase.first,taken=phase.taken;
- if(!shifting)recover(s,{cost:ability.cost,hit,taken,takenHits:phase.heroHits});
+ if(!shifting)recover(s,{cost:ability.cost,hit,taken,takenHits:phase.attacks.filter(row=>row.recipient===profile.name&&!row.skipped).length});
  else {d.pools[FORMS[d.form].resource]=s.en;}
  const regen=window.soaRacialAbilities?.passives?.(profile.race)?.regeneration||0;const preRegen=s.hp;s.hp=Math.min(maxHP,s.hp+regen);healed+=s.hp-preRegen;
  c.combatRound=round;s.time++;
@@ -307,7 +307,7 @@ function panel(s,c,p,level,choose,locked=false){
  }
  const rules=add("details","");add("summary","Resource rules",rules);add("p","Mana recovers up to 25 in caster forms; inactive Mana recovers 5 per ordinary action.",rules);
  if(resources.includes("energy"))add("p","Cat Energy recovers 20 per exchange.",rules);
- if(resources.includes("rage"))add("p","Bear Rage gains 5 per landed attack and 5 when hit; it loses 5 outside combat.",rules);
+ if(resources.includes("rage"))add("p","Bear Rage gains 5 per landed attack and 5 for each enemy attack aimed at the Druid, even if it misses or deals no damage; it loses 5 outside combat.",rules);
  if(learnedForms.length>1)add("p","Shifting never refills a resource pool.",rules);
  if(d.effects?.rejuvenation){const status=add("p","Rejuvenation active · 15 HP per round · "+d.effects.rejuvenation.remaining+" rounds remaining");status.className="soa-druid-hot";status.setAttribute("aria-live","polite");}
  if(d.form==="cat")add("p","Combo points: "+d.combo.points+" / 5"+(d.combo.target?" on "+d.combo.target:"")+(d.prowl?" · Prowl active":""));

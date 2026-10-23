@@ -55,6 +55,12 @@ test("Druid free basic attacks are recorded as Natural Strike, not Maul",async()
  await ctx.select({text:"Use a free basic attack against the Satyr",type:"combat",difficulty:"easy",ability:"strike"});
  assert.equal(ctx.campaign.lastExchange.ability,"druid_strike");assert.equal(ctx.campaign.lastExchange.abilityName,"Natural Strike");assert.match(ctx.campaign.pending.resolution,/Natural Strike/);
 });
+test("Bear gains Rage for attacks aimed at it even when they miss or deal zero damage",async()=>{
+ const x=setup("Druid",10),ctx=x.ctx;ctx.campaign.druidQuests={bear:{state:"claimed"}};ctx.s.druid.form="bear";ctx.s.en=0;ctx.s.druid.pools.rage=0;ctx.campaign.enemies=[{name:"Satyr",hp:50,maxHp:50},{name:"Cultist",hp:45,maxHp:45}];ctx.campaign.enemyLocation=ctx.campaign.scene.location;
+ let incoming=0;x.rules.attack=(bonus,ac)=>({die:15,bonus,total:15+bonus,hit:ac<15||incoming++===0,critical:false});x.rules.damage=(die,flat)=>flat===2?0:4+flat;
+ await ctx.select({text:"Use a free basic attack against the Satyr",type:"combat",difficulty:"easy",ability:"strike"});
+ const incomingAttacks=ctx.campaign.lastExchange.enemyAttacks;assert.equal(incomingAttacks.length,2);assert.equal(incomingAttacks[0].hit,true);assert.equal(incomingAttacks[0].damage,0);assert.equal(incomingAttacks[1].hit,false);assert.equal(ctx.s.druid.pools.rage,15);
+});
 test("environment actions cannot silently hit an engaged foe instead",()=>{
  const x=setup();x.ctx.campaign.enemies=[{name:"Satyr",hp:50,maxHp:50}];assert.ok(x.plan(x.cast("Cast Wrath at the root knot","wrath")).error);
 });

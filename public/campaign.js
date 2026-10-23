@@ -267,7 +267,7 @@ function resourceForecast(action){
   const d=window.soaDruid.current(),shift=window.soaDruid.shiftFrom(action);
   if(shift!==null){const current=d.pools.mana,cost=shift==="caster"?0:20,after=Math.max(0,current-cost);return {label:"Mana",current,max:100,cost,after,affordable:current>=cost,cooldown:0,abilityId:"shift_"+shift,text:"Mana "+current+" → "+after+"/100 · "+(cost?cost+" cost":"No Mana cost")+" · One full turn"};}
   const key=window.soaDruid.FORMS[d.form].resource,level=window.soaProgression?.level?.()||1,a=window.soaClassAbilities.available("Druid",level).find(x=>x.id===resolvedCombatAbility(action)),cost=a?.cost??(action.type==="combat"?0:actionOdds(action).cost),current=s.en,gain=key==="rage"?0:key==="energy"?20:25,after=Math.min(100,current-cost+gain),label=resourceName();
-  return {label,current,max:100,cost,after,affordable:current>=cost,cooldown:a?classCooldownLeft(a):0,abilityId:a?.id,text:label+" "+current+" → "+Math.max(0,after)+"/100 · "+cost+" cost"+(key==="rage"?" · Rage earned on hits":" · +"+gain+" recovery")};
+  return {label,current,max:100,cost,after,affordable:current>=cost,cooldown:a?classCooldownLeft(a):0,abilityId:a?.id,text:label+" "+current+" → "+Math.max(0,after)+"/100 · "+cost+" cost"+(key==="rage"?" · +5 per landed attack and each enemy attack aimed at you, even if it misses":" · +"+gain+" recovery")};
  }
  const profile=window.soaCharacters?.profile?.(),label=resourceName(),current=Math.max(0,Math.min(100,Number(s.en)||0)),storyAbility=resolvedStoryVanish(action);
  const storyPlan=window.soaStoryActions?storyActionPlan(action):null;
@@ -1244,7 +1244,7 @@ async function chooseDungeon(choice){
    if(intent?.error||intent?.kind==="opening"||choice.type==="druid_quest"||choice.craftRecipe||(!["combat","racial"].includes(choice.type)&&shift==null&&!intent?.ability)){rollback(intent?.error||"Use the dungeon controls, learned spells or combat actions to continue.");return;}
    const cost=window.soaDruid?.current?.()?resourceForecast(choice).cost:0;
    resolution=result(choice);if(!resolution){rollback("That action is unavailable. No turn spent.");return;}
-   if(window.soaDruid?.current?.()&&campaign.druidResolvedTime!==s.time){s.en=oldEnergy;window.soaDruid.recover(s,{cost,hit:campaign.lastExchange?.hit===true,taken:campaign.lastExchange?.taken||0,takenHits:campaign.lastExchange?.enemyAttacks?.filter(row=>row.damage>0&&row.recipient===hero.name).length,combat:livingEnemies().length>0});}
+   if(window.soaDruid?.current?.()&&campaign.druidResolvedTime!==s.time){s.en=oldEnergy;window.soaDruid.recover(s,{cost,hit:campaign.lastExchange?.hit===true,taken:campaign.lastExchange?.taken||0,takenHits:campaign.lastExchange?.enemyAttacks?.filter(row=>row.recipient===hero.name&&!row.skipped).length,combat:livingEnemies().length>0});}
    const tick=window.soaDruid?.tickRejuvenation?.(s);if(tick){resolution+=" "+tick.message;if(campaign.lastExchange&&campaign.combatRound>roundBefore){campaign.lastExchange.healed=(campaign.lastExchange.healed||0)+tick.amount;campaign.lastExchange.heroAfter=s.hp;}}
    if((Number(campaign.combatRound)||0)>roundBefore){const partyAction=engine.resolveParty?.(campaign,s,campaign.lastExchange,hero,window.soaCombatRules);if(partyAction)resolution+=" Adventurers: "+partyAction;if(selectedCombatTarget&&!livingEnemies().some(enemy=>enemy.name===selectedCombatTarget))selectedCombatTarget=livingEnemies()[0]?.name||null;out=engine.settle(campaign,s,campaign.lastExchange);if(out.error){rollback(out.error);return;}if(out.message)resolution+=" "+out.message;}
   }
