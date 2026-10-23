@@ -585,3 +585,31 @@ Chapter transitions archive a recap and reset the local scene number. They never
 complete unfinished quests, replace a pinned quest, move the character or grant
 rewards. Older saves retain their chapter/history and begin local scene tracking
 from the current saved situation; no past chapters are invented. Shell v112.
+
+## Classic dungeon expeditions (October 23, 2026)
+
+The Adventure tab includes 26 local dungeon routes, with multi-wing instances
+listed separately. The catalog follows the Classic Era dungeon list and its
+recommended level ranges; entry also requires traveling to the listed region.
+These are fixed, turn-based full-clear routes, not simulations of random rares,
+class-summon chains, keys or every original instance event.
+
+Each route pairs every listed boss with a minion patrol and a boss guard. Defeat
+both groups at every stage; stages cannot be skipped. Runs, defeated enemies,
+boss loot rolls and clearance contracts persist in the character's campaign save.
+Bosses have a 35% chance to award a class-restricted weapon, armor or trinket;
+the final boss has a 60% chance. Those are SoA game rules, not WoW drop rates or
+original item statistics. Gear scales modestly by recommended dungeon tier, goes
+to inventory, and must be equipped in Character → Loadout & Equipment.
+
+Players can accept a one-time clearance contract for a class trinket and copper.
+Clear every stage in one run to unlock the claim. Loot rolls are fixed and saved
+when the boss falls, so save/reload or retry cannot reroll them. Camp once after
+each cleared stage to recover some health and class resources. Leaving an
+unfinished run requires confirmation; already collected gear and character
+progress remain saved. Encounters use the local combat engine, including the
+normal multi-enemy attack phase, and do not require AI narration or an API key.
+
+Reference: [WoWHead Classic dungeon overview](https://www.wowhead.com/classic/guide/classic-dungeons-overview).
+The roster and level ranges are source-informed; SoA encounter counts, rewards,
+gear bonuses, entry gates and combat rules are adaptations.

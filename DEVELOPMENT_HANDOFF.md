@@ -341,3 +341,30 @@ Added three region-bound, engine-authored missions with immutable reward terms a
   quest/discovery gates, combat deferral, repeat prevention, save rollback/reload,
   Act confirmation and API metadata. Shell v112. Actual iPhone rendering and live
   Gemini generation remain unverified here.
+
+## Classic dungeon expeditions (2026-10-23)
+- Added a 26-route Classic Era catalog in `public/dungeon-data.js`; Scarlet
+  Monastery, Dire Maul and Stratholme wings are separate. Each fixed SoA route
+  tracks every listed boss, two minion patrols per boss, and one boss guard.
+- `public/dungeons.js` owns gates, saved run/stage state, receipts, loot, camp,
+  retreat, clearance contracts and locally generated encounter rosters. Routes
+  require character level and matching region; cannot skip a wave; active runs
+  cannot reach Gemini advance. Defeat of every minion and boss is required.
+- Boss drop chance is 35%, final boss 60%; fixed receipts survive retries/reloads.
+  Class-specific weapon/armor/trinket rewards use bounded tiered SoA bonuses,
+  enter the normal inventory, and are manually equipped through existing gear UI.
+  One-time contract reward requires a full clear, persists after retreat, and
+  remains claimable with full inventory after making space. Camping is once per
+  cleared stage. Loot and rewards are not auto-equipped.
+- Integrated item metadata, Chronicle milestone, Quest UI, equipment, combat,
+  campaign local routing, save validation and offline assets. Normal combat handles
+  groups and boss every-third-round attacks. AI narration and API credentials are
+  not required for the dungeon loop.
+- The catalog is informed by the Wowhead Classic overview; random rare spawns,
+  class summons, keys and some original event mechanics are intentionally not
+  simulated. Entry levels, encounter counts, SoA item names/stats, and drop rates
+  are game adaptations rather than original WoW values.
+- Validation: 257 Node tests and 128 faction assertions pass; syntax and static
+  build pass. Added full RFC full-clear/claim coverage, loot/reload/overflow,
+  no-skip guards, equipment bonuses, retreat/camp and malformed-save checks.
+  Actual mobile rendering/live Gemini generation remain unverified.

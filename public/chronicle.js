@@ -13,6 +13,7 @@ function completedMilestones(c,d){
  const items=d.quests.filter(q=>q?.status==="completed"&&q.id!=="personal-quest").map(q=>({id:"journal:"+q.id,title:clean(q.title)}));
  for(const [id,q] of Object.entries(c.quests?.missions||{}))if(q?.state==="claimed")items.push({id:"mission:"+id,title:clean(window.soaQuests?.missions?.().find(m=>m.id===id)?.title||id.replaceAll("-"," "))});
  for(const [id,q] of Object.entries(c.druidQuests||{}))if(q?.state==="claimed"&&q.receipt)items.push({id:"druid:"+id,title:clean(window.soaDruid?.QUESTS?.[id]?.title||id.replaceAll("_"," ")+" form training")});
+ for(const [id,q] of Object.entries(c.dungeons?.quests||{}))if(q?.claimed&&q.completedRun)items.push({id:"dungeon:"+id,title:clean(window.soaDungeons?.definition?.(id)?.quest||id+" dungeon clearance")});
  return items;
 }
 function pacing(c,d){
@@ -235,6 +236,7 @@ function render(c=current){
  const chapters=el("details",undefined,"soa-collapsible-quests");chapters.append(el("summary","Completed chapters · "+d.archives.length));
  for(const archive of d.archives.slice().reverse()){const entry=el("section",undefined,"soa-quest-entry");entry.append(el("h4","Act "+roman(archive.act)+" · Chapter "+roman(archive.chapter)+" — "+archive.chapterTitle),el("p",archive.summary||"Chapter archived."));chapters.append(entry)}
  root.append(chapters);
+ const dungeonQuests=window.soaDungeons?.questPanel?.(c);if(dungeonQuests)root.append(dungeonQuests);
  const tabs=el("div",undefined,"soa-journal-tabs");const quest=el("button","Quests"),archive=el("button","Journal"),notes=el("button","Discoveries");
  const body=el("div",undefined,"soa-journal-body");
  let selected=root.dataset.view||"quests";

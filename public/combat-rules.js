@@ -49,11 +49,13 @@ function resolveEnemyPhase({s,c,enemies,rules,round,heroAC=12,heroName="Your her
   const ally=eligible.length&&Math.random()<.35?eligible[Math.floor(Math.random()*eligible.length)]:null;
   const defender=ally||s;
   row.recipient=ally?.name||heroName;row.before=defender.hp;row.defenderAC=ally?allyAC(ally):heroAC;
-  const block=rules.statBlock(enemy),roll=rules.attack(block.bonus-attackPenalty,row.defenderAC,{advantage:guard||c.guardUntil>=round?-1:0});
+  const empowered=enemy.dungeonBoss===true&&round%3===0;
+  const block=rules.statBlock(enemy),roll=rules.attack(block.bonus-attackPenalty+(empowered?2:0),row.defenderAC,{advantage:guard||c.guardUntil>=round?-1:0});
+  if(empowered)row.abilityName=enemy.dungeonSpecial==="spell"?"Empowered Spell":"Crushing Blow";
   Object.assign(row,{die:roll.die,total:roll.total,bonus:roll.bonus,hit:!!roll.hit,critical:!!roll.critical});
   if(roll.hit&&!ally&&evasionActive){row.evasionRoll=rules.roll(100);row.evaded=row.evasionRoll<=50;}
   if(roll.hit&&!row.evaded){
-   row.damage=Math.min(Math.max(0,defender.hp-(ally?0:1)),rules.damage(block.die,2,roll.critical));defender.hp-=row.damage;taken+=row.damage;
+   row.damage=Math.min(Math.max(0,defender.hp-(ally?0:1)),rules.damage(block.die,empowered?4:2,roll.critical));defender.hp-=row.damage;taken+=row.damage;
    if(!ally){heroTaken+=row.damage;if(row.damage>0)heroHits++;}
    else {c.partyHealth||={};c.partyHealth[ally.name]={hp:ally.hp,maxHp:ally.maxHp,derived:c.partyHealth[ally.name]?.derived===true};}
   }
@@ -71,7 +73,7 @@ function enemyPhaseSummary(attacks){
   const roll="d20 "+row.die+" + "+row.bonus+" = "+row.total+" vs AC "+row.defenderAC;
   if(row.evaded)return row.enemy+"'s hit is dodged by Evasion (d100 "+row.evasionRoll+" ≤ 50; "+roll+").";
   const dodge=row.evasionRoll!==null?" Evasion fails (d100 "+row.evasionRoll+" > 50).":"";
-  return row.enemy+(row.hit?" hits ":" misses ")+row.recipient+" ("+roll+")"+(row.critical?" · Critical":"")+": "+row.damage+" damage ("+row.before+" → "+row.after+" HP)."+dodge+(row.parry?" Parried; Riposte is ready next turn.":"");
+  return row.enemy+(row.abilityName?" uses "+row.abilityName+" and":"")+(row.hit?" hits ":" misses ")+row.recipient+" ("+roll+")"+(row.critical?" · Critical":"")+": "+row.damage+" damage ("+row.before+" → "+row.after+" HP)."+dodge+(row.parry?" Parried; Riposte is ready next turn.":"");
  }).join(" "):"No living enemy can attack.";
 }
 window.soaEnemyPhase={resolve:resolveEnemyPhase,summary:enemyPhaseSummary};

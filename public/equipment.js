@@ -57,7 +57,7 @@ function baselineModifiers(){
 const slots=["weapon","armor","trinket"];
 const state=()=>window.soaLivingCampaign?.getState?.();
 const holder=()=>state()?.quests;
-function itemInfo(item){const name=String(item?.name||"");return CATALOG[name]||window.soaCrafting?.itemInfo?.(item)||null}
+function itemInfo(item){const name=String(item?.name||"");return CATALOG[name]||window.soaCrafting?.itemInfo?.(item)||window.soaDungeons?.itemInfo?.(item)||null}
 function equipment(){
  const q=holder();if(!q)return {};
  q.equipped||={};return q.equipped;
