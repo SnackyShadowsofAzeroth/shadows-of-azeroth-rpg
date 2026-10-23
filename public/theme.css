@@ -66,29 +66,39 @@ details.soa-collapsible-quests>summary::-webkit-details-marker{display:inline-bl
 .soa-choice-resource[data-resource="focus"] .soa-choice-resource-fill{background:linear-gradient(90deg,#388b67,#8ad8ae);box-shadow:0 0 9px #62d39c99}
 
 
-/* Druid menu has explicit foregrounds in both themes; child text cannot inherit
-   parchment ink on a dark surface. Resource colors retain their class meaning. */
-.soa-druid-panel{--druid-ink:#eee8d8;--druid-muted:#bccbbb;--druid-heading:#e3ca91;--druid-edge:#62715a;color:var(--druid-ink);border:1px solid var(--druid-edge);border-radius:12px;padding:16px;margin:16px 0;background:linear-gradient(145deg,#24352c,#18252d);font:14px/1.55 system-ui}
-.soa-druid-panel h4{color:var(--druid-heading);font-size:16px;margin:0 0 10px}
-.soa-druid-panel p,.soa-druid-panel strong,.soa-druid-panel summary{color:var(--druid-ink)}
-.soa-druid-panel p{margin:8px 0}.soa-druid-panel small{display:block;color:var(--druid-muted)}
-.soa-druid-panel details{margin-top:12px;border-top:1px solid var(--druid-edge);padding-top:10px}
-.soa-druid-panel details>summary{font-weight:650;min-height:32px;line-height:1.5;cursor:pointer;pointer-events:auto}
+/* Woodland Druid frame: dark bark, living foliage and moonlit resource inlays.
+   Foregrounds are explicit in both themes to prevent parchment ink inheritance. */
+.soa-druid-panel,body.theme-alternative .soa-druid-panel{
+ --druid-ink:#f0ead9;--druid-muted:#bcc9ae;--druid-heading:#e6d5a0;--druid-edge:#536447;
+ position:relative;isolation:isolate;margin:20px 0;padding:35px 19px 29px;border:5px solid #302a1f;border-radius:8px;
+ color:var(--druid-ink);font:14px/1.6 system-ui;background:radial-gradient(ellipse at 4% 4%,#28423566,transparent 56%),radial-gradient(ellipse at 100% 100%,#15413b55,transparent 52%),repeating-linear-gradient(175deg,#ffffff02 0 1px,transparent 1px 8px),linear-gradient(135deg,#121b16,#0c1411 65%,#12201b);
+ box-shadow:inset 0 0 0 1px #74815a,inset 0 0 0 4px #11130d,inset 0 0 25px #0009,0 0 0 1px #75644a,0 0 0 3px #181e16,0 8px 18px #0006;
+}
+.soa-druid-panel::before,.soa-druid-panel::after{content:"";position:absolute;z-index:0;left:-9px;right:-9px;height:45px;background:url("./druid-vines.svg") center top / 420px 52px repeat-x;pointer-events:none}
+.soa-druid-panel::before{top:-15px}.soa-druid-panel::after{bottom:-16px;transform:rotate(180deg)}
+.soa-druid-panel>*,body.theme-alternative .soa-druid-panel>*{position:relative;z-index:1}
+.soa-druid-panel h4,body.theme-alternative .soa-druid-panel h4{color:var(--druid-heading);font:700 17px/1.45 Georgia,serif;letter-spacing:.015em;margin:0 0 13px;padding-left:32px;text-shadow:0 2px 3px #000}
+.soa-druid-panel h4::before{content:"";position:absolute;left:0;top:0;width:22px;height:22px;border:1px solid #8ba96c;border-radius:50%;background:radial-gradient(circle at 35% 30%,#98d2a2 0,#397a57 24%,#153d32 58%,#061d18 78%);box-shadow:0 0 0 3px #1b2d21,0 0 12px #5baf7a44,inset 0 0 0 2px #aac47d44}
+.soa-druid-panel p,.soa-druid-panel strong,.soa-druid-panel summary,body.theme-alternative .soa-druid-panel p,body.theme-alternative .soa-druid-panel strong,body.theme-alternative .soa-druid-panel summary{color:var(--druid-ink)}
+.soa-druid-panel p{margin:8px 0}.soa-druid-panel small,body.theme-alternative .soa-druid-panel small{display:block;color:var(--druid-muted)}
+.soa-druid-panel details{margin-top:13px;border-top:1px solid #50613f88;padding-top:10px}
+.soa-druid-panel details>summary{font-weight:650;min-height:36px;line-height:1.6;cursor:pointer;pointer-events:auto}
+.soa-druid-panel details>summary::marker{color:#9eb67a}
 .soa-druid-panel details>div{border-top:1px solid var(--druid-edge);padding-top:12px;margin-top:12px}
-.soa-druid-panel button{color:#f7ecd4;background:linear-gradient(#42533d,#2b382a);border:1px solid #81916b;min-height:48px;line-height:1.45;white-space:normal}
-.soa-druid-panel button[aria-pressed="true"]{color:#fff3d5;background:#304d39;border-color:#cfb67b;box-shadow:inset 3px 0 #cfb67b}
-.soa-druid-panel button:disabled{opacity:1;color:#bbc1b2;cursor:default}
-.soa-druid-panel button:focus-visible,.soa-druid-panel summary:focus-visible{outline:3px solid #d6ae59;outline-offset:3px}
-.soa-druid-pool{margin:14px 0}.soa-druid-pool strong{font-size:13px;letter-spacing:.025em}
-.soa-druid-rail{height:10px;background:#111b21;border:1px solid #61706a;border-radius:8px;overflow:hidden;margin-top:6px}
-.soa-druid-rail i{display:block;height:100%;background:#60a9f0}.soa-druid-pool[data-resource="energy"] i{background:#f0ca23}.soa-druid-pool[data-resource="rage"] i{background:#ec6453}
-body.theme-alternative .soa-druid-panel{--druid-ink:#342719;--druid-muted:#615039;--druid-heading:#30452b;--druid-edge:#ac966a;background:linear-gradient(135deg,#f4e6bf,#dfcca0);color:var(--druid-ink);border-color:#8b7850;box-shadow:inset 0 1px 0 #fff6d8,0 3px 8px #49371b24}
-body.theme-alternative .soa-druid-panel h4{color:var(--druid-heading);text-shadow:none}
-body.theme-alternative .soa-druid-panel p,body.theme-alternative .soa-druid-panel strong,body.theme-alternative .soa-druid-panel summary{color:var(--druid-ink)}
-body.theme-alternative .soa-druid-panel small{color:var(--druid-muted)}
-body.theme-alternative .soa-druid-panel button{color:#382b1d;background:linear-gradient(#fff1cf,#e6d2a5);border-color:#9d8456;box-shadow:inset 0 1px 0 #fff8e7,0 1px 3px #4e371d26}
-body.theme-alternative .soa-druid-panel button[aria-pressed="true"]{color:#fff5dd;background:linear-gradient(#425b3c,#30472e);border-color:#5f744d;box-shadow:inset 3px 0 #d3b76f}
-body.theme-alternative .soa-druid-panel button:disabled{color:#6a5840;background:#e3d2ac;box-shadow:none}
-body.theme-alternative .soa-druid-panel button[aria-pressed="true"]:disabled{color:#fff5dd;background:#354e32;box-shadow:inset 3px 0 #d3b76f}
-body.theme-alternative .soa-druid-panel .soa-druid-rail{background:#77694f;border-color:#95805b}
+.soa-druid-panel button,body.theme-alternative .soa-druid-panel button{color:#eee6cb;background:repeating-linear-gradient(174deg,#bca17608 0 1px,transparent 1px 6px),linear-gradient(#34392a,#20271d);border:1px solid #63704c;border-radius:5px;min-height:48px;padding:12px;line-height:1.45;white-space:normal;box-shadow:inset 0 1px 0 #c0c59b22,inset 0 0 0 2px #141b12,0 2px 4px #0006}
+.soa-druid-panel button:not(:disabled):hover,body.theme-alternative .soa-druid-panel button:not(:disabled):hover{border-color:#a4bc79;background-color:#3c4c31}
+.soa-druid-panel button[aria-pressed="true"],body.theme-alternative .soa-druid-panel button[aria-pressed="true"]{color:#f4efd8;border-color:#9bb66c;background:linear-gradient(#355535,#1c362a);box-shadow:inset 3px 0 #a9c77b,inset 0 0 16px #60934322,0 0 7px #65904122}
+.soa-druid-panel button:disabled,body.theme-alternative .soa-druid-panel button:disabled{opacity:1;color:#adb89f;background:linear-gradient(#293024,#1c231c);border-color:#4e5940;cursor:default;box-shadow:inset 0 0 0 2px #141b12}
+.soa-druid-panel button[aria-pressed="true"]:disabled,body.theme-alternative .soa-druid-panel button[aria-pressed="true"]:disabled{color:#f4efd8;border-color:#9bb66c;background:#29452e;box-shadow:inset 3px 0 #a9c77b}
+.soa-druid-panel button:focus-visible,.soa-druid-panel summary:focus-visible{outline:3px solid #8ed6c5;outline-offset:3px}
+.soa-druid-pool{margin:16px 0;padding:10px 11px 12px;border:1px solid #47583f;border-radius:5px;background:linear-gradient(#070e0c,#15241b);box-shadow:inset 0 1px 5px #0009,0 1px 0 #9daf6b22}
+.soa-druid-pool strong{font-size:12px;letter-spacing:.05em}
+.soa-druid-panel .soa-druid-pool[data-resource="mana"] strong,body.theme-alternative .soa-druid-panel .soa-druid-pool[data-resource="mana"] strong{color:#abdafa}
+.soa-druid-panel .soa-druid-pool[data-resource="energy"] strong,body.theme-alternative .soa-druid-panel .soa-druid-pool[data-resource="energy"] strong{color:#f2d873}
+.soa-druid-panel .soa-druid-pool[data-resource="rage"] strong,body.theme-alternative .soa-druid-panel .soa-druid-pool[data-resource="rage"] strong{color:#ffb1a2}
+.soa-druid-rail,body.theme-alternative .soa-druid-panel .soa-druid-rail{height:13px;background:#060d0b;border:1px solid #6f7851;border-radius:3px;overflow:hidden;margin-top:7px;box-shadow:0 0 0 2px #0c160f,inset 0 2px 4px #000}
+.soa-druid-rail i{display:block;height:100%;background:linear-gradient(#a9e5ff 0,#54adf0 22%,#2474b3 75%,#174871);box-shadow:inset 0 1px 0 #e6fbff88,0 0 9px #47b1e788}
+.soa-druid-pool[data-resource="energy"] i{background:linear-gradient(#ffed9c,#dfb929 40%,#a78015);box-shadow:inset 0 1px 0 #fff7bd,0 0 8px #d4b54166}
+.soa-druid-pool[data-resource="rage"] i{background:linear-gradient(#ffc6a9,#d9654b 40%,#8d3028);box-shadow:inset 0 1px 0 #ffcabd,0 0 8px #dc6b4e66}
+@media(max-width:420px){.soa-druid-panel,body.theme-alternative .soa-druid-panel{padding-left:15px;padding-right:15px}.soa-druid-panel h4,body.theme-alternative .soa-druid-panel h4{font-size:16px}}
 #resource-meter[data-resource="mana"] i{background:#60a9f0}#resource-meter[data-resource="rage"] i{background:#ec6453}#resource-meter[data-resource="energy"] i{background:#f0ca23}

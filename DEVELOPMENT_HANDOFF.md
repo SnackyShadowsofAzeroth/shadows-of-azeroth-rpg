@@ -237,3 +237,16 @@ Added three region-bound, engine-authored missions with immutable reward terms a
 - 149 tests pass; full DOM regression clicks the exact screenshot's Option A,
   confirms 100 -> 95 Mana, one saved turn, no enemy/retaliation, and no double
   charge after story retry. Cache v99 forces updated client scripts.
+
+## Woodland Druid menu skin (2026-10-22)
+- Replaced the parchment Druid card with a reference-inspired woodland frame in
+  both themes: dark bark tones, hand-authored SVG vine/leaf trim, a green heading
+  orb, recessed wood buttons, moss borders and luminous resource inlays.
+- Scoped explicit ivory/sage/gold foregrounds prevent the original low-contrast
+  parchment inheritance bug. Mana remains blue, Energy yellow and Rage red.
+- `public/druid-vines.svg` is code-native decorative artwork; it is noninteractive
+  and does not reuse the reference image's black content regions. Small-screen
+  padding and 48px button targets remain. No gameplay or visibility gates changed.
+- 149 tests, syntax check, DOM interactions and both-theme text contrast checks
+  pass. New asset included in service-worker shell v100. Real-iPhone visual QA
+  remains unverified.
