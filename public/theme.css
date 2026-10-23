@@ -93,11 +93,13 @@ details.soa-collapsible-quests>summary::-webkit-details-marker{display:inline-bl
 .soa-druid-panel button:focus-visible,.soa-druid-panel summary:focus-visible{outline:3px solid #8ed6c5;outline-offset:3px}
 .soa-druid-pool{margin:16px 0;padding:10px 11px 12px;border:1px solid #47583f;border-radius:5px;background:linear-gradient(#070e0c,#15241b);box-shadow:inset 0 1px 5px #0009,0 1px 0 #9daf6b22}
 .soa-druid-pool strong{font-size:12px;letter-spacing:.05em}
+.soa-druid-panel .soa-druid-pool[data-resource="health"] strong,body.theme-alternative .soa-druid-panel .soa-druid-pool[data-resource="health"] strong{color:#a9e8a2}
 .soa-druid-panel .soa-druid-pool[data-resource="mana"] strong,body.theme-alternative .soa-druid-panel .soa-druid-pool[data-resource="mana"] strong{color:#abdafa}
 .soa-druid-panel .soa-druid-pool[data-resource="energy"] strong,body.theme-alternative .soa-druid-panel .soa-druid-pool[data-resource="energy"] strong{color:#f2d873}
 .soa-druid-panel .soa-druid-pool[data-resource="rage"] strong,body.theme-alternative .soa-druid-panel .soa-druid-pool[data-resource="rage"] strong{color:#ffb1a2}
 .soa-druid-rail,body.theme-alternative .soa-druid-panel .soa-druid-rail{height:13px;background:#060d0b;border:1px solid #6f7851;border-radius:3px;overflow:hidden;margin-top:7px;box-shadow:0 0 0 2px #0c160f,inset 0 2px 4px #000}
 .soa-druid-rail i{display:block;height:100%;background:linear-gradient(#a9e5ff 0,#54adf0 22%,#2474b3 75%,#174871);box-shadow:inset 0 1px 0 #e6fbff88,0 0 9px #47b1e788}
+.soa-druid-pool[data-resource="health"] i{background:linear-gradient(#b4efa1,#55b65b 35%,#256d38);box-shadow:inset 0 1px 0 #e1ffd288,0 0 8px #54ba6266}
 .soa-druid-pool[data-resource="energy"] i{background:linear-gradient(#ffed9c,#dfb929 40%,#a78015);box-shadow:inset 0 1px 0 #fff7bd,0 0 8px #d4b54166}
 .soa-druid-pool[data-resource="rage"] i{background:linear-gradient(#ffc6a9,#d9654b 40%,#8d3028);box-shadow:inset 0 1px 0 #ffcabd,0 0 8px #dc6b4e66}
 @media(max-width:420px){.soa-druid-panel,body.theme-alternative .soa-druid-panel{padding-left:15px;padding-right:15px}.soa-druid-panel h4,body.theme-alternative .soa-druid-panel h4{font-size:16px}}

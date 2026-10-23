@@ -1140,7 +1140,8 @@ function draw(){
 
  drawEnemyStatus(box);
  drawRacialActions(box);
- if(window.soaCharacters?.profile?.()?.className==="Druid"&&window.soaDruid)box.append(window.soaDruid.panel(s,campaign,window.soaCharacters.profile(),window.soaProgression?.level?.()||1,choose,busy||!!pending()));
+ const druidStatusPanel=window.soaCharacters?.profile?.()?.className==="Druid"&&window.soaDruid?window.soaDruid.panel(s,campaign,window.soaCharacters.profile(),window.soaProgression?.level?.()||1,choose,busy||!!pending()):null;
+ if(druidStatusPanel)box.append(druidStatusPanel);
  if(campaign?.chronicle?.pendingMilestone){
   const notice=document.createElement("button");notice.type="button";notice.className="soa-chapter-review";
   notice.textContent="✦ A chapter milestone is ready for your review · Open Journal";
@@ -1152,7 +1153,16 @@ function draw(){
   cue.textContent="Spell choices can affect visible obstacles or yourself without an enemy. An opening attack on a visible foe begins combat and resolves one exchange.";
   box.append(cue);
  }
- const reserve=document.createElement("section");reserve.className="soa-choice-resource";reserve.dataset.resource=resourceKey();reserve.setAttribute("aria-label","Current "+resourceName());const reserveHeading=document.createElement("div");reserveHeading.className="soa-choice-resource-heading";const reserveLabel=document.createElement("strong");reserveLabel.textContent="CURRENT "+resourceName().toUpperCase();const reserveValue=document.createElement("span");const reserveCurrent=Math.max(0,Math.min(100,Number(s.en)||0));reserveValue.textContent=reserveCurrent+" / 100";reserveHeading.append(reserveLabel,reserveValue);const reserveTrack=document.createElement("div");reserveTrack.className="soa-choice-resource-track";reserveTrack.dataset.resource=resourceKey();reserveTrack.setAttribute("role","progressbar");reserveTrack.setAttribute("aria-label",resourceName()+" reserve");reserveTrack.setAttribute("aria-valuemin","0");reserveTrack.setAttribute("aria-valuemax","100");reserveTrack.setAttribute("aria-valuenow",String(reserveCurrent));const reserveFill=document.createElement("div");reserveFill.className="soa-choice-resource-fill";reserveFill.style.width=reserveCurrent+"%";reserveTrack.append(reserveFill);const reserveHint=document.createElement("small");reserveHint.textContent=window.soaDruid?.current?.()?"Separate Mana, Energy and Rage reserves follow the shapeshifting rules above.":"Combat exchanges and other actions restore up to +25 "+resourceName()+" (maximum 100). Costs below show your projected balance.";reserve.append(reserveHeading,reserveTrack,reserveHint);box.append(reserve);
+ if(!druidStatusPanel){
+  const reserve=document.createElement("section");reserve.className="soa-choice-resource";reserve.dataset.resource=resourceKey();reserve.setAttribute("aria-label","Current "+resourceName());
+  const reserveHeading=document.createElement("div");reserveHeading.className="soa-choice-resource-heading";
+  const reserveLabel=document.createElement("strong");reserveLabel.textContent="CURRENT "+resourceName().toUpperCase();
+  const reserveValue=document.createElement("span"),reserveCurrent=Math.max(0,Math.min(100,Number(s.en)||0));reserveValue.textContent=reserveCurrent+" / 100";reserveHeading.append(reserveLabel,reserveValue);
+  const reserveTrack=document.createElement("div");reserveTrack.className="soa-choice-resource-track";reserveTrack.dataset.resource=resourceKey();reserveTrack.setAttribute("role","progressbar");reserveTrack.setAttribute("aria-label",resourceName()+" reserve");reserveTrack.setAttribute("aria-valuemin","0");reserveTrack.setAttribute("aria-valuemax","100");reserveTrack.setAttribute("aria-valuenow",String(reserveCurrent));
+  const reserveFill=document.createElement("div");reserveFill.className="soa-choice-resource-fill";reserveFill.style.width=reserveCurrent+"%";reserveTrack.append(reserveFill);
+  const reserveHint=document.createElement("small");reserveHint.textContent="Combat exchanges and other actions restore up to +25 "+resourceName()+" (maximum 100). Costs below show your projected balance.";
+  reserve.append(reserveHeading,reserveTrack,reserveHint);box.append(reserve);
+ }
  const choicesHeader=document.createElement("div");choicesHeader.className="soa-choices-heading";
  const title=document.createElement("strong");title.textContent="Choose your next move";
  const count=document.createElement("span");count.textContent=sc.choices.length+" story paths"+(livingEnemies().length?" · combat actions above":" + resources + custom");

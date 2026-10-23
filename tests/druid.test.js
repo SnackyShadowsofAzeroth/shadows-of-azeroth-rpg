@@ -110,19 +110,23 @@ test("form menu reveals only earned forms, their resources and eligible training
  x.context.document.createElement=element;
  const walk=node=>[node,...node.children.flatMap(walk)],draw=level=>walk(x.d.panel(x.s,x.c,x.profile,level,()=>{}));
  let nodes=draw(1);
- assert.deepEqual(nodes.filter(n=>n.className==="soa-druid-pool").map(n=>n.dataset.resource),["mana"]);
+ assert.deepEqual(nodes.filter(n=>n.className==="soa-druid-pool").map(n=>n.dataset.resource),["health","mana"]);
+ assert.ok(nodes.some(n=>n.textContent==="HEALTH · 80 / 100"));
+ const health=nodes.find(n=>n.dataset.resource==="health");assert.equal(health.children[1].attributes["aria-valuenow"],"80");assert.equal(health.children[1].children[0].style.width,"80%");
  assert.equal(nodes.filter(n=>n.dataset.form).length,0);
  assert.ok(!nodes.some(n=>/Great Cat Spirit|Trial of the Sea Lion|Wings of the Wild/.test(n.textContent)));
  nodes=draw(10);assert.ok(nodes.some(n=>n.textContent.includes("Body and Heart")));assert.equal(nodes.filter(n=>n.dataset.form).length,0);
  // Accepting a quest must not reveal the locked form or its Rage bar.
  x.c.druidQuests={bear:{state:"active",step:0,proof:[]}};nodes=draw(10);
- assert.equal(nodes.filter(n=>n.dataset.form).length,0);assert.deepEqual(nodes.filter(n=>n.className==="soa-druid-pool").map(n=>n.dataset.resource),["mana"]);
+ assert.equal(nodes.filter(n=>n.dataset.form).length,0);assert.deepEqual(nodes.filter(n=>n.className==="soa-druid-pool").map(n=>n.dataset.resource),["health","mana"]);
  x.unlock("bear");nodes=draw(10);
  assert.deepEqual(nodes.filter(n=>n.dataset.form).map(n=>n.dataset.form),["caster","bear"]);
- assert.deepEqual(nodes.filter(n=>n.className==="soa-druid-pool").map(n=>n.dataset.resource),["mana","rage"]);
+ assert.deepEqual(nodes.filter(n=>n.className==="soa-druid-pool").map(n=>n.dataset.resource),["health","mana","rage"]);
  assert.ok(!nodes.some(n=>n.textContent.includes("Quest locked")));
  assert.ok(!nodes.some(n=>/Windstalker|Frenzied Regeneration|Dire Bear/.test(n.textContent)));
  assert.ok(nodes.filter(n=>n.tag==="details").every(n=>n.className==="soa-collapsible-quests"));
+ x.s.hp=37;nodes=draw(10);assert.ok(nodes.some(n=>n.textContent==="HEALTH · 37 / 100"));
+ x.profile.race="Tauren";x.context.window.soaRacialAbilities={passives:()=>({maxHp:10})};nodes=draw(10);assert.ok(nodes.some(n=>n.textContent==="HEALTH · 37 / 110"));
 });
 
 test("Wrath can resolve an environmental root-knot choice without spawning an enemy",()=>{

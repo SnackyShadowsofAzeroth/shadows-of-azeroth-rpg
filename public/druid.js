@@ -270,7 +270,14 @@ function panel(s,c,p,level,choose,locked=false){
  const d=state(s),combat=(c.enemies||[]).some(e=>e.hp>0),learnedForms=Object.keys(FORMS).filter(id=>unlocked(c,id,p,level)),resources=[...new Set(learnedForms.map(id=>FORMS[id].resource))];
  add("h4","Shapeshifting · "+name(d.form,p));add("p",FORMS[d.form].description);
  if(learnedForms.length>1)add("p","Changing form takes one turn. Entering a form costs 20 Mana; returning to humanoid costs no Mana.");
- for(const key of resources){const wrap=document.createElement("div");wrap.className="soa-druid-pool";wrap.dataset.resource=key;add("strong",key.toUpperCase()+" · "+d.pools[key]+" / 100",wrap);const rail=add("div","",wrap);rail.className="soa-druid-rail";rail.setAttribute("role","progressbar");rail.setAttribute("aria-label",key+" reserve");rail.setAttribute("aria-valuemin","0");rail.setAttribute("aria-valuemax","100");rail.setAttribute("aria-valuenow",String(d.pools[key]));const fill=add("i","",rail);fill.style.width=d.pools[key]+"%";box.append(wrap);}
+ const maxHealth=100+(window.soaRacialAbilities?.passives?.(p.race)?.maxHp||0);
+ for(const key of ["health",...resources]){
+  const value=key==="health"?s.hp:d.pools[key],max=key==="health"?maxHealth:100;
+  const wrap=document.createElement("div");wrap.className="soa-druid-pool";wrap.dataset.resource=key;
+  add("strong",key.toUpperCase()+" · "+value+" / "+max,wrap);
+  const rail=add("div","",wrap);rail.className="soa-druid-rail";rail.setAttribute("role","progressbar");rail.setAttribute("aria-label",key==="health"?"Current health":key+" reserve");rail.setAttribute("aria-valuemin","0");rail.setAttribute("aria-valuemax",String(max));rail.setAttribute("aria-valuenow",String(value));
+  const fill=add("i","",rail);fill.style.width=Math.max(0,Math.min(100,value/max*100))+"%";box.append(wrap);
+ }
  const rules=add("details","");add("summary","Resource rules",rules);add("p","Mana recovers up to 25 in caster forms; inactive Mana recovers 5 per ordinary action.",rules);
  if(resources.includes("energy"))add("p","Cat Energy recovers 20 per exchange.",rules);
  if(resources.includes("rage"))add("p","Bear Rage gains 5 per landed attack and 5 when hit; it loses 5 outside combat.",rules);
