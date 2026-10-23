@@ -47,7 +47,7 @@ assert.equal(berserking.strikes,3,"Berserking resolves three separate melee swin
 assert.equal(berserking.weaponDamage,true);
 assert.equal(berserking.followupMultiplier,0.5,"free follow-up attacks deal half damage");
 assert.equal(berserking.criticalOn,20,"Berserking uses the standard critical range");
-assert.equal(berserking.cooldown,3);
+assert.equal(berserking.cooldown,4);
 const trollCard=racial.card("Troll");
 const berserkingRow=trollCard.children.find(row=>row.children?.[0]?.textContent==="Berserking");
 assert.ok(berserkingRow,"Berserking is visible in the racial ability card");
