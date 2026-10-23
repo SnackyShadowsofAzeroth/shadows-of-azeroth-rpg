@@ -54,7 +54,6 @@ function accessCode(){return get("ai-code")?.value.trim()||""}
 function focusAccess(){const message="Enter your private AI access code in the AI Story Director panel to continue.";status(message);window.soaAiDirector?.showSetup?.(message,true);const f=get("ai-code");if(f){f.scrollIntoView({behavior:"smooth",block:"center"});f.focus()}}
 function refreshDisplay(){render();draw();window.soaCharacters?.refreshProfessions?.()}
 function pending(){return campaign?.pending&&typeof campaign.pending.action==="string"?campaign.pending:null}
-function selectionFeedback(message){status(message,true);returnToAdventure("status")}
 function originOfCampaign(){
  const hero=window.soaCharacters?.profile?.();
  if(hero&&hero.id!=="snacky")return "Separate personal adventure for "+String(hero.name||"this hero").slice(0,36)+"; starts at level "+hero.level+" alone in "+String(hero.startingZone||"their race starting zone")+" with 15 silver; keep independent from other character campaigns.";
@@ -1296,6 +1295,7 @@ async function chooseArena(choice){
  finally{busy=false;refreshDisplay();}
 }
 async function choose(choice){
+ const selectionFeedback=message=>{status(message,true);returnToAdventure("status")};
  if(busy||pending())return;
  if(window.soaSaveRules.isIntegrityBlocked()){selectionFeedback("Saved data could not be read. Restore a valid backup before continuing.");return}
  if(campaignLoadBlocked||campaignStorageReadFailed){status("");return}

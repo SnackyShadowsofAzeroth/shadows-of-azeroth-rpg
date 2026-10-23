@@ -170,7 +170,7 @@ test("tab selection displays only its screen and maps old saved tab names", () =
 
 test("choice cards have explicit button semantics and blocked choices explain themselves in Adventure", () => {
   assert.match(campaign, /b\.type="button";b\.className=displayedChoice\.difficulty/);
-  assert.match(campaign, /function selectionFeedback\(message\)\{status\(message,true\);returnToAdventure\("status"\)\}/);
+  assert.match(campaign, /async function choose\(choice\)\{\s*const selectionFeedback=message=>\{status\(message,true\);returnToAdventure\("status"\)\}/);
   assert.match(campaign, /if\(intent\?\.error\)\{selectionFeedback\(intent\.error\+" No action spent\."\);return\}/);
   assert.match(campaign, /if\(!navigator\.onLine\)\{selectionFeedback\(/);
 });
