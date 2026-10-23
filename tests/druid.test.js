@@ -58,6 +58,11 @@ test("Cat combo points are target bound, build on hits, and finishers consume th
  const other={name:"Other Guard",hp:500,maxHp:500};x.c.enemies.push(other);assert.match(x.cast("ferocious_bite",other).error,/Build combo/);
  x.s.en=100;assert.ok(!x.cast("ferocious_bite").error);assert.equal(x.s.druid.combo.points,0);
 });
+test("Druid area attacks record named abilities and complete per-target HP and roll data",()=>{
+ const x=setup(16);x.unlock("bear");x.d.shift(x.s,x.c,x.profile,16,"bear");x.s.en=100;x.s.druid.pools.rage=100;x.foe();x.c.enemies.push({name:"Second Guard",hp:50,maxHp:50});
+ const out=x.cast("swipe");assert.equal(out.event.abilityName,"Swipe");assert.equal(out.event.effect,"damage");assert.equal(out.event.strikes.length,2);
+ out.event.strikes.forEach((strike,i)=>{assert.equal(strike.index,i+1);assert.equal(strike.criticalOn,20);assert.equal(strike.before-strike.damage,strike.after);assert.equal(strike.after,x.c.enemies[i].hp);assert.equal(strike.maxHp,x.c.enemies[i].maxHp);});
+});
 test("bleeds tick once per future exchange and cannot tick while viewing or retrying",()=>{
  const x=setup();x.unlock("cat");x.d.shift(x.s,x.c,x.profile,60,"cat");const target=x.foe();x.cast("rake");const after=target.hp;assert.equal(x.s.druid.dots.length,1);x.d.context();x.d.context();assert.equal(target.hp,after);
  const basic={id:"test_guard",name:"Wait",cost:0,effect:"guard",stat:"DEX",die:0,flat:0};
