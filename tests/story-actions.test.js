@@ -108,6 +108,11 @@ test("returning to natural form is possible at zero Mana",async()=>{
 test("a return story choice in combat is one recorded shift exchange with retaliation",async()=>{
  const x=bearReturnSetup(true),ctx=x.ctx,hp=ctx.s.hp;await ctx.select(x.action);assert.equal(ctx.s.druid.form,"caster");assert.equal(ctx.campaign.combatRound,1);assert.equal(ctx.campaign.enemies[0].hp,50);assert.equal(ctx.campaign.lastExchange.dealt,0);assert.equal(ctx.campaign.lastExchange.shapeshift,true);assert.equal(ctx.campaign.lastExchange.ability,"shift_caster");assert.equal(ctx.campaign.pending.combat,true);assert.equal(ctx.campaign.pending.combatExchangeResolved,true);assert.ok(ctx.s.hp<hp);assert.equal(ctx.s.druid.pools.mana,7);
 });
+test("a resolver-specific rejection is preserved instead of replaced by a generic choice error",async()=>{
+ const x=setup("Warrior",10),ctx=x.ctx;ctx.result=()=>{ctx.status("The target is no longer available. No action spent.");return null};
+ await ctx.select({text:"Move toward the fissure",type:"move",difficulty:"easy"});
+ assert.equal(ctx.notice,"The target is no longer available. No action spent.");assert.doesNotMatch(ctx.notice,/That choice could not be resolved/);
+});
 test("already-natural and unaffordable form choices are filtered before selection",async()=>{
  const x=bearReturnSetup(),ctx=x.ctx;ctx.s.druid.form="caster";ctx.s.en=7;assert.match(x.plan(x.action).error,/Already in Humanoid Form/);assert.equal(ctx.playableStoryChoice(x.action,0).type,"rest");const before=JSON.stringify(ctx.s);await ctx.select(x.action);assert.equal(JSON.stringify(ctx.s),before);assert.equal(ctx.generations,undefined);
  const entry={text:"Shapeshift into Bear Form",type:"move"};assert.match(x.plan(entry).error,/20 Mana/);assert.equal(ctx.playableStoryChoice(entry,1).type,"rest");

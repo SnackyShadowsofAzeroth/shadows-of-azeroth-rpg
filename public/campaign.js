@@ -1063,7 +1063,7 @@ function interfaceUI(){
  if(settings)settings.insertBefore(disclosure,get("export"));
  else document.querySelector("main")?.append(disclosure);
  get("campaign-mode").onchange=e=>{if(e.target.checked){if(campaignLoadBlocked||campaignStorageReadFailed){e.target.checked=false;status("");return}if(!campaign)campaign=make();if(!store()){e.target.checked=false;enabled=false;return}enabled=true;if(!localSet("soa-campaign-enabled","1"))window.soaReportStorageFailure?.("Campaign mode preference could not be saved.");draw();if(navigator.onLine&&(!campaign.scene||pending())){window.soaLayout?.select?.("adventure");advance(campaign.lastAction,campaign.lastResult,true)}}else{enabled=false;if(!localSet("soa-campaign-enabled","0"))window.soaReportStorageFailure?.("Campaign mode preference could not be saved.");document.body.classList.remove("soa-living-mode");get("campaign-scene").replaceChildren();showOriginal(true)}};
- get("campaign-start").onclick=()=>{if(campaignLoadBlocked||campaignStorageReadFailed){selectionFeedback("");return}if(!campaign)campaign=make();if(!store())return;enabled=true;get("campaign-mode").checked=true;if(!localSet("soa-campaign-enabled","1"))window.soaReportStorageFailure?.("Campaign mode preference could not be saved.");draw();if(!accessCode()){focusAccess();selectionFeedback("Enter your private AI access code in Settings to continue. Your choice has not been spent.");return}window.soaLayout?.select?.("adventure");if(pending()||!campaign.scene)advance(campaign.lastAction,campaign.lastResult,true);else{status("Saved scene ready. Choose your next action below.");refreshDisplay()}};
+ get("campaign-start").onclick=()=>{if(campaignLoadBlocked||campaignStorageReadFailed){selectionFeedback("");return}if(!campaign)campaign=make();if(!store())return;enabled=true;get("campaign-mode").checked=true;if(!localSet("soa-campaign-enabled","1"))window.soaReportStorageFailure?.("Campaign mode preference could not be saved.");draw();if(!accessCode()){focusAccess();return}window.soaLayout?.select?.("adventure");if(pending()||!campaign.scene)advance(campaign.lastAction,campaign.lastResult,true);else{status("Saved scene ready. Choose your next action below.");refreshDisplay()}};
  get("campaign-offline").onclick=()=>{enabled=false;document.body.classList.remove("soa-living-mode");get("campaign-mode").checked=false;if(!localSet("soa-campaign-enabled","0"))window.soaReportStorageFailure?.("Campaign mode preference could not be saved.");showOriginal(true);get("campaign-status").textContent="Offline scripted adventure enabled.";window.soaLayout?.select?.("adventure")};
 }
 function showOriginal(show){const campaignBox=get("campaign-box");if(campaignBox)campaignBox.style.display=show?"none":"";if(window.soaCharacters?.isNewCharacter?.())show=false;for(const el of document.querySelectorAll("main > section.panel")){if(el.id==="campaign-box")continue;const isStory=!!el.querySelector("#choices");if(isStory)el.style.display=show?"":"none"}}
@@ -1303,7 +1303,7 @@ async function choose(choice){
  if(window.soaDungeons&&(choice.dungeonAction||window.soaDungeons.current(campaign)))return chooseDungeon(choice);
  if(window.soaArena&&(choice.arenaAction||window.soaArena.current(campaign)))return chooseArena(choice);
  if(!navigator.onLine){selectionFeedback("Offline: your saved scene is available. Reconnect to generate another.");return}
- if(!accessCode()){focusAccess();return}
+ if(!accessCode()){focusAccess();selectionFeedback("Enter your private AI access code in Settings to continue. Your choice has not been spent.");return}
  const detected=dialogueFromCustom(choice);if((detected||socialSkill(choice))&&choice.custom&&choice.type==="investigate")choice={...choice,type:"social"};
  const intent=window.soaStoryActions?storyActionPlan(choice):null;
  if(intent?.error){selectionFeedback(intent.error+" No action spent.");return}
@@ -1317,7 +1317,7 @@ async function choose(choice){
  const combatRoundBefore=Number(campaign.combatRound)||0;
  const craftingBefore=choice.craftRecipe?{s:structuredClone(s),c:structuredClone(campaign)}:null;
  const druidBefore=window.soaDruid?.current?.()?{s:structuredClone(s),c:structuredClone(campaign),energy:s.en,cost:resourceForecast(resolvingChoice).cost}:null;
- let resolution=result(resolvingChoice);
+ statusMessage="";let resolution=result(resolvingChoice);
  if(resolution&&druidBefore&&campaign.druidResolvedTime!==s.time){s.en=druidBefore.energy;window.soaDruid.recover(s,{cost:druidBefore.cost,hit:(Number(campaign.combatRound)||0)>combatRoundBefore&&campaign.lastExchange?.hit===true,taken:(Number(campaign.combatRound)||0)>combatRoundBefore?campaign.lastExchange?.taken||0:0,takenHits:(Number(campaign.combatRound)||0)>combatRoundBefore?campaign.lastExchange?.enemyAttacks?.filter(row=>row.damage>0&&row.recipient===window.soaCharacters.profile().name).length:0,combat:livingEnemies().length>0});}
  
  if(resolution&&druidBefore){const tick=window.soaDruid.tickRejuvenation(s);if(tick){resolution+=" "+tick.message;
@@ -1325,7 +1325,7 @@ async function choose(choice){
    const row=campaign.combatLog?.at(-1);if(row)row.events.push({name:window.soaCharacters.profile().name,side:"ally",delta:tick.amount,after:s.hp,maxHp:heroHealthCap()});
   }
  }}
- if(!resolution){if(storyBefore){s=storyBefore.s;campaign=storyBefore.c;selectedCombatTarget=storyBefore.selected;return}selectionFeedback("That choice could not be resolved. No turn was spent; choose another action.");return}
+ if(!resolution){if(storyBefore){s=storyBefore.s;campaign=storyBefore.c;selectedCombatTarget=storyBefore.selected}const reason=statusMessage||"That choice could not be resolved.";selectionFeedback(/No action spent\.?$/i.test(reason)?reason:reason+" No action spent.");return}
  if(druidBefore&&window.soaDruid.current()?.effects?.dashActions>0)window.soaDruid.current().effects.dashActions--;
  const combatRoundAfter=Number(campaign.combatRound)||0;
  campaign.lastProgression="";
