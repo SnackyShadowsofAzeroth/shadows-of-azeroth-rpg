@@ -57,22 +57,24 @@ function baselineModifiers(){
 const slots=["weapon","armor","trinket"];
 const state=()=>window.soaLivingCampaign?.getState?.();
 const holder=()=>state()?.quests;
-function itemInfo(item){const name=String(item?.name||"");return CATALOG[name]||null}
+function itemInfo(item){const name=String(item?.name||"");return CATALOG[name]||window.soaCrafting?.itemInfo?.(item)||null}
 function equipment(){
  const q=holder();if(!q)return {};
  q.equipped||={};return q.equipped;
 }
 function valid(item,character){
  const info=itemInfo(item);if(!info||!slots.includes(info.slot))return false;
- return !info.classes.length||info.classes.includes(character?.className);
+ return (!info.classes.length||info.classes.includes(character?.className))&&(!info.level||(window.soaProgression?.level?.()||character?.level||1)>=info.level);
 }
 function equip(index){
+ if(window.soaSaveRules?.isIntegrityBlocked?.())return {error:"Restore the damaged save first"};
  const q=holder(),p=window.soaCharacters?.profile?.();if(!q||!Array.isArray(q.inventory))return {error:"Inventory unavailable"};
  const item=q.inventory[index],info=itemInfo(item);if(!valid(item,p))return {error:"Item cannot be equipped by this class"};
  if(!Number.isInteger(index)||index<0||index>=q.inventory.length)return {error:"Item missing"};
- equipment()[info.slot]=index;window.soaLivingCampaign?.persist?.();return {message:"Equipped "+item.name};
+ const before={...equipment()};equipment()[info.slot]=index;
+ if(window.soaLivingCampaign?.persist?.()===false){q.equipped=before;return {error:"Equipment could not be saved"};}return {message:"Equipped "+item.name};
 }
-function unequip(slot){if(!slots.includes(slot))return;delete equipment()[slot];window.soaLivingCampaign?.persist?.()}
+function unequip(slot){if(!slots.includes(slot)||window.soaSaveRules?.isIntegrityBlocked?.())return {error:"Equipment changes unavailable"};const q=holder(),before={...equipment()};delete equipment()[slot];if(window.soaLivingCampaign?.persist?.()===false){q.equipped=before;return {error:"Equipment could not be saved"};}return {message:"Unequipped "+slot}}
 function modifiers(){
  const q=holder(),eq=equipment(),bonuses={STR:0,DEX:0,CON:0,INT:0,WIS:0,CHA:0,ac:0,attack:0,damage:0};
  const seen=new Set();
@@ -88,7 +90,7 @@ function renderStatus(){
  const isSnacky=profile?.id==="snacky";
  const gathered=[];
  if(isSnacky)for(const [label,name] of SNACKY_LOADOUT)gathered.push({label,name,source:"baseline"});
- if(profile?.origin==="custom")for(const name of window.soaCharacters?.startingEquipment?.()||[])gathered.push({label:"Starter gear",name,source:"starter"});
+ if(profile?.origin==="custom")for(const name of window.soaCharacters?.startingEquipment?.()||[]){const slot=/staff|sword|blade|mace|axe|dagger|bow|hammer/i.test(name)?"weapon":"armor";if(!Number.isInteger(holder()?.equipped?.[slot]))gathered.push({label:"Starter gear",name,source:"starter"});}
  const q=holder(),eq=q?.equipped||{};
  for(const [slot,index] of Object.entries(eq)){
   const item=q?.inventory?.[index];if(!item)continue;
@@ -106,6 +108,7 @@ function renderStatus(){
   const tag=document.createElement("small");tag.textContent=label;
   const value=document.createElement("strong");value.textContent=name;
   row.append(tag,value);
+  const craftedInfo=itemInfo({name});if(craftedInfo){const stats=document.createElement("small");stats.textContent=craftedInfo.description;row.append(stats)}
   const tooltip=window.soaForeverItems?.byName?.(name);
   if(tooltip?.verified){
    const stats=Object.entries(tooltip.stats||{}).map(([k,v])=>"+"+v+" "+k).join(" · ");
@@ -121,17 +124,19 @@ function renderStatus(){
 }
 function panel(){
  const q=holder();if(!q)return null;
- const section=document.createElement("details"),head=document.createElement("summary");section.open=sessionStorage.getItem("soa-equipment-panel-open")==="1";section.ontoggle=()=>sessionStorage.setItem("soa-equipment-panel-open",section.open?"1":"0");head.textContent="Inventory & Quest Rewards";section.append(head);
+ const section=document.createElement("details"),head=document.createElement("summary");section.open=sessionStorage.getItem("soa-equipment-panel-open")==="1";section.ontoggle=()=>sessionStorage.setItem("soa-equipment-panel-open",section.open?"1":"0");head.textContent="Inventory · Crafted Gear & Quest Rewards";section.append(head);
  const intro=document.createElement("p");intro.textContent="Spare quest rewards and newly acquired equipment. Currently equipped gear is shown in the character panel.";section.append(intro);
- const subtitle=document.createElement("h3");subtitle.textContent="Additional Quest Rewards";section.append(subtitle);
+ if(window.soaCrafting?.recoverable?.(state())?.length){const note=document.createElement("p");note.textContent="A finished craft is documented in your recent story. Open Crafting → Recover previously crafted gear below to restore it to inventory once.";section.append(note)}
+ const subtitle=document.createElement("h3");subtitle.textContent="Available Equipment & Rewards";section.append(subtitle);
  const items=q.inventory||[],eq=equipment();
- if(!items.length){const p=document.createElement("p");p.textContent="No additional quest equipment collected yet.";section.append(p)}
+ if(!items.length){const p=document.createElement("p");p.textContent="No additional equipment collected or crafted yet.";section.append(p)}
  items.forEach((item,i)=>{const info=itemInfo(item),row=document.createElement("div");row.style.cssText="padding:8px 0;border-top:1px solid #ad946b";
  const title=document.createElement("strong");title.textContent=item.name+" · "+(info?.rarity||item.rarity||"unclassified");row.append(title);
- const p=document.createElement("p");p.textContent=info?.description||"Quest item; no equipment statistics";row.append(p);
- if(info&&slots.includes(info.slot)){const button=document.createElement("button");button.type="button";const equipped=eq[info.slot]===i;button.textContent=equipped?"Unequip":"Equip";button.disabled=!equipped&&!valid(item,window.soaCharacters?.profile?.());button.onclick=()=>{if(equipped)unequip(info.slot);else equip(i);window.soaLivingCampaign?.refreshUI?.()};row.append(button)}
+ const p=document.createElement("p");p.textContent=(info?.description||"Quest item; no equipment statistics")+" · "+(item.source||"Unknown source")+(info?.level?" · Requires level "+info.level:"");row.append(p);
+ if(info&&slots.includes(info.slot)){const button=document.createElement("button");button.type="button";const equipped=eq[info.slot]===i;button.textContent=equipped?"Unequip":valid(item,window.soaCharacters?.profile?.())?"Equip":"Class or level requirement not met";button.disabled=window.soaSaveRules?.isIntegrityBlocked?.()||!!state()?.pending||!equipped&&!valid(item,window.soaCharacters?.profile?.());button.onclick=()=>{const result=equipped?unequip(info.slot):equip(i);if(result?.error)window.alert(result.error);window.soaLivingCampaign?.refreshUI?.()};row.append(button)}
  section.append(row)});
  return section;
 }
 window.soaEquipment={CATALOG,SNACKY_LOADOUT,canonicalSlots,baselineModifiers,renderStatus,itemInfo,equip,unequip,equipment,modifiers,panel};
 })();
+

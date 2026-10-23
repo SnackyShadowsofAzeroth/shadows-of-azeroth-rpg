@@ -237,6 +237,7 @@ function dicePreview(action){
  const {cost,target}=odds;return {primary:"🎲 "+odds.skill+" · d100 ≤ "+target+" ("+target+"%)",secondary:cost+" "+resourceName()+" cost · up to +"+ACTION_RESOURCE_RECOVERY+" recovery · ability modifier "+(odds.modifier>=0?"+":"")+odds.modifier+" · training +"+odds.trained+(odds.classBonus?" · class aptitude "+(odds.classBonus>0?"+":"")+odds.classBonus:"")};
 }
 function resourceForecast(action){
+ if(action.craftRecipe)return {cost:0,affordable:true,current:s.en,after:s.en,text:"Crafting · one action · materials consumed"};
  if(window.soaDruid?.current?.()){const d=window.soaDruid.current(),key=window.soaDruid.FORMS[d.form].resource,level=window.soaProgression?.level?.()||1,shift=window.soaDruid.shiftFrom(action),a=window.soaClassAbilities.available("Druid",level).find(x=>x.id===resolvedCombatAbility(action)),cost=shift!==null?(shift==="caster"?0:20):a?.cost??(action.type==="combat"?0:actionOdds(action).cost),current=shift!==null?d.pools.mana:s.en,gain=shift!==null||key==="rage"?0:key==="energy"?20:25,after=Math.min(100,current-cost+gain),label=shift!==null?"Mana":resourceName();return {label,current,max:100,cost,after,affordable:current>=cost,cooldown:a?classCooldownLeft(a):0,abilityId:a?.id,text:label+" "+current+" → "+Math.max(0,after)+"/100 · "+cost+" cost"+(key==="rage"?" · Rage earned on hits":" · +"+gain+" recovery")};}
  const profile=window.soaCharacters?.profile?.(),label=resourceName(),current=Math.max(0,Math.min(100,Number(s.en)||0)),storyAbility=resolvedStoryVanish(action);
  const combatAction=(action.type==="combat"||!!storyAbility)&&livingEnemies().length>0;
@@ -970,6 +971,13 @@ function druidResult(action){
  return outcome.message;
 }
 function result(action){
+ if(action.craftRecipe){
+  const receipt="craft:"+campaign.turn+":"+((Number(campaign.actionSerial)||0)+1),crafted=window.soaCrafting.craft(campaign,action.craftRecipe,receipt);
+  if(crafted.error){status(crafted.error+" No action spent.");return null}
+  s.time++;if(!window.soaDruid?.current?.())s.en=Math.min(100,s.en+ACTION_RESOURCE_RECOVERY);
+  return "Success: "+crafted.message+" Materials consumed once; no automatic equip. Result is authoritative.";
+ }
+ if(/\b(?:craft|forge|stitch|sew|make|build|assemble)\w*\b/i.test(action.text||"")&&/\b(?:armor|armour|tunic|robe|mail|blade|sword|goggles|targeting lens)\b/i.test(action.text||"")){status("Use Character → Loadout & Equipment → Crafting to choose a tracked recipe and materials. No action spent.");return null}
  const druidResolution=window.soaDruid?druidResult(action):undefined;if(druidResolution!==undefined)return druidResolution;
  const unavailable=unavailableClassAbility(action);
  if(unavailable){status(unavailable.name+(unavailable.level?" unlocks at level "+unavailable.level:" is not learned")+". No action spent.");return null}
@@ -1061,12 +1069,20 @@ function draw(){
  }else board?.remove();
  window.soaEquipment?.renderStatus?.();
  const gear=window.soaEquipment?.panel?.();
+ const crafting=window.soaCrafting?.panel?.(campaign,{wallet:()=>s.money,locked:busy||!!pending()||campaignSaveFailed,choose,commit:operation=>{
+  if(busy||pending()||window.soaSaveRules.isIntegrityBlocked())return;
+  const before=structuredClone(campaign),oldMoney=s.money,result=operation();
+  if(result?.error){status(result.error);window.alert(result.error);return}
+  if(Number.isSafeInteger(result?.wallet))s.money=result.wallet;
+  if(!save()||!store()){campaign=before;s.money=oldMoney;save();store();status("Crafting change could not be saved; no materials or items committed.");refreshDisplay();return}
+  refreshDisplay();status(result.message);
+ }});
  const enchanting=window.soaEnchanting?.panel?.(campaign,sc.location,()=>s.money,(result)=>{if(Number.isSafeInteger(result?.wallet)){s.money=result.wallet;save()}store();render();draw();status(result?.message||"Enchanting updated.")});
  let toolsPanel=get("soa-character-tools");
- if(gear||enchanting){
+ if(gear||enchanting||crafting){
   if(!toolsPanel){toolsPanel=document.createElement("section");toolsPanel.id="soa-character-tools";toolsPanel.className="panel"}
   toolsPanel.replaceChildren();const toolsHeading=document.createElement("h2");toolsHeading.textContent="Loadout & Equipment";toolsPanel.append(toolsHeading);
-  if(gear)toolsPanel.append(gear);if(enchanting)toolsPanel.append(enchanting);
+  if(gear)toolsPanel.append(gear);if(crafting)toolsPanel.append(crafting);if(enchanting)toolsPanel.append(enchanting);
   const characterScreen=get("soa-character-screen"),main=document.querySelector("main");
   if(characterScreen)characterScreen.after(toolsPanel);else if(main)main.append(toolsPanel);
  }else toolsPanel?.remove();
@@ -1163,6 +1179,7 @@ async function choose(choice){
  const detected=dialogueFromCustom(choice);if((detected||socialSkill(choice))&&choice.custom&&choice.type==="investigate")choice={...choice,type:"social"};
  const storyAbility=resolvedStoryVanish(choice),resolvingChoice=storyAbility?{...choice,type:"combat",ability:storyAbility}:choice;
  const combatRoundBefore=Number(campaign.combatRound)||0;
+ const craftingBefore=choice.craftRecipe?{s:structuredClone(s),c:structuredClone(campaign)}:null;
  const druidBefore=window.soaDruid?.current?.()?{s:structuredClone(s),c:structuredClone(campaign),energy:s.en,cost:resourceForecast(resolvingChoice).cost}:null;
  let resolution=result(resolvingChoice);
  if(resolution&&druidBefore&&campaign.druidResolvedTime!==s.time){s.en=druidBefore.energy;window.soaDruid.recover(s,{cost:druidBefore.cost,hit:(Number(campaign.combatRound)||0)>combatRoundBefore&&campaign.lastExchange?.hit===true,taken:(Number(campaign.combatRound)||0)>combatRoundBefore?campaign.lastExchange?.taken||0:0,combat:livingEnemies().length>0});}
@@ -1182,7 +1199,7 @@ async function choose(choice){
  campaign.lastAction=safe(choice.text);campaign.lastResult=resolution;
  campaign.pending={action:campaign.lastAction,resolution,startedAt:Date.now(),dialogue:detected,survey:choice.survey===true,combat:resolvingChoice.type==="combat",combatRoundBefore,combatRoundAfter,combatExchangeResolved:resolvingChoice.type==="combat"&&combatRoundAfter>combatRoundBefore,actionReceipt};
  campaign.history.push("At "+safe(campaign.scene?.location||"unknown location")+": Player: "+campaign.lastAction+" | "+resolution);
- campaign.history=campaign.history.slice(-MAX);const saved=druidBefore?(save()&&store()):store();if(!saved&&druidBefore){s=druidBefore.s;campaign=druidBefore.c;save();store();status("Druid action could not be saved. No turn committed; retry after restoring device storage.");refreshDisplay();return;}refreshDisplay();if(!saved)return;
+ campaign.history=campaign.history.slice(-MAX);const beforeAction=craftingBefore||druidBefore,saved=beforeAction?(save()&&store()):store();if(!saved&&beforeAction){s=beforeAction.s;campaign=beforeAction.c;save();store();status("Action could not be saved. No turn committed; retry after restoring device storage.");refreshDisplay();return;}refreshDisplay();if(!saved)return;
  // Release the iPhone keyboard and return to the story while Gemini works.
  if(choice.custom&&document.activeElement?.blur)document.activeElement.blur();
  returnToAdventure("status");

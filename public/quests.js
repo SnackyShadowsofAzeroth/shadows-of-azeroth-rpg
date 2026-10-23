@@ -53,7 +53,10 @@ const ensure=campaign=>{
  for(const key of ["accepted","completed","claimed","missions"]){if(!q[key]||typeof q[key]!=="object"||Array.isArray(q[key]))q[key]={}}
  for(const key of ["accepted","completed","claimed","missions"])for(const [id,value] of Object.entries(q[key]))if(!value||typeof value!=="object"||Array.isArray(value))delete q[key][id];
  if(!Array.isArray(q.inventory))q.inventory=[];
- q.inventory=q.inventory.filter(item=>item&&typeof item==="object"&&typeof item.name==="string").map(item=>({name:item.name.slice(0,80),source:typeof item.source==="string"?item.source.slice(0,90):"Unknown",rarity:typeof item.rarity==="string"?item.rarity:"common"})).slice(-200);
+ // Never evict old equipment when new rewards arrive: equipped slots reference inventory indices.
+ const oldInventory=q.inventory,indexMap=new Map();q.inventory=[];
+ oldInventory.forEach((item,index)=>{if(!item||typeof item!=="object"||typeof item.name!=="string")return;indexMap.set(index,q.inventory.length);q.inventory.push({name:item.name.slice(0,80),source:typeof item.source==="string"?item.source.slice(0,90):"Unknown",rarity:typeof item.rarity==="string"?item.rarity:"common"})});
+ if(q.equipped&&typeof q.equipped==="object")for(const [slot,index] of Object.entries(q.equipped)){if(indexMap.has(index))q.equipped[slot]=indexMap.get(index);else delete q.equipped[slot]}
  if(!Array.isArray(q.receipts))q.receipts=[];
  q.receipts=q.receipts.filter(receipt=>typeof receipt==="string").slice(-500);
  if(!Array.isArray(q.rewardHistory))q.rewardHistory=[];

@@ -87,6 +87,12 @@ function validateCampaignSave(value){
   for(const [id,r] of Object.entries(value.druidQuests))if(!(id in lengths)||!object(r)||!["active","claimed"].includes(r.state)||!Number.isInteger(r.step)||r.step<0||r.step>lengths[id]||!Array.isArray(r.proof)||r.proof.length!==r.step||r.state==="claimed"&&(r.step!==lengths[id]||r.receipt!=="druid-form:"+id))fail("Druid quest progress is invalid.");
  }
  if(value.chronicle!==undefined&&value.chronicle!==null)validateChronicle(value.chronicle);
+ if(value.crafting!==undefined){
+  const c=value.crafting;
+  if(!object(c)||c.version!==1||!object(c.materials)||!object(c.receipts)||!object(c.recovered)||!Array.isArray(c.log)||c.log.length>60)fail("Crafting ledger is invalid.");
+  if(Object.entries(c.materials).some(([k,n])=>k.length>80||!Number.isSafeInteger(n)||n<0||n>10000))fail("Crafting materials are invalid.");
+  if(Object.entries(c.receipts).some(([k,v])=>k.length>160||typeof v!=="string"||v.length>80)||Object.entries(c.recovered).some(([k,v])=>k.length>80||v!==true)||c.log.some(x=>!object(x)||typeof x.item!=="string"||x.item.length>80||typeof x.receipt!=="string"||x.receipt.length>160||!Number.isSafeInteger(x.turn)||x.turn<0||typeof x.recovered!=="boolean"))fail("Crafting receipts are invalid.");
+ }
  if(value.quests!==undefined&&value.quests!==null&&!object(value.quests))fail("Backup campaign quests are invalid.");
  return structuredClone(value);
 }
