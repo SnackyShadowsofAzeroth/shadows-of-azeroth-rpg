@@ -12,7 +12,7 @@ const FORMS={
  flight:{name:"Flight",level:60,resource:"mana",ac:0,outdoors:true,utility:true,noCombat:true,description:"SoA level-60 capstone: +25 to aerial movement checks outdoors. Cannot enter during combat or attack."}
 };
 const SKY={caster:"Humanoid",bear:"Ironfeather Guardian",dire_bear:"Great Ironfeather Guardian",cat:"Windstalker Raptor",aquatic:"Tidewing Diver",travel:"Swiftstrider",moonkin:"Astral Owl",tree:"Living Aerie",flight:"Stormwing"};
-const MENTOR=/\b(?:moonglade|nighthaven|darnassus|thunder bluff)\b/i;
+const MENTOR=/\b(?:moonglade|nighthaven|darnassus|thunder bluff|druid\s+(?:trainer|mentor))\b/i;
 const step=(text,region,kind="check",extra={})=>({text,region,kind,...extra});
 const QUESTS={
  bear:{title:"Body and Heart",source:"Classic-inspired",steps:[step("Speak with the Great Bear Spirit in Moonglade",/moonglade|great bear spirit/i,"check"),step("Face Lunaclaw in Moonkin Stone clearing",/moonkin stone|darkshore|mulgore/i,"combat",{target:"Lunaclaw"})]},
