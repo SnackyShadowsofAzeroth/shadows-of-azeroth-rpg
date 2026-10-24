@@ -14,6 +14,7 @@ const FORMS={
 const SKY={caster:"Humanoid",bear:"Ironfeather Guardian",dire_bear:"Great Ironfeather Guardian",cat:"Windstalker Raptor",aquatic:"Tidewing Diver",travel:"Swiftstrider",moonkin:"Astral Owl",tree:"Living Aerie",flight:"Stormwing"};
 const MENTOR=/\b(?:moonglade|nighthaven|darnassus|thunder bluff|druid\s+(?:trainer|mentor))\b/i;
 function atMentor(c){const scene=c?.scene||{};if(MENTOR.test(String(scene.location||"")))return true;const choices=(Array.isArray(scene.choices)?scene.choices:[]).map(choice=>typeof choice==="string"?choice:String(choice?.text||""));const actionable=choices.some(text=>/\b(?:ask|speak(?:\s+with)?|talk(?:\s+to)?|return(?:\s+to)?|visit|meet|approach)\s+(?:(?:your|the|a)\s+)?(?:druid\s+)?(?:mentor|trainer)\b/i.test(text));return actionable;}
+function atQuestObjective(c,objective){if(!objective)return false;const scene=c?.scene||{},choices=(Array.isArray(scene.choices)?scene.choices:[]).map(choice=>typeof choice==="string"?choice:String(choice?.text||""));const context=[scene.location,scene.story,scene.description,...choices].filter(Boolean).join(" ");return objective.region.test(String(context));}
 const step=(text,region,kind="check",extra={})=>({text,region,kind,...extra});
 const QUESTS={
  bear:{title:"Body and Heart",source:"Classic-inspired",steps:[step("Speak with the Great Bear Spirit in Moonglade",/moonglade|great bear spirit/i,"check"),step("Face Lunaclaw in Moonkin Stone clearing",/moonkin stone|darkshore|mulgore/i,"combat",{target:"Lunaclaw"})]},
@@ -276,7 +277,7 @@ function questAction(s,c,profile,level,id,operation,rules){
   record.state="claimed";record.receipt="druid-form:"+id;record.claimedAt=c.turn||0;s.time++;
   return {message:"Quest complete: "+q.title+". Learned "+name(id,profile)+" Form. No automatic shapeshift or currency reward."};
  }
- const objective=q.steps[record.step];if(!objective||!objective.region.test(loc))return {error:"Travel to the objective location first: "+(objective?.text||"return to your mentor")+"."};
+ const objective=q.steps[record.step];if(!atQuestObjective(c,objective))return {error:"Travel to the objective location first: "+(objective?.text||"return to your mentor")+"."};
  if(record.fighting)return {error:"The summoned trial must be defeated through combat."};
  if(objective.kind==="combat"){
   record.fighting=objective.target;c.enemies=[{name:objective.target,hp:40+level,maxHp:40+level}];c.enemyLocation=loc;s.time++;
@@ -333,7 +334,7 @@ function panel(s,c,p,level,choose,locked=false){
   const next=q.steps[record?.step||0];add("p",record?.state==="claimed"?"Completed · "+name(id,p)+" Form learned":record?"Objectives "+record.step+" / "+q.steps.length+" · "+(next?.text||"Return to a mentor"):"Speak with a Druid mentor in Moonglade, Darnassus or Thunder Bluff.",row);
   const op=!record?"accept":record.step===q.steps.length?"claim":"step";
   const button=add("button",record?.state==="claimed"?"Learned":op==="accept"?"Accept form quest":op==="claim"?"Return quest to mentor":record.fighting?"Trial in progress":"Attempt next objective",row);button.type="button";
-  button.disabled=locked||combat||record?.state==="claimed"||level<f.level||!!f.spec&&p.specialization!==f.spec||((op==="accept"||op==="claim")?!atMentor(c):!next?.region.test(c.scene?.location||""));
+  button.disabled=locked||combat||record?.state==="claimed"||level<f.level||!!f.spec&&p.specialization!==f.spec||((op==="accept"||op==="claim")?!atMentor(c):!atQuestObjective(c,next));
   button.onclick=()=>choose({text:q.title+": "+op,type:"druid_quest",quest:id,operation:op});
  }
  }
