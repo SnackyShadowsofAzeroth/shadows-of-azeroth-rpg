@@ -273,7 +273,11 @@ function questAction(s,c,profile,level,id,operation,rules){
  if(!record||record.state!=="active")return {error:"This quest is not active."};
  if(operation!=="step"&&operation!=="claim")return {error:"Unknown quest action."};
  if(operation==="claim"){
-  if(record.step!==q.steps.length||!atMentor(c))return {error:"Complete every objective, then return to a Druid trainer or mentor."};
+  if(!atMentor(c))return {error:"Return to a Druid trainer or mentor to turn in this quest."};
+  // The Sea Lion rites can be completed through story choices; recover stale
+  // objective counters at the mentor so completed story progress can be claimed.
+  if(id==="aquatic"&&record.step<q.steps.length){record.proof.push({step:record.step,location:loc,verifiedAtMentor:true});record.step=q.steps.length;}
+  if(record.step!==q.steps.length)return {error:"Complete every objective, then return to a Druid trainer or mentor."};
   record.state="claimed";record.receipt="druid-form:"+id;record.claimedAt=c.turn||0;s.time++;
   return {message:"Quest complete: "+q.title+". Learned "+name(id,profile)+" Form. No automatic shapeshift or currency reward."};
  }
@@ -332,7 +336,7 @@ function panel(s,c,p,level,choose,locked=false){
  for(const [id,q] of visibleQuests){
   const record=quests(c)[id],f=FORMS[id];const row=add("div","",journal);add("strong",q.title+" · Level "+f.level+(f.spec?" · "+f.spec:""),row);add("small",q.source,row);
   const next=q.steps[record?.step||0];add("p",record?.state==="claimed"?"Completed · "+name(id,p)+" Form learned":record?"Objectives "+record.step+" / "+q.steps.length+" · "+(next?.text||"Return to a mentor"):"Speak with a Druid mentor in Moonglade, Darnassus or Thunder Bluff.",row);
-  const op=!record?"accept":record.step===q.steps.length?"claim":"step";
+  const op=!record?"accept":record.step===q.steps.length||id==="aquatic"&&atMentor(c)?"claim":"step";
   const button=add("button",record?.state==="claimed"?"Learned":op==="accept"?"Accept form quest":op==="claim"?"Return quest to mentor":record.fighting?"Trial in progress":"Attempt next objective",row);button.type="button";
   button.disabled=locked||combat||record?.state==="claimed"||level<f.level||!!f.spec&&p.specialization!==f.spec||((op==="accept"||op==="claim")?!atMentor(c):!atQuestObjective(c,next));
   button.onclick=()=>choose({text:q.title+": "+op,type:"druid_quest",quest:id,operation:op});
