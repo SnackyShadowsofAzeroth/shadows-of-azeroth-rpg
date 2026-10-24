@@ -285,10 +285,10 @@ function questAction(s,c,profile,level,id,operation,rules){
   c.defeatedEnemies=(c.defeatedEnemies||[]).filter(x=>x!==(loc+"|"+objective.target.toLowerCase()));
   return {message:"The "+objective.target+" trial begins. Resolve each round with combat actions; the quest is not complete."};
  }
- const die=rules.roll(20),bonus=window.soaAbilities?.get?.("hero")?.modifiers?.WIS||0,ok=die===20||die!==1&&die+bonus>=11;
+ const die=rules.roll(20),bonus=window.soaAbilities?.get?.("hero")?.modifiers?.WIS||0,ok=id==="aquatic"||die===20||die!==1&&die+bonus>=11;
  s.time++;recover(s,{combat:false});
- if(ok){record.proof.push({step:record.step,location:loc,roll:die});record.step++;}
- return {message:(ok?"Success: ":"Complication: ")+objective.text+" · d20 "+die+" + "+bonus+" vs DC 11. "+(ok?"Objective verified. "+(record.step===q.steps.length?"Return to your mentor to learn the form.":"Next: "+q.steps[record.step].text):"Objective incomplete; you may try again on a later turn.")};
+ if(ok){record.proof.push({step:record.step,location:loc,roll:id==="aquatic"?null:die});record.step++;}
+ return {message:(ok?"Success: ":"Complication: ")+objective.text+(id==="aquatic"?" · Objective verified at the correct location. ":" · d20 "+die+" + "+bonus+" vs DC 11. ")+(ok?"Objective verified. "+(record.step===q.steps.length?"Return to your mentor to learn the form.":"Next: "+q.steps[record.step].text):"Objective incomplete; you may try again on a later turn.")};
 }
 function onDefeat(c,enemy){for(const [id,r] of Object.entries(quests(c))){const o=QUESTS[id]?.steps[r.step];if(r.state==="active"&&r.fighting===enemy&&o?.target===enemy){r.proof.push({step:r.step,target:enemy,location:c.enemyLocation});r.step++;delete r.fighting;}}}
 function resetEncounter(s){const d=state(s);d.combo={target:null,points:0};d.dots=[];const hot=d.effects?.regrowth;const rejuvenation=d.effects?.rejuvenation;d.effects={...(hot?{regrowth:{until:3}}:{}),...(rejuvenation?{rejuvenation}:{} )};d.pools.rage=0;if(FORMS[d.form].resource==="rage")s.en=0;}
