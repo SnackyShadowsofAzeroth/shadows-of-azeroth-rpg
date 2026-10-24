@@ -52,7 +52,7 @@ test("allied hero resource has a clean aligned label/value row above its meter",
 
 test("combat actions are integrated above story choices with a free baseline strike",()=>{
  const draw=campaign.indexOf("drawCombatActions(box);");
- const choices=campaign.indexOf("for(const [index,choice] of sc.choices.entries())");
+ const choices=campaign.indexOf("for(const [index,displayedChoice] of displayedChoices.entries())");
  assert.ok(draw>0&&draw<choices,"combat actions should appear inside the next-move flow before story options");
  assert.match(campaign,/Weapon Strike · Free/);
  assert.match(campaign,/Always available · combat exchange restores up to/);
