@@ -899,6 +899,14 @@ function drawCombatActions(box){
  target.value=selected.name;
  target.onchange=()=>{selectedCombatTarget=target.value;draw()};
  targetLabel.append(target);section.append(targetLabel);
+ if(hero?.className==="Druid"&&hero.form==="cat"){
+  const combo=window.soaDruid?.context?.()?.combo||{target:null,points:0};
+  const comboBox=document.createElement("div");comboBox.className="soa-cat-combo-status";comboBox.setAttribute("role","status");comboBox.setAttribute("aria-live","polite");
+  const sameTarget=combo.target===target.value,points=sameTarget?combo.points:0;
+  const comboTitle=document.createElement("strong");comboTitle.textContent="Combo points · "+points+" / 5"+(sameTarget?" on "+target.value:" · build on "+target.value);
+  const comboNote=document.createElement("small");comboNote.textContent="Claw, Rake, Shred, Ravage and Pounce build 1 on a hit. Ferocious Bite gains +3 damage per point; Rip's bleed gains +2 damage per tick per point. Finishers consume the points.";
+  comboBox.append(comboTitle,comboNote);section.append(comboBox);
+ }
  const basic=document.createElement("button");basic.type="button";basic.className="soa-ability-button soa-combat-basic";
  basic.textContent=hero?.className==="Druid"&&hero.form!=="caster"?"Natural Strike · Free":"Weapon Strike · Free";
  basic.title="A reliable attack that is always available.";
