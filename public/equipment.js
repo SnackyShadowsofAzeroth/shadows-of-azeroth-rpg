@@ -75,6 +75,24 @@ function equip(index){
  if(window.soaLivingCampaign?.persist?.()===false){q.equipped=before;return {error:"Equipment could not be saved"};}return {message:"Equipped "+item.name};
 }
 function unequip(slot){if(!slots.includes(slot)||window.soaSaveRules?.isIntegrityBlocked?.())return {error:"Equipment changes unavailable"};const q=holder(),before={...equipment()};delete equipment()[slot];if(window.soaLivingCampaign?.persist?.()===false){q.equipped=before;return {error:"Equipment could not be saved"};}return {message:"Unequipped "+slot}}
+const SALE_VALUES={common:25,uncommon:100,rare:500,epic:2000,legendary:5000};
+function formatSaleValue(copper){if(copper>=10000)return Math.floor(copper/10000)+"g "+String(Math.floor(copper%10000/100)).padStart(2,"0")+"s";if(copper>=100)return Math.floor(copper/100)+"s"+(copper%100?" "+String(copper%100)+"c":"");return copper+"c"}
+function saleValue(item){const rarity=String(itemInfo(item)?.rarity||item?.rarity||"common").toLowerCase();return SALE_VALUES[rarity]||SALE_VALUES.common}
+function sell(index){
+ if(window.soaSaveRules?.isIntegrityBlocked?.())return {error:"Restore the damaged save first"};
+ const c=state(),q=holder();if(!c||!q||!Array.isArray(q.inventory))return {error:"Inventory unavailable"};
+ if(c.pending)return {error:"Resolve the pending story action before selling items."};
+ if(!Number.isInteger(index)||index<0||index>=q.inventory.length||!q.inventory[index])return {error:"Item missing"};
+ const eq=equipment();if(Object.values(eq).some(value=>Number(value)===index))return {error:"Unequip this item before selling it."};
+ const copper=saleValue(q.inventory[index]),itemName=q.inventory[index].name;
+ if(!window.soaWallet?.credit)return {error:"Wallet unavailable."};
+ const beforeInventory=q.inventory.slice(),beforeEquipped={...eq},beforeEnchanting=c.enchanting?JSON.parse(JSON.stringify(c.enchanting)):null;
+ q.inventory[index]=null;window.soaQuests?.ensure?.(c);
+ if(window.soaLivingCampaign?.persist?.()===false){q.inventory=beforeInventory;q.equipped=beforeEquipped;if(beforeEnchanting)c.enchanting=beforeEnchanting;else delete c.enchanting;return {error:"Item could not be saved. Nothing was sold."};}
+ const credit=window.soaWallet.credit(copper);
+ if(credit?.error){q.inventory=beforeInventory;q.equipped=beforeEquipped;if(beforeEnchanting)c.enchanting=beforeEnchanting;else delete c.enchanting;window.soaLivingCampaign?.persist?.();return {error:credit.error+" The item was restored."};}
+ return {message:"Sold "+itemName+" for "+formatSaleValue(copper)+"."};
+}
 function modifiers(){
  const q=holder(),eq=equipment(),bonuses={STR:0,DEX:0,CON:0,INT:0,WIS:0,CHA:0,ac:0,attack:0,damage:0};
  const seen=new Set();
@@ -134,6 +152,7 @@ function panel(){
  const title=document.createElement("strong");title.textContent=item.name+" · "+(info?.rarity||item.rarity||"unclassified");row.append(title);
  const p=document.createElement("p");p.textContent=(info?.description||"Quest item; no equipment statistics")+" · "+(item.source||"Unknown source")+(info?.level?" · Requires level "+info.level:"");row.append(p);
  if(info&&slots.includes(info.slot)){const button=document.createElement("button");button.type="button";const equipped=eq[info.slot]===i;button.textContent=equipped?"Unequip":valid(item,window.soaCharacters?.profile?.())?"Equip":"Class or level requirement not met";button.disabled=window.soaSaveRules?.isIntegrityBlocked?.()||!!state()?.pending||!equipped&&!valid(item,window.soaCharacters?.profile?.());button.onclick=()=>{const result=equipped?unequip(info.slot):equip(i);if(result?.error)window.alert(result.error);window.soaLivingCampaign?.refreshUI?.()};row.append(button)}
+ const sale=document.createElement("button");sale.type="button";const equipped=Object.values(eq).some(value=>Number(value)===i),price=saleValue(item);sale.textContent="Sell · "+formatSaleValue(price);sale.disabled=window.soaSaveRules?.isIntegrityBlocked?.()||!!state()?.pending||equipped||!window.soaWallet?.credit;sale.title=equipped?"Unequip before selling":"";sale.onclick=()=>{if(!window.confirm("Sell "+item.name+" for "+formatSaleValue(price)+"?"))return;const result=sell(i);if(result?.error)window.alert(result.error);else window.alert(result.message);window.soaLivingCampaign?.refreshUI?.()};row.append(sale);
  section.append(row)});
  return section;
 }
