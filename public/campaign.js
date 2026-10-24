@@ -1194,7 +1194,14 @@ function draw(){
  const count=document.createElement("span");count.textContent=sc.choices.length+" story paths"+(livingEnemies().length?" · combat actions above":" + resources + custom");
  choicesHeader.append(title,count);box.append(choicesHeader);
  drawCombatActions(box);
- for(const [index,choice] of sc.choices.entries()){const displayedChoice=window.soaStoryActions?playableStoryChoice(choice,index):canonicalStoryChoice(choice);const b=document.createElement("button");b.type="button";b.className=displayedChoice.difficulty==="easy"?"low":displayedChoice.difficulty==="hard"?"high":"med";const headline=document.createElement("strong"),detail=document.createElement("small");headline.textContent=String.fromCharCode(65+index)+") "+displayedChoice.text;headline.style.display="block";const preview=dicePreview(displayedChoice);
+ const displayedChoices=sc.choices.map((choice,index)=>window.soaStoryActions?playableStoryChoice(choice,index):canonicalStoryChoice(choice));
+ if(!livingEnemies().length&&window.soaStoryActions?.visibleHostile){
+  const threat=window.soaStoryActions.visibleHostile({text:String(sc.story||""),type:"combat"},campaign,window.soaProgression?.level?.()||1);
+  if(threat&&!displayedChoices.some(choice=>choice.type==="combat"&&/\\b(?:attack|strike|maul|mangle)\\b/i.test(choice.text||""))){
+   displayedChoices.unshift({text:"Attack "+threat.name+" with a free weapon strike",type:"combat",ability:"strike",difficulty:"medium"});
+  }
+ }
+ for(const [index,displayedChoice] of displayedChoices.entries()){const b=document.createElement("button");b.type="button";b.className=displayedChoice.difficulty==="easy"?"low":displayedChoice.difficulty==="hard"?"high":"med";const headline=document.createElement("strong"),detail=document.createElement("small");headline.textContent=String.fromCharCode(65+index)+") "+displayedChoice.text;headline.style.display="block";const preview=dicePreview(displayedChoice);
  detail.textContent=(displayedChoice.difficulty||"medium")+" difficulty · "+(socialSkill(displayedChoice)||displayedChoice.type||"investigate");
  const rollLine=document.createElement("span");rollLine.className="soa-roll-preview";rollLine.textContent=preview.primary;
  const rollHint=document.createElement("span");rollHint.className="soa-roll-hint";rollHint.textContent=preview.secondary;const transaction=document.createElement("span");transaction.className="soa-choice-resource-transaction";transaction.textContent=resourceForecast(displayedChoice).text;detail.style.cssText="display:block;margin-top:5px;color:#bccbd6;font:12px system-ui;text-transform:capitalize";b.append(headline,detail,rollLine,rollHint,transaction);b.disabled=busy||!!pending();b.onclick=()=>choose(displayedChoice);box.append(b)}
