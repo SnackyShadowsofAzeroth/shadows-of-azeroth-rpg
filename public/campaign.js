@@ -1168,6 +1168,7 @@ function draw(){
  if(pending()){const note=document.createElement("p");note.className="soa-pending";note.textContent="Your last decision is saved. The next story scene has not arrived. Retry safely without repeating the action.";box.append(note);const retry=document.createElement("button");retry.className="med";retry.textContent="Retry generating next scene";retry.disabled=busy;retry.onclick=()=>{returnToAdventure("status");advance(campaign.lastAction,campaign.lastResult,true)};box.append(retry)}
 
  drawEnemyStatus(gameplayPanel);
+ if(activeChallenge)drawCombatActions(gameplayPanel);
  drawRacialActions(gameplayPanel);
  const druidStatusPanel=window.soaCharacters?.profile?.()?.className==="Druid"&&window.soaDruid?window.soaDruid.panel(s,campaign,window.soaCharacters.profile(),window.soaProgression?.level?.()||1,choose,busy||!!pending()):null;
  if(druidStatusPanel)gameplayPanel.append(druidStatusPanel);
@@ -1189,7 +1190,7 @@ function draw(){
  const arenaPanel=window.soaArena?.panel?.(campaign,s,window.soaCharacters?.profile?.(),choose,busy||!!pending());if(arenaPanel)challengeMount?.append(arenaPanel);
  const dungeonPanel=window.soaDungeons?.panel?.(campaign,s,window.soaCharacters?.profile?.(),window.soaProgression?.level?.()||1,choose,busy||!!pending());if(dungeonPanel)challengeMount?.append(dungeonPanel);
  const choicesHeader=document.createElement("div");choicesHeader.className="soa-choices-heading";
- if(activeChallenge){const cue=document.createElement("p");cue.className="soa-precombat-cue";cue.textContent="Your expedition or arena bout is active. Continue the encounter in Dungeons.";box.append(cue);drawCombatActions(gameplayPanel);const foot=document.createElement("p");foot.className="muted soa-scene-footer";foot.textContent="Turn "+campaign.turn+" · Local challenge progress saved on this device";gameplayPanel.append(foot);return;}
+ if(activeChallenge){const cue=document.createElement("p");cue.className="soa-precombat-cue";cue.textContent="Your expedition or arena bout is active. Continue the encounter in Dungeons.";box.append(cue);const foot=document.createElement("p");foot.className="muted soa-scene-footer";foot.textContent="Turn "+campaign.turn+" · Local challenge progress saved on this device";gameplayPanel.append(foot);return;}
  const title=document.createElement("strong");title.textContent="Choose your next move";
  const count=document.createElement("span");count.textContent=sc.choices.length+" story paths"+(livingEnemies().length?" · combat actions above":" + resources + custom");
  choicesHeader.append(title,count);box.append(choicesHeader);
