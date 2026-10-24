@@ -2,7 +2,7 @@
 const normalize=s=>String(s||"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
 const mentions=(text,name)=>(" "+normalize(text)+" ").includes(" "+normalize(name)+" ");
 const obstacles=/\b(?:root[ -]knot|tangled roots|vines?|brambles?|barricade|wooden door|door|padlock|lock|chains?|webbing|spiderweb|boulder|fallen branch|fallen log|obstruction|obstacle|bindings?|thorny growth|corrupted growth|corruption|ritual seal|magical seal|ward|runes?|debris|ice wall|ice barrier|blocked passage)\b/gi;
-const creatures=/\b(?:satyr|bandit|raider|poacher|cultist|saboteur|smuggler|assassin|ghoul|skeleton|zombie|wraith|spider|wolf|worg|boar|raptor|scorpid|harpy|gnoll|kobold|murloc|trogg|ogre|golem|guard)\b/gi;
+const creatures=/\b(?:satyr|bandit|raider|poacher|cultist|saboteur|smuggler|assassin|ghoul|skeleton|zombie|wraith|spider|wolf|worg|boar|raptor|scorpid|harpy|gnoll|kobold|murloc|trogg|ogre|golem|guard|stalker|horror|abomination|beast|creature)\b/gi;
 const unavailable=/\b(?:dead|corpse|fallen|defeated|unconscious|incapacitated|absent|distant|faraway|miles away|remember|recalled|rumou?r|legend|painting|statue|friendly|peaceful|tame|no longer|not present|no (?:visible |nearby )?(?:enemy|hostile|satyr|bandit|guard))\b/i;
 const hostile=/\b(?:hostile|enemy|lurks?|lurking|prowls?|prowling|snarls?|snarling|lunges?|lunging|attacks?|attacking|charges?|charging|threatens?|threatening|blocks?|blocking|aggressive|ambush|stalks?|stalking|raider|bandit|corruptor)\b/i;
 function obstacle(action,c){
@@ -19,10 +19,16 @@ function visibleHostile(action,c,level){
  }
  // A choice alone is not proof of a creature's presence. Prose must establish it here.
  for(const name of [...text.matchAll(creatures)].map(m=>m[0])){
-  const sentences=story.split(/(?<=[.!?])\s+|\n+/).filter(sentence=>mentions(sentence,name));
-  if(!sentences.some(sentence=>hostile.test(sentence)&&!unavailable.test(sentence)))continue;
+  const sentences=story.split(/(?<=[.!?])\s+|\n+/),mentionsAt=[];
+  sentences.forEach((sentence,index)=>{if(mentions(sentence,name)&&!unavailable.test(sentence))mentionsAt.push(index)});
+  // Scene prose may name a threat in one sentence and describe its attack posture nearby.
+  if(!mentionsAt.some(index=>sentences.slice(Math.max(0,index-1),Math.min(sentences.length,index+3)).some(sentence=>hostile.test(sentence)&&!unavailable.test(sentence))))continue;
   const structured=(c.scene?.enemies||[]).find(e=>mentions(e.name,name)&&mentions(text,e.name));
-  const targetName=structured?.name||name[0].toUpperCase()+name.slice(1).toLowerCase();
+  const storyOccurrence=story.match(new RegExp("\\b"+name+"\\b","i"));
+  const before=storyOccurrence?story.slice(0,storyOccurrence.index):"";
+  const titlePrefix=before.match(/(?:^|[^.!?\n])((?:[A-Z][a-z'’’-]*\s+){0,2})$/)?.[1]||"";
+  const inferredName=(titlePrefix+name).trim().replace(/^(?:The|A|An)\s+/,"");
+  const targetName=structured?.name||inferredName[0].toUpperCase()+inferredName.slice(1);
   if((c.defeatedEnemies||[]).includes(String(c.scene?.location||"")+"|"+targetName.toLowerCase()))continue;
   const maxHp=Number.isInteger(structured?.maxHp)&&structured.maxHp>0?Math.min(500,structured.maxHp):Math.min(140,35+Math.max(1,level)*2);
   const hp=Number.isInteger(structured?.hp)?Math.min(maxHp,structured.hp):maxHp;if(hp<=0)continue;

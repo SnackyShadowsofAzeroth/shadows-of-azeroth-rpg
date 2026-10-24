@@ -26,6 +26,13 @@ test("environmental spell routing works across Druid, Mage, Shaman and Priest wi
 test("opening Moonfire registers the visible hostile and resolves exactly one exchange",async()=>{
  const x=setup();x.ctx.campaign.scene.story="A hostile satyr lurks beside the trail.";const a=x.cast("Cast Moonfire at the lurking satyr","moonfire");assert.equal(x.plan(a).kind,"opening");await x.ctx.select(a);const c=x.ctx.campaign;assert.equal(c.enemies.length,1);assert.equal(c.enemies[0].name,"Satyr");assert.ok(c.enemies[0].hp>0&&c.enemies[0].hp<c.enemies[0].maxHp);assert.equal(c.combatRound,1);assert.equal(x.ctx.s.time,1);assert.equal(c.pending.combatExchangeResolved,true);assert.equal(c.lastExchange.target,"Satyr");assert.equal(x.ctx.s.en,95);assert.equal(x.ctx.generations,1);await x.ctx.select(a);assert.equal(x.ctx.s.time,1);assert.equal(x.ctx.generations,1);
 });
+test("generated named stalkers across nearby hostile prose can open combat",()=>{
+ const x=setup();
+ x.ctx.campaign.scene.story="As a massive bear, you stand your ground while the trapped Corrupted Hollow Stalker paces nearby. The creature's glowing red eyes dart frantically and its low hiss vibrates through the damp air. The roar keeps the void-touched beast pinned and hesitant to lunge.";
+ const action={text:"Attack the Corrupted Hollow Stalker",type:"combat",difficulty:"easy"};
+ const plan=x.plan(action);
+ assert.equal(plan.kind,"opening");assert.equal(plan.target.name,"Corrupted Hollow Stalker");assert.equal(plan.target.hp,55);
+});
 test("named visible enemies retain their exact tracked identity and HP",()=>{
  const x=setup();x.ctx.campaign.scene={location:"Forest",story:"Lunaclaw snarls before you.",enemies:[{name:"Lunaclaw",hp:44,maxHp:55}]};const p=x.plan(x.cast("Cast Wrath at Lunaclaw","wrath"));assert.equal(p.kind,"opening");assert.equal(p.target.name,"Lunaclaw");assert.equal(p.target.hp,44);
 });
