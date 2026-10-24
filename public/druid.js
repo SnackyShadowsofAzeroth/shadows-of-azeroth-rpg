@@ -13,6 +13,7 @@ const FORMS={
 };
 const SKY={caster:"Humanoid",bear:"Ironfeather Guardian",dire_bear:"Great Ironfeather Guardian",cat:"Windstalker Raptor",aquatic:"Tidewing Diver",travel:"Swiftstrider",moonkin:"Astral Owl",tree:"Living Aerie",flight:"Stormwing"};
 const MENTOR=/\b(?:moonglade|nighthaven|darnassus|thunder bluff|druid\s+(?:trainer|mentor))\b/i;
+function atMentor(c){const scene=c?.scene||{};if(MENTOR.test(String(scene.location||"")))return true;const choices=(Array.isArray(scene.choices)?scene.choices:[]).map(choice=>typeof choice==="string"?choice:String(choice?.text||""));const actionable=choices.some(text=>/\b(?:ask|speak(?:\s+with)?|talk(?:\s+to)?|return(?:\s+to)?|visit|meet|approach)\s+(?:(?:your|the|a)\s+)?(?:druid\s+)?(?:mentor|trainer)\b/i.test(text));return actionable;}
 const step=(text,region,kind="check",extra={})=>({text,region,kind,...extra});
 const QUESTS={
  bear:{title:"Body and Heart",source:"Classic-inspired",steps:[step("Speak with the Great Bear Spirit in Moonglade",/moonglade|great bear spirit/i,"check"),step("Face Lunaclaw in Moonkin Stone clearing",/moonkin stone|darkshore|mulgore/i,"combat",{target:"Lunaclaw"})]},
@@ -265,13 +266,13 @@ function questAction(s,c,profile,level,id,operation,rules){
  const required=q.requires||f.requires;if(required&&!unlocked(c,required,profile,level))return {error:"Complete the "+FORMS[required].name+" rite first."};
  if((c.enemies||[]).some(e=>e.hp>0))return {error:"Finish the current encounter before continuing a form quest."};
  if(operation==="accept"){
-  if(record)return {error:"This quest is already recorded."};if(!MENTOR.test(loc))return {error:"Visit a Druid mentor in Moonglade, Darnassus or Thunder Bluff."};
+  if(record)return {error:"This quest is already recorded."};if(!atMentor(c))return {error:"Visit a Druid trainer or mentor before accepting this quest."};
   records[id]={state:"active",step:0,proof:[]};s.time++;return {message:"Accepted "+q.title+". Next: "+q.steps[0].text+". Return to a mentor after every objective is verified."};
  }
  if(!record||record.state!=="active")return {error:"This quest is not active."};
  if(operation!=="step"&&operation!=="claim")return {error:"Unknown quest action."};
  if(operation==="claim"){
-  if(record.step!==q.steps.length||!MENTOR.test(loc))return {error:"Complete every objective, then return to a Druid mentor."};
+  if(record.step!==q.steps.length||!atMentor(c))return {error:"Complete every objective, then return to a Druid trainer or mentor."};
   record.state="claimed";record.receipt="druid-form:"+id;record.claimedAt=c.turn||0;s.time++;
   return {message:"Quest complete: "+q.title+". Learned "+name(id,profile)+" Form. No automatic shapeshift or currency reward."};
  }
@@ -332,7 +333,7 @@ function panel(s,c,p,level,choose,locked=false){
   const next=q.steps[record?.step||0];add("p",record?.state==="claimed"?"Completed · "+name(id,p)+" Form learned":record?"Objectives "+record.step+" / "+q.steps.length+" · "+(next?.text||"Return to a mentor"):"Speak with a Druid mentor in Moonglade, Darnassus or Thunder Bluff.",row);
   const op=!record?"accept":record.step===q.steps.length?"claim":"step";
   const button=add("button",record?.state==="claimed"?"Learned":op==="accept"?"Accept form quest":op==="claim"?"Return quest to mentor":record.fighting?"Trial in progress":"Attempt next objective",row);button.type="button";
-  button.disabled=locked||combat||record?.state==="claimed"||level<f.level||!!f.spec&&p.specialization!==f.spec||((op==="accept"||op==="claim")?!MENTOR.test(c.scene?.location||""):!next?.region.test(c.scene?.location||""));
+  button.disabled=locked||combat||record?.state==="claimed"||level<f.level||!!f.spec&&p.specialization!==f.spec||((op==="accept"||op==="claim")?!atMentor(c):!next?.region.test(c.scene?.location||""));
   button.onclick=()=>choose({text:q.title+": "+op,type:"druid_quest",quest:id,operation:op});
  }
  }
