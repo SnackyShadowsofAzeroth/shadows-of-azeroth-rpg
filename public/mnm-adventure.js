@@ -13,19 +13,6 @@ const APPROACHES=[
  {id:"tracks",label:"Read the ground",stat:"wis",dc:12,detail:"Study wind-scoured footprints and the disturbed sand."},
  {id:"question",label:"Question the haulers",stat:"cha",dc:13,detail:"Ask the caravan hands what they heard before the bell went quiet."}
 ];
-const RACIAL_STORY_FEATURES={
- human:{phase:"approach",stats:STATS},
- gnome:{phase:"approach",stats:["int"]},
- deep_gnome:{phase:"approach",stats:["int","wis"]},
- dwarf:{phase:"approach",stats:["int","sta"]},
- deep_dwarf:{phase:"approach",stats:["int"]},
- high_elf:{phase:"approach",stats:["int"]},
- wood_elf:{phase:"approach",stats:["wis","agi"]},
- deep_elf:{phase:"encounter",stats:["agi"]},
- ogre:{phase:"encounter",stats:["str","sta"]},
- halfling:{phase:"approach",stats:["wis"]},
- goblin:{phase:"approach",stats:["int","wis"]}
-};
 const ENCOUNTER=[
  {id:"str",label:"Drive it back",stat:"str",dc:14,detail:"Meet its force and break its hold on the route slate."},
  {id:"sta",label:"Hold the breach",stat:"sta",dc:12,detail:"Keep your footing as the loose ground shifts beneath you."},
@@ -38,7 +25,7 @@ const ENCOUNTER=[
 const clone=value=>JSON.parse(JSON.stringify(value));
 const cleanText=value=>String(value??"").replace(/[<>]/g,"").slice(0,220);
 function createSave(profile){
- return {version:VERSION,characterId:String(profile?.id||""),stage:"origin",origin:"",clue:false,enemyResolve:3,enemyPressure:0,outcome:"",completed:false,racialFeatureUsed:false,trollAdaptationReady:false,journal:[],updatedAt:new Date().toISOString()};
+ return {version:VERSION,characterId:String(profile?.id||""),stage:"origin",origin:"",clue:false,approachUsed:"",enemyResolve:3,enemyPressure:0,outcome:"",completed:false,racialFeatureUsed:false,trollAdaptationReady:false,titanBraceReady:false,calafreyWardReady:false,spiritLatticeReady:false,wyrdpathReady:false,journal:[],updatedAt:new Date().toISOString()};
 }
 function statLine(profile){
  const scores=profile?.stats||{};
@@ -49,22 +36,14 @@ function validSave(value,profile){
  if(!["origin","briefing","approach","encounter","aftermath","complete"].includes(value.stage))return false;
  if(value.origin&&!REGIONS.some(region=>region.id===value.origin))return false;
  if(typeof value.clue!=="boolean"||!Number.isInteger(value.enemyResolve)||value.enemyResolve<0||value.enemyResolve>3||!Number.isInteger(value.enemyPressure)||value.enemyPressure<0||value.enemyPressure>3)return false;
- if(!["","victory","driven-off","withdrew"].includes(value.outcome)||typeof value.completed!=="boolean"||!Array.isArray(value.journal)||value.journal.length>100||value.journal.some(x=>typeof x!=="string"))return false;
+ if(value.approachUsed===undefined)value.approachUsed="";
+ if(typeof value.approachUsed!=="string"||value.approachUsed!==""&&!APPROACHES.some(item=>item.id===value.approachUsed))return false;
+ if(!["","victory","driven-off","withdrew","mapped","parley"].includes(value.outcome)||typeof value.completed!=="boolean"||!Array.isArray(value.journal)||value.journal.length>100||value.journal.some(x=>typeof x!=="string"))return false;
  if(value.racialFeatureUsed!==undefined&&typeof value.racialFeatureUsed!=="boolean"||value.trollAdaptationReady!==undefined&&typeof value.trollAdaptationReady!=="boolean")return false;
  if(value.racialFeatureUsed===undefined)value.racialFeatureUsed=false;
  if(value.trollAdaptationReady===undefined)value.trollAdaptationReady=false;
+ for(const key of ["titanBraceReady","calafreyWardReady","spiritLatticeReady","wyrdpathReady"]){if(value[key]===undefined)value[key]=false;if(typeof value[key]!=="boolean")return false;}
  return value.stage!=="complete"||value.completed===true;
-}
-function racialStoryBonus(profile,save,phase,stat){
- if(save.racialFeatureUsed)return {bonus:0,name:""};
- if(profile?.raceId==="troll"){
-  if(phase==="encounter"&&save.trollAdaptationReady)return {bonus:1,name:"Tempered Survivor"};
-  return {bonus:0,name:""};
- }
- const feature=RACIAL_STORY_FEATURES[profile?.raceId];
- if(!feature||feature.phase!==phase||!feature.stats.includes(stat))return {bonus:0,name:""};
- const description=window.soaMnmRules.racialAbilities?.[profile.raceId];
- return {bonus:1,name:description?.name||"Custom racial feature"};
 }
 function check(profile,stat,dc,roll,storyBonus=0){
  const n=Math.trunc(Number(roll));
@@ -77,6 +56,19 @@ function addJournal(save,line){
  save.journal.push(cleanText(line));
  if(save.journal.length>100)save.journal=save.journal.slice(-100);
  save.updatedAt=new Date().toISOString();
+}
+function useRacialFeature(save){if(save.racialFeatureUsed)throw new Error("This racial feature has already been used this chapter.");save.racialFeatureUsed=true;}
+function raiseDanger(save,profile){
+ if(save.titanBraceReady){save.titanBraceReady=false;return " Titan's Craft holds the marker steady; Danger does not rise."}
+ if(save.calafreyWardReady){save.calafreyWardReady=false;return " Calafrey Discipline absorbs the setback; Danger does not rise."}
+ save.enemyPressure=Math.min(3,save.enemyPressure+1);
+ if(profile?.raceId==="troll"&&!save.racialFeatureUsed&&save.enemyPressure===3){
+  save.racialFeatureUsed=true;save.enemyPressure=2;save.enemyResolve=Math.max(0,save.enemyResolve-1);
+  if(save.enemyResolve===0){save.stage="aftermath";save.outcome="victory";return " Tempered Survivor turns the near escape into a counter; the scavenger yields the slate."}
+  return " Tempered Survivor keeps the scavenger from escaping, holding Danger at 2 and removing 1 Resolve."
+ }
+ if(save.enemyPressure>=3){save.stage="aftermath";save.outcome="driven-off";return " Danger reaches 3; the scavenger escapes through a narrow cut."}
+ return " Danger rises to "+save.enemyPressure+"."
 }
 function transition(current,profile,action,roll){
  if(!validSave(current,profile))throw new Error("M&M adventure save does not match this character.");
@@ -93,23 +85,100 @@ function transition(current,profile,action,roll){
  }
  if(action?.type==="approach"&&next.stage==="approach"){
   const option=APPROACHES.find(item=>item.id===action.id);if(!option)throw new Error("Choose an investigation approach.");
-  const trait=racialStoryBonus(profile,next,"approach",option.stat);const result=check(profile,option.stat,option.dc,roll,trait.bonus);if(trait.bonus)next.racialFeatureUsed=true;if(profile.raceId==="troll"&&!result.success)next.trollAdaptationReady=true;next.clue=result.success;next.enemyResolve=result.success?2:3;next.enemyPressure=0;next.stage="encounter";
-  let outcome=result.success?"You find a useful lead before the scavenger blocks the route.":"The clues remain uncertain, but the stolen signal slate draws you to the creature.";
-  addJournal(next,option.label+": d20 "+result.roll+" "+(result.modifier>=0?"+":"")+result.modifier+(result.storyBonus?" + racial feature "+result.storyBonus:"")+" = "+result.total+" vs DC "+result.dc+" \u2014 "+(result.success?"success":"failure")+".");
-  if(trait.bonus)outcome+=" "+trait.name+" reveals a useful opening.";
-  if(profile.raceId==="troll"&&!result.success)outcome+=" Tempered Survivor is ready for the next encounter check.";
+  const result=check(profile,option.stat,option.dc,roll);next.approachUsed=option.id;next.clue=result.success;next.enemyResolve=result.success?2:3;next.enemyPressure=0;next.stage="encounter";
+  const outcome=result.success?"You find a useful lead before the scavenger blocks the route.":"The clues remain uncertain, but the stolen signal slate draws you to the creature.";
+  addJournal(next,option.label+": d20 "+result.roll+" "+(result.modifier>=0?"+":"")+result.modifier+" = "+result.total+" vs DC "+result.dc+" - "+(result.success?"success":"failure")+".");
   return {state:next,message:outcome,roll:result};
+ }
+ if(action?.type==="humanRetry"&&next.stage==="encounter"){
+  if(profile?.raceId!=="human"||next.racialFeatureUsed||next.clue)throw new Error("Many Roads is only available after a failed investigation.");
+  const option=APPROACHES.find(item=>item.id===action.id);if(!option||option.id===next.approachUsed)throw new Error("Choose a different investigation approach.");
+  useRacialFeature(next);
+  const result=check(profile,option.stat,option.dc,roll);
+  if(result.success){next.clue=true;next.enemyResolve=Math.min(next.enemyResolve,2);}
+  addJournal(next,"Many Roads - "+option.label+": d20 "+result.roll+" "+(result.modifier>=0?"+":"")+result.modifier+" = "+result.total+" vs DC "+result.dc+" - "+(result.success?"success":"failure")+".");
+  return {state:next,message:result.success?"A different human perspective uncovers the route clue.":"The second approach fails to clarify the trail, but reveals how the scavenger is moving.",roll:result};
+ }
+ if(action?.type==="racial"){
+  if(action.id!==profile?.raceId||next.racialFeatureUsed)throw new Error("This racial feature is not available to this character.");
+  if(profile.raceId==="gnome"&&next.stage==="approach"){
+   useRacialFeature(next);next.clue=true;next.enemyResolve=2;next.enemyPressure=0;next.approachUsed="";next.stage="encounter";
+   addJournal(next,"Eureka - a patient insight reveals the missing signal trail without a check.");
+   return {state:next,message:"Eureka! A puzzling detail resolves into a clear lead. The scavenger begins at 2 Resolve."};
+  }
+  if(profile.raceId==="deep_gnome"&&next.stage==="encounter"){
+   useRacialFeature(next);next.stage="aftermath";next.outcome="mapped";
+   addJournal(next,"Spiral Cartographer - mapped a safe alternate route past the scavenger.");
+   return {state:next,message:"The deep gnome maps a safe route through the broken ground. The slate remains lost, but the caravan receives a reliable warning."};
+  }
+  if(profile.raceId==="dwarf"&&next.stage==="encounter"){
+   useRacialFeature(next);
+   if(next.enemyPressure>0)next.enemyPressure--;
+   else next.titanBraceReady=true;
+   addJournal(next,next.titanBraceReady?"Titan's Craft - braced the marker against the next setback.":"Titan's Craft - repaired the marker and removed 1 Danger.");
+   return {state:next,message:next.titanBraceReady?"You brace the signal marker; the next Danger increase is canceled.":"You repair the marker under pressure, reducing Danger by 1."};
+  }
+  if(profile.raceId==="deep_dwarf"&&next.stage==="encounter"){
+   useRacialFeature(next);next.spiritLatticeReady=true;
+   addJournal(next,"Spirit Lattice - prepared a bound spirit to catch the scavenger's next opening.");
+   return {state:next,message:"A spirit is bound into a precise lattice. The next failed exchange will cost the scavenger 1 Resolve, though Danger will still rise."};
+  }
+  if(profile.raceId==="high_elf"&&next.stage==="encounter"){
+   useRacialFeature(next);next.calafreyWardReady=true;
+   addJournal(next,"Calafrey Discipline - prepared a measured ward against one setback.");
+   return {state:next,message:"A measured ward takes shape. The next failed exchange will not raise Danger."};
+  }
+  if(profile.raceId==="wood_elf"&&next.stage==="encounter"){
+   useRacialFeature(next);next.wyrdpathReady=true;
+   addJournal(next,"Wyrdpath - followed living signs to take a flanking line.");
+   return {state:next,message:"The wood elf follows signs in the scrub and takes a living flank. The next successful exchange removes 2 Resolve instead of 1."};
+  }
+  if(profile.raceId==="deep_elf"&&next.stage==="encounter"&&next.clue&&next.enemyResolve>0){
+   useRacialFeature(next);next.enemyResolve=Math.max(0,next.enemyResolve-1);
+   if(next.enemyResolve===0){next.stage="aftermath";next.outcome="victory"}
+   addJournal(next,"Shadow's Veil - used the known opening to strike unseen and remove 1 Resolve.");
+   return {state:next,message:next.outcome==="victory"?"The known opening lets the deep elf take the signal slate from the shadows.":"The deep elf uses the clue to strike unseen, removing 1 Resolve without increasing Danger."};
+  }
+  if(profile.raceId==="ogre"&&next.stage==="encounter"){
+   useRacialFeature(next);next.enemyResolve=Math.max(0,next.enemyResolve-1);
+   if(next.enemyResolve===0){next.stage="aftermath";next.outcome="victory";addJournal(next,"Storm Coast Fury - a committed assault broke the scavenger's hold on the signal slate.");return {state:next,message:"The committed assault takes the slate. The scavenger yields before another exchange."}}
+   const danger=raiseDanger(next,profile);addJournal(next,"Storm Coast Fury - removed 1 Resolve and risked 1 Danger.");
+   return {state:next,message:"The ogre lands a committed blow, removing 1 Resolve."+danger};
+  }
+  if(profile.raceId==="halfling"&&next.stage==="encounter"&&next.enemyResolve===1){
+   useRacialFeature(next);next.stage="aftermath";next.outcome="parley";
+   addJournal(next,"Fontborn Memory - settled the encounter with a remembered wayfarer's tale.");
+   return {state:next,message:"An old road-tale gives both sides a way to stand down. The scavenger returns the slate peacefully."};
+  }
+  if(profile.raceId==="goblin"&&next.stage==="encounter"&&next.clue){
+   useRacialFeature(next);
+   const result=check(profile,"dex",13,roll);
+   if(result.success){next.stage="aftermath";next.outcome="victory"}
+   else raiseDanger(next,profile);
+   addJournal(next,"Secret-Sense - hidden-route Dexterity check: d20 "+result.roll+" "+(result.modifier>=0?"+":"")+result.modifier+" = "+result.total+" vs DC 13 - "+(result.success?"success":"failure")+".");
+   const message=result.success?"The goblin spots an unguarded seam, slips through, and recovers the slate.":next.outcome==="driven-off"?"The hidden route closes as the scavenger escapes through another cut.":"The hidden route is watched; Danger rises to "+next.enemyPressure+".";
+   return {state:next,message,roll:result};
+  }
+  throw new Error("This racial feature is not available at this point in the chapter.");
  }
  if(action?.type==="combat"&&next.stage==="encounter"){
   const option=ENCOUNTER.find(item=>item.id===action.id)||(action.id==="class"?{id:"class",label:"Use "+profile.className+" training",stat:bestClassStat(profile),dc:14,detail:"Use your strongest class stat."}:null);if(!option)throw new Error("Choose an encounter action.");
-  const trait=racialStoryBonus(profile,next,"encounter",option.stat);const result=check(profile,option.stat,option.dc,roll,trait.bonus);if(trait.bonus){next.racialFeatureUsed=true;next.trollAdaptationReady=false;}
-  if(result.success){next.enemyResolve=Math.max(0,next.enemyResolve-1);if(next.enemyResolve===0){next.stage="aftermath";next.outcome="victory"}}
-  else{next.enemyPressure=Math.min(3,next.enemyPressure+1);if(next.enemyPressure===3){next.stage="aftermath";next.outcome="driven-off"}}
-  addJournal(next,option.label+": d20 "+result.roll+" "+(result.modifier>=0?"+":"")+result.modifier+(result.storyBonus?" + racial feature "+result.storyBonus:"")+" = "+result.total+" vs DC "+result.dc+" \u2014 "+(result.success?"success":"failure")+".");
+  const result=check(profile,option.stat,option.dc,roll);let featureMessage="";
+  if(result.success){
+   const progress=next.wyrdpathReady?2:1;
+   if(next.wyrdpathReady){next.wyrdpathReady=false;featureMessage=" Wyrdpath turns the flank into a decisive opening."}
+   next.enemyResolve=Math.max(0,next.enemyResolve-progress);
+   if(next.enemyResolve===0){next.stage="aftermath";next.outcome="victory"}
+  }else{
+   if(next.spiritLatticeReady){next.spiritLatticeReady=false;next.enemyResolve=Math.max(0,next.enemyResolve-1);featureMessage=" Spirit Lattice catches the scavenger in a bound spirit, removing 1 Resolve."}
+   if(next.enemyResolve===0){next.stage="aftermath";next.outcome="victory"}
+   else featureMessage+=raiseDanger(next,profile);
+  }
+  addJournal(next,option.label+": d20 "+result.roll+" "+(result.modifier>=0?"+":"")+result.modifier+" = "+result.total+" vs DC "+result.dc+" - "+(result.success?"success":"failure")+".");
   let message=result.success?"Your move turns the encounter in your favor.":"The scavenger forces you to give ground.";
   if(next.outcome==="victory")message="The scavenger yields the route slate and retreats into the broken ground.";
   if(next.outcome==="driven-off")message="The scavenger slips away through a narrow cut. You keep the trail and can still finish the job.";
-  return {state:next,message,roll:result};
+  return {state:next,message:message+featureMessage,roll:result};
  }
  if(action?.type==="retreat"&&next.stage==="encounter"){
   next.stage="aftermath";next.outcome="withdrew";addJournal(next,"Withdrew from the encounter and chose a safer route back.");
@@ -117,9 +186,9 @@ function transition(current,profile,action,roll){
  }
  if(action?.type==="complete"&&next.stage==="aftermath"){
   next.stage="complete";next.completed=true;
-  const resultText=next.outcome==="victory"?"Recovered the Dune Gate signal slate after driving off the scavenger.":next.outcome==="driven-off"?"Marked the scavenger's escape route and restored a safe warning at Dune Gate.":"Mapped a safer approach to Dune Gate and warned the caravan crew.";
+  const resultText=next.outcome==="victory"?"Recovered the Dune Gate signal slate after driving off the scavenger.":next.outcome==="parley"?"Recovered the signal slate through a peaceful parley.":next.outcome==="mapped"?"Mapped a reliable safe route around the scavenger; the signal slate remains missing.":next.outcome==="driven-off"?"Marked the scavenger's escape route and restored a safe warning at Dune Gate.":"Mapped a safer approach to Dune Gate and warned the caravan crew.";
   addJournal(next,"Chapter complete: "+resultText);
-  return {state:next,message:"Chapter complete. The signal route is recorded in your journal."};
+  return {state:next,message:"Chapter complete. The signal route is recorded in the journal."};
  }
  throw new Error("That action is not available in the current chapter.");
 }
@@ -199,17 +268,48 @@ function boot(){
   panel.append(button("Take the trail","Accept the signal-keeper's request and investigate the marker.",()=>perform({type:"accept"},false),"med"));
  }
  function renderApproach(panel){
-  panel.append(el("div","QUEST \u00b7 INVESTIGATE","soa-mnm-kicker"),el("h2","Find the missing signal"));
+  panel.append(el("div","QUEST · INVESTIGATE","soa-mnm-kicker"),el("h2","Find the missing signal"));
   panel.append(el("p","The trail leaves the caravan road at a half-buried marker. Choose how "+profile.name+" looks for the missing route slate. A failed check still advances the story, but leaves the scavenger harder to corner."));
   panel.append(actionList(APPROACHES,"approach"));
+  if(profile.raceId==="gnome"&&!save.racialFeatureUsed)panel.append(button("Eureka - reveal the clue","Use a once-per-chapter insight instead of rolling. The scavenger begins at 2 Resolve.",()=>perform({type:"racial",id:"gnome"},false),"med"));
  }
  function renderEncounter(panel){
-  panel.append(el("div","ENCOUNTER \u00b7 ORIGINAL STORY RULES","soa-mnm-kicker"),el("h2","A scavenger blocks the marker"));
+  panel.append(el("div","ENCOUNTER · ORIGINAL STORY RULES","soa-mnm-kicker"),el("h2","A scavenger blocks the marker"));
   panel.append(el("p","A masked scavenger drags the route slate into the broken ground. This is a custom narrative encounter, not a creature or combat rule from the official game."));
   const meters=el("div",undefined,"soa-mnm-encounter-meters");
   meters.append(meter("Scavenger resolve",save.enemyResolve,save.clue?2:3),meter("Danger",save.enemyPressure,3));
-  panel.append(meters,el("p","Win by reducing resolve to zero. Three failed exchanges let the scavenger escape; retreat is always available. No character death is possible in this story prototype."));
-  const racial=window.soaMnmRules.racialAbilities?.[profile.raceId];if(racial){const traitState=save.racialFeatureUsed?"Custom racial story feature used this chapter.":profile.raceId==="troll"?(save.trollAdaptationReady?"Tempered Survivor is ready after the failed investigation.":"Tempered Survivor responds to a setback; it has not triggered this chapter."):"Custom racial story feature may add +1 to one lore-matched check this chapter.";panel.append(el("p",racial.name+" \u00b7 "+traitState,"soa-mnm-feature-status"));}
+  panel.append(meters,el("p","Win by reducing Resolve to zero. Three Danger lets the scavenger escape; retreat remains available. Racial features are original Shadows of Azeroth rules."));
+  const racial=window.soaMnmRules.racialAbilities?.[profile.raceId];
+  if(racial){
+   const states=[];
+   if(save.racialFeatureUsed)states.push("used this chapter");
+   else if(profile.raceId==="troll")states.push("passive safeguard ready");
+   else states.push("available once this chapter");
+   if(save.titanBraceReady)states.push("Titan's brace prepared");
+   if(save.calafreyWardReady)states.push("Calafrey ward prepared");
+   if(save.spiritLatticeReady)states.push("Spirit Lattice prepared");
+   if(save.wyrdpathReady)states.push("Wyrdpath flank prepared");
+   panel.append(el("p",racial.name+" · "+states.join(" · ")+" - "+racial.effect,"soa-mnm-feature-status"));
+  }
+  if(!save.racialFeatureUsed){
+   const use=(label,detail,id,needsRoll=false)=>panel.append(button(label,detail,()=>perform({type:"racial",id},needsRoll),"med"));
+   if(profile.raceId==="human"&&!save.clue){
+    const alternatives=APPROACHES.filter(item=>item.id!==save.approachUsed);
+    const options=el("div",undefined,"soa-mnm-racial-options");
+    options.append(el("h3","Many Roads - change your approach"),el("p","The first investigation failed. Choose a different method for one fresh roll; it gets no racial modifier."));
+    for(const item of alternatives)options.append(button(item.label,item.detail+" · "+STAT_NAMES[item.stat]+" · DC "+item.dc,()=>perform({type:"humanRetry",id:item.id},true),"low"));
+    panel.append(options);
+   }
+   if(profile.raceId==="deep_gnome")use("Spiral Cartographer - map a safe route","Complete with a reliable warning instead of recovering the slate.","deep_gnome");
+   if(profile.raceId==="dwarf")use("Titan's Craft - brace or repair","Remove 1 Danger, or brace the marker to cancel the next Danger increase.","dwarf");
+   if(profile.raceId==="deep_dwarf")use("Spirit Lattice - prepare a bound spirit","The next failed exchange also removes 1 scavenger Resolve; Danger still rises.","deep_dwarf");
+   if(profile.raceId==="high_elf")use("Calafrey Discipline - prepare a ward","The next failed exchange will not increase Danger.","high_elf");
+   if(profile.raceId==="wood_elf")use("Wyrdpath - take a living flank","The next successful exchange removes 2 Resolve instead of 1; no roll bonus.","wood_elf");
+   if(profile.raceId==="deep_elf"&&save.clue&&save.enemyResolve>0)use("Shadow's Veil - strike unseen","Use the known opening to remove 1 Resolve without increasing Danger.","deep_elf");
+   if(profile.raceId==="ogre")use("Storm Coast Fury - committed assault","Remove 1 Resolve and add 1 Danger.","ogre");
+   if(profile.raceId==="halfling"&&save.enemyResolve===1)use("Fontborn Memory - parley","End the encounter peacefully and recover the slate through an old wayfarer's tale.","halfling");
+   if(profile.raceId==="goblin"&&save.clue)use("Secret-Sense - slip through the hidden route","Unmodified Dexterity check, DC 13. Success takes the slate; failure adds Danger.","goblin",true);
+  }
   const classStat=bestClassStat(profile),classBonus=Number(profile.classBonuses?.[classStat]||0);
   const signature={id:"class",label:"Use "+profile.className+" training",stat:classStat,dc:14,detail:"Make the encounter fit your strongest class stat ("+STAT_NAMES[classStat]+", class modifier "+(classBonus>=0?"+":"")+classBonus+")."};
   panel.append(actionList(ENCOUNTER.filter(x=>x.id!=="sta"),"combat"));
@@ -221,8 +321,8 @@ function boot(){
   const track=el("div",undefined,"soa-mnm-meter-track"),fill=el("i");fill.style.width=(max?Math.max(0,Math.min(100,value/max*100)):0)+"%";track.append(fill);wrap.append(track);return wrap;
  }
  function renderAftermath(panel){
-  panel.append(el("div","QUEST \u00b7 RETURN","soa-mnm-kicker"),el("h2",save.outcome==="victory"?"The route is safe":save.outcome==="driven-off"?"The threat is marked":"A safer route home"));
-  const line=save.outcome==="victory"?"The signal slate is recovered. Sera restores the warning bell before the caravan reaches the broken ground.":"Sera Fen records the danger and marks a safer route around the damaged signal post.";
+  panel.append(el("div","QUEST · RETURN","soa-mnm-kicker"),el("h2",save.outcome==="victory"?"The route is safe":save.outcome==="parley"?"The slate is returned":save.outcome==="mapped"?"A safe route is mapped":save.outcome==="driven-off"?"The threat is marked":"A safer route home"));
+  const line=save.outcome==="victory"?"The signal slate is recovered. Sera restores the warning bell before the caravan reaches the broken ground.":save.outcome==="parley"?"The scavenger returns the signal slate after a peaceful exchange, and Sera restores the warning bell.":save.outcome==="mapped"?"The slate remains missing, but the safe alternate route is mapped and Sera can warn every caravan.":save.outcome==="driven-off"?"Sera records the danger and marks the scavenger's escape route.":"Sera Fen records the danger and marks a safer route around the damaged signal post.";
   panel.append(el("p",line),el("p","Your choices and the encounter are saved in the Journey Log."));
   panel.append(button("Record the chapter","Complete the quest and preserve its outcome in the journal.",()=>perform({type:"complete"},false),"med"));
  }
@@ -244,7 +344,7 @@ function boot(){
   const hero=el("section",undefined,"soa-mnm-game-heading");
   hero.append(el("div","MONSTERS & MEMORIES \u00b7 ORIGINAL ADVENTURE","soa-mnm-kicker"),el("h1",profile.name));
   hero.append(el("p",profile.race+" "+profile.className+" \u00b7 Level "+(profile.level||1)+" \u00b7 "+(save?.origin?REGIONS.find(x=>x.id===save.origin)?.name:"Choose an opening region"),"soa-mnm-subtitle"));
-  const racial=window.soaMnmRules.racialAbilities?.[profile.raceId];if(racial)hero.append(el("p","CUSTOM RACIAL FEATURE \u00b7 "+racial.name+" \u2014 "+racial.description,"soa-mnm-feature"));
+  const racial=window.soaMnmRules.racialAbilities?.[profile.raceId];if(racial)hero.append(el("p","CUSTOM RACIAL FEATURE · "+racial.name+" - "+racial.description+" Effect: "+racial.effect,"soa-mnm-feature"));
   app.append(hero);
   const tabs=el("div",undefined,"soa-mnm-tabs");tabs.setAttribute("role","tablist");tabs.setAttribute("aria-label","M&M character views");
   for(const [id,label] of [["adventure","Adventure"],["character","Character"],["journal","Journey Log"],["combat","Combat"],["progress","Progress"],["inventory","Items"]]){
@@ -286,6 +386,6 @@ function boot(){
  if(blocked&&!save)save=createSave(profile);
  render();
 }
-window.soaMnmAdventure=Object.freeze({key:KEY,createSave,validSave,transition,regions:REGIONS.map(x=>({...x})),approaches:APPROACHES.map(x=>({...x})),encounter:ENCOUNTER.map(x=>({...x})),racialStoryFeatures:{...RACIAL_STORY_FEATURES},boot});
+window.soaMnmAdventure=Object.freeze({key:KEY,createSave,validSave,transition,regions:REGIONS.map(x=>({...x})),approaches:APPROACHES.map(x=>({...x})),encounter:ENCOUNTER.map(x=>({...x})),boot});
 document.addEventListener("DOMContentLoaded",boot);
 })();
