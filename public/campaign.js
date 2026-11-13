@@ -1,4 +1,5 @@
 (()=>{"use strict";
+if(window.soaCharacters?.profile?.()?.system==="mnm"){window.soaLivingCampaign=Object.freeze({getState:()=>null,enabled:()=>false,persist:()=>false,refreshUI:()=>{}});return;}
 const KEY="soa-campaign-v1", MAX=24, COMBAT_RESOURCE_RECOVERY=25, ACTION_RESOURCE_RECOVERY=25;
 let campaign=null,busy=false,enabled=false,customDraft="",customType="investigate",customSocialSkill="auto",statusMessage="",campaignSaveFailed=false,campaignLoadBlocked=false,campaignStorageReadFailed=false,selectedCombatTarget=null,selectedAllyTarget=null;
 const get=id=>document.getElementById(id);

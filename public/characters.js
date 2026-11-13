@@ -1,6 +1,6 @@
 (()=>{"use strict";
 const ROSTER_KEY="soa-character-roster-v1", SLOT_PREFIX="soa-character-slot-v1-", ENTER_KEY="soa-character-entered";
-const SAVES=["soa-save-v1","soa-campaign-v1","soa-companions-v1","soa-reputation-v1","soa-campaign-enabled","soa-progression-v1"];
+const SAVES=["soa-save-v1","soa-campaign-v1","soa-companions-v1","soa-reputation-v1","soa-campaign-enabled","soa-progression-v1","soa-mnm-adventure-v1"];
 const CHARACTER_RULES=window.soaCharacterRules,RACES=CHARACTER_RULES.races;
 const skybornePath=CHARACTER_RULES.pathForFaction;
 const factionDisplay=CHARACTER_RULES.displayFaction;
@@ -97,9 +97,9 @@ function restore(id){
   return false;
  }
 }
-function baseState(profile){if(profile.system==="mnm")return {equipment:[],id:"new-hero-start",hp:0,en:0,money:0,time:0,alert:0,seen:[],flags:{},enemy:null,log:["M&M character record created. Campaign rules are still being converted."]};return {equipment:[...(profile.startingEquipment||BASIC_GEAR[profile.className]||[])],id:"new-hero-start",hp:100,en:100,money:1500,time:0,alert:0,seen:[],flags:{},enemy:null,log:["A new journey begins for "+profile.name+" in "+startingZone(profile)+".","You have 15 silver and no companions."]}}
+function baseState(profile){if(profile.system==="mnm")return {equipment:[],id:"new-hero-start",hp:0,en:0,money:0,time:0,alert:0,seen:[],flags:{},enemy:null,log:["M&M character created. Begin Chapter One from the Adventure tab."]};return {equipment:[...(profile.startingEquipment||BASIC_GEAR[profile.className]||[])],id:"new-hero-start",hp:100,en:100,money:1500,time:0,alert:0,seen:[],flags:{},enemy:null,log:["A new journey begins for "+profile.name+" in "+startingZone(profile)+".","You have 15 silver and no companions."]}}
 function newCampaign(profile){
- if(profile.system==="mnm")return {turn:0,scene:null,history:[],journal:[],startingZone:"",lastError:"",lastAction:"M&M character created. The M&M rules and campaign are still being converted; no Warcraft adventure has been started.",lastResult:"M&M character record ready. Adventure play is not yet converted.",pending:null};
+ if(profile.system==="mnm")return {turn:0,scene:null,history:[],journal:[],startingZone:"",lastError:"",lastAction:"M&M story progress is stored separately from the legacy campaign.",lastResult:"Use the dedicated M&M Adventure screen for Chapter One.",pending:null};
  const zone=startingZone(profile);
  return {turn:0,scene:null,history:[],journal:[],startingZone:zone,lastError:"",lastAction:"Begin the FIRST scene of a completely new adventure for "+profile.name+", a LEVEL 1 "+profile.race+" "+profile.className+" of the "+profile.faction+(profile.race==="Skyborne"?" ("+skybornePath(profile.faction)+")":"")+". STARTING LOCATION: "+zone+". The character starts PHYSICALLY IN THIS STARTING ZONE, ALONE, with exactly 15 silver (1,500 copper), basic class starter equipment only, and no existing allies, companions, party, completed missions, faction standing, personal relationships, or earned equipment beyond the starter kit. Treat faction identity as background only; do not assign numeric standing or relationship scores before an in-world event establishes them. Record relationships and faction standing only after meaningful encounters and choices. "+(profile.race==="Skyborne"&&profile.className==="Druid"?"Skyborne Druids have unique bird-inspired forms; preserve that racial identity in descriptions. ":"")+"Introduce a modest class-appropriate first task and six distinct action choices. No travel skips, established companions, Hollow Raven or Snacky's storyline. Do not grant XP, extra currency, equipment, specialization, or followers in the opening narration.",lastResult:"Level 1 newcomer in "+zone+". Starting funds: 15 silver. Faction standing and personal relationships are unestablished; no previous battles, companions, or rewards.",pending:null};
 }
@@ -194,6 +194,8 @@ function create(profile){
  if(!snapshot(previous)){alert("Unable to back up your current adventure. Character creation has been stopped to protect your save.");return}
  try{
   if(!write("soa-save-v1",baseState(p))||!write("soa-campaign-v1",newCampaign(p)))throw Error("Insufficient storage for new character data");
+  if(isMnm){const adventureSave=window.soaMnmAdventure?.createSave?.(p);if(!adventureSave||!write("soa-mnm-adventure-v1",adventureSave))throw Error("M&M Adventure could not be initialized safely");}
+  else localStorage.removeItem("soa-mnm-adventure-v1");
   localStorage.removeItem("soa-companions-v1");
   localStorage.removeItem("soa-reputation-v1");
   localStorage.removeItem("soa-progression-v1");
@@ -324,7 +326,7 @@ function drawMenu(){
   }
   const feature=r.racialAbilities[race.value];
   racialFeature.replaceChildren();
-  if(feature)racialFeature.append(make("span","CUSTOM RACIAL FEATURE · DESIGN DRAFT","soa-mnm-custom-label"),make("strong",feature.name),make("p",feature.description),make("small","Description only for now; no combat effect is active."));
+  if(feature)racialFeature.append(make("span","CUSTOM RACIAL FEATURE · DESIGN DRAFT","soa-mnm-custom-label"),make("strong",feature.name),make("p",feature.description),make("small","Custom story feature: once per chapter, it can add +1 to a lore-matched story check in Chapter One. It is not an official M&M racial trait."));
   const sourceNote=make("p",raceInfo?.provisional?"Race modifiers for "+raceInfo.name+" are provisional, based on the supplied stat pattern.":"Race and class modifiers are from the supplied in-game table.","muted soa-mnm-note");
   if(raceInfo?.selectable===false)sourceNote.textContent="No current in-game stat line supplied for "+(raceInfo?.name||"this race")+"; new character creation is disabled for it.";
   statPanel.querySelector(".soa-mnm-stat-source")?.remove();
@@ -334,7 +336,7 @@ function drawMenu(){
  race.onchange=updateClassList;klass.onchange=updateStartingStats;updateClassList();
  form.append(labeled("Character name",name),labeled("Gender",gender),labeled("Race",race),labeled("Class",klass),statPanel,racialFeature);
  form.append(make("p","Starting scores use a base of 10 plus the selected race and class modifiers. This is a Shadows of Azeroth rebalance; no extra allocation points are granted during character creation. Three race lines are marked provisional.","muted soa-mnm-note"));
- form.append(make("p","This creates an M&M character record. Campaign, combat, equipment, and progression are still being converted, so no Warcraft faction, professions, starting kit, or silver are assigned.","soa-mnm-warning"));
+ form.append(make("p","This creates an M&M character with a playable offline first chapter. No Warcraft faction, professions, starting kit, or silver are assigned. The chapter uses clearly marked custom story rules; official M&M combat, abilities, equipment, and progression remain in conversion.","soa-mnm-warning"));
  const warning=make("p","","soa-menu-error");warning.setAttribute("aria-live","polite");form.append(warning);
  const submit=make("button","Create M&M Character");submit.type="submit";form.append(submit);
  form.onsubmit=e=>{
@@ -355,7 +357,7 @@ function drawMenu(){
 }
 function profilePanel(){
  const head=document.querySelector("header");if(!head)return;
- const title=get("soa-player-name"),tag=get("soa-player-class");const isMnm=active.system==="mnm";document.body.classList.toggle("soa-ruleset-mnm",isMnm);const kicker=get("soa-brand-kicker"),brand=get("soa-brand-name"),tagline=get("soa-brand-tagline");if(kicker)kicker.textContent=isMnm?"MONSTERS & MEMORIES · CHARACTER RECORD":"An unofficial Azeroth-inspired adventure";if(brand)brand.textContent=isMnm?"THE ADVENTURER’S JOURNAL":"SHADOWS OF AZEROTH";if(tagline)tagline.textContent=isMnm?"RACE · CLASS · SEVEN STATS":"Your Story · Your Choices · Your Legacy";if(title)title.textContent=active.name;if(tag)tag.textContent=isMnm?"M&M · "+active.race+" "+active.className:active.id==="snacky"?"SI:7 · Combat Swords":"LEGACY · "+factionDisplay(active)+" · "+active.race+" "+active.className;
+ const title=get("soa-player-name"),tag=get("soa-player-class");const isMnm=active.system==="mnm";document.body.classList.toggle("soa-ruleset-mnm",isMnm);const kicker=get("soa-brand-kicker"),brand=get("soa-brand-name"),tagline=get("soa-brand-tagline");if(kicker)kicker.textContent=isMnm?"MONSTERS & MEMORIES · CHARACTER RECORD":"An unofficial Azeroth-inspired adventure";if(brand)brand.textContent=isMnm?"THE ADVENTURER’S JOURNAL":"SHADOWS OF AZEROTH";if(tagline)tagline.textContent=isMnm?"AÊTHORIL · QUESTS · SEVEN STATS":"Your Story · Your Choices · Your Legacy";if(title)title.textContent=active.name;if(tag)tag.textContent=isMnm?"M&M · "+active.race+" "+active.className:active.id==="snacky"?"SI:7 · Combat Swords":"LEGACY · "+factionDisplay(active)+" · "+active.race+" "+active.className;
  if(typeof render==="function")render();
  window.soaEquipment?.renderStatus?.();
  const menu=make("button","☰ Characters");menu.id="soa-characters-button";menu.type="button";menu.onclick=drawMenu;head.append(menu);
@@ -370,7 +372,7 @@ function organizeGameSections(){
  if(active.system==="mnm"){
   const status=get("soa-character-status"),profession=get("soa-profession-panel");
   let screen=get("soa-character-screen");
-  if(!screen){screen=make("section");screen.id="soa-character-screen";screen.className="soa-game-screen";screen.setAttribute("aria-label","M&M Character Record");main.insertBefore(screen,main.querySelector(":scope > footer")||null)}
+  if(!screen){screen=make("section");screen.id="soa-character-screen";screen.className="soa-game-screen";screen.setAttribute("aria-label","M&M Adventure and Character Record");main.insertBefore(screen,main.querySelector(":scope > footer")||null)}
   screen.replaceChildren();if(status)status.hidden=true;if(profession){profession.hidden=false;screen.append(profession)}
   for(const child of main.children){if(child!==screen&&child.tagName!=="HEADER"&&child.tagName!=="FOOTER")child.hidden=true}
   return;
@@ -450,7 +452,7 @@ function drawProfessions(){
   const rules=window.soaMnmRules,race=rules.raceById(active.raceId||active.race),klass=rules.classById(active.classId);
   let sheet;
   try{sheet=rules.startingStats(race.id,klass.id)}catch{sheet=null}
-  root.append(make("p","This character uses the seven-stat M&M starting sheet. Values combine a base 10 with race and class modifiers. Campaign play, combat, equipment, and progression are still under conversion.","muted soa-mnm-warning"));
+  root.append(make("p","This character uses the seven-stat M&M starting sheet. Values combine a base 10 with race and class modifiers. Chapter One is playable; official M&M combat, abilities, equipment, and progression are still being converted.","muted soa-mnm-warning"));
   if(sheet){
    if(sheet.provisional)root.append(make("p","PROVISIONAL RACIAL MODIFIERS · "+race.name+" uses a logical stat line from the supplied pattern.","soa-mnm-provisional"));
    const grid=make("div",undefined,"soa-mnm-record-grid"),labels={str:"Strength",sta:"Stamina",dex:"Dexterity",agi:"Agility",int:"Intelligence",wis:"Wisdom",cha:"Charisma"};
@@ -461,7 +463,7 @@ function drawProfessions(){
    }
    root.append(grid);
    const feature=rules.racialAbilities[race.id];
-   if(feature){const ability=make("section",undefined,"soa-mnm-racial-ability");ability.append(make("span","CUSTOM RACIAL FEATURE · DESIGN DRAFT","soa-mnm-custom-label"),make("h3",feature.name),make("p",feature.description),make("small","Description only; no combat effect is active yet."));root.append(ability)}
+   if(feature){const ability=make("section",undefined,"soa-mnm-racial-ability");ability.append(make("span","CUSTOM RACIAL FEATURE · DESIGN DRAFT","soa-mnm-custom-label"),make("h3",feature.name),make("p",feature.description),make("small","Custom story feature: once per chapter, it can add +1 to a lore-matched story check. It is not an official M&M racial trait."));root.append(ability)}
    root.append(make("p","LEVEL "+(active.level||1)+" · "+active.classPrefix+" · No extra point allocation is included; these are the complete starting totals.","soa-mnm-note"));
   }else root.append(make("p","No verified starting-stat line is available for this saved race/class combination. Existing profile data is preserved.","soa-mnm-warning"));
   return;

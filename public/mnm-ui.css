@@ -247,3 +247,47 @@ dialog::backdrop{background:#080a08d9;backdrop-filter:blur(2px)}
  display:block;margin:0;color:#f1ddb0;font:700 29px/1 Georgia,serif;text-shadow:0 2px 4px #000
 }
 .soa-menu-card .soa-character-item>.soa-character-avatar img{width:100%;height:100%;object-fit:cover}
+
+
+/* Playable M&M story chapter: original project narrative on the shared frontier materials. */
+.soa-ruleset-mnm #soa-character-screen .soa-mnm-tabs{display:flex!important;gap:8px;flex-wrap:wrap;margin:0 0 14px;padding:6px;border:2px ridge #746a53;background:linear-gradient(#242824f2,#171b18f5)}
+.soa-mnm-game{width:min(100%,1100px);margin:0 auto}
+.soa-mnm-game-heading{position:relative;margin:10px 0 14px;padding:clamp(18px,3vw,30px);border:3px ridge #8d8060;background:linear-gradient(120deg,#252d2bed,#1b211feF 68%,#332d20eF);box-shadow:inset 0 0 0 2px #101412,0 8px 24px #0008}
+.soa-mnm-game-heading h1{margin:3px 0 5px;color:#e5cc91;font:700 clamp(28px,5vw,44px)/1.1 Georgia,serif}
+.soa-mnm-game-heading p{margin:0;color:#d5d0c3}
+.soa-mnm-kicker{color:#c9a96d;font:700 10px/1.5 system-ui,sans-serif;letter-spacing:.19em;text-transform:uppercase}
+.soa-mnm-subtitle{font:600 13px/1.6 system-ui,sans-serif;letter-spacing:.05em}
+.soa-mnm-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px;padding:7px;border:2px ridge #746a53;background:linear-gradient(#252a26f5,#161a17f5)}
+.soa-ruleset-mnm .soa-mnm-tab{min-width:135px;flex:1;background:linear-gradient(#514e40,#2b302b);border-color:#8f805c}
+.soa-ruleset-mnm .soa-mnm-tab[aria-selected="true"]{color:#f5dfa8;border-style:inset;border-color:#d7b76f;background:linear-gradient(#705e38,#343529);box-shadow:inset 0 0 0 1px #e1c77b66}
+.soa-mnm-live{margin:8px 0;padding:11px 14px;border-left:4px solid #c8a661;background:#4f493488;color:#f0dda9!important;font:600 13px/1.5 system-ui,sans-serif}
+.soa-mnm-adventure-panel{margin:0 0 14px;padding:clamp(16px,3vw,28px);border:3px ridge #81765d;background:linear-gradient(145deg,#2b302df2,#1b201df7);box-shadow:inset 0 0 0 2px #101412,0 8px 24px #0008}
+.soa-mnm-adventure-panel h2{margin:.3em 0 .7em;color:#e0c786;font-size:clamp(24px,4vw,34px)}
+.soa-mnm-adventure-panel p{max-width:78ch;color:#ddd8cb;line-height:1.75}
+.soa-mnm-rule-note{padding:12px 14px;border:1px solid #8a7751;background:#a48d5730;color:#eadbb9!important;font:600 12px/1.65 system-ui,sans-serif}
+.soa-mnm-origin-grid,.soa-mnm-choice-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:16px 0}
+.soa-ruleset-mnm .soa-mnm-choice{display:flex;min-height:78px;flex-direction:column;align-items:flex-start;justify-content:center;gap:6px;text-align:left;white-space:normal;border:2px outset #8a8069;background:linear-gradient(145deg,#414640,#252b27);padding:13px 15px}
+.soa-mnm-choice strong{color:#e3ca8c;font:700 15px/1.3 Georgia,serif}
+.soa-mnm-choice span{color:#d3d0c6;font:12px/1.5 system-ui,sans-serif}
+.soa-mnm-encounter-meters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;max-width:700px;margin:16px 0}
+.soa-mnm-meter{padding:12px;border:1px solid #68716d;background:#222927}
+.soa-mnm-meter>span{color:#d3cdbd;font:700 11px/1.4 system-ui,sans-serif;text-transform:uppercase;letter-spacing:.08em}
+.soa-mnm-meter>strong{float:right;color:#e0c686;font:700 13px/1.4 system-ui,sans-serif}
+.soa-mnm-meter-track{height:9px;clear:both;margin-top:9px;border:1px solid #111;background:#111714}
+.soa-mnm-meter-track i{display:block;height:100%;background:linear-gradient(#d6ba78,#887145);transition:width .2s ease}
+.soa-mnm-rules-disclosure{margin:14px 0;padding:12px 15px;border:1px solid #626c68;background:#1a211e;color:#d7d2c5}
+.soa-mnm-rules-disclosure summary{cursor:pointer;color:#d9bf82;font-weight:700}
+.soa-mnm-rules-disclosure p{max-width:90ch;font:12px/1.7 system-ui,sans-serif}
+.soa-mnm-journal{display:grid;gap:8px;padding-left:24px;color:#ddd8cb}
+.soa-mnm-journal li{padding:9px 12px;border-left:2px solid #8f7c51;background:#222824;font:13px/1.55 system-ui,sans-serif}
+.soa-ruleset-mnm #soa-profession-panel[hidden]{display:none!important}
+.soa-ruleset-mnm .soa-mnm-roster-button{display:block;margin:12px auto;border-color:#a58b5c;background:linear-gradient(#5e5745,#30342d)}
+@media(max-width:700px){
+ .soa-mnm-origin-grid,.soa-mnm-choice-grid{grid-template-columns:1fr}
+ .soa-mnm-encounter-meters{grid-template-columns:1fr}
+ .soa-ruleset-mnm .soa-mnm-tab{min-width:0}
+}
+@media(prefers-reduced-motion:reduce){.soa-mnm-meter-track i{transition:none}}
+
+.soa-mnm-feature{max-width:90ch;margin:12px 0 0;padding:9px 12px;border-left:3px solid #a48b58;background:#a48b5826;color:#e0d5bc!important;font:12px/1.6 system-ui,sans-serif}
+.soa-mnm-feature-status{padding:10px 12px;border-left:3px solid #8c7650;background:#c9aa5322;color:#eadbb9!important;font:700 12px/1.5 system-ui,sans-serif}

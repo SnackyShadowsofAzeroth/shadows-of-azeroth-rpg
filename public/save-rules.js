@@ -166,14 +166,18 @@ function validateCharacterRoster(value){
 }
 function validateRosterBackup(value){
  if(!object(value)||value.kind!=="shadows-of-azeroth-multi-character-backup"||value.version!==1)fail("This is not a supported all-character backup.");
- const roster=value.roster,slots=value.slots,portraits=value.portraits||{};
+ const normalized=structuredClone(value);
+ const roster=normalized.roster,slots=normalized.slots,portraits=normalized.portraits||{};
  if(!object(roster)||roster.version!==1||!Array.isArray(roster.characters)||roster.characters.length<1||roster.characters.length>16||!object(slots)||!object(portraits))fail("Backup roster is incomplete.");
  const validRoster=validateCharacterRoster(roster),ids=new Set(validRoster.characters.map(person=>person.id));
  if(!ids.has(roster.active)||Object.keys(slots).length!==ids.size||Object.keys(slots).some(id=>!ids.has(id)))fail("Backup character slots do not match the roster.");
- const saveKeys=["soa-save-v1","soa-campaign-v1","soa-companions-v1","soa-reputation-v1","soa-campaign-enabled","soa-progression-v1"];
+ const saveKeys=["soa-save-v1","soa-campaign-v1","soa-companions-v1","soa-reputation-v1","soa-campaign-enabled","soa-progression-v1","soa-mnm-adventure-v1"];
+ const requiredSaveKeys=saveKeys.slice(0,6),optionalSaveKey="soa-mnm-adventure-v1";
  for(const id of ids){
-  const slot=slots[id];
-  if(!object(slot)||saveKeys.some(key=>!Object.hasOwn(slot,key))||saveKeys.some(key=>slot[key]!==null&&typeof slot[key]!=="string"))fail("Backup contains an invalid character save slot.");
+  const slot=slots[id],person=roster.characters.find(character=>character.id===id);
+  if(!object(slot)||requiredSaveKeys.some(key=>!Object.hasOwn(slot,key))||requiredSaveKeys.some(key=>slot[key]!==null&&typeof slot[key]!=="string"))fail("Backup contains an invalid character save slot.");
+  if(!Object.hasOwn(slot,optionalSaveKey))slot[optionalSaveKey]=null;
+  if(slot[optionalSaveKey]!==null&&typeof slot[optionalSaveKey]!=="string")fail("Backup contains an invalid M&M adventure save.");
   for(const key of saveKeys.slice(0,4).concat(saveKeys.slice(5))){
    if(slot[key]===null)continue;
    let parsed;try{parsed=JSON.parse(slot[key])}catch{fail("Backup contains unreadable save data.")}
@@ -182,13 +186,15 @@ function validateRosterBackup(value){
    else if(key==="soa-companions-v1")validateCompanionsSave(parsed);
    else if(key==="soa-reputation-v1")validateReputationSave(parsed);
    else if(key==="soa-progression-v1")validateProgressionSave(parsed);
-   else if(!object(parsed))fail("Backup contains invalid character data.");
+   else if(key===optionalSaveKey){
+    if(person?.system!=="mnm"||!window.soaMnmAdventure?.validSave?.(parsed,person))fail("Backup contains an invalid M&M adventure save.");
+   }else if(!object(parsed))fail("Backup contains invalid character data.");
   }
   if(slot["soa-campaign-enabled"]!==null&&!['0','1'].includes(slot["soa-campaign-enabled"]))fail("Backup campaign setting is invalid.");
   if(typeof slot["soa-save-v1"]!=="string"&&typeof slot["soa-campaign-v1"]!=="string")fail("A character is missing both game saves.");
  }
  for(const [id,data] of Object.entries(portraits))if(!ids.has(id)||typeof data!=="string"||data.length>=210000||!/^data:image\/jpeg;base64,[a-z0-9+/=]+$/i.test(data))fail("Backup portrait data is invalid.");
- return structuredClone(value);
+ return normalized;
 }
 window.soaSaveRules={validateOfflineSave,validateCampaignSave,validateChronicle,validateProgressionSave,validateCompanionsSave,validateReputationSave,validateCharacterRoster,validateRosterBackup,freshOfflineSave,readStoredJSON,reportCorruption,clearCorruption,clearAllCorruption,isIntegrityBlocked:()=>integrityIssues.size>0};
 })();

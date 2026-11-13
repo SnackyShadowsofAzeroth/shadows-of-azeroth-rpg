@@ -78,7 +78,7 @@ const CLASS_BONUSES=Object.freeze({
  spellblade:vector({str:2,dex:3,int:3}),
  wizard:vector({str:3,dex:1,int:4})
 });
-/* Custom, lore-grounded design concepts; descriptions only, with no gameplay effects yet. */
+/* Custom, lore-grounded story features. Their one-use narrative effects are implemented in mnm-adventure.js, not presented as official M&M traits. */
 const RACIAL_ABILITIES=Object.freeze({
  human:{name:"Many Roads",description:"A human's upbringing in a seafaring, noble, bureaucratic, or nomadic tradition lends a practical perspective to unfamiliar trouble."},
  gnome:{name:"Eureka",description:"A flash of patient curiosity turns a puzzling detail into an inventive lead, reflecting the gnomes' relentless search for truth."},

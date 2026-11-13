@@ -10,26 +10,23 @@ Rebuild Shadows of Azeroth around the user's Monsters & Memories rules and an or
 - Troll, High Elf, and Deep Dwarf have logical provisional racial modifiers and are visibly marked provisional. Var'nai remains readable in old profiles but is not offered for new creation because no stat line was supplied.
 - Deep Gnome Bard is included per the latest official patch note.
 - New M&M profiles save the seven-stat starting sheet and both modifier vectors without changing legacy saves. Character creation grants no extra stat points; a later allocation system depends on combat tuning.
-- Each selectable race has an original custom racial-feature concept with a short description. It is explicitly design-only and has no active combat/gameplay effect yet.
-- M&M campaign, combat, equipment, and progression remain under conversion; the character sheet communicates this.
+- Each selectable race has a lore-matched custom story feature. In Chapter One, the matching feature can grant +1 on one eligible story check; Troll's Tempered Survivor triggers after an investigation setback. These are project-specific story effects, not official M&M racial traits.
+- A dedicated offline M&M story module now provides one complete original chapter with exploration checks, a branching encounter, safe retreat, a saved journal, and a completion state. Its d20 checks and Resolve/Pressure encounter are custom Shadows of Azeroth rules; official combat, abilities, XP, equipment, and progression remain unimplemented.
 
 ## Readiness audit (2026-11-13)
 
-**The M&M version is not yet a playable full RPG.** Character creation works, but new M&M characters are deliberately routed to a character-record screen while the former Warcraft campaign screens are hidden.
+**The M&M version now has a playable first-chapter vertical slice, but it is not yet a full RPG.** M&M characters enter a dedicated, offline story screen. Legacy Warcraft campaign startup is explicitly disabled for them.
 
 | System | Current state |
 | --- | --- |
-| Race/class creation and restrictions | Connected to the M&M creator. User-provided stat modifiers update all seven displayed starting totals. Troll, High Elf, and Deep Dwarf remain provisional; Var'nai creation is unavailable without a stat line. |
-| Character records and local roster | M&M profile and starting stats are saved separately from legacy character profiles. There is no M&M adventure save model yet. |
-| M&M setting, starting location, NPCs, and quests | Not playable. No M&M opening adventure or quest path is wired to the character screen. |
-| Checks and ability use | A d20 helper and eligibility checks exist in `mnm-rules.js`, but the campaign does not call them. No official M&M ability catalog is connected. |
-| Combat | No M&M initiative, attacks, defenses, resources, encounter resolution, or retreat flow. The existing combat engine is legacy rules and is hidden for M&M characters. |
-| Leveling, learning, and progression | M&M characters start at level 1. There is no M&M XP curve, level table, trainer flow, ability learning, or advancement loop. |
-| Inventory and rewards | M&M profiles start with empty equipment and currency. No M&M item catalog, loot, vendors, or equipment rules are connected. |
-| Racial features | Race feature concepts are shown as custom design drafts only; none has a gameplay effect. |
-| Offline and mobile delivery | The app shell supports offline/mobile delivery for existing content. An eventual M&M adventure module must be added to the service-worker cache and save-slot/backup flow. |
-
-Treat the current live M&M experience as a **character creator and record prototype**, not a full RPG. Legacy characters still use the older Warcraft-inspired game; they are not evidence that M&M gameplay is complete.
+| Race/class creation and starting stats | Connected to the M&M creator. User-provided modifiers update all seven totals from a base of 10. Troll, High Elf, and Deep Dwarf remain provisional; Var'nai creation is unavailable without a stat line. |
+| Character record and roster | M&M stats remain separate from legacy profiles. Adventure progress is stored under `soa-mnm-adventure-v1`, included in character switching and archive backup, and initialized independently per character. |
+| M&M setting and origins | Chapter One uses the official Aêthoril/Szuur setting frame and offers Night Harbor, the Underdocks, Faelindral, and Ail'vorith as story origins. The choice is labeled custom because this creator does not model faith/deity restrictions for official starting cities. |
+| Quest and exploration | One complete original quest, **The Quiet Signal at Dune Gate**, has an investigation branch. Checks are driven by the seven M&M starting stats; failed checks still advance the story. Choices and results appear in the local Journey Log. |
+| Encounter | One repeatable-until-resolved story encounter uses custom Resolve/Pressure counters, safe retreat, and a no-death fallback. It is explicitly labeled as a Shadows of Azeroth narrative rule, not official M&M combat. |
+| Class and racial abilities | No official M&M class ability catalog is available in the project, so no official class abilities are simulated. Lore-matched racial story features have a once-per-chapter +1 effect in this chapter; these are clearly labeled custom and do not claim to reproduce official racial traits. |
+| XP, levels, gear, and rewards | Not implemented for M&M. The first chapter deliberately grants no XP, equipment, or currency; the character stays level 1. |
+| Offline and mobile delivery | The new adventure module and its UI are in the service-worker shell cache. Its save key participates in character switching, backup, restore, and older-backup compatibility. |
 
 ## Remaining conversion order
 1. **Rules and catalogs** — verify ability tables, racial feature mechanics, level tables, items, equipment, and progression from established references.
