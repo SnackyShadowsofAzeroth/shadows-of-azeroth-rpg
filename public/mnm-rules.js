@@ -93,7 +93,7 @@ const RACIAL_ABILITIES=Object.freeze({
  troll:{name:"Tempered Survivor",description:"Trolls are resilient, adaptive hunters whose lives have been tempered by war and catastrophe.",effect:"Once, when Danger would force the scavenger to escape, hold at 2 Danger and counter for 1 Resolve."},
  goblin:{name:"Secret-Sense",description:"Goblins are valued for sensing secrets, hidden entrances, deception, and opportunities others miss.",effect:"After finding a clue, attempt an unmodified Dexterity check (DC 13) to recover the slate through a hidden route; failure adds Danger."}
 });
-const raceById=const raceById=id=>RACES.find(x=>x.id===id)||null;
+const raceById=id=>RACES.find(x=>x.id===id)||null;
 const raceByName=name=>RACES.find(x=>x.name===name)||null;
 const classById=id=>CLASSES.find(x=>x.id===id)||null;
 const classesForRace=id=>(AVAILABILITY[id]||[]).map(classById).filter(Boolean);
