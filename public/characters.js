@@ -326,7 +326,7 @@ function drawMenu(){
   racialFeature.replaceChildren();
   if(feature)racialFeature.append(make("span","CUSTOM RACIAL FEATURE · DESIGN DRAFT","soa-mnm-custom-label"),make("strong",feature.name),make("p",feature.description),make("small","Description only for now; no combat effect is active."));
   const sourceNote=make("p",raceInfo?.provisional?"Race modifiers for "+raceInfo.name+" are provisional, based on the supplied stat pattern.":"Race and class modifiers are from the supplied in-game table.","muted soa-mnm-note");
-  if(!raceInfo?.selectable)sourceNote.textContent="No current in-game stat line supplied for "+(raceInfo?.name||"this race")+"; new character creation is disabled for it.";
+  if(raceInfo?.selectable===false)sourceNote.textContent="No current in-game stat line supplied for "+(raceInfo?.name||"this race")+"; new character creation is disabled for it.";
   statPanel.querySelector(".soa-mnm-stat-source")?.remove();
   sourceNote.className+=(raceInfo?.provisional?" soa-mnm-provisional":"")+" soa-mnm-stat-source";
   statPanel.append(sourceNote);
