@@ -235,3 +235,15 @@ dialog::backdrop{background:#080a08d9;backdrop-filter:blur(2px)}
 /* Keep a single roster row spacious instead of leaving an empty column beside it. */
 .soa-menu-card{width:min(100%,1100px)}
 .soa-character-list:has(>.soa-character-item:only-child){grid-template-columns:1fr}
+
+/* Give characters without a custom portrait a compact frontier medallion. */
+.soa-menu-card .soa-character-item>.soa-character-avatar{
+ flex:0 0 78px;width:78px;height:78px;display:grid;place-items:center;overflow:hidden;
+ border:4px ridge #ad915e;border-radius:2px;
+ background:linear-gradient(180deg,#15161255,#151612bb),url("./frontier-menu.png") 17% 62%/cover;
+ box-shadow:inset 0 0 0 2px #332819,0 2px 5px #0008
+}
+.soa-menu-card .soa-character-item>.soa-character-avatar>span{
+ display:block;margin:0;color:#f1ddb0;font:700 29px/1 Georgia,serif;text-shadow:0 2px 4px #000
+}
+.soa-menu-card .soa-character-item>.soa-character-avatar img{width:100%;height:100%;object-fit:cover}
