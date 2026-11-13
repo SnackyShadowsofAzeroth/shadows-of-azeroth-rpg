@@ -153,6 +153,7 @@ function boot(){
  screen.replaceChildren();screen.setAttribute("aria-label","M&M Adventure and character record");
  const app=el("div",undefined,"soa-mnm-game");
  screen.append(app);
+ app.addEventListener("soa-mnm-system-update",()=>render());
  let view="adventure",statusText=loadMessage;
  function button(label,description,onClick,cls){
   const b=el("button",undefined,"soa-mnm-choice"+(cls?" "+cls:""));b.type="button";
@@ -245,8 +246,8 @@ function boot(){
   hero.append(el("p",profile.race+" "+profile.className+" \u00b7 Level "+(profile.level||1)+" \u00b7 "+(save?.origin?REGIONS.find(x=>x.id===save.origin)?.name:"Choose an opening region"),"soa-mnm-subtitle"));
   const racial=window.soaMnmRules.racialAbilities?.[profile.raceId];if(racial)hero.append(el("p","CUSTOM RACIAL FEATURE \u00b7 "+racial.name+" \u2014 "+racial.description,"soa-mnm-feature"));
   app.append(hero);
-  const tabs=el("div",undefined,"soa-mnm-tabs");tabs.setAttribute("role","tablist");tabs.setAttribute("aria-label","Adventure views");
-  for(const [id,label] of [["adventure","Adventure"],["character","Character"],["journal","Journey Log"]]){
+  const tabs=el("div",undefined,"soa-mnm-tabs");tabs.setAttribute("role","tablist");tabs.setAttribute("aria-label","M&M character views");
+  for(const [id,label] of [["adventure","Adventure"],["character","Character"],["journal","Journey Log"],["combat","Combat"],["progress","Progress"],["inventory","Items"]]){
    const b=el("button",label,"soa-mnm-tab");b.type="button";b.dataset.view=id;b.setAttribute("role","tab");b.setAttribute("aria-selected",String(view===id));b.onclick=()=>setView(id,false);tabs.append(b);
   }
   app.append(tabs);
@@ -257,6 +258,10 @@ function boot(){
    else app.append(el("p","The character record is temporarily unavailable."));
   }else if(view==="journal"){
    const pane=el("section",undefined,"soa-mnm-adventure-panel");renderJournal(pane);app.append(pane);
+  }else if(view==="combat"||view==="progress"||view==="inventory"){
+   const systemPanel=window.soaMnmSystems?.render?.(view,profile,()=>render());
+   if(systemPanel)app.append(systemPanel);
+   else{const pane=el("section",undefined,"soa-mnm-adventure-panel");pane.append(el("h2","M&M system unavailable"),el("p","The M&M rules module did not load."));app.append(pane)}
   }else{
    const pane=el("section",undefined,"soa-mnm-adventure-panel");
    const steps=["origin","briefing","approach","encounter","aftermath","complete"];
@@ -271,7 +276,7 @@ function boot(){
   }
   const rules=el("details",undefined,"soa-mnm-rules-disclosure");
   rules.append(el("summary","Story rules and M&M source note"));
-  rules.append(el("p","Checks use this project's existing d20 helper: d20 + floor((starting stat \u2212 10) / 2) against the printed DC; natural 20 succeeds and natural 1 fails. DCs and the Resolve/Pressure encounter are custom Shadows of Azeroth story rules. They do not replace official M&M combat, class abilities, XP, or item rules."));
+  rules.append(el("p","Checks use this project's existing d20 helper: d20 + floor((starting stat \u2212 10) / 2) against the printed DC; natural 20 succeeds and natural 1 fails. DCs and the Resolve/Pressure encounter are custom Shadows of Azeroth story rules. The Combat, Progress, and Items views expose documented M&M rules, but do not resolve damage, award or level XP, or create catalog items until official formulas and data are available."));
   app.append(rules);
   const roster=el("button","\u2630 Character Select","soa-mnm-roster-button");roster.type="button";roster.onclick=()=>window.soaCharacters?.showMenu?.();app.append(roster);
  }
