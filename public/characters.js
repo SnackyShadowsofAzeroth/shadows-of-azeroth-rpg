@@ -1,6 +1,6 @@
 (()=>{"use strict";
 const ROSTER_KEY="soa-character-roster-v1", SLOT_PREFIX="soa-character-slot-v1-", ENTER_KEY="soa-character-entered";
-const SAVES=["soa-save-v1","soa-campaign-v1","soa-companions-v1","soa-reputation-v1","soa-campaign-enabled","soa-progression-v1","soa-mnm-adventure-v1"];
+const SAVES=["soa-save-v1","soa-campaign-v1","soa-companions-v1","soa-reputation-v1","soa-campaign-enabled","soa-progression-v1","soa-mnm-adventure-v1","soa-mnm-systems-v1"];
 const CHARACTER_RULES=window.soaCharacterRules,RACES=CHARACTER_RULES.races;
 const skybornePath=CHARACTER_RULES.pathForFaction;
 const factionDisplay=CHARACTER_RULES.displayFaction;
@@ -194,8 +194,15 @@ function create(profile){
  if(!snapshot(previous)){alert("Unable to back up your current adventure. Character creation has been stopped to protect your save.");return}
  try{
   if(!write("soa-save-v1",baseState(p))||!write("soa-campaign-v1",newCampaign(p)))throw Error("Insufficient storage for new character data");
-  if(isMnm){const adventureSave=window.soaMnmAdventure?.createSave?.(p);if(!adventureSave||!write("soa-mnm-adventure-v1",adventureSave))throw Error("M&M Adventure could not be initialized safely");}
-  else localStorage.removeItem("soa-mnm-adventure-v1");
+  if(isMnm){
+   const adventureSave=window.soaMnmAdventure?.createSave?.(p);
+   if(!adventureSave||!write("soa-mnm-adventure-v1",adventureSave))throw Error("M&M Adventure could not be initialized safely");
+   const systemSave=window.soaMnmSystems?.createSave?.(p);
+   if(!systemSave||!write("soa-mnm-systems-v1",systemSave))throw Error("M&M systems could not be initialized safely");
+  }else{
+   localStorage.removeItem("soa-mnm-adventure-v1");
+   localStorage.removeItem("soa-mnm-systems-v1");
+  }
   localStorage.removeItem("soa-companions-v1");
   localStorage.removeItem("soa-reputation-v1");
   localStorage.removeItem("soa-progression-v1");
