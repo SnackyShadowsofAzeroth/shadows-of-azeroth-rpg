@@ -1,5 +1,5 @@
 /* M&M in-game stat model for Shadows of Azeroth.
- * Race/class modifiers were supplied by the user. Baseline 16 and seven stat keys follow the in-game character sheet.
+ * Race/class modifiers were supplied by the user. The seven stat keys follow the in-game character sheet; this project's starting baseline is 10.
  * Three unreleased race modifiers are explicitly provisional; Var'nai is kept for old saves but not offered for new creation.
  */
 (()=>{"use strict";

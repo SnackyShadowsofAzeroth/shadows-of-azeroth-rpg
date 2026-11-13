@@ -450,7 +450,7 @@ function drawProfessions(){
   const rules=window.soaMnmRules,race=rules.raceById(active.raceId||active.race),klass=rules.classById(active.classId);
   let sheet;
   try{sheet=rules.startingStats(race.id,klass.id)}catch{sheet=null}
-  root.append(make("p","This character uses the seven-stat M&M starting sheet. Values combine a base 16 with race and class modifiers. Campaign play, combat, equipment, and progression are still under conversion.","muted soa-mnm-warning"));
+  root.append(make("p","This character uses the seven-stat M&M starting sheet. Values combine a base 10 with race and class modifiers. Campaign play, combat, equipment, and progression are still under conversion.","muted soa-mnm-warning"));
   if(sheet){
    if(sheet.provisional)root.append(make("p","PROVISIONAL RACIAL MODIFIERS · "+race.name+" uses a logical stat line from the supplied pattern.","soa-mnm-provisional"));
    const grid=make("div",undefined,"soa-mnm-record-grid"),labels={str:"Strength",sta:"Stamina",dex:"Dexterity",agi:"Agility",int:"Intelligence",wis:"Wisdom",cha:"Charisma"};
@@ -462,7 +462,7 @@ function drawProfessions(){
    root.append(grid);
    const feature=rules.racialAbilities[race.id];
    if(feature){const ability=make("section",undefined,"soa-mnm-racial-ability");ability.append(make("span","CUSTOM RACIAL FEATURE · DESIGN DRAFT","soa-mnm-custom-label"),make("h3",feature.name),make("p",feature.description),make("small","Description only; no combat effect is active yet."));root.append(ability)}
-   root.append(make("p","LEVEL "+(active.level||1)+" · "+active.classPrefix+" · 10 in-game bonus points are not included in these starting totals.","soa-mnm-note"));
+   root.append(make("p","LEVEL "+(active.level||1)+" · "+active.classPrefix+" · No extra point allocation is included; these are the complete starting totals.","soa-mnm-note"));
   }else root.append(make("p","No verified starting-stat line is available for this saved race/class combination. Existing profile data is preserved.","soa-mnm-warning"));
   return;
  }

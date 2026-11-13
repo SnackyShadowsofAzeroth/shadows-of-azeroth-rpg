@@ -13,6 +13,24 @@ Rebuild Shadows of Azeroth around the user's Monsters & Memories rules and an or
 - Each selectable race has an original custom racial-feature concept with a short description. It is explicitly design-only and has no active combat/gameplay effect yet.
 - M&M campaign, combat, equipment, and progression remain under conversion; the character sheet communicates this.
 
+## Readiness audit (2026-11-13)
+
+**The M&M version is not yet a playable full RPG.** Character creation works, but new M&M characters are deliberately routed to a character-record screen while the former Warcraft campaign screens are hidden.
+
+| System | Current state |
+| --- | --- |
+| Race/class creation and restrictions | Connected to the M&M creator. User-provided stat modifiers update all seven displayed starting totals. Troll, High Elf, and Deep Dwarf remain provisional; Var'nai creation is unavailable without a stat line. |
+| Character records and local roster | M&M profile and starting stats are saved separately from legacy character profiles. There is no M&M adventure save model yet. |
+| M&M setting, starting location, NPCs, and quests | Not playable. No M&M opening adventure or quest path is wired to the character screen. |
+| Checks and ability use | A d20 helper and eligibility checks exist in `mnm-rules.js`, but the campaign does not call them. No official M&M ability catalog is connected. |
+| Combat | No M&M initiative, attacks, defenses, resources, encounter resolution, or retreat flow. The existing combat engine is legacy rules and is hidden for M&M characters. |
+| Leveling, learning, and progression | M&M characters start at level 1. There is no M&M XP curve, level table, trainer flow, ability learning, or advancement loop. |
+| Inventory and rewards | M&M profiles start with empty equipment and currency. No M&M item catalog, loot, vendors, or equipment rules are connected. |
+| Racial features | Race feature concepts are shown as custom design drafts only; none has a gameplay effect. |
+| Offline and mobile delivery | The app shell supports offline/mobile delivery for existing content. An eventual M&M adventure module must be added to the service-worker cache and save-slot/backup flow. |
+
+Treat the current live M&M experience as a **character creator and record prototype**, not a full RPG. Legacy characters still use the older Warcraft-inspired game; they are not evidence that M&M gameplay is complete.
+
 ## Remaining conversion order
 1. **Rules and catalogs** — verify ability tables, racial feature mechanics, level tables, items, equipment, and progression from established references.
 2. **Character progression** — after level-one combat and derived-stat effects are tuned, decide whether to add a Shadows of Azeroth allocation budget and define caps from those mechanics; the current creator grants no extra points.
