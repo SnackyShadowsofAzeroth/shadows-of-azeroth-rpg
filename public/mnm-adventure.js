@@ -3,7 +3,7 @@ const KEY="soa-mnm-adventure-v1",VERSION=1;
 const STATS=["str","sta","dex","agi","int","wis","cha"];
 const STAT_NAMES={str:"Strength",sta:"Stamina",dex:"Dexterity",agi:"Agility",int:"Intelligence",wis:"Wisdom",cha:"Charisma"};
 const REGIONS=[
- {id:"night-harbor",name:"Night Harbor",description:"Aêthoril's western port, where the coastal charts point out toward Szuur.",lore:"Night Harbor is the Crown Jewel of the West, a great port on Aêthoril's western coast."},
+ {id:"night-harbor",name:"Night Harbor",description:"A\u00eathoril's western port, where the coastal charts point out toward Szuur.",lore:"Night Harbor is the Crown Jewel of the West, a great port on A\u00eathoril's western coast."},
  {id:"underdocks",name:"The Underdocks",description:"A shadowed port beneath Night Harbor, carrying trade down toward the Deep.",lore:"The Underdocks lie far below Night Harbor and connect its trade routes with the Deep."},
  {id:"faelindral",name:"Faelindral",description:"A city in the trees in the enchanted lands of Calafrey.",lore:"Faelindral stands north of Szuur among the green lands of Calafrey."},
  {id:"ail-vorith",name:"Ail'vorith",description:"The Deep Elves' dark capital beneath eastern Calafrey.",lore:"Ail'vorith rests deep below the eastern lands of Calafrey."}
@@ -95,7 +95,7 @@ function transition(current,profile,action,roll){
   const option=APPROACHES.find(item=>item.id===action.id);if(!option)throw new Error("Choose an investigation approach.");
   const trait=racialStoryBonus(profile,next,"approach",option.stat);const result=check(profile,option.stat,option.dc,roll,trait.bonus);if(trait.bonus)next.racialFeatureUsed=true;if(profile.raceId==="troll"&&!result.success)next.trollAdaptationReady=true;next.clue=result.success;next.enemyResolve=result.success?2:3;next.enemyPressure=0;next.stage="encounter";
   let outcome=result.success?"You find a useful lead before the scavenger blocks the route.":"The clues remain uncertain, but the stolen signal slate draws you to the creature.";
-  addJournal(next,option.label+": d20 "+result.roll+" "+(result.modifier>=0?"+":"")+result.modifier+(result.storyBonus?" + racial feature "+result.storyBonus:"")+" = "+result.total+" vs DC "+result.dc+" — "+(result.success?"success":"failure")+".");
+  addJournal(next,option.label+": d20 "+result.roll+" "+(result.modifier>=0?"+":"")+result.modifier+(result.storyBonus?" + racial feature "+result.storyBonus:"")+" = "+result.total+" vs DC "+result.dc+" \u2014 "+(result.success?"success":"failure")+".");
   if(trait.bonus)outcome+=" "+trait.name+" reveals a useful opening.";
   if(profile.raceId==="troll"&&!result.success)outcome+=" Tempered Survivor is ready for the next encounter check.";
   return {state:next,message:outcome,roll:result};
@@ -105,7 +105,7 @@ function transition(current,profile,action,roll){
   const trait=racialStoryBonus(profile,next,"encounter",option.stat);const result=check(profile,option.stat,option.dc,roll,trait.bonus);if(trait.bonus){next.racialFeatureUsed=true;next.trollAdaptationReady=false;}
   if(result.success){next.enemyResolve=Math.max(0,next.enemyResolve-1);if(next.enemyResolve===0){next.stage="aftermath";next.outcome="victory"}}
   else{next.enemyPressure=Math.min(3,next.enemyPressure+1);if(next.enemyPressure===3){next.stage="aftermath";next.outcome="driven-off"}}
-  addJournal(next,option.label+": d20 "+result.roll+" "+(result.modifier>=0?"+":"")+result.modifier+(result.storyBonus?" + racial feature "+result.storyBonus:"")+" = "+result.total+" vs DC "+result.dc+" — "+(result.success?"success":"failure")+".");
+  addJournal(next,option.label+": d20 "+result.roll+" "+(result.modifier>=0?"+":"")+result.modifier+(result.storyBonus?" + racial feature "+result.storyBonus:"")+" = "+result.total+" vs DC "+result.dc+" \u2014 "+(result.success?"success":"failure")+".");
   let message=result.success?"Your move turns the encounter in your favor.":"The scavenger forces you to give ground.";
   if(next.outcome==="victory")message="The scavenger yields the route slate and retreats into the broken ground.";
   if(next.outcome==="driven-off")message="The scavenger slips away through a narrow cut. You keep the trail and can still finish the job.";
@@ -161,7 +161,7 @@ function boot(){
  function actionList(choices,kind){
   const list=el("div",undefined,"soa-mnm-choice-grid");
   for(const choice of choices){
-   const text=choice.detail+" · "+STAT_NAMES[choice.stat]+" · DC "+choice.dc;
+   const text=choice.detail+" \u00b7 "+STAT_NAMES[choice.stat]+" \u00b7 DC "+choice.dc;
    list.append(button(choice.label,text,()=>perform({type:kind,id:choice.id},true)));
   }
   return list;
@@ -179,36 +179,36 @@ function boot(){
    const result=transition(save,profile,action,roll);
    save=result.state;
    localStorage.setItem(KEY,JSON.stringify(save));
-   statusText=result.message+(result.roll?" Roll "+result.roll.roll+" + "+result.roll.modifier+" = "+result.roll.total+" vs DC "+result.roll.dc+" · "+(result.roll.success?"Success":"Failure")+".":"");
+   statusText=result.message+(result.roll?" Roll "+result.roll.roll+" + "+result.roll.modifier+" = "+result.roll.total+" vs DC "+result.roll.dc+" \u00b7 "+(result.roll.success?"Success":"Failure")+".":"");
   }catch(error){save=before;statusText=error.message}
   render();
   app.querySelector("h2")?.focus();
  }
  function renderOrigin(panel){
-  panel.append(el("p","Choose the opening region for this custom story chapter on Aêthoril. The official game's starting-city eligibility can depend on race, faith/deity, and class; this story-origin choice does not enforce that full matrix.","soa-mnm-rule-note"));
+  panel.append(el("p","Choose the opening region for this custom story chapter on A\u00eathoril. The official game's starting-city eligibility can depend on race, faith/deity, and class; this story-origin choice does not enforce that full matrix.","soa-mnm-rule-note"));
   const grid=el("div",undefined,"soa-mnm-origin-grid");
   for(const region of REGIONS)grid.append(button(region.name,region.description+" "+region.lore,()=>perform({type:"origin",region:region.id},false)));
   panel.append(grid);
  }
  function renderBriefing(panel){
   const region=REGIONS.find(item=>item.id===save.origin);
-  panel.append(el("div","ORIGINAL PROJECT STORY · CHAPTER ONE","soa-mnm-kicker"),el("h2","The Quiet Signal at Dune Gate"));
+  panel.append(el("div","ORIGINAL PROJECT STORY \u00b7 CHAPTER ONE","soa-mnm-kicker"),el("h2","The Quiet Signal at Dune Gate"));
   panel.append(el("p","From "+region.name+", you travel toward the outer reaches of Szuur. Sera Fen, a caravan signal-keeper, says the warning bell at Dune Gate has gone silent. A route slate is missing, and the next caravan is already on the road."));
   panel.append(el("p","The Szuur route and its missing signal are original story material for this game. Your race and class shape your character sheet; no official M&M class abilities are being simulated in this chapter."));
   panel.append(button("Take the trail","Accept the signal-keeper's request and investigate the marker.",()=>perform({type:"accept"},false),"med"));
  }
  function renderApproach(panel){
-  panel.append(el("div","QUEST · INVESTIGATE","soa-mnm-kicker"),el("h2","Find the missing signal"));
+  panel.append(el("div","QUEST \u00b7 INVESTIGATE","soa-mnm-kicker"),el("h2","Find the missing signal"));
   panel.append(el("p","The trail leaves the caravan road at a half-buried marker. Choose how "+profile.name+" looks for the missing route slate. A failed check still advances the story, but leaves the scavenger harder to corner."));
   panel.append(actionList(APPROACHES,"approach"));
  }
  function renderEncounter(panel){
-  panel.append(el("div","ENCOUNTER · ORIGINAL STORY RULES","soa-mnm-kicker"),el("h2","A scavenger blocks the marker"));
+  panel.append(el("div","ENCOUNTER \u00b7 ORIGINAL STORY RULES","soa-mnm-kicker"),el("h2","A scavenger blocks the marker"));
   panel.append(el("p","A masked scavenger drags the route slate into the broken ground. This is a custom narrative encounter, not a creature or combat rule from the official game."));
   const meters=el("div",undefined,"soa-mnm-encounter-meters");
   meters.append(meter("Scavenger resolve",save.enemyResolve,save.clue?2:3),meter("Danger",save.enemyPressure,3));
   panel.append(meters,el("p","Win by reducing resolve to zero. Three failed exchanges let the scavenger escape; retreat is always available. No character death is possible in this story prototype."));
-  const racial=window.soaMnmRules.racialAbilities?.[profile.raceId];if(racial){const traitState=save.racialFeatureUsed?"Custom racial story feature used this chapter.":profile.raceId==="troll"?(save.trollAdaptationReady?"Tempered Survivor is ready after the failed investigation.":"Tempered Survivor responds to a setback; it has not triggered this chapter."):"Custom racial story feature may add +1 to one lore-matched check this chapter.";panel.append(el("p",racial.name+" · "+traitState,"soa-mnm-feature-status"));}
+  const racial=window.soaMnmRules.racialAbilities?.[profile.raceId];if(racial){const traitState=save.racialFeatureUsed?"Custom racial story feature used this chapter.":profile.raceId==="troll"?(save.trollAdaptationReady?"Tempered Survivor is ready after the failed investigation.":"Tempered Survivor responds to a setback; it has not triggered this chapter."):"Custom racial story feature may add +1 to one lore-matched check this chapter.";panel.append(el("p",racial.name+" \u00b7 "+traitState,"soa-mnm-feature-status"));}
   const classStat=bestClassStat(profile),classBonus=Number(profile.classBonuses?.[classStat]||0);
   const signature={id:"class",label:"Use "+profile.className+" training",stat:classStat,dc:14,detail:"Make the encounter fit your strongest class stat ("+STAT_NAMES[classStat]+", class modifier "+(classBonus>=0?"+":"")+classBonus+")."};
   panel.append(actionList(ENCOUNTER.filter(x=>x.id!=="sta"),"combat"));
@@ -220,19 +220,19 @@ function boot(){
   const track=el("div",undefined,"soa-mnm-meter-track"),fill=el("i");fill.style.width=(max?Math.max(0,Math.min(100,value/max*100)):0)+"%";track.append(fill);wrap.append(track);return wrap;
  }
  function renderAftermath(panel){
-  panel.append(el("div","QUEST · RETURN","soa-mnm-kicker"),el("h2",save.outcome==="victory"?"The route is safe":save.outcome==="driven-off"?"The threat is marked":"A safer route home"));
+  panel.append(el("div","QUEST \u00b7 RETURN","soa-mnm-kicker"),el("h2",save.outcome==="victory"?"The route is safe":save.outcome==="driven-off"?"The threat is marked":"A safer route home"));
   const line=save.outcome==="victory"?"The signal slate is recovered. Sera restores the warning bell before the caravan reaches the broken ground.":"Sera Fen records the danger and marks a safer route around the damaged signal post.";
   panel.append(el("p",line),el("p","Your choices and the encounter are saved in the Journey Log."));
   panel.append(button("Record the chapter","Complete the quest and preserve its outcome in the journal.",()=>perform({type:"complete"},false),"med"));
  }
  function renderComplete(panel){
-  panel.append(el("div","CHAPTER ONE · COMPLETE","soa-mnm-kicker"),el("h2","The Quiet Signal at Dune Gate"));
+  panel.append(el("div","CHAPTER ONE \u00b7 COMPLETE","soa-mnm-kicker"),el("h2","The Quiet Signal at Dune Gate"));
   panel.append(el("p","The caravan route is marked safe, and your account of the encounter is preserved. Open the Journey Log to review your choices and rolls."));
   panel.append(el("p","This first chapter does not award XP, equipment, or levels yet; those systems are still being converted to the new game."));
   panel.append(button("Review the Journey Log","See region choice, checks, encounter actions, and quest outcome.",()=>setView("journal",false)));
  }
  function renderJournal(panel){
-  panel.append(el("div","YOUR ADVENTURE · LOCAL JOURNAL","soa-mnm-kicker"),el("h2","Journey Log"));
+  panel.append(el("div","YOUR ADVENTURE \u00b7 LOCAL JOURNAL","soa-mnm-kicker"),el("h2","Journey Log"));
   if(!save?.journal?.length)panel.append(el("p","Your story has not begun. Choose a starting region on the Adventure tab."));
   else{const list=el("ol",undefined,"soa-mnm-journal");for(const line of save.journal)list.append(el("li",line));panel.append(list)}
   panel.append(el("p","Saved on this device with the selected character's other save data. It is included in the character archive backup."));
@@ -241,9 +241,9 @@ function boot(){
   if(!app.isConnected)return;
   app.replaceChildren();
   const hero=el("section",undefined,"soa-mnm-game-heading");
-  hero.append(el("div","MONSTERS & MEMORIES · ORIGINAL ADVENTURE","soa-mnm-kicker"),el("h1",profile.name));
-  hero.append(el("p",profile.race+" "+profile.className+" · Level "+(profile.level||1)+" · "+(save?.origin?REGIONS.find(x=>x.id===save.origin)?.name:"Choose an opening region"),"soa-mnm-subtitle"));
-  const racial=window.soaMnmRules.racialAbilities?.[profile.raceId];if(racial)hero.append(el("p","CUSTOM RACIAL FEATURE · "+racial.name+" — "+racial.description,"soa-mnm-feature"));
+  hero.append(el("div","MONSTERS & MEMORIES \u00b7 ORIGINAL ADVENTURE","soa-mnm-kicker"),el("h1",profile.name));
+  hero.append(el("p",profile.race+" "+profile.className+" \u00b7 Level "+(profile.level||1)+" \u00b7 "+(save?.origin?REGIONS.find(x=>x.id===save.origin)?.name:"Choose an opening region"),"soa-mnm-subtitle"));
+  const racial=window.soaMnmRules.racialAbilities?.[profile.raceId];if(racial)hero.append(el("p","CUSTOM RACIAL FEATURE \u00b7 "+racial.name+" \u2014 "+racial.description,"soa-mnm-feature"));
   app.append(hero);
   const tabs=el("div",undefined,"soa-mnm-tabs");tabs.setAttribute("role","tablist");tabs.setAttribute("aria-label","Adventure views");
   for(const [id,label] of [["adventure","Adventure"],["character","Character"],["journal","Journey Log"]]){
@@ -260,7 +260,7 @@ function boot(){
   }else{
    const pane=el("section",undefined,"soa-mnm-adventure-panel");
    const steps=["origin","briefing","approach","encounter","aftermath","complete"];
-   pane.append(el("div","CHAPTER ONE · STEP "+(steps.indexOf(save.stage)+1)+" OF "+steps.length,"soa-mnm-kicker"));
+   pane.append(el("div","CHAPTER ONE \u00b7 STEP "+(steps.indexOf(save.stage)+1)+" OF "+steps.length,"soa-mnm-kicker"));
    if(save.stage==="origin")renderOrigin(pane);
    else if(save.stage==="briefing")renderBriefing(pane);
    else if(save.stage==="approach")renderApproach(pane);
@@ -271,9 +271,9 @@ function boot(){
   }
   const rules=el("details",undefined,"soa-mnm-rules-disclosure");
   rules.append(el("summary","Story rules and M&M source note"));
-  rules.append(el("p","Checks use this project's existing d20 helper: d20 + floor((starting stat − 10) / 2) against the printed DC; natural 20 succeeds and natural 1 fails. DCs and the Resolve/Pressure encounter are custom Shadows of Azeroth story rules. They do not replace official M&M combat, class abilities, XP, or item rules."));
+  rules.append(el("p","Checks use this project's existing d20 helper: d20 + floor((starting stat \u2212 10) / 2) against the printed DC; natural 20 succeeds and natural 1 fails. DCs and the Resolve/Pressure encounter are custom Shadows of Azeroth story rules. They do not replace official M&M combat, class abilities, XP, or item rules."));
   app.append(rules);
-  const roster=el("button","☰ Character Select","soa-mnm-roster-button");roster.type="button";roster.onclick=()=>window.soaCharacters?.showMenu?.();app.append(roster);
+  const roster=el("button","\u2630 Character Select","soa-mnm-roster-button");roster.type="button";roster.onclick=()=>window.soaCharacters?.showMenu?.();app.append(roster);
  }
  function el(tag,text,cls){
   const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;
