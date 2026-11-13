@@ -1,0 +1,425 @@
+/* Monsters & Memories-inspired visual pass: faceted classic-fantasy surfaces, bronze trim, parchment text, and readable touch controls. Uses original CSS only; no game art or logos copied. */
+:root {
+  color-scheme: dark;
+  --mnm-night: #101714;
+  --mnm-forest: #18231d;
+  --mnm-panel: #202b24;
+  --mnm-panel-hi: #30382d;
+  --mnm-bronze: #826845;
+  --mnm-bronze-light: #b59a68;
+  --mnm-gold: #e2c78d;
+  --mnm-parchment: #eee1c3;
+  --mnm-muted: #bcb8a7;
+  --mnm-green: #77966b;
+  --mnm-red: #a75546;
+  --mnm-blue: #6386a0;
+}
+html {
+  min-height: 100%;
+  background: #0c110f;
+}
+body,
+body[class*="soa-theme-"] {
+  color: var(--mnm-parchment);
+  background:
+    radial-gradient(ellipse at 50% -15%, #485343 0, #27332a 27%, transparent 62%),
+    linear-gradient(135deg, #141a16 0%, #202820 46%, #101512 100%);
+  font-family: Georgia, "Times New Roman", serif;
+}
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: .2;
+  background:
+    linear-gradient(146deg, transparent 0 48%, #6670551a 48.2% 48.8%, transparent 49%),
+    linear-gradient(34deg, transparent 0 65%, #b79b5d12 65.2% 65.7%, transparent 66%);
+}
+main {
+  width: min(100%, 1180px);
+  max-width: 1180px;
+  padding: max(16px, env(safe-area-inset-top)) clamp(14px, 3vw, 30px) max(112px, env(safe-area-inset-bottom));
+}
+header {
+  position: relative;
+  margin: 8px 0 20px;
+  padding: 24px 12px 20px;
+  border-top: 2px solid var(--mnm-bronze);
+  border-bottom: 2px solid var(--mnm-bronze);
+  background: linear-gradient(90deg, transparent, #222b21a8 20% 80%, transparent);
+}
+header::after {
+  content: "◆";
+  position: absolute;
+  bottom: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0 12px;
+  color: var(--mnm-gold);
+  background: #202820;
+  font: 14px/1 Georgia, serif;
+}
+header .eyebrow,
+.soa-kicker,
+.soa-roster-kicker,
+.eyebrow {
+  color: #c4b58d;
+  font: 700 10px/1.5 system-ui, sans-serif;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+header h1,
+h1 {
+  color: #f0d391;
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 700;
+  letter-spacing: .055em;
+  text-shadow: 0 2px 0 #4a3c26, 0 5px 18px #0009;
+}
+h2, h3, h4,
+.soa-panel-disclosure > summary,
+.soa-dungeons-heading h2 {
+  color: var(--mnm-gold);
+  font-family: Georgia, "Times New Roman", serif;
+  text-shadow: 0 1px 0 #382f22;
+}
+.panel,
+.soa-game-screen,
+.soa-dungeon-panel,
+.soa-dungeon-party,
+.soa-arena-panel,
+.soa-allies-drawer,
+.soa-menu-card,
+.soa-chronicle-panel,
+.soa-profession-panel,
+#soa-character-record,
+#soa-character-sheet,
+#soa-save-settings,
+#campaign-box,
+#companion-panel,
+#soa-standalone-reputation,
+#soa-contract-board,
+#soa-character-tools {
+  color: var(--mnm-parchment);
+  border: 2px solid var(--mnm-bronze);
+  border-radius: 5px;
+  background:
+    linear-gradient(135deg, #ffffff0b 0 1px, transparent 1px 52%, #00000012 52%),
+    linear-gradient(145deg, #30392df7, #1d2821f7 58%, #18211cf7);
+  box-shadow:
+    inset 0 1px 0 #efe0b82c,
+    inset 0 0 0 1px #111810a8,
+    0 8px 22px #0007;
+}
+.panel {
+  position: relative;
+  padding: clamp(14px, 3vw, 22px);
+  margin: 16px 0;
+}
+.panel h2,
+.soa-game-screen h2 {
+  border-bottom: 1px solid #98815778;
+  padding-bottom: 8px;
+}
+.panel p,
+.soa-game-screen p {
+  color: #ded4bc;
+}
+.stat,
+.soa-companion-info,
+.soa-social-result,
+.soa-quest-entry,
+.soa-personal-entry,
+.soa-journal-compose,
+.soa-journal-edit,
+.soa-profession-row,
+.soa-arena-panel details,
+.soa-dungeon-recruit {
+  border: 1px solid #786747;
+  border-radius: 4px;
+  background: linear-gradient(145deg, #34382b, #222b23);
+  color: var(--mnm-parchment);
+  box-shadow: inset 0 1px 0 #f4e1b51a;
+}
+.stat {
+  padding: 11px 12px;
+}
+.stat strong,
+.num {
+  color: #f3d998;
+}
+.muted,
+.soa-character-item span,
+.soa-companion-info span,
+.soa-social-action small {
+  color: var(--mnm-muted);
+}
+.tag,
+.soa-status,
+.soa-ai-status {
+  color: #c8d1ad;
+}
+.bar {
+  height: 9px;
+  border: 1px solid #090e0b;
+  border-radius: 2px;
+  background: #0c120f;
+  box-shadow: inset 0 1px 3px #000;
+}
+.bar i {
+  background: linear-gradient(#a2bd78, #55754d);
+  box-shadow: inset 0 1px 0 #ffffff50;
+}
+.bar.energy i,
+#resource-meter[data-resource="energy"] .bar i,
+#resource-meter[data-resource="focus"] .bar i {
+  background: linear-gradient(#f0d270, #a77c36);
+}
+#resource-meter[data-resource="mana"] .bar i {
+  background: linear-gradient(#90b9dc, #426e99);
+}
+#resource-meter[data-resource="rage"] .bar i {
+  background: linear-gradient(#df8770, #963d36);
+}
+button,
+.soa-character-item button,
+.soa-create-form button,
+.soa-menu-back,
+#soa-mobile-nav button,
+.soa-character-tabs button,
+.soa-journal-tabs button {
+  color: #f2e5c4;
+  border: 2px outset #927850;
+  border-radius: 4px;
+  background: linear-gradient(180deg, #56513b 0%, #39392c 46%, #292f26 100%);
+  box-shadow: inset 0 1px 0 #fff3, 0 2px 3px #0008;
+  font-family: system-ui, sans-serif;
+  transition: filter .12s ease, transform .12s ease, border-color .12s ease;
+}
+button {
+  min-height: 46px;
+}
+button:hover:not(:disabled) {
+  filter: brightness(1.16);
+  border-color: #d4b675;
+}
+button:active:not(:disabled) {
+  transform: translateY(1px);
+  filter: brightness(.92);
+}
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+summary:focus-visible,
+a:focus-visible {
+  outline: 3px solid #f0d486;
+  outline-offset: 3px;
+}
+button.low,
+button.med,
+button.high {
+  border-left-width: 5px;
+}
+button.low {
+  border-left-color: #7d9c6e;
+  background: linear-gradient(90deg, #304b36, #3a3b2d 76%);
+}
+button.med {
+  border-left-color: #d8b567;
+  background: linear-gradient(90deg, #625035, #3e3b2d 76%);
+}
+button.high {
+  border-left-color: #c16e5f;
+  background: linear-gradient(90deg, #603b32, #3e342c 76%);
+}
+button.sub,
+.soa-menu-card button,
+.soa-character-item button,
+.soa-person,
+.soa-journal-tabs button {
+  border-color: #88724d;
+}
+button:disabled {
+  filter: grayscale(.5);
+  opacity: .58;
+}
+input,
+select,
+textarea,
+.ai-input,
+.soa-create-form input,
+.soa-create-form select,
+.soa-journal-compose textarea,
+.soa-journal-edit textarea {
+  color: #f4e7c7;
+  border: 1px solid #8c7854;
+  border-radius: 3px;
+  background: #141c17;
+  box-shadow: inset 0 2px 5px #0009;
+}
+input::placeholder,
+textarea::placeholder {
+  color: #a9a28f;
+}
+a {
+  color: #e4c77e;
+}
+dialog {
+  color: var(--mnm-parchment);
+  border: 3px ridge var(--mnm-bronze-light);
+  border-radius: 5px;
+  background: linear-gradient(145deg, #303a2e, #18211b);
+  box-shadow: 0 16px 50px #000c, inset 0 0 0 2px #121811;
+}
+dialog::backdrop,
+.soa-menu-overlay {
+  background: #080d0bdc;
+  backdrop-filter: blur(3px);
+}
+.soa-menu-card {
+  color: var(--mnm-parchment);
+  border: 4px ridge var(--mnm-bronze-light);
+  border-radius: 5px;
+  background:
+    linear-gradient(135deg, #ffffff0d 0 1px, transparent 1px 50%, #00000014 50%),
+    linear-gradient(145deg, #354032, #202a22 65%, #18211b);
+  box-shadow: inset 0 0 0 2px #111710, 0 22px 65px #000d;
+}
+.soa-menu-card h1,
+.soa-character-item strong,
+.soa-panel-disclosure > summary,
+.soa-profession-panel h3 {
+  color: #f1d696;
+  text-shadow: 0 2px 0 #443723;
+}
+.soa-character-item {
+  border: 1px solid #8b7653;
+  border-radius: 4px;
+  background: linear-gradient(120deg, #3d4132, #252e26);
+  color: var(--mnm-parchment);
+}
+.soa-character-item strong {
+  font-family: Georgia, "Times New Roman", serif;
+}
+.soa-character-tabs button,
+#soa-characters-button,
+#soa-mobile-nav button {
+  min-height: 46px;
+  color: #ead9ae;
+  background: linear-gradient(180deg, #3e4537, #242d25);
+}
+.soa-character-tabs button[aria-pressed="true"],
+#soa-mobile-nav button[aria-current="page"] {
+  color: #fff1c8;
+  border-color: #e2c78d;
+  background: linear-gradient(180deg, #977a48, #5d4a2e 54%, #3e382a);
+  box-shadow: inset 0 1px 0 #fff5, inset 0 0 0 1px #d8bd8250, 0 2px 6px #0008;
+}
+.soa-person.selected,
+button.soa-person.selected {
+  color: #f2e9cb;
+  border-color: #91aa75;
+  background: linear-gradient(145deg, #496241, #293b2a);
+}
+.soa-chronicle-kicker,
+.soa-current-chapter,
+.soa-chronicle-panel h2,
+.soa-quest-entry h4,
+.soa-collapsible-quests > summary {
+  color: #e4cb91;
+}
+.soa-quest-entry,
+.soa-personal-entry,
+.soa-journal-compose,
+.soa-journal-edit {
+  border-color: #8a7756;
+  background: linear-gradient(145deg, #343b2f, #252f27);
+  color: #eee1c3;
+}
+.soa-quest-objective,
+.soa-journal-record,
+.soa-chronicle-panel p,
+.soa-character-record,
+.soa-panel-disclosure-content {
+  color: #e1d8c1;
+}
+.soa-quest-objective {
+  border-color: #76674b;
+}
+.soa-journal-compose label {
+  color: #e7d6ad;
+}
+.soa-arena-panel,
+.soa-dungeon-party,
+.soa-allies-drawer {
+  border-color: #7d8d61;
+  background: linear-gradient(145deg, #2e3c2e, #1d2b22);
+}
+.soa-arena-panel h4,
+.soa-dungeon-party h4 {
+  color: #e9d59a;
+}
+.soa-foe-target {
+  border-color: #907950 !important;
+  border-radius: 4px !important;
+  background: linear-gradient(145deg, #353a30, #232d25) !important;
+  color: #eee1c3 !important;
+}
+.soa-foe-target[aria-pressed="true"] {
+  border-color: #e1c27c !important;
+  box-shadow: inset 0 0 0 2px #d9bd7650, 0 0 0 2px #c2a36133 !important;
+}
+#soa-mobile-nav {
+  border: 2px solid #987d4d;
+  border-bottom: 0;
+  border-radius: 5px 5px 0 0;
+  background: linear-gradient(180deg, #29342cfa, #151c17fa);
+  box-shadow: 0 -5px 24px #0009, inset 0 1px 0 #e9d39b30;
+}
+#soa-mobile-nav button {
+  border-color: transparent;
+  box-shadow: none;
+  font-weight: 700;
+}
+#soa-mobile-nav button[aria-current="page"] {
+  border-color: #c8a967;
+}
+.soa-chronicle-panel,
+.soa-game-screen,
+.soa-dungeons-screen,
+.soa-allies-screen {
+  scroll-margin-top: 16px;
+}
+footer {
+  color: #a89d82;
+}
+@media (min-width: 851px) {
+  main {
+    padding-left: 32px;
+    padding-right: 32px;
+  }
+  header {
+    margin-bottom: 24px;
+  }
+}
+@media (max-width: 600px) {
+  header {
+    padding: 20px 9px 18px;
+  }
+  header h1 {
+    font-size: clamp(25px, 7vw, 34px);
+  }
+  .panel {
+    margin: 12px 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+  }
+}
