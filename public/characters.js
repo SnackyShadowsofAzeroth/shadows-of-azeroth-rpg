@@ -97,7 +97,7 @@ function restore(id){
   return false;
  }
 }
-function baseState(profile){if(profile.system==="mnm")return {equipment:[],id:"mnm-character-record",hp:0,en:0,money:0,time:0,alert:0,seen:[],flags:{},enemy:null,log:["M&M character record created. Campaign rules are still being converted."]};return {equipment:[...(profile.startingEquipment||BASIC_GEAR[profile.className]||[])],id:"new-hero-start",hp:100,en:100,money:1500,time:0,alert:0,seen:[],flags:{},enemy:null,log:["A new journey begins for "+profile.name+" in "+startingZone(profile)+".","You have 15 silver and no companions."]}}
+function baseState(profile){if(profile.system==="mnm")return {equipment:[],id:"new-hero-start",hp:0,en:0,money:0,time:0,alert:0,seen:[],flags:{},enemy:null,log:["M&M character record created. Campaign rules are still being converted."]};return {equipment:[...(profile.startingEquipment||BASIC_GEAR[profile.className]||[])],id:"new-hero-start",hp:100,en:100,money:1500,time:0,alert:0,seen:[],flags:{},enemy:null,log:["A new journey begins for "+profile.name+" in "+startingZone(profile)+".","You have 15 silver and no companions."]}}
 function newCampaign(profile){
  if(profile.system==="mnm")return {turn:0,scene:null,history:[],journal:[],startingZone:"",lastError:"",lastAction:"M&M character created. The M&M rules and campaign are still being converted; no Warcraft adventure has been started.",lastResult:"M&M character record ready. Adventure play is not yet converted.",pending:null};
  const zone=startingZone(profile);
