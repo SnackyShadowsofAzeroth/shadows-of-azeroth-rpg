@@ -324,7 +324,7 @@ function drawMenu(){
 }
 function profilePanel(){
  const head=document.querySelector("header");if(!head)return;
- const title=get("soa-player-name"),tag=get("soa-player-class");document.body.classList.toggle("soa-ruleset-mnm",active.system==="mnm");if(title)title.textContent=active.name;if(tag)tag.textContent=active.system==="mnm"?"MONSTERS & MEMORIES · "+active.race+" "+active.className:active.id==="snacky"?"SI:7 · Combat Swords":"LEGACY · "+factionDisplay(active)+" · "+active.race+" "+active.className;
+ const title=get("soa-player-name"),tag=get("soa-player-class");const isMnm=active.system==="mnm";document.body.classList.toggle("soa-ruleset-mnm",isMnm);const kicker=get("soa-brand-kicker"),brand=get("soa-brand-name"),tagline=get("soa-brand-tagline");if(kicker)kicker.textContent=isMnm?"MONSTERS & MEMORIES · CHARACTER RECORD":"An unofficial Azeroth-inspired adventure";if(brand)brand.textContent=isMnm?"THE ADVENTURER’S JOURNAL":"SHADOWS OF AZEROTH";if(tagline)tagline.textContent=isMnm?"RACE · CLASS · SIX ABILITIES":"Your Story · Your Choices · Your Legacy";if(title)title.textContent=active.name;if(tag)tag.textContent=isMnm?"M&M · "+active.race+" "+active.className:active.id==="snacky"?"SI:7 · Combat Swords":"LEGACY · "+factionDisplay(active)+" · "+active.race+" "+active.className;
  if(typeof render==="function")render();
  window.soaEquipment?.renderStatus?.();
  const menu=make("button","☰ Characters");menu.id="soa-characters-button";menu.type="button";menu.onclick=drawMenu;head.append(menu);
