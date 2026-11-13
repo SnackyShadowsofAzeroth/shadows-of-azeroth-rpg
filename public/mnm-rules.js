@@ -5,7 +5,7 @@
 (()=>{"use strict";
 const ABILITIES=Object.freeze(["str","dex","con","int","wis","cha"]); // legacy six-score helper, retained for compatibility
 const STAT_KEYS=Object.freeze(["str","sta","dex","agi","int","wis","cha"]);
-const STAT_BASE=10;
+const STAT_BASE=10,MAX_LEVEL=60;
 const RACES=Object.freeze([
  {id:"human",name:"Human"},{id:"gnome",name:"Gnome"},{id:"deep_gnome",name:"Deep Gnome"},
  {id:"dwarf",name:"Dwarf"},{id:"deep_dwarf",name:"Deep Dwarf",provisional:true},
@@ -111,7 +111,7 @@ function abilityModifiers(scores={}){return Object.fromEntries(ABILITIES.map(key
 function normalizeCharacter(input={}){
  const race=raceById(input.raceId||input.race)||raceByName(input.race),klass=classById(input.classId||input.class);
  if(!race||!klass||!AVAILABILITY[race.id]?.includes(klass.id))throw new Error("Choose a supported M&M race and class combination.");
- const sheet=startingStats(race.id,klass.id),level=Math.max(1,Math.trunc(Number(input.level)||1));
+ const sheet=startingStats(race.id,klass.id),level=Math.max(1,Math.min(MAX_LEVEL,Math.trunc(Number(input.level)||1)));
  const learned=Array.isArray(input.learnedAbilities)?[...new Set(input.learnedAbilities)]:[];
  const legacyScores=input.abilities?Object.fromEntries(ABILITIES.map(key=>[key,Math.max(3,Math.min(25,Math.trunc(Number(input.abilities[key]??10))))])):undefined;
  return {...input,system:"mnm",raceId:race.id,race:race.name,classId:klass.id,className:klass.name,classPrefix:klass.prefix,level,baseStats:sheet.base,racialBonuses:sheet.racialBonuses,classBonuses:sheet.classBonuses,stats:sheet.stats,statRulesVersion:1,provisionalRaceStats:sheet.provisional,availableForCreation:sheet.available,racialAbility:RACIAL_ABILITIES[race.id]||null,...(legacyScores?{abilities:legacyScores,modifiers:abilityModifiers(legacyScores)}:{}),learnedAbilities:learned};
@@ -130,5 +130,5 @@ function abilityRequirement(ability,character,{target,equipment=[],reagents={},m
  return null;
 }
 function canUseAbility(ability,character,context={}){return abilityRequirement(ability,character,context)===null;}
-window.soaMnmRules=Object.freeze({version:3,abilities:ABILITIES,statKeys:STAT_KEYS,statBase:STAT_BASE,races:RACES,classes:CLASSES,raceBonuses:RACE_BONUSES,classBonuses:CLASS_BONUSES,racialAbilities:RACIAL_ABILITIES,raceById,raceByName,classById,classesForRace,selectableRaces,isValidSelection,startingStats,abilityModifier,abilityModifiers,normalizeCharacter,d20Check,abilityRequirement,canUseAbility});
+window.soaMnmRules=Object.freeze({version:4,maxLevel:MAX_LEVEL,abilities:ABILITIES,statKeys:STAT_KEYS,statBase:STAT_BASE,races:RACES,classes:CLASSES,raceBonuses:RACE_BONUSES,classBonuses:CLASS_BONUSES,racialAbilities:RACIAL_ABILITIES,raceById,raceByName,classById,classesForRace,selectableRaces,isValidSelection,startingStats,abilityModifier,abilityModifiers,normalizeCharacter,d20Check,abilityRequirement,canUseAbility});
 })();
