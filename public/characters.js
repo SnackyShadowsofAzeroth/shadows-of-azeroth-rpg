@@ -319,7 +319,7 @@ function drawMenu(){
   const sheet=r.startingStats(race.value,klass.value);statGrid.replaceChildren();
   for(const key of r.statKeys){
    const card=make("div",undefined,"soa-mnm-stat-tile");
-   card.append(make("span",labels[key],"soa-mnm-stat-name"),make("strong",String(sheet.stats[key]),"soa-mnm-stat-total"),make("small","Base 16 · Race "+signed(sheet.racialBonuses[key])+" · Class "+signed(sheet.classBonuses[key]),"soa-mnm-stat-breakdown"));
+   card.append(make("span",labels[key],"soa-mnm-stat-name"),make("strong",String(sheet.stats[key]),"soa-mnm-stat-total"),make("small","Base "+r.statBase+" · Race "+signed(sheet.racialBonuses[key])+" · Class "+signed(sheet.classBonuses[key]),"soa-mnm-stat-breakdown"));
    statGrid.append(card);
   }
   const feature=r.racialAbilities[race.value];
@@ -333,7 +333,7 @@ function drawMenu(){
  };
  race.onchange=updateClassList;klass.onchange=updateStartingStats;updateClassList();
  form.append(labeled("Character name",name),labeled("Gender",gender),labeled("Race",race),labeled("Class",klass),statPanel,racialFeature);
- form.append(make("p","Stats shown are 16 base plus the selected race and class modifiers, before the in-game 10 bonus points are allocated. Three race lines are marked provisional.","muted soa-mnm-note"));
+ form.append(make("p","Starting scores use a base of 10 plus the selected race and class modifiers. This is a Shadows of Azeroth rebalance; no extra allocation points are granted during character creation. Three race lines are marked provisional.","muted soa-mnm-note"));
  form.append(make("p","This creates an M&M character record. Campaign, combat, equipment, and progression are still being converted, so no Warcraft faction, professions, starting kit, or silver are assigned.","soa-mnm-warning"));
  const warning=make("p","","soa-menu-error");warning.setAttribute("aria-live","polite");form.append(warning);
  const submit=make("button","Create M&M Character");submit.type="submit";form.append(submit);

@@ -5,7 +5,7 @@
 (()=>{"use strict";
 const ABILITIES=Object.freeze(["str","dex","con","int","wis","cha"]); // legacy six-score helper, retained for compatibility
 const STAT_KEYS=Object.freeze(["str","sta","dex","agi","int","wis","cha"]);
-const STAT_BASE=16;
+const STAT_BASE=10;
 const RACES=Object.freeze([
  {id:"human",name:"Human"},{id:"gnome",name:"Gnome"},{id:"deep_gnome",name:"Deep Gnome"},
  {id:"dwarf",name:"Dwarf"},{id:"deep_dwarf",name:"Deep Dwarf",provisional:true},
