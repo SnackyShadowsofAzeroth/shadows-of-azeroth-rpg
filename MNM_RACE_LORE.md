@@ -47,3 +47,23 @@ The race page's Deep Gnome list omits Bard, but the later official 0.30.6.0 patc
 - Preserve the culture-specific details and tensions above; do not reduce a race to one personality or treat group traits as universal.
 - Distinguish source canon from SoA inventions. Add new local detail only when it fits the source themes, and do not rewrite named canon, history, or affiliations.
 - Do not assign a race a class outside its listed access. Human class access may depend on origin/start location.
+
+
+## Custom racial-feature concepts
+
+These are original Shadows of Azeroth design concepts grounded in the source themes above. They are descriptions only and have no active game effects yet.
+
+| Race | Concept | Lore connection |
+|---|---|---|
+| Human | Many Roads | Draws on the distinct seafaring, noble, bureaucratic, and nomadic cultures without treating every human alike. |
+| Gnome | Eureka | Expresses inventive epiphanies and relentless truth-seeking. |
+| Deep Gnome | Spiral Cartographer | Uses their expertise in dreamscapes, astral paths, and the Spirals. |
+| Dwarf | Titan's Craft | Connects practical craftsmanship with the titan and stone origin myths. |
+| Deep Dwarf | Spirit Lattice | Reflects spirit-binding and strange crafted creations in the corrupted Deep. |
+| High Elf | Calafrey Discipline | Ties magical mastery and strict Cilindrine doctrine to deliberate practice. |
+| Wood Elf | Wyrdpath | Uses Faelewyn forest attunement and recognizes existing Wyrdgates without granting teleportation. |
+| Deep Elf | Shadow's Veil | Draws on survival in the Deep and the Shadow's influence. |
+| Ogre | Storm Coast Fury | Connects their giant-made martial origin with disciplined force. |
+| Halfling | Fontborn Memory | Reflects their bond to Eth-ur and ancient lorekeeping. |
+| Troll | Tempered Survivor | Expresses resilience, adaptability, and hunter survival craft. |
+| Goblin | Secret-Sense | Directly reflects their intuition for hidden entrances and deception. |

@@ -78,19 +78,20 @@ const CLASS_BONUSES=Object.freeze({
  spellblade:vector({str:2,dex:3,int:3}),
  wizard:vector({str:3,dex:1,int:4})
 });
+/* Custom, lore-grounded design concepts; descriptions only, with no gameplay effects yet. */
 const RACIAL_ABILITIES=Object.freeze({
- human:{name:"Steadfast Resolve",description:"A practiced calm helps you keep your purpose when danger, fear, or confusion presses in."},
- gnome:{name:"Bright Contrivance",description:"You can turn odd materials and a quick idea into a clever tool, signal, or distraction."},
- deep_gnome:{name:"Echo Sense",description:"Careful listening through stone reveals distant movement, hollow spaces, and hidden routes."},
- dwarf:{name:"Stoneguard",description:"Plant your feet, set your stance, and hold firm when a heavy force tries to move you."},
- deep_dwarf:{name:"Soulforged Ward",description:"An iron will gathers into a protective ward against corruption and unseen pressure."},
- high_elf:{name:"Arcane Poise",description:"Disciplined focus lets you remain composed around volatile magic and complex workings."},
- wood_elf:{name:"Wyrdpath",description:"Read the living landscape to find a safer passage through wild country and natural cover."},
- deep_elf:{name:"Umbral Step",description:"Use low light and practiced silence to slip past watchful eyes."},
- ogre:{name:"Stormblood Might",description:"Commit your immense strength to a crushing blow that can open a guarded line."},
- halfling:{name:"Quickfoot",description:"A sharp instinct and nimble movement help you evade danger in a sudden close-quarters scramble."},
- troll:{name:"Relentless Vigor",description:"Endure a punishing setback and rally your strength when others would falter."},
- goblin:{name:"Scrapwise",description:"Repurpose nearby scraps into a useful improvised tool or a momentary diversion."}
+ human:{name:"Many Roads",description:"A human's upbringing in a seafaring, noble, bureaucratic, or nomadic tradition lends a practical perspective to unfamiliar trouble."},
+ gnome:{name:"Eureka",description:"A flash of patient curiosity turns a puzzling detail into an inventive lead, reflecting the gnomes' relentless search for truth."},
+ deep_gnome:{name:"Spiral Cartographer",description:"Study of dreamscapes, astral paths, and the Spirals helps a deep gnome recognize a strange crossing and choose a route through it."},
+ dwarf:{name:"Titan's Craft",description:"Stone, metal, and the old Galdri creation stories guide a dwarf's hands when making or repairing a tool under pressure."},
+ deep_dwarf:{name:"Spirit Lattice",description:"Deep dwarves shape corrupted stone and bind spirits into strange works; a spirit lattice helps a crafted object answer its maker's command."},
+ high_elf:{name:"Calafrey Discipline",description:"Centuries-old Cilindrine doctrine and mastery of magic help a high elf hold a measured line through a complex working."},
+ wood_elf:{name:"Wyrdpath",description:"A Faelewyn reads the forest's living signs and notices where an existing Wyrdgate or Fae-touched path crosses the mortal wood."},
+ deep_elf:{name:"Shadow's Veil",description:"Ail'trist survival in the Deep beneath the Shadow lends a practiced use of darkness and silence to conceal deliberate movement."},
+ ogre:{name:"Storm Coast Fury",description:"Made for war against the Spiral Lords, an ogre turns fearless discipline into one committed burst of force."},
+ halfling:{name:"Fontborn Memory",description:"A halfling's bond to Eth-ur and its ancient stories can bring a forgotten detail to mind when the land or its history matters."},
+ troll:{name:"Tempered Survivor",description:"A troll adapts after a hunt turns against them, changing ground, method, or pace instead of yielding."},
+ goblin:{name:"Secret-Sense",description:"A goblin notices the unguarded hinge, concealed entrance, or false note in a story that others overlook."}
 });
 const raceById=id=>RACES.find(x=>x.id===id)||null;
 const raceByName=name=>RACES.find(x=>x.name===name)||null;
