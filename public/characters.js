@@ -301,18 +301,49 @@ function drawMenu(){
  const race=make("select"),klass=make("select");
  const labeled=(title,field)=>{const label=make("label",title);label.append(field);return label};
  const r=window.soaMnmRules;
- selectOptions(race,r.races.map(x=>({value:x.id,label:x.name})));race.value="human";
- const scores=make("fieldset",undefined,"soa-mnm-scores");const legend=make("legend","ABILITY SCORES");scores.append(legend);
- const labels={str:"Strength",dex:"Dexterity",con:"Constitution",int:"Intelligence",wis:"Wisdom",cha:"Charisma"},scoreInputs={};
- const updateClassList=()=>{const previous=klass.value,choices=r.classesForRace(race.value);selectOptions(klass,choices.map(x=>({value:x.id,label:x.name})));if(choices.some(x=>x.id===previous))klass.value=previous;};
- race.onchange=updateClassList;updateClassList();klass.value="fighter";
- for(const key of r.abilities){const wrap=make("label",labels[key],"soa-mnm-score");const input=make("input");input.type="number";input.min="3";input.max="25";input.step="1";input.value="10";input.required=true;input.setAttribute("aria-label",labels[key]);const mod=make("output","+0");input.oninput=()=>{mod.textContent=(r.abilityModifier(input.value)>=0?"+":"")+r.abilityModifier(input.value)};wrap.append(input,mod);scores.append(wrap);scoreInputs[key]=input}
- form.append(labeled("Character name",name),labeled("Gender",gender),labeled("Race",race),labeled("Class",klass),scores);
- form.append(make("p","Race and class availability follows the M&M character options. Assign scores directly; no race bonuses or point-buy rules are assumed.","muted soa-mnm-note"));
- form.append(make("p","This creates an M&M character record. The campaign, combat, equipment, and progression systems are still being converted, so no Warcraft faction, professions, starting kit, or silver are assigned.","soa-mnm-warning"));
+ selectOptions(race,r.selectableRaces().map(x=>({value:x.id,label:x.name+(x.provisional?" · provisional":"")})));race.value="human";
+ const statPanel=make("fieldset",undefined,"soa-mnm-scores"),statLegend=make("legend","RACE + CLASS STARTING STATS");
+ const statGrid=make("div",undefined,"soa-mnm-stat-grid");statPanel.append(statLegend,statGrid);
+ const racialFeature=make("aside",undefined,"soa-mnm-racial-ability");
+ const labels={str:"Strength",sta:"Stamina",dex:"Dexterity",agi:"Agility",int:"Intelligence",wis:"Wisdom",cha:"Charisma"};
+ const signed=n=>(n>0?"+":"")+String(n);
+ const updateClassList=()=>{
+  const previous=klass.value,choices=r.classesForRace(race.value);
+  selectOptions(klass,choices.map(value=>({value:value.id,label:value.name})));
+  if(choices.some(x=>x.id===previous))klass.value=previous;
+  else if(choices.some(x=>x.id==="fighter"))klass.value="fighter";
+  updateStartingStats();
+ };
+ const updateStartingStats=()=>{
+  const raceInfo=r.raceById(race.value),classInfo=r.classById(klass.value);
+  const sheet=r.startingStats(race.value,klass.value);statGrid.replaceChildren();
+  for(const key of r.statKeys){
+   const card=make("div",undefined,"soa-mnm-stat-tile");
+   card.append(make("span",labels[key],"soa-mnm-stat-name"),make("strong",String(sheet.stats[key]),"soa-mnm-stat-total"),make("small","Base 16 · Race "+signed(sheet.racialBonuses[key])+" · Class "+signed(sheet.classBonuses[key]),"soa-mnm-stat-breakdown"));
+   statGrid.append(card);
+  }
+  const feature=r.racialAbilities[race.value];
+  racialFeature.replaceChildren();
+  if(feature)racialFeature.append(make("span","CUSTOM RACIAL FEATURE · DESIGN DRAFT","soa-mnm-custom-label"),make("strong",feature.name),make("p",feature.description),make("small","Description only for now; no combat effect is active."));
+  const sourceNote=make("p",raceInfo?.provisional?"Race modifiers for "+raceInfo.name+" are provisional, based on the supplied stat pattern.":"Race and class modifiers are from the supplied in-game table.","muted soa-mnm-note");
+  if(!raceInfo?.selectable)sourceNote.textContent="No current in-game stat line supplied for "+(raceInfo?.name||"this race")+"; new character creation is disabled for it.";
+  statPanel.querySelector(".soa-mnm-stat-source")?.remove();
+  sourceNote.className+=(raceInfo?.provisional?" soa-mnm-provisional":"")+" soa-mnm-stat-source";
+  statPanel.append(sourceNote);
+ };
+ race.onchange=updateClassList;klass.onchange=updateStartingStats;updateClassList();
+ form.append(labeled("Character name",name),labeled("Gender",gender),labeled("Race",race),labeled("Class",klass),statPanel,racialFeature);
+ form.append(make("p","Stats shown are 16 base plus the selected race and class modifiers, before the in-game 10 bonus points are allocated. Three race lines are marked provisional.","muted soa-mnm-note"));
+ form.append(make("p","This creates an M&M character record. Campaign, combat, equipment, and progression are still being converted, so no Warcraft faction, professions, starting kit, or silver are assigned.","soa-mnm-warning"));
  const warning=make("p","","soa-menu-error");warning.setAttribute("aria-live","polite");form.append(warning);
  const submit=make("button","Create M&M Character");submit.type="submit";form.append(submit);
- form.onsubmit=e=>{e.preventDefault();const n=name.value.trim();if(n.length<2||n.length>36){warning.textContent="Enter a name between 2 and 36 characters.";return}if(!r.isValidSelection({system:"mnm",raceId:race.value,classId:klass.value})){warning.textContent="That race and class combination is not available.";return}if(roster.characters.some(x=>x.name.toLowerCase()===n.toLowerCase())){warning.textContent="That character name is already in your roster.";return}const abilities=Object.fromEntries(Object.entries(scoreInputs).map(([key,input])=>[key,Number(input.value)]));create({system:"mnm",name:n,gender:gender.value,raceId:race.value,classId:klass.value,abilities})};
+ form.onsubmit=e=>{
+  e.preventDefault();const n=name.value.trim();
+  if(n.length<2||n.length>36){warning.textContent="Enter a name between 2 and 36 characters.";return}
+  if(!r.isValidSelection({system:"mnm",raceId:race.value,classId:klass.value})||!r.raceById(race.value)?.selectable){warning.textContent="That race and class combination is not available in the current character creator.";return}
+  if(roster.characters.some(x=>x.name.toLowerCase()===n.toLowerCase())){warning.textContent="That character name is already in your roster.";return}
+  create({system:"mnm",name:n,gender:gender.value,raceId:race.value,classId:klass.value});
+ };
  expand.append(form);shell.append(expand);
  createToggle.onclick=()=>{const opening=expand.hidden;expand.hidden=!opening;createToggle.setAttribute("aria-expanded",String(opening));createToggle.textContent=opening?"Close Character Creation":"＋ Create M&M Character";if(opening){name.focus({preventScroll:true});expand.scrollIntoView({behavior:"smooth",block:"nearest"})}};
  const backup=make("button","Download All Character Saves");backup.type="button";backup.className="soa-roster-backup";backup.onclick=exportRosterBackup;shell.append(backup);
@@ -324,7 +355,7 @@ function drawMenu(){
 }
 function profilePanel(){
  const head=document.querySelector("header");if(!head)return;
- const title=get("soa-player-name"),tag=get("soa-player-class");const isMnm=active.system==="mnm";document.body.classList.toggle("soa-ruleset-mnm",isMnm);const kicker=get("soa-brand-kicker"),brand=get("soa-brand-name"),tagline=get("soa-brand-tagline");if(kicker)kicker.textContent=isMnm?"MONSTERS & MEMORIES · CHARACTER RECORD":"An unofficial Azeroth-inspired adventure";if(brand)brand.textContent=isMnm?"THE ADVENTURER’S JOURNAL":"SHADOWS OF AZEROTH";if(tagline)tagline.textContent=isMnm?"RACE · CLASS · SIX ABILITIES":"Your Story · Your Choices · Your Legacy";if(title)title.textContent=active.name;if(tag)tag.textContent=isMnm?"M&M · "+active.race+" "+active.className:active.id==="snacky"?"SI:7 · Combat Swords":"LEGACY · "+factionDisplay(active)+" · "+active.race+" "+active.className;
+ const title=get("soa-player-name"),tag=get("soa-player-class");const isMnm=active.system==="mnm";document.body.classList.toggle("soa-ruleset-mnm",isMnm);const kicker=get("soa-brand-kicker"),brand=get("soa-brand-name"),tagline=get("soa-brand-tagline");if(kicker)kicker.textContent=isMnm?"MONSTERS & MEMORIES · CHARACTER RECORD":"An unofficial Azeroth-inspired adventure";if(brand)brand.textContent=isMnm?"THE ADVENTURER’S JOURNAL":"SHADOWS OF AZEROTH";if(tagline)tagline.textContent=isMnm?"RACE · CLASS · SEVEN STATS":"Your Story · Your Choices · Your Legacy";if(title)title.textContent=active.name;if(tag)tag.textContent=isMnm?"M&M · "+active.race+" "+active.className:active.id==="snacky"?"SI:7 · Combat Swords":"LEGACY · "+factionDisplay(active)+" · "+active.race+" "+active.className;
  if(typeof render==="function")render();
  window.soaEquipment?.renderStatus?.();
  const menu=make("button","☰ Characters");menu.id="soa-characters-button";menu.type="button";menu.onclick=drawMenu;head.append(menu);
@@ -416,10 +447,23 @@ function drawProfessions(){
  root.append(make("div",active.system==="mnm"?"M&M CHARACTER RECORD":"CHARACTER RECORD","soa-roster-kicker"),make("h2",active.name+" · "+active.race+" "+active.className));
  if(active.system==="mnm"){
   root.classList.add("soa-mnm-record");
-  const intro=make("p","This character uses the M&M race, class, and six-score record. Campaign play, combat, equipment, and progression are still under conversion.","muted soa-mnm-warning");root.append(intro);
-  const grid=make("div",undefined,"soa-mnm-record-grid"),labels={str:"Strength",dex:"Dexterity",con:"Constitution",int:"Intelligence",wis:"Wisdom",cha:"Charisma"};
-  for(const key of window.soaMnmRules.abilities){const card=make("div",undefined,"soa-mnm-record-score");const score=Number(active.abilities?.[key]??10),mod=window.soaMnmRules.abilityModifier(score);card.append(make("span",labels[key]),make("strong",String(score)),make("small",(mod>=0?"+":"")+mod));grid.append(card)}
-  root.append(grid,make("p","LEVEL "+(active.level||1)+" · "+active.classPrefix+" · No faction, profession, inventory, or currency has been assigned.","soa-mnm-note"));
+  const rules=window.soaMnmRules,race=rules.raceById(active.raceId||active.race),klass=rules.classById(active.classId);
+  let sheet;
+  try{sheet=rules.startingStats(race.id,klass.id)}catch{sheet=null}
+  root.append(make("p","This character uses the seven-stat M&M starting sheet. Values combine a base 16 with race and class modifiers. Campaign play, combat, equipment, and progression are still under conversion.","muted soa-mnm-warning"));
+  if(sheet){
+   if(sheet.provisional)root.append(make("p","PROVISIONAL RACIAL MODIFIERS · "+race.name+" uses a logical stat line from the supplied pattern.","soa-mnm-provisional"));
+   const grid=make("div",undefined,"soa-mnm-record-grid"),labels={str:"Strength",sta:"Stamina",dex:"Dexterity",agi:"Agility",int:"Intelligence",wis:"Wisdom",cha:"Charisma"};
+   for(const key of rules.statKeys){
+    const card=make("div",undefined,"soa-mnm-record-score"),raceBonus=sheet.racialBonuses[key],classBonus=sheet.classBonuses[key];
+    card.append(make("span",labels[key]),make("strong",String(sheet.stats[key])),make("small","Race "+(raceBonus>0?"+":"")+raceBonus+" · Class "+(classBonus>0?"+":"")+classBonus));
+    grid.append(card);
+   }
+   root.append(grid);
+   const feature=rules.racialAbilities[race.id];
+   if(feature){const ability=make("section",undefined,"soa-mnm-racial-ability");ability.append(make("span","CUSTOM RACIAL FEATURE · DESIGN DRAFT","soa-mnm-custom-label"),make("h3",feature.name),make("p",feature.description),make("small","Description only; no combat effect is active yet."));root.append(ability)}
+   root.append(make("p","LEVEL "+(active.level||1)+" · "+active.classPrefix+" · 10 in-game bonus points are not included in these starting totals.","soa-mnm-note"));
+  }else root.append(make("p","No verified starting-stat line is available for this saved race/class combination. Existing profile data is preserved.","soa-mnm-warning"));
   return;
  }
  root.classList.remove("soa-mnm-record");
@@ -434,7 +478,7 @@ function drawProfessions(){
  for(const [name,record] of Object.entries(active.professions||{}))root.append(professionRow(name,record,"Practice via Story",()=>prefill(name)));
  const secondary=make("details");secondary.append(make("summary","Secondary skills · 60-rank path"));for(const [name,record] of Object.entries(active.secondary||{}))secondary.append(professionRow(name,record,"Practice",()=>prefill(name)));root.append(secondary);
  const recents=active.professionLog||[];if(recents.length)root.append(make("p",recents.slice(-2).map(formatProfessionLog).join(" · "),"muted"));
- const status=get("soa-character-status"),sheet=root.querySelector(".soa-ability-sheet"),abilities=get("abilities");if(status&&sheet&&abilities)status.insertBefore(sheet,abilities);
+ const status=get("soa-character-status"),sheetNode=root.querySelector(".soa-ability-sheet"),abilities=get("abilities");if(status&&sheetNode&&abilities)status.insertBefore(sheetNode,abilities);
 }
 function prefill(prof){
  const action=get("campaign-custom-action"),type=get("campaign-custom-type");
