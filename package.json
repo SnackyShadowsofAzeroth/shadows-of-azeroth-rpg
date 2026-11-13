@@ -5,5 +5,8 @@
     "build": "node -e \"console.log('Static game files are served from public/')\"",
     "check": "node scripts/check-syntax.cjs",
     "test": "node --test tests/*.test.js && node tests/character-rules.test.js"
+  },
+  "devDependencies": {
+    "wrangler": "4.161.0"
   }
 }
