@@ -32,9 +32,9 @@ function normalizeCharacter(input={}){
  const learned=Array.isArray(input.learnedAbilities)?[...new Set(input.learnedAbilities)]:[];
  return {...input,system:"mnm",race:race.id,classId:klass.id,classPrefix:klass.prefix,level,abilities:scores,modifiers:abilityModifiers(scores),learnedAbilities:learned};
 }
-function d20Check({roll,ability="dex",skillBonus=0,proficiency=0,dc}){
+function d20Check({roll,ability="dex",scores={},skillBonus=0,proficiency=0,dc}){
  const die=Math.trunc(Number(roll));if(die<1||die>20)throw new RangeError("d20 roll must be 1–20.");
- const total=die+abilityModifier(10)+Math.trunc(Number(skillBonus)||0)+Math.trunc(Number(proficiency)||0);
+ const total=die+abilityModifier(scores[ability]??10)+Math.trunc(Number(skillBonus)||0)+Math.trunc(Number(proficiency)||0);
  return {roll:die,total,dc:Number(dc),success:die===20||die!==1&&total>=Number(dc),critical:die===20};
 }
 function abilityRequirement(ability,character,{target,equipment=[],reagents={},mana=Infinity}={}){
