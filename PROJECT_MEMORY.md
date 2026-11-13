@@ -8,6 +8,8 @@ Read this file before changing project code, content, configuration, or deployme
 - The current deployed game and its saves still use the legacy Warcraft-inspired rules and content. Existing systems include character creation/progression, campaign choices, combat, arenas, quests/chronicle, equipment, dungeons, crafting, companions, and local saves. Feature modules and their relationships are indexed in the Graphify graph.
 - Read `CAMPAIGN_BIBLE.md` for the campaign and quality standards, `DEVELOPMENT_HANDOFF.md` for accumulated implementation history, and `MNM_REWRITE_PLAN.md` for the agreed conversion order and boundaries.
 
+- `MNM_RACE_LORE.md` is the canon reference for the official race descriptions and race/class eligibility. Consult it when creating characters, races, or story content. The race page's Deep Gnome class list is superseded by the later official patch adding Bard.
+
 ## Monsters & Memories rewrite status
 
 - The goal is to rebuild the game around the user's Monsters & Memories RPG rules, remove Warcraft-derived setting and terminology from converted content, and preserve offline play and mobile delivery. The user directed us to apply an original M&M-inspired visual system in parallel with rules and content work.
