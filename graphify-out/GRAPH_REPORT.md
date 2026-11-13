@@ -1,18 +1,19 @@
-# Graph Report - Shadows of Azeroth RPG  (2026-11-12)
+# Graph Report - Shadows of Azeroth RPG  (2026-11-13)
 
 ## Corpus Check
-- 77 files · ~70,546 words
+- 78 files · ~71,240 words
 - Verdict: corpus is large enough that graph structure adds value.
-- Unclassified: 13 file(s) not represented in the graph (top: .css 10, (none) 1, .webmanifest 1)
+- Unclassified: 14 file(s) not represented in the graph (top: .css 11, (none) 1, .webmanifest 1)
 
 ## Summary
-- 908 nodes · 1591 edges · 82 communities (65 shown, 17 thin omitted)
-- Extraction: 89% EXTRACTED · 11% INFERRED · 0% AMBIGUOUS · INFERRED: 179 edges (avg confidence: 0.85)
+- 933 nodes · 1654 edges · 84 communities (67 shown, 17 thin omitted)
+- Extraction: 89% EXTRACTED · 11% INFERRED · 0% AMBIGUOUS · INFERRED: 186 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from the current project source and project memory included in this branch.
-- Refresh after code changes with `graphify update .` (no API cost).
+- Built from commit: `64556896`
+- Run `git rev-parse HEAD` and compare to check if the graph is stale.
+- Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - public/campaign.js
@@ -90,6 +91,8 @@
 - UI refinement and safety pass (v18)
 - Reversible Stormwind SI:7 visual theme (v10)
 - AGENTS.md
+- mnm-mode.js
+- check-syntax.cjs
 
 ## God Nodes (most connected - your core abstractions)
 1. `Shadows of Azeroth — Development Handoff` - 38 edges
@@ -101,24 +104,24 @@
 7. `fightExchange()` - 17 edges
 8. `result()` - 17 edges
 9. `status()` - 17 edges
-10. `resourceForecast()` - 16 edges
+10. `state()` - 17 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `Mission ledger phase 2 (2026-10-16)` --references--> `save()`  [INFERRED]
   DEVELOPMENT_HANDOFF.md → public/companions.js
+- `save()` --indirect_call--> `state()`  [INFERRED]
+  public/mnm-mode.js → public/druid.js
+- `settings()` --indirect_call--> `state()`  [INFERRED]
+  public/mnm-mode.js → public/druid.js
 - `questPanel()` --indirect_call--> `current()`  [INFERRED]
   public/chronicle.js → public/druid.js
 - `organizeGameSections()` --indirect_call--> `get()`  [INFERRED]
   public/characters.js → public/class-abilities.js
-- `draw()` --indirect_call--> `selected()`  [INFERRED]
-  public/companions.js → public/specializations.js
-- `interact()` --indirect_call--> `selected()`  [INFERRED]
-  public/companions.js → public/specializations.js
 
 ## Import Cycles
 - None detected.
 
-## Communities (82 total, 17 thin omitted)
+## Communities (84 total, 17 thin omitted)
 
 ### Community 0 - "public/campaign.js"
 Cohesion: 0.10
@@ -145,8 +148,8 @@ Cohesion: 0.08
 Nodes (24): Architecture, Campaign Chronicle, chapter system and Quest Journal (v30), Campaign continuity audit and guardrails (v20), Canonical story transition: Hollow Raven → Stormwind (v21), Combat health and damage ledger (v29), Companion conversations in Adventure (v32), Companion identities and class specializations (v34), Custom dialogue now changes relationships (+16 more)
 
 ### Community 6 - "progression.js"
-Cohesion: 0.24
-Nodes (20): award(), awardCore(), bar(), battle(), bonus(), check(), commitMutation(), companionBadge() (+12 more)
+Cohesion: 0.21
+Nodes (21): award(), awardCore(), bar(), battle(), bonus(), check(), commitMutation(), companionBadge() (+13 more)
 
 ### Community 7 - "steps"
 Cohesion: 0.09
@@ -197,8 +200,8 @@ Cohesion: 0.15
 Nodes (11): assert, campaign, chronicleCss, fs, oldDruidStrike, path, resourcesContext, root (+3 more)
 
 ### Community 19 - "racial-abilities.test.js"
-Cohesion: 0.08
-Nodes (20): files, fs, html, path, roots, { spawnSync }, visit(), vm (+12 more)
+Cohesion: 0.15
+Nodes (12): abilitiesSource, assert, berserking, berserkingRow, context, expected, fs, path (+4 more)
 
 ### Community 20 - "crafting.test.js"
 Cohesion: 0.21
@@ -245,8 +248,8 @@ Cohesion: 0.18
 Nodes (10): assert, classes, context, fs, path, profile, root, test (+2 more)
 
 ### Community 31 - "story-actions.test.js"
-Cohesion: 0.19
-Nodes (11): assert, bearReturnSetup(), block(), campaignSource, fs, path, setup(), ctx (+3 more)
+Cohesion: 0.24
+Nodes (10): assert, bearReturnSetup(), block(), campaignSource, fs, path, setup(), src() (+2 more)
 
 ### Community 32 - "dungeons.js"
 Cohesion: 0.36
@@ -380,16 +383,26 @@ Nodes (3): Current calculation rules, Save, API, and runtime protections, Stabil
 Cohesion: 0.67
 Nodes (3): Improvements, Multi-pass stability and iPhone polish review (v38), Regression review
 
+### Community 82 - "mnm-mode.js"
+Cohesion: 0.20
+Nodes (24): adventureView(), bar(), bind(), characterView(), combatAction(), combatView(), createHero(), creation() (+16 more)
+
+### Community 83 - "check-syntax.cjs"
+Cohesion: 0.20
+Nodes (8): files, fs, html, path, roots, { spawnSync }, visit(), vm
+
 ## Knowledge Gaps
 - **17 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `level()` connect `progression.js` to `story-actions.test.js`?**
-  _High betweenness centrality (0.020) - this node is a cross-community bridge._
+- **Why does `setup()` connect `story-actions.test.js` to `progression.js`?**
+  _High betweenness centrality (0.021) - this node is a cross-community bridge._
 - **Should `public/campaign.js` be split into smaller, more focused modules?**
   _Cohesion score 0.09996754300551769 - nodes in this community are weakly interconnected._
+- **Why does `ctx` connect `progression.js` to `story-actions.test.js`?**
+  _High betweenness centrality (0.020) - this node is a cross-community bridge._
 - **Should `Shadows of Azeroth — Development Handoff` be split into smaller, more focused modules?**
   _Cohesion score 0.05128205128205128 - nodes in this community are weakly interconnected._
 - **Should `characters.js` be split into smaller, more focused modules?**
@@ -398,5 +411,3 @@ _Questions this graph is uniquely positioned to answer:_
   _Cohesion score 0.08 - nodes in this community are weakly interconnected._
 - **Should `steps` be split into smaller, more focused modules?**
   _Cohesion score 0.08695652173913043 - nodes in this community are weakly interconnected._
-- **Should `dungeons.test.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.09090909090909091 - nodes in this community are weakly interconnected._
