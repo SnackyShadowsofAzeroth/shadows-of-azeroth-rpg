@@ -204,9 +204,9 @@
     "semantic_hash": ""
   },
   "public/sw.js": {
-    "mtime": 1794547720.4198494,
-    "seen": 1794547740.6078835,
-    "ast_hash": "ad7a46db969eeaa988ff51d8a3a859d7",
+    "mtime": 1794549213.293473,
+    "seen": 1794549234.962126,
+    "ast_hash": "c203698177b14806f1d34c7c4e680d06",
     "semantic_hash": ""
   },
   "scripts/check-syntax.cjs": {
@@ -444,9 +444,9 @@
     "semantic_hash": ""
   },
   "public/index.html": {
-    "mtime": 1794547720.4198494,
-    "seen": 1794547740.6079204,
-    "ast_hash": "70082e55d88dcd1c7ccb34048ab90af3",
+    "mtime": 1794549201.9020357,
+    "seen": 1794549234.9621727,
+    "ast_hash": "eba13849bcb919ca6223e3d9f59b225e",
     "semantic_hash": ""
   },
   "public/druid-vines.svg": {
@@ -477,6 +477,12 @@
     "mtime": 1794547883.8232062,
     "seen": 1794547903.9586022,
     "ast_hash": "a590c938c97652147d56d1a0a5412c81",
+    "semantic_hash": ""
+  },
+  "public/mnm-mode.js": {
+    "mtime": 1794549167.3037434,
+    "seen": 1794549234.962112,
+    "ast_hash": "a51ddc333e5c505c070372bff407c4c5",
     "semantic_hash": ""
   }
 }
