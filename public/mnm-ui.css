@@ -231,3 +231,7 @@ dialog::backdrop{background:#080a08d9;backdrop-filter:blur(2px)}
  .soa-mnm-stat-tile{grid-template-columns:minmax(0,1fr) auto}
 }
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important}}
+
+/* Keep a single roster row spacious instead of leaving an empty column beside it. */
+.soa-menu-card{width:min(100%,1100px)}
+.soa-character-list:has(>.soa-character-item:only-child){grid-template-columns:1fr}
