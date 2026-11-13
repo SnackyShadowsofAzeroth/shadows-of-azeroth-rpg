@@ -78,22 +78,22 @@ const CLASS_BONUSES=Object.freeze({
  spellblade:vector({str:2,dex:3,int:3}),
  wizard:vector({str:3,dex:1,int:4})
 });
-/* Custom, lore-grounded story features. Their one-use narrative effects are implemented in mnm-adventure.js, not presented as official M&M traits. */
+/* Original Shadows of Azeroth racial features. These are custom Chapter One mechanics, not official M&M abilities. */
 const RACIAL_ABILITIES=Object.freeze({
- human:{name:"Many Roads",description:"A human's upbringing in a seafaring, noble, bureaucratic, or nomadic tradition lends a practical perspective to unfamiliar trouble."},
- gnome:{name:"Eureka",description:"A flash of patient curiosity turns a puzzling detail into an inventive lead, reflecting the gnomes' relentless search for truth."},
- deep_gnome:{name:"Spiral Cartographer",description:"Study of dreamscapes, astral paths, and the Spirals helps a deep gnome recognize a strange crossing and choose a route through it."},
- dwarf:{name:"Titan's Craft",description:"Stone, metal, and the old Galdri creation stories guide a dwarf's hands when making or repairing a tool under pressure."},
- deep_dwarf:{name:"Spirit Lattice",description:"Deep dwarves shape corrupted stone and bind spirits into strange works; a spirit lattice helps a crafted object answer its maker's command."},
- high_elf:{name:"Calafrey Discipline",description:"Centuries-old Cilindrine doctrine and mastery of magic help a high elf hold a measured line through a complex working."},
- wood_elf:{name:"Wyrdpath",description:"A Faelewyn reads the forest's living signs and notices where an existing Wyrdgate or Fae-touched path crosses the mortal wood."},
- deep_elf:{name:"Shadow's Veil",description:"Ail'trist survival in the Deep beneath the Shadow lends a practiced use of darkness and silence to conceal deliberate movement."},
- ogre:{name:"Storm Coast Fury",description:"Made for war against the Spiral Lords, an ogre turns fearless discipline into one committed burst of force."},
- halfling:{name:"Fontborn Memory",description:"A halfling's bond to Eth-ur and its ancient stories can bring a forgotten detail to mind when the land or its history matters."},
- troll:{name:"Tempered Survivor",description:"A troll adapts after a hunt turns against them, changing ground, method, or pace instead of yielding."},
- goblin:{name:"Secret-Sense",description:"A goblin notices the unguarded hinge, concealed entrance, or false note in a story that others overlook."}
+ human:{name:"Many Roads",description:"Humans vary widely across Ba'Haara, Tarellian, Easthymn, and Sojourner traditions; no single disposition defines them.",effect:"After a failed investigation, try one different approach with a fresh roll and no racial modifier."},
+ gnome:{name:"Eureka",description:"Patient curiosity and extraordinary epiphanies reflect the gnomes' relentless pursuit of truth.",effect:"During the investigation, reveal the clue without a roll; the scavenger begins the encounter with 2 Resolve."},
+ deep_gnome:{name:"Spiral Cartographer",description:"Deep gnomes explore dreamscapes, astral paths, and the Spirals, mapping ways through realities others fear to enter.",effect:"During the encounter, map a safe alternate route and finish with a reliable warning; the stolen slate remains unrecovered."},
+ dwarf:{name:"Titan's Craft",description:"A dwarf's practical craft, stone lore, and steadfastness draw on Galdri traditions without assuming every dwarf is a smith.",effect:"During the encounter, remove 1 Danger; if Danger is still 0, brace the marker so it cancels the next Danger increase."},
+ deep_dwarf:{name:"Spirit Lattice",description:"Deep dwarves bind spirits into strange creations and reshape corrupted stone with cold precision.",effect:"Prepare a spirit lattice: your next failed encounter exchange also removes 1 scavenger Resolve, while Danger still rises."},
+ high_elf:{name:"Calafrey Discipline",description:"Cilindrine magical mastery and measured doctrine let a high elf hold a precise line under pressure.",effect:"Prepare a ward that prevents Danger from rising on your next failed encounter exchange."},
+ wood_elf:{name:"Wyrdpath",description:"Faelewyn read the living forest and its paths; this feature follows natural signs and does not create or summon a Wyrdgate.",effect:"Take a living flank: your next successful encounter exchange removes 2 Resolve instead of 1, with no roll bonus."},
+ deep_elf:{name:"Shadow's Veil",description:"The Ail'trist adapted to the Deep beneath the Shadow, learning to move deliberately through darkness and danger.",effect:"After finding a clue, use the cover of darkness to remove 1 scavenger Resolve without raising Danger."},
+ ogre:{name:"Storm Coast Fury",description:"Ogres were made for war and forged a disciplined martial society after the Storm Coast catastrophe.",effect:"Make a committed assault: remove 1 scavenger Resolve and add 1 Danger."},
+ halfling:{name:"Fontborn Memory",description:"Halflings' bond to Eth-ur and their long tradition of storytelling and lorekeeping preserve old ways through memory.",effect:"When the scavenger has 1 Resolve, settle the encounter peacefully and recover the slate through a remembered wayfarer's tale."},
+ troll:{name:"Tempered Survivor",description:"Trolls are resilient, adaptive hunters whose lives have been tempered by war and catastrophe.",effect:"Once, when Danger would force the scavenger to escape, hold at 2 Danger and counter for 1 Resolve."},
+ goblin:{name:"Secret-Sense",description:"Goblins are valued for sensing secrets, hidden entrances, deception, and opportunities others miss.",effect:"After finding a clue, attempt an unmodified Dexterity check (DC 13) to recover the slate through a hidden route; failure adds Danger."}
 });
-const raceById=id=>RACES.find(x=>x.id===id)||null;
+const raceById=const raceById=id=>RACES.find(x=>x.id===id)||null;
 const raceByName=name=>RACES.find(x=>x.name===name)||null;
 const classById=id=>CLASSES.find(x=>x.id===id)||null;
 const classesForRace=id=>(AVAILABILITY[id]||[]).map(classById).filter(Boolean);
