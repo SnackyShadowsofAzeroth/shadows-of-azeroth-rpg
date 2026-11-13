@@ -157,7 +157,7 @@ function validateCharacterRoster(value){
  if(!object(value)||value.version!==1||!Array.isArray(value.characters)||value.characters.length<1||value.characters.length>16)fail("Character roster is incomplete.");
  const ids=new Set();
  for(const person of value.characters){
-  if(!object(person)||typeof person.id!=="string"||!/^[a-z0-9_-]{1,64}$/i.test(person.id)||typeof person.name!=="string"||!person.name.trim()||person.name.length>60||!window.soaCharacterRules?.validSelection?.(person)||(person.professions!==undefined&&(!object(person.professions)))||(person.secondary!==undefined&&(!object(person.secondary)))||(person.professionLog!==undefined&&!Array.isArray(person.professionLog))||(person.professionEvents!==undefined&&!Array.isArray(person.professionEvents)))fail("Character roster contains an invalid profile.");
+  if(!object(person)||typeof person.id!=="string"||!/^[a-z0-9_-]{1,64}$/i.test(person.id)||typeof person.name!=="string"||!person.name.trim()||person.name.length>60||!(person?.system==="mnm"?window.soaMnmRules?.isValidSelection?.(person):window.soaCharacterRules?.validSelection?.(person))||(person.professions!==undefined&&(!object(person.professions)))||(person.secondary!==undefined&&(!object(person.secondary)))||(person.professionLog!==undefined&&!Array.isArray(person.professionLog))||(person.professionEvents!==undefined&&!Array.isArray(person.professionEvents)))fail("Character roster contains an invalid profile.");
   if(ids.has(person.id))fail("Character roster contains duplicate IDs.");
   ids.add(person.id);
  }

@@ -12,7 +12,7 @@ const SECONDARY=["Cooking","Fishing","First Aid"];
 const BASIC_GEAR={Warrior:["Worn Training Sword","Plain Shield","Simple Cloth Tunic"],Paladin:["Worn Training Mace","Plain Shield","Simple Cloth Tunic"],Hunter:["Worn Practice Bow","Small Quiver","Simple Cloth Tunic"],Rogue:["Worn Practice Dagger","Plain Cloth Tunic"],Priest:["Worn Wooden Staff","Plain Cloth Robe"],Shaman:["Worn Wooden Mace","Plain Cloth Tunic"],Mage:["Worn Wooden Staff","Plain Cloth Robe"],Warlock:["Worn Wooden Staff","Plain Cloth Robe"],Druid:["Worn Wooden Staff","Plain Cloth Tunic"]};
 const isSnackyEgg=p=>p?.name==="Snacky Lugnuts"&&p?.gender==="Male"&&p?.race==="Gnome"&&p?.className==="Rogue"&&Object.keys(p?.professions||{}).includes("Mining")&&Object.keys(p?.professions||{}).includes("Engineering");
 const START_ZONES={"Human":"Northshire Valley, Elwynn Forest","Dwarf":"Coldridge Valley, Dun Morogh","Gnome":"Coldridge Valley, Dun Morogh","Night Elf":"Shadowglen, Teldrassil","Orc":"Valley of Trials, Durotar","Troll":"Valley of Trials, Durotar","Undead":"Deathknell, Tirisfal Glades","Tauren":"Red Cloud Mesa, Mulgore","Skyborne":"Skyborne Enclave (original starting settlement)"};
-const startingZone=p=>START_ZONES[p.race]||"a settlement in "+(p.faction==="Horde"?"Kalimdor":"the Eastern Kingdoms");
+const startingZone=p=>p?.system==="mnm"?"":START_ZONES[p.race]||"a settlement in "+(p.faction==="Horde"?"Kalimdor":"the Eastern Kingdoms");
 let roster,active,rosterLoadBlocked=false;
 const get=id=>document.getElementById(id);
 const make=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e};
@@ -97,8 +97,9 @@ function restore(id){
   return false;
  }
 }
-function baseState(profile){return {equipment:[...(profile.startingEquipment||BASIC_GEAR[profile.className]||[])],id:"new-hero-start",hp:100,en:100,money:1500,time:0,alert:0,seen:[],flags:{},enemy:null,log:["A new journey begins for "+profile.name+" in "+startingZone(profile)+".","You have 15 silver and no companions."]}}
+function baseState(profile){if(profile.system==="mnm")return {equipment:[],id:"mnm-character-record",hp:0,en:0,money:0,time:0,alert:0,seen:[],flags:{},enemy:null,log:["M&M character record created. Campaign rules are still being converted."]};return {equipment:[...(profile.startingEquipment||BASIC_GEAR[profile.className]||[])],id:"new-hero-start",hp:100,en:100,money:1500,time:0,alert:0,seen:[],flags:{},enemy:null,log:["A new journey begins for "+profile.name+" in "+startingZone(profile)+".","You have 15 silver and no companions."]}}
 function newCampaign(profile){
+ if(profile.system==="mnm")return {turn:0,scene:null,history:[],journal:[],startingZone:"",lastError:"",lastAction:"M&M character created. The M&M rules and campaign are still being converted; no Warcraft adventure has been started.",lastResult:"M&M character record ready. Adventure play is not yet converted.",pending:null};
  const zone=startingZone(profile);
  return {turn:0,scene:null,history:[],journal:[],startingZone:zone,lastError:"",lastAction:"Begin the FIRST scene of a completely new adventure for "+profile.name+", a LEVEL 1 "+profile.race+" "+profile.className+" of the "+profile.faction+(profile.race==="Skyborne"?" ("+skybornePath(profile.faction)+")":"")+". STARTING LOCATION: "+zone+". The character starts PHYSICALLY IN THIS STARTING ZONE, ALONE, with exactly 15 silver (1,500 copper), basic class starter equipment only, and no existing allies, companions, party, completed missions, faction standing, personal relationships, or earned equipment beyond the starter kit. Treat faction identity as background only; do not assign numeric standing or relationship scores before an in-world event establishes them. Record relationships and faction standing only after meaningful encounters and choices. "+(profile.race==="Skyborne"&&profile.className==="Druid"?"Skyborne Druids have unique bird-inspired forms; preserve that racial identity in descriptions. ":"")+"Introduce a modest class-appropriate first task and six distinct action choices. No travel skips, established companions, Hollow Raven or Snacky's storyline. Do not grant XP, extra currency, equipment, specialization, or followers in the opening narration.",lastResult:"Level 1 newcomer in "+zone+". Starting funds: 15 silver. Faction standing and personal relationships are unestablished; no previous battles, companions, or rewards.",pending:null};
 }
@@ -123,7 +124,7 @@ function socialSkills(){
  const mod=skill=>window.soaAbilities?.modifier?.(skill)||0;
  return {bluff:base.bluff+si7+hidden+(trained?.("bluff")||0)+mod("bluff"),bribe:base.bribe+(trained?.("bribe")||0)+mod("bribe"),romance:base.romance+(trained?.("romance")||0)+mod("romance"),threaten:base.threaten+(trained?.("threaten")||0)+mod("threaten")};
 }
-function selectedProfile(){return {...active,form:active.className==="Druid"?window.soaDruid?.form?.():undefined,factionPath:active.race==="Skyborne"?skybornePath(active.faction):null,level:window.soaProgression?.level?.()||10,professions:Object.fromEntries(Object.entries(active.professions||{}).map(([k,v])=>[k,v.skill||1]))}}
+function selectedProfile(){if(active.system==="mnm")return {...active,level:active.level||1};return {...active,form:active.className==="Druid"?window.soaDruid?.form?.():undefined,factionPath:active.race==="Skyborne"?skybornePath(active.faction):null,level:window.soaProgression?.level?.()||10,professions:Object.fromEntries(Object.entries(active.professions||{}).map(([k,v])=>[k,v.skill||1]))}}
 function commitRoster(){return write(ROSTER_KEY,roster)}
 function enter(id){
  if(window.soaSaveRules.isIntegrityBlocked()){alert("Character changes are paused until the saved data has been recovered.");return}
@@ -175,12 +176,20 @@ function deleteCharacter(id){
 }
 function create(profile){
  if(window.soaSaveRules.isIntegrityBlocked()){alert("Character creation is paused until the saved data has been recovered.");return}
- if(!validCharacterChoice(profile)){alert("That faction and class combination is not available for the selected race.");return}
- if(!Array.isArray(profile.professionNames)||profile.professionNames.length>2||new Set(profile.professionNames).size!==profile.professionNames.length||profile.professionNames.some(n=>!PROFS.includes(n))){alert("Choose at most two distinct primary professions.");return}
+ const isMnm=profile.system==="mnm";
+ if(!(isMnm?window.soaMnmRules?.isValidSelection?.(profile):validCharacterChoice(profile))){alert(isMnm?"That M&M race and class combination is not available.":"That faction and class combination is not available for the selected race.");return}
+ if(!isMnm&&(!Array.isArray(profile.professionNames)||profile.professionNames.length>2||new Set(profile.professionNames).size!==profile.professionNames.length||profile.professionNames.some(n=>!PROFS.includes(n)))){alert("Choose at most two distinct primary professions.");return}
  if(roster.characters.length>=16){alert("Character roster full (16).");return}
  const id="hero-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,7);
- const p={...profile,factionPath:profile.race==="Skyborne"?skybornePath(profile.faction):null,id,origin:"custom",startLevel:1,startingZone:startingZone(profile),startingEquipment:[...(BASIC_GEAR[profile.className]||[])],specialization:"Unchosen",professions:Object.fromEntries(profile.professionNames.map(n=>[n,{skill:1,events:0}])),secondary:Object.fromEntries(SECONDARY.map(n=>[n,{skill:1,events:0}])),professionEvents:[],professionLog:[]};
- delete p.professionNames;
+ let p;
+ if(isMnm){
+  const normalized=window.soaMnmRules.normalizeCharacter({...profile,level:1});
+  p={...normalized,id,origin:"mnm",startLevel:1,startingZone:"",startingEquipment:[],specialization:"Unchosen",learnedAbilities:[],professions:{},secondary:{},professionEvents:[],professionLog:[]};
+  delete p.faction;delete p.professionNames;
+ }else{
+  p={...profile,factionPath:profile.race==="Skyborne"?skybornePath(profile.faction):null,id,origin:"custom",startLevel:1,startingZone:startingZone(profile),startingEquipment:[...(BASIC_GEAR[profile.className]||[])],specialization:"Unchosen",professions:Object.fromEntries(profile.professionNames.map(n=>[n,{skill:1,events:0}])),secondary:Object.fromEntries(SECONDARY.map(n=>[n,{skill:1,events:0}])),professionEvents:[],professionLog:[]};
+  delete p.professionNames;
+ }
  const previous=active.id;
  if(!snapshot(previous)){alert("Unable to back up your current adventure. Character creation has been stopped to protect your save.");return}
  try{
@@ -269,63 +278,53 @@ function importRosterBackupFile(event){
 function drawMenu(){
  let overlay=get("soa-character-menu");if(overlay)overlay.remove();
  overlay=make("div",undefined,"soa-menu-overlay");overlay.id="soa-character-menu";
- const shell=make("div",undefined,"soa-menu-card");
- shell.append(make("div","SHADOWS OF AZEROTH · CHARACTER SELECT","soa-roster-kicker"),make("h1","Choose Your Hero"));
+ const shell=make("div",undefined,"soa-menu-card soa-mnm-creation");
+ shell.append(make("div","MONSTERS & MEMORIES · CHARACTER SELECT","soa-roster-kicker"),make("h1","Create Your Adventurer"));
  if(window.soaSaveRules.isIntegrityBlocked())shell.append(make("p","Saved data could not be read and is preserved. Gameplay is paused. Use Restore All Character Saves with a known-good backup to recover safely.","soa-menu-error"));
  const list=make("div",undefined,"soa-character-list");
  for(const p of roster.characters){
   const item=make("div",undefined,"soa-character-item");
-  const description=make("div");description.append(make("strong",p.name),make("span",factionDisplay(p)+" · "+p.race+" "+p.className+" · Level "+(p.id===active.id?(window.soaProgression?.level?.()||p.startLevel||10):(()=>{const slot=read(SLOT_PREFIX+p.id);try{return Number(JSON.parse(slot?.["soa-progression-v1"]||"null")?.actors?.hero?.level)||p.startLevel||10}catch{return p.startLevel||10}})())+" · "+Object.keys(p.professions||{}).join(" / ")));
-  const button=make("button",p.id===active.id?"Play":"Switch & Play");button.type="button";button.onclick=()=>enter(p.id);
+  const level=p.system==="mnm"?(p.level||1):(p.id===active.id?(window.soaProgression?.level?.()||p.startLevel||10):(()=>{const slot=read(SLOT_PREFIX+p.id);try{return Number(JSON.parse(slot?.["soa-progression-v1"]||"null")?.actors?.hero?.level)||p.startLevel||10}catch{return p.startLevel||10}})());
+  const desc=p.system==="mnm"?"M&M · "+p.race+" "+p.className+" · Level "+level:"Legacy · "+factionDisplay(p)+" · "+p.race+" "+p.className+" · Level "+level;
+  const description=make("div");description.append(make("strong",p.name),make("span",desc));
+  const button=make("button",p.id===active.id?"Playing":"Switch & Play");button.type="button";button.onclick=()=>enter(p.id);
   const actions=make("div",undefined,"soa-character-actions");actions.append(button);
   const remove=make("button","Delete");remove.type="button";remove.className="soa-delete-character";remove.setAttribute("aria-label","Delete "+p.name);remove.onclick=()=>deleteCharacter(p.id);actions.append(remove);
   item.append(description,actions);list.append(item);
  }
  shell.append(list);
- const createToggle=make("button","＋ Create New Character");createToggle.type="button";createToggle.className="soa-roster-backup";createToggle.setAttribute("aria-expanded","false");createToggle.setAttribute("aria-controls","soa-character-creation");shell.append(createToggle);
- const expand=make("section");expand.id="soa-character-creation";expand.className="soa-create-new";expand.hidden=true;expand.setAttribute("aria-label","Create a new character");
- const form=make("form");form.className="soa-create-form";
+ const createToggle=make("button","＋ Create M&M Character");createToggle.type="button";createToggle.className="soa-roster-backup";createToggle.setAttribute("aria-expanded","true");createToggle.setAttribute("aria-controls","soa-character-creation");shell.append(createToggle);
+ const expand=make("section");expand.id="soa-character-creation";expand.className="soa-create-new";expand.setAttribute("aria-label","Create a new M&M character");
+ const form=make("form");form.className="soa-create-form soa-mnm-form";
  const name=make("input");name.type="text";name.maxLength=36;name.minLength=2;name.required=true;name.placeholder="Character name";
- const nameLabel=make("label","Character name");nameLabel.append(name);
- const race=make("select"),gender=make("select"),faction=make("select"),className=make("select"),prof1=make("select"),prof2=make("select");
+ const gender=make("select");selectOptions(gender,["Female","Male","Nonbinary","Prefer not to say"]);
+ const race=make("select"),klass=make("select");
  const labeled=(title,field)=>{const label=make("label",title);label.append(field);return label};
- selectOptions(race,Object.keys(RACES));race.value="Human";selectOptions(gender,["Male","Female"]);
- const allegianceHint=make("p","","muted soa-allegiance-help");
- function update(){
-  const r=RACES[race.value],oldFaction=faction.value,choices=factionOptions(race.value);
-  selectOptions(faction,choices);
-  const previousChoice=choices.find(option=>option.value===oldFaction&&!option.disabled);
-  faction.value=previousChoice?.value||(race.value==="Skyborne"?"Alliance":r.faction);
-  const valid=allowedClasses(race.value,faction.value),lastClass=className.value;
-  selectOptions(className,valid.map(value=>({value,label:value==="Druid"&&race.value==="Skyborne"?"Druid · bird-inspired forms":value})));
-  if(valid.includes(lastClass))className.value=lastClass;
-  allegianceHint.textContent=race.value==="Skyborne"
-   ?"Skyborne share Warrior, Hunter, Rogue, and Druid. Alliance High Order Skyborne may also be Mages; Horde Windshaper Skyborne may also be Shamans. Druid forms are bird-inspired."
-   :r.faction+" allegiance is required for "+race.value+"; the opposing faction is unavailable.";
- }
- race.onchange=update;faction.onchange=update;update();
- selectOptions(prof1,PROFS);selectOptions(prof2,PROFS);prof1.value="Mining";prof2.value="Engineering";
- form.append(nameLabel,labeled("Gender",gender),labeled("Race",race),labeled("Faction",faction),allegianceHint,labeled("Class",className),labeled("Primary profession I",prof1),labeled("Primary profession II",prof2));
- const hint=make("p","New heroes begin alone at level 1 with 15 silver in their starting zone. Independent saves and professions; generating the new story requires Gemini online.","muted");form.append(hint);
+ const r=window.soaMnmRules;
+ selectOptions(race,r.races.map(x=>({value:x.id,label:x.name})));race.value="human";
+ const scores=make("fieldset",undefined,"soa-mnm-scores");const legend=make("legend","ABILITY SCORES");scores.append(legend);
+ const labels={str:"Strength",dex:"Dexterity",con:"Constitution",int:"Intelligence",wis:"Wisdom",cha:"Charisma"},scoreInputs={};
+ const updateClassList=()=>{const previous=klass.value,choices=r.classesForRace(race.value);selectOptions(klass,choices.map(x=>({value:x.id,label:x.name})));if(choices.some(x=>x.id===previous))klass.value=previous;};
+ race.onchange=updateClassList;updateClassList();klass.value="fighter";
+ for(const key of r.abilities){const wrap=make("label",labels[key],"soa-mnm-score");const input=make("input");input.type="number";input.min="3";input.max="25";input.step="1";input.value="10";input.required=true;input.setAttribute("aria-label",labels[key]);const mod=make("output","+0");input.oninput=()=>{mod.textContent=(r.abilityModifier(input.value)>=0?"+":"")+r.abilityModifier(input.value)};wrap.append(input,mod);scores.append(wrap);scoreInputs[key]=input}
+ form.append(labeled("Character name",name),labeled("Gender",gender),labeled("Race",race),labeled("Class",klass),scores);
+ form.append(make("p","Race and class availability follows the M&M character options. Assign scores directly; no race bonuses or point-buy rules are assumed.","muted soa-mnm-note"));
+ form.append(make("p","This creates an M&M character record. The campaign, combat, equipment, and progression systems are still being converted, so no Warcraft faction, professions, starting kit, or silver are assigned.","soa-mnm-warning"));
  const warning=make("p","","soa-menu-error");warning.setAttribute("aria-live","polite");form.append(warning);
- const submit=make("button","Create Character & Start Story");submit.type="submit";form.append(submit);
- form.onsubmit=e=>{e.preventDefault();const n=name.value.trim();if(n.length<2||n.length>36){warning.textContent="Enter a name between 2 and 36 characters.";return}if(!validCharacterChoice({race:race.value,faction:faction.value,className:className.value})){warning.textContent="Choose a faction and class allowed for that race.";return}if(prof1.value===prof2.value){warning.textContent="Choose two different primary professions.";return}if(roster.characters.some(x=>x.name.toLowerCase()===n.toLowerCase())){warning.textContent="That character name is already in your roster.";return}create({name:n,gender:gender.value,race:race.value,faction:faction.value,className:className.value,professionNames:[prof1.value,prof2.value]})};
+ const submit=make("button","Create M&M Character");submit.type="submit";form.append(submit);
+ form.onsubmit=e=>{e.preventDefault();const n=name.value.trim();if(n.length<2||n.length>36){warning.textContent="Enter a name between 2 and 36 characters.";return}if(!r.isValidSelection({system:"mnm",raceId:race.value,classId:klass.value})){warning.textContent="That race and class combination is not available.";return}if(roster.characters.some(x=>x.name.toLowerCase()===n.toLowerCase())){warning.textContent="That character name is already in your roster.";return}const abilities=Object.fromEntries(Object.entries(scoreInputs).map(([key,input])=>[key,Number(input.value)]));create({system:"mnm",name:n,gender:gender.value,raceId:race.value,classId:klass.value,abilities})};
  expand.append(form);shell.append(expand);
- createToggle.onclick=()=>{
-  const opening=expand.hidden;expand.hidden=!opening;createToggle.setAttribute("aria-expanded",String(opening));
-  createToggle.textContent=opening?"Close Character Creation":"＋ Create New Character";
-  if(opening){name.focus({preventScroll:true});expand.scrollIntoView({behavior:"smooth",block:"nearest"})}
- };
+ createToggle.onclick=()=>{const opening=expand.hidden;expand.hidden=!opening;createToggle.setAttribute("aria-expanded",String(opening));createToggle.textContent=opening?"Close Character Creation":"＋ Create M&M Character";if(opening){name.focus({preventScroll:true});expand.scrollIntoView({behavior:"smooth",block:"nearest"})}};
  const backup=make("button","Download All Character Saves");backup.type="button";backup.className="soa-roster-backup";backup.onclick=exportRosterBackup;shell.append(backup);
  const restore=make("button","Restore All Character Saves");restore.type="button";restore.className="soa-roster-backup";restore.onclick=()=>get("soa-roster-restore-file").click();shell.append(restore);
  const restoreInput=make("input");restoreInput.type="file";restoreInput.id="soa-roster-restore-file";restoreInput.accept="application/json,.json";restoreInput.hidden=true;restoreInput.onchange=importRosterBackupFile;shell.append(restoreInput);
- const backupHelp=make("p","Back up or restore the complete character roster, including local stories, relationships, progression and portraits.","soa-menu-help");shell.append(backupHelp);
+ shell.append(make("p","Existing legacy characters and their saves remain in this roster. Back up or restore the complete local character archive.","soa-menu-help"));
  const close=make("button","Return to Game");close.className="soa-menu-back";close.onclick=()=>{overlay.remove();document.documentElement.classList.remove("soa-character-menu-open");try{sessionStorage.setItem(ENTER_KEY,"1")}catch(e){}};
  shell.append(close);overlay.append(shell);document.body.append(overlay);document.documentElement.classList.add("soa-character-menu-open");window.soaPortraits?.refreshMenu?.();
 }
 function profilePanel(){
  const head=document.querySelector("header");if(!head)return;
- const title=get("soa-player-name"),tag=get("soa-player-class");if(title)title.textContent=active.name;if(tag)tag.textContent=active.id==="snacky"?"SI:7 · Combat Swords":factionDisplay(active)+" · "+active.race+" "+active.className;
+ const title=get("soa-player-name"),tag=get("soa-player-class");document.body.classList.toggle("soa-ruleset-mnm",active.system==="mnm");if(title)title.textContent=active.name;if(tag)tag.textContent=active.system==="mnm"?"MONSTERS & MEMORIES · "+active.race+" "+active.className:active.id==="snacky"?"SI:7 · Combat Swords":"LEGACY · "+factionDisplay(active)+" · "+active.race+" "+active.className;
  if(typeof render==="function")render();
  window.soaEquipment?.renderStatus?.();
  const menu=make("button","☰ Characters");menu.id="soa-characters-button";menu.type="button";menu.onclick=drawMenu;head.append(menu);
@@ -337,6 +336,14 @@ function profilePanel(){
 // must not decide which section players encounter first.
 function organizeGameSections(){
  const main=document.querySelector("main");if(!main)return;
+ if(active.system==="mnm"){
+  const status=get("soa-character-status"),profession=get("soa-profession-panel");
+  let screen=get("soa-character-screen");
+  if(!screen){screen=make("section");screen.id="soa-character-screen";screen.className="soa-game-screen";screen.setAttribute("aria-label","M&M Character Record");main.insertBefore(screen,main.querySelector(":scope > footer")||null)}
+  screen.replaceChildren();if(status)status.hidden=true;if(profession){profession.hidden=false;screen.append(profession)}
+  for(const child of main.children){if(child!==screen&&child.tagName!=="HEADER"&&child.tagName!=="FOOTER")child.hidden=true}
+  return;
+ }
  const status=get("soa-character-status"),profession=get("soa-profession-panel");
  if(status&&profession&&!get("soa-character-screen")){
   const screen=make("section");screen.id="soa-character-screen";screen.className="soa-game-screen";screen.setAttribute("aria-label","Character");
@@ -406,27 +413,26 @@ function formatProfessionLog(entry){
 }
 function drawProfessions(){
  const root=get("soa-profession-panel");if(!root)return;get("soa-character-status")?.querySelectorAll(".soa-ability-sheet").forEach(sheet=>sheet.remove());root.replaceChildren();
- root.append(make("div","CHARACTER RECORD","soa-roster-kicker"),make("h2",active.name+" · "+active.race+" "+active.className));
+ root.append(make("div",active.system==="mnm"?"M&M CHARACTER RECORD":"CHARACTER RECORD","soa-roster-kicker"),make("h2",active.name+" · "+active.race+" "+active.className));
+ if(active.system==="mnm"){
+  root.classList.add("soa-mnm-record");
+  const intro=make("p","This character uses the M&M race, class, and six-score record. Campaign play, combat, equipment, and progression are still under conversion.","muted soa-mnm-warning");root.append(intro);
+  const grid=make("div",undefined,"soa-mnm-record-grid"),labels={str:"Strength",dex:"Dexterity",con:"Constitution",int:"Intelligence",wis:"Wisdom",cha:"Charisma"};
+  for(const key of window.soaMnmRules.abilities){const card=make("div",undefined,"soa-mnm-record-score");const score=Number(active.abilities?.[key]??10),mod=window.soaMnmRules.abilityModifier(score);card.append(make("span",labels[key]),make("strong",String(score)),make("small",(mod>=0?"+":"")+mod));grid.append(card)}
+  root.append(grid,make("p","LEVEL "+(active.level||1)+" · "+active.classPrefix+" · No faction, profession, inventory, or currency has been assigned.","soa-mnm-note"));
+  return;
+ }
+ root.classList.remove("soa-mnm-record");
  const abilityCard=window.soaAbilities?.card?.("hero");if(abilityCard)root.append(abilityCard);
  const level=window.soaProgression?.level?.()||active.startLevel||10;root.append(specializationCard());const classAbilities=window.soaClassAbilities?.card?.(active.className,level);if(classAbilities)root.append(classAbilities);const racialAbilities=window.soaRacialAbilities?.card?.(active.race);if(racialAbilities)root.append(racialAbilities);
- window.soaProgression?.refresh?.();
- window.soaPortraits?.refresh?.();
+ window.soaProgression?.refresh?.();window.soaPortraits?.refresh?.();
  const meta=make("p",factionDisplay(active)+" · "+(active.specialization||"Unchosen"),"muted");root.append(meta);
- const social=make("details");social.className="soa-social-stats";
- social.append(make("summary","Social skills · bluff, bribe, romance, threaten"));
- const scores=make("div",undefined,"soa-social-score-grid");
- for(const [skill,bonus] of Object.entries(socialSkills())){
-  const score=make("div",undefined,"soa-social-score");
-  score.append(make("strong",skill[0].toUpperCase()+skill.slice(1)),make("span","+"+bonus));
-  scores.append(score);
- }
- social.append(scores,make("p","Living Campaign social actions use d20 + skill versus a difficulty check. Bribery requires an explicitly offered amount; affection still requires mutual consent.","muted"));
- root.append(social);
+ const social=make("details");social.className="soa-social-stats";social.append(make("summary","Social skills · bluff, bribe, romance, threaten"));
+ const scores=make("div",undefined,"soa-social-score-grid");for(const [skill,bonus] of Object.entries(socialSkills())){const score=make("div",undefined,"soa-social-score");score.append(make("strong",skill[0].toUpperCase()+skill.slice(1)),make("span","+"+bonus));scores.append(score)}
+ social.append(scores,make("p","Living Campaign social actions use d20 + skill versus a difficulty check. Bribery requires an explicitly offered amount; affection still requires mutual consent.","muted"));root.append(social);
  root.append(make("h3","Professions"),make("p","60 mastery ranks · 5 training points per rank.","muted soa-profession-help"));
  for(const [name,record] of Object.entries(active.professions||{}))root.append(professionRow(name,record,"Practice via Story",()=>prefill(name)));
- const secondary=make("details");const sum=make("summary","Secondary skills · 60-rank path");secondary.append(sum);
- for(const [name,record] of Object.entries(active.secondary||{}))secondary.append(professionRow(name,record,"Practice",()=>prefill(name)));
- root.append(secondary);
+ const secondary=make("details");secondary.append(make("summary","Secondary skills · 60-rank path"));for(const [name,record] of Object.entries(active.secondary||{}))secondary.append(professionRow(name,record,"Practice",()=>prefill(name)));root.append(secondary);
  const recents=active.professionLog||[];if(recents.length)root.append(make("p",recents.slice(-2).map(formatProfessionLog).join(" · "),"muted"));
  const status=get("soa-character-status"),sheet=root.querySelector(".soa-ability-sheet"),abilities=get("abilities");if(status&&sheet&&abilities)status.insertBefore(sheet,abilities);
 }

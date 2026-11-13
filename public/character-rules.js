@@ -24,6 +24,7 @@ function classesFor(raceName,faction){
  return [...skyborneShared,...(exclusive?[exclusive]:[])];
 }
 function validSelection(profile){
+ if(profile?.system==="mnm")return !!window.soaMnmRules?.isValidSelection?.(profile);
  const race=races[profile?.race];
  return !!race&&(race.faction==="Choose"?Object.hasOwn(skybornePaths,profile.faction):profile.faction===race.faction)&&classesFor(profile.race,profile.faction).includes(profile.className);
 }
