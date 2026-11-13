@@ -1,0 +1,482 @@
+{
+  ".github/workflows/pages-production.yml": {
+    "mtime": 1794547720.4184434,
+    "seen": 1794547740.607844,
+    "ast_hash": "ed5def1716059ca6cfbb275cdbc4cd04",
+    "semantic_hash": ""
+  },
+  ".github/workflows/quality.yml": {
+    "mtime": 1794547720.4186358,
+    "seen": 1794547740.60785,
+    "ast_hash": "13b61d8238e8e4400d684e056f921956",
+    "semantic_hash": ""
+  },
+  "functions/_lib/read-json.js": {
+    "mtime": 1794547720.419484,
+    "seen": 1794547740.6078527,
+    "ast_hash": "85cad904a7e46f25cc97795dd396075d",
+    "semantic_hash": ""
+  },
+  "functions/api/campaign.js": {
+    "mtime": 1794547720.419484,
+    "seen": 1794547740.6078544,
+    "ast_hash": "7503d1e5c9923fc4414cd19aed6f24b8",
+    "semantic_hash": ""
+  },
+  "functions/api/story.js": {
+    "mtime": 1794547720.419739,
+    "seen": 1794547740.6078556,
+    "ast_hash": "b0e3cc198520a5dd96a8b8c916a5eacd",
+    "semantic_hash": ""
+  },
+  "package.json": {
+    "mtime": 1794547720.419739,
+    "seen": 1794547740.6078568,
+    "ast_hash": "dd18839800875cfa7e1595172bfe0c8e",
+    "semantic_hash": ""
+  },
+  "public/abilities.js": {
+    "mtime": 1794547720.4198494,
+    "seen": 1794547740.607858,
+    "ast_hash": "f7dcefb8c8e0be62e82615c49d2a3340",
+    "semantic_hash": ""
+  },
+  "public/arena.js": {
+    "mtime": 1794547720.4198494,
+    "seen": 1794547740.607859,
+    "ast_hash": "b465dfe61a54f05a81294f3b92f93d4b",
+    "semantic_hash": ""
+  },
+  "public/campaign.js": {
+    "mtime": 1794547720.4198494,
+    "seen": 1794547740.6078598,
+    "ast_hash": "078eccb2a5a24d52d733b890a33a4ba7",
+    "semantic_hash": ""
+  },
+  "public/character-rules.js": {
+    "mtime": 1794547720.4198494,
+    "seen": 1794547740.607861,
+    "ast_hash": "d534f9eea3f1f9f388ad4c6e90b8fe9e",
+    "semantic_hash": ""
+  },
+  "public/characters.js": {
+    "mtime": 1794547720.4198494,
+    "seen": 1794547740.6078618,
+    "ast_hash": "8dbcf75893b410f7b25a045f46da64de",
+    "semantic_hash": ""
+  },
+  "public/chronicle.js": {
+    "mtime": 1794547720.4198494,
+    "seen": 1794547740.607863,
+    "ast_hash": "f10ee59dcfd14551c74bef205366e0c9",
+    "semantic_hash": ""
+  },
+  "public/class-abilities.js": {
+    "mtime": 1794547720.4198494,
+    "seen": 1794547740.6078641,
+    "ast_hash": "939ffcbd350749d5ee0d46e0028aba3f",
+    "semantic_hash": ""
+  },
+  "public/class-themes.js": {
+    "mtime": 1794547720.4198494,
+    "seen": 1794547740.6078649,
+    "ast_hash": "a23c4927879702e4eb693574f7d70167",
+    "semantic_hash": ""
+  },
+  "public/combat-rules.js": {
+    "mtime": 1794547720.4198494,
+    "seen": 1794547740.6078656,
+    "ast_hash": "e27d08e5f789c1fb8cc70cc02b6736a6",
+    "semantic_hash": ""
+  },
+  "public/companions.js": {
+    "mtime": 1794547720.4198494,
+    "seen": 1794547740.6078665,
+    "ast_hash": "d477bbe2196d376ce9db6a7777979e0c",
+    "semantic_hash": ""
+  },
+  "public/crafting.js": {
+    "mtime": 1794547720.4198494,
+    "seen": 1794547740.6078675,
+    "ast_hash": "017ed0ba3abb480cbf48502ed6b663c2",
+    "semantic_hash": ""
+  },
+  "public/druid.js": {
+    "mtime": 1794547720.4198494,
+    "seen": 1794547740.6078684,
+    "ast_hash": "477d81254d3ba779844e7f86484eebe1",
+    "semantic_hash": ""
+  },
+  "public/dungeon-data.js": {
+    "mtime": 1794547720.4198494,
+    "seen": 1794547740.6078691,
+    "ast_hash": "8193af9d461bbb0e334fe843831f2af9",
+    "semantic_hash": ""
+  },
+  "public/dungeons.js": {
+    "mtime": 1794547720.4198494,
+    "seen": 1794547740.6078699,
+    "ast_hash": "fec5c3967aee2065f52c1c45f2ad1eae",
+    "semantic_hash": ""
+  },
+  "public/enchanting.js": {
+    "mtime": 1794547720.4198494,
+    "seen": 1794547740.6078708,
+    "ast_hash": "4e777f61eb343d611c0b1ea8c7eb2942",
+    "semantic_hash": ""
+  },
+  "public/equipment.js": {
+    "mtime": 1794547720.4198494,
+    "seen": 1794547740.6078718,
+    "ast_hash": "402d04e4595c2a2810898212bb9598b7",
+    "semantic_hash": ""
+  },
+  "public/forever-items.js": {
+    "mtime": 1794547720.4198494,
+    "seen": 1794547740.607873,
+    "ast_hash": "9dc1baef93acf69a7b6d591a50355d86",
+    "semantic_hash": ""
+  },
+  "public/mnm-rules.js": {
+    "mtime": 1794547720.4198494,
+    "seen": 1794547740.6078742,
+    "ast_hash": "fe764c63209aeb54f36393f06a26c6fa",
+    "semantic_hash": ""
+  },
+  "public/mobile-layout.js": {
+    "mtime": 1794547720.4198494,
+    "seen": 1794547740.6078749,
+    "ast_hash": "6f6ac42faf3b197889f976fee259d415",
+    "semantic_hash": ""
+  },
+  "public/portraits.js": {
+    "mtime": 1794547720.4198494,
+    "seen": 1794547740.6078758,
+    "ast_hash": "b7b9a3f9a4a38c7fc501f246ca748310",
+    "semantic_hash": ""
+  },
+  "public/progression.js": {
+    "mtime": 1794547720.4198494,
+    "seen": 1794547740.6078765,
+    "ast_hash": "d2caf850b6f9c7f4f8207b4234ebdc3f",
+    "semantic_hash": ""
+  },
+  "public/quests.js": {
+    "mtime": 1794547720.4198494,
+    "seen": 1794547740.6078777,
+    "ast_hash": "beeccf059f0fd942d3981ab5d034d6df",
+    "semantic_hash": ""
+  },
+  "public/racial-abilities.js": {
+    "mtime": 1794547720.4198494,
+    "seen": 1794547740.6078784,
+    "ast_hash": "eea3ab23cfb1f23efeddc5934f723b03",
+    "semantic_hash": ""
+  },
+  "public/reputation.js": {
+    "mtime": 1794547720.4198494,
+    "seen": 1794547740.6078792,
+    "ast_hash": "c0bdf08c98fd68a847ce6db1a874fe57",
+    "semantic_hash": ""
+  },
+  "public/resource-rules.js": {
+    "mtime": 1794547720.4198494,
+    "seen": 1794547740.60788,
+    "ast_hash": "1b19d16a4cb549d55acab26e24adab53",
+    "semantic_hash": ""
+  },
+  "public/save-rules.js": {
+    "mtime": 1794547720.4198494,
+    "seen": 1794547740.607881,
+    "ast_hash": "12563608c2a581e90b64224e02247ffe",
+    "semantic_hash": ""
+  },
+  "public/specializations.js": {
+    "mtime": 1794547720.4198494,
+    "seen": 1794547740.6078818,
+    "ast_hash": "de3c810586a747d1d50c40abcbb4e0a7",
+    "semantic_hash": ""
+  },
+  "public/story-actions.js": {
+    "mtime": 1794547720.4198494,
+    "seen": 1794547740.6078825,
+    "ast_hash": "a2aea0a98e1780da0ba8c9e7efde8e5f",
+    "semantic_hash": ""
+  },
+  "public/sw.js": {
+    "mtime": 1794547720.4198494,
+    "seen": 1794547740.6078835,
+    "ast_hash": "ad7a46db969eeaa988ff51d8a3a859d7",
+    "semantic_hash": ""
+  },
+  "scripts/check-syntax.cjs": {
+    "mtime": 1794547720.4198494,
+    "seen": 1794547740.6078844,
+    "ast_hash": "2374519dd26cb2b34ecc1e61f04bccc1",
+    "semantic_hash": ""
+  },
+  "tests/ai-connection.test.js": {
+    "mtime": 1794547720.4198494,
+    "seen": 1794547740.6078854,
+    "ast_hash": "a2c8b272910dd3ae53047736ec85876d",
+    "semantic_hash": ""
+  },
+  "tests/arena.test.js": {
+    "mtime": 1794547720.4236336,
+    "seen": 1794547740.607886,
+    "ast_hash": "2adabbbcf44dbc37220458799915e577",
+    "semantic_hash": ""
+  },
+  "tests/campaign-math.test.js": {
+    "mtime": 1794547720.4236336,
+    "seen": 1794547740.6078868,
+    "ast_hash": "d2be1d6163ef43ddd93708ddd1931a6f",
+    "semantic_hash": ""
+  },
+  "tests/campaign-retry.test.js": {
+    "mtime": 1794547720.4236336,
+    "seen": 1794547740.607888,
+    "ast_hash": "4b99bedbd4cebebeb7827bf19f0754e5",
+    "semantic_hash": ""
+  },
+  "tests/character-delete.test.js": {
+    "mtime": 1794547720.4236336,
+    "seen": 1794547740.6078887,
+    "ast_hash": "93be912011e2860f1fd30e36ca3f619d",
+    "semantic_hash": ""
+  },
+  "tests/character-rules.test.js": {
+    "mtime": 1794547720.4236336,
+    "seen": 1794547740.6078897,
+    "ast_hash": "1ecdc417371675bea6e3dfdb9f8a8ca9",
+    "semantic_hash": ""
+  },
+  "tests/chronicle-anchor.test.js": {
+    "mtime": 1794547720.4236336,
+    "seen": 1794547740.6078904,
+    "ast_hash": "5f9ec78207f11f60733113f967c43ee7",
+    "semantic_hash": ""
+  },
+  "tests/chronicle-pacing.test.js": {
+    "mtime": 1794547720.4236336,
+    "seen": 1794547740.607893,
+    "ast_hash": "9f9aab144830cbce31f978bb229bf318",
+    "semantic_hash": ""
+  },
+  "tests/class-abilities.test.js": {
+    "mtime": 1794547720.4236336,
+    "seen": 1794547740.6078937,
+    "ast_hash": "a43869c5c94a6dd479ed115e9efc4b36",
+    "semantic_hash": ""
+  },
+  "tests/class-themes.test.js": {
+    "mtime": 1794547720.4236336,
+    "seen": 1794547740.6078944,
+    "ast_hash": "58f8b7501f419fa8f1d70225096526f4",
+    "semantic_hash": ""
+  },
+  "tests/combat-continuity.test.js": {
+    "mtime": 1794547720.4236336,
+    "seen": 1794547740.6078954,
+    "ast_hash": "299d474ecdfc762742f296354a46be2c",
+    "semantic_hash": ""
+  },
+  "tests/combat-resource-display.test.js": {
+    "mtime": 1794547720.4236336,
+    "seen": 1794547740.607896,
+    "ast_hash": "a66523569440a15d350ef4a1e5c7086d",
+    "semantic_hash": ""
+  },
+  "tests/crafting.test.js": {
+    "mtime": 1794547720.4236336,
+    "seen": 1794547740.607897,
+    "ast_hash": "5224dde6caa3c328ecca4fad0e7ad6e0",
+    "semantic_hash": ""
+  },
+  "tests/druid.test.js": {
+    "mtime": 1794547720.4236336,
+    "seen": 1794547740.6078978,
+    "ast_hash": "68b75e90397a413f3ee392fd9c17a45d",
+    "semantic_hash": ""
+  },
+  "tests/dungeons.test.js": {
+    "mtime": 1794547720.4236336,
+    "seen": 1794547740.607899,
+    "ast_hash": "ac58c1e192edae1db3eb2de0899fb5fc",
+    "semantic_hash": ""
+  },
+  "tests/enchanting-inventory.test.js": {
+    "mtime": 1794547720.4236336,
+    "seen": 1794547740.6079,
+    "ast_hash": "140bcac8e8bbf214510215dedea6cbca",
+    "semantic_hash": ""
+  },
+  "tests/enemy-combat-display.test.js": {
+    "mtime": 1794547720.4236336,
+    "seen": 1794547740.6079006,
+    "ast_hash": "3a6de0a90e81f33215c8e61d56c573da",
+    "semantic_hash": ""
+  },
+  "tests/enemy-phase.test.js": {
+    "mtime": 1794547720.4236336,
+    "seen": 1794547740.6079013,
+    "ast_hash": "fbe3375db94862cff7e21d5e4194faef",
+    "semantic_hash": ""
+  },
+  "tests/mission-reward.test.js": {
+    "mtime": 1794547720.4236336,
+    "seen": 1794547740.6079025,
+    "ast_hash": "73933df721a4d96ed33b61d2a0b9b695",
+    "semantic_hash": ""
+  },
+  "tests/mobile-layout.test.js": {
+    "mtime": 1794547720.4236336,
+    "seen": 1794547740.6079032,
+    "ast_hash": "ec1b67897aff99871c0c0ee3dfb3b9e7",
+    "semantic_hash": ""
+  },
+  "tests/progression-storage.test.js": {
+    "mtime": 1794547720.4236336,
+    "seen": 1794547740.607904,
+    "ast_hash": "453d65fbfdf5b9fe7334d88597a35f4b",
+    "semantic_hash": ""
+  },
+  "tests/quest-economy.test.js": {
+    "mtime": 1794547720.4236336,
+    "seen": 1794547740.607905,
+    "ast_hash": "e7e495d71d747952e4976511f2e288a3",
+    "semantic_hash": ""
+  },
+  "tests/quests-migration.test.js": {
+    "mtime": 1794547720.4236336,
+    "seen": 1794547740.607906,
+    "ast_hash": "0d2498b427fae6c2c8ae1468db850068",
+    "semantic_hash": ""
+  },
+  "tests/racial-abilities.test.js": {
+    "mtime": 1794547720.4236336,
+    "seen": 1794547740.6079068,
+    "ast_hash": "8954413b1e79466a7de58377e009fd95",
+    "semantic_hash": ""
+  },
+  "tests/relationship-onboarding.test.js": {
+    "mtime": 1794547720.4236336,
+    "seen": 1794547740.6079075,
+    "ast_hash": "d503b704de9eef2d4ce1f5345742784d",
+    "semantic_hash": ""
+  },
+  "tests/request-body.test.js": {
+    "mtime": 1794547720.4236336,
+    "seen": 1794547740.6079082,
+    "ast_hash": "2c105ec8dbaef5d77bb17f2969cdaec2",
+    "semantic_hash": ""
+  },
+  "tests/resource-rules.test.js": {
+    "mtime": 1794547720.4236336,
+    "seen": 1794547740.6079097,
+    "ast_hash": "bc4c5ca6fd4f1064c2a4e7e47e0e9fc4",
+    "semantic_hash": ""
+  },
+  "tests/save-rules.test.js": {
+    "mtime": 1794547720.4236336,
+    "seen": 1794547740.6079106,
+    "ast_hash": "d8fdc42c70516fbed2172d17fd3be5f2",
+    "semantic_hash": ""
+  },
+  "tests/selection-timeout.test.js": {
+    "mtime": 1794547720.4236336,
+    "seen": 1794547740.6079113,
+    "ast_hash": "3b12f5b81635eb6964e003ec51d7a2cd",
+    "semantic_hash": ""
+  },
+  "tests/specializations.test.js": {
+    "mtime": 1794547720.4236336,
+    "seen": 1794547740.6079123,
+    "ast_hash": "1d166ed8305898b97b7e5cf971f18a64",
+    "semantic_hash": ""
+  },
+  "tests/storage-transactions.test.js": {
+    "mtime": 1794547720.4236336,
+    "seen": 1794547740.6079133,
+    "ast_hash": "e583b0b9257f6eb00b79b87ce8a3256f",
+    "semantic_hash": ""
+  },
+  "tests/story-actions.test.js": {
+    "mtime": 1794547720.4236336,
+    "seen": 1794547740.607914,
+    "ast_hash": "38669a7d05ef75357ec6371854ad591a",
+    "semantic_hash": ""
+  },
+  "tests/worker-preview.test.js": {
+    "mtime": 1794547720.4236336,
+    "seen": 1794547740.607915,
+    "ast_hash": "abac3be70f4fb1c101918ce293c1e1d4",
+    "semantic_hash": ""
+  },
+  "worker.mjs": {
+    "mtime": 1794547720.4236336,
+    "seen": 1794547740.6079159,
+    "ast_hash": "72d2f31f67b9686446deda9b879294f0",
+    "semantic_hash": ""
+  },
+  "CAMPAIGN_BIBLE.md": {
+    "mtime": 1794547720.4186358,
+    "seen": 1794547740.6079168,
+    "ast_hash": "b43bd06932e86e36363658a5cabd64f8",
+    "semantic_hash": ""
+  },
+  "DEVELOPMENT_HANDOFF.md": {
+    "mtime": 1794547720.4186358,
+    "seen": 1794547740.6079178,
+    "ast_hash": "67a82012e956640fc346b62be220e263",
+    "semantic_hash": ""
+  },
+  "MNM_REWRITE_PLAN.md": {
+    "mtime": 1794547720.4186358,
+    "seen": 1794547740.6079185,
+    "ast_hash": "cf016c6ee8dba81919b3d585025610f8",
+    "semantic_hash": ""
+  },
+  "README.md": {
+    "mtime": 1794547720.4186358,
+    "seen": 1794547740.6079195,
+    "ast_hash": "c7f5c9a47126bb4f3f81537ba8baa5f0",
+    "semantic_hash": ""
+  },
+  "public/index.html": {
+    "mtime": 1794547720.4198494,
+    "seen": 1794547740.6079204,
+    "ast_hash": "70082e55d88dcd1c7ccb34048ab90af3",
+    "semantic_hash": ""
+  },
+  "public/druid-vines.svg": {
+    "mtime": 1794547720.4198494,
+    "seen": 1794547740.6079211,
+    "ast_hash": "ac7a3f8df2e6922d96d25e46ddfbd3b9",
+    "semantic_hash": ""
+  },
+  "public/icon.svg": {
+    "mtime": 1794547720.4198494,
+    "seen": 1794547740.6079218,
+    "ast_hash": "1701ac1c2723de23e729797aff7d4e26",
+    "semantic_hash": ""
+  },
+  ".codex/hooks.json": {
+    "mtime": 1794547775.6873007,
+    "seen": 1794547903.9579544,
+    "ast_hash": "005ac71c84af2cae38e255e2b9de2411",
+    "semantic_hash": ""
+  },
+  "AGENTS.md": {
+    "mtime": 1794547883.8232062,
+    "seen": 1794547903.958597,
+    "ast_hash": "93ee96c5eaeeb4ea2cbc013f20d30eee",
+    "semantic_hash": ""
+  },
+  "PROJECT_MEMORY.md": {
+    "mtime": 1794547883.8232062,
+    "seen": 1794547903.9586022,
+    "ast_hash": "a590c938c97652147d56d1a0a5412c81",
+    "semantic_hash": ""
+  }
+}
