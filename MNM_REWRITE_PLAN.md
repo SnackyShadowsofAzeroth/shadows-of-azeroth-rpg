@@ -10,7 +10,7 @@ Rebuild Shadows of Azeroth as a turn-based RPG grounded in the user's Monsters &
 3. **Combat and adventuring loop** — implement initiative/turn order, attacks, defenses, class abilities, items, custom actions, checks, retreat, loot, XP, equipment, and branching quests. Preserve one consequential exchange at a time and transparent state changes.
 4. **Content replacement** — replace Warcraft setting text and content with original M&M-based locations, NPCs, enemies, quests, trainers, and item catalogs. Preserve only original or user-created material that is not Warcraft-derived.
 5. **Save compatibility and offline rollout** — keep existing saves recoverable and distinguish legacy Warcraft saves from new M&M characters. Do not silently reinterpret or erase existing local data.
-6. **Visual redesign** — after the mechanics and content stabilize, adapt the interface toward the user's preferred chunky, faceted, stylized M&M look without changing the newly established rules.
+6. **Visual redesign** — the user has directed this to proceed in parallel with the rules/content conversion. Apply the chunky, faceted, classic-fantasy visual direction in `public/mnm-ui.css`; keep this style-only pass separate from the new rules and preserve saves.
 
 ## Current foundation
 
