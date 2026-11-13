@@ -15,7 +15,7 @@ Rebuild Shadows of Azeroth as a turn-based RPG grounded in the user's Monsters &
 ## Current foundation
 
 - `public/mnm-rules.js` is an isolated, data-only rules module. It defines the M&M race and class identifiers, six ability scores and modifiers, d20 check resolution, character normalization, and source-aware class ability eligibility checks.
-- The new module is not yet loaded by the current game and does not change the interface, deployed game, or existing saves.
+- The new module now loads with the game and is included in the offline service-worker cache. It does not yet change character creation, gameplay, the interface, or existing saves.
 - Official M&M abilities must keep their exact class prefix/name/rank and source requirements. Chat-RPG additions such as Sneak Attack, Cunning Action, and Read the Opening must be marked as custom rather than presented as official class abilities.
 - A class level marks an ability as eligible to learn; it does not mean the character already knows it. Trainers and scrolls can add it to the learned list.
 - Race-specific bonuses, full class/rank tables, equipment catalogs, and precise progression curves must be populated from the user's established RPG reference and current class data before integration. Do not guess missing values.
