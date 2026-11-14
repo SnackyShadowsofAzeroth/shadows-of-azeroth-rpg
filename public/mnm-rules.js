@@ -97,7 +97,8 @@ const raceById=id=>RACES.find(x=>x.id===id)||null;
 const raceByName=name=>RACES.find(x=>x.name===name)||null;
 const classById=id=>CLASSES.find(x=>x.id===id)||null;
 const classesForRace=id=>(AVAILABILITY[id]||[]).map(classById).filter(Boolean);
-const selectableRaces=()=>RACES.filter(x=>x.selectable!==false);
+const isSelectableRace=id=>{const race=raceById(id)||raceByName(id);return !!race&&race.selectable!==false;};
+const selectableRaces=()=>RACES.filter(x=>isSelectableRace(x.id));
 const STARTING_LOCATIONS=Object.freeze({human:"night-harbor",halfling:"night-harbor",gnome:"night-harbor",dwarf:"night-harbor",deep_gnome:"underdocks",deep_elf:"underdocks",goblin:"underdocks",ogre:"underdocks",wood_elf:"penshaw",deep_dwarf:"night-harbor",high_elf:"night-harbor",troll:"night-harbor",varnai:"night-harbor"});
 const startLocationForRace=id=>STARTING_LOCATIONS[raceById(id)?.id]||"night-harbor";
 function isValidSelection(p={}){const race=raceById(p.raceId||p.race)||raceByName(p.race);const klass=classById(p.classId)||CLASSES.find(x=>x.name===p.className);return !!race&&!!klass&&AVAILABILITY[race.id]?.includes(klass.id);}
@@ -133,5 +134,5 @@ function abilityRequirement(ability,character,{target,equipment=[],reagents={},m
  return null;
 }
 function canUseAbility(ability,character,context={}){return abilityRequirement(ability,character,context)===null;}
-window.soaMnmRules=Object.freeze({version:4,maxLevel:MAX_LEVEL,abilities:ABILITIES,statKeys:STAT_KEYS,statBase:STAT_BASE,races:RACES,classes:CLASSES,raceBonuses:RACE_BONUSES,classBonuses:CLASS_BONUSES,racialAbilities:RACIAL_ABILITIES,raceById,raceByName,classById,classesForRace,selectableRaces,startLocationForRace,isValidSelection,startingStats,abilityModifier,abilityModifiers,normalizeCharacter,d20Check,abilityRequirement,canUseAbility});
+window.soaMnmRules=Object.freeze({version:4,maxLevel:MAX_LEVEL,abilities:ABILITIES,statKeys:STAT_KEYS,statBase:STAT_BASE,races:RACES,classes:CLASSES,raceBonuses:RACE_BONUSES,classBonuses:CLASS_BONUSES,racialAbilities:RACIAL_ABILITIES,raceById,raceByName,classById,classesForRace,isSelectableRace,selectableRaces,startLocationForRace,isValidSelection,startingStats,abilityModifier,abilityModifiers,normalizeCharacter,d20Check,abilityRequirement,canUseAbility});
 })();
