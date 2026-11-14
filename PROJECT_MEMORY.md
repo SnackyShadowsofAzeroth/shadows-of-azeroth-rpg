@@ -34,3 +34,5 @@ Read this file before changing project code, content, configuration, or deployme
 - Install the CLI with `uv tool install graphifyy` if it is unavailable. The executable is `graphify`.
 - The Graphify index was refreshed on 2026-11-13 from the current worktree with race-specific M&M starts, the Night Harbor/Underdocks/Penshaw travel hub, exclusion of provisional race stats from new creation, and the M&M: RPG rebrand: 991 nodes, 1,794 edges, and 87 communities. Refresh it after future code edits and keep `graphify-out/graph.json` and `GRAPH_REPORT.md` current.
 
+### Character creation availability
+The M&M creator must treat an omitted race `selectable` flag as available and only reject a race when the flag is explicitly `false`. The regression is covered by `isSelectableRace` tests for supported and withheld races.
