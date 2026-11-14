@@ -8,6 +8,23 @@ const AUTO_ATTACK_INTERVAL=1600;
 const MINUTE=60*1000,HOUR=60*MINUTE,DAY=24*HOUR;
 const object=value=>value!==null&&typeof value==="object"&&!Array.isArray(value);
 const clampLevel=value=>Math.max(1,Math.min(MAX_LEVEL,Math.trunc(Number(value)||1)));
+const CURRENCY_EXCHANGE="100 Copper = 1 Silver · 100 Silver = 1 Gold · 100 Gold = 1 Platinum.";
+function currencyBreakdown(copperAmount){
+ let remainder=Math.max(0,Math.trunc(Number(copperAmount)||0));
+ const platinum=Math.floor(remainder/1000000);remainder%=1000000;
+ const gold=Math.floor(remainder/10000);remainder%=10000;
+ const silver=Math.floor(remainder/100);const copper=remainder%100;
+ return {platinum,gold,silver,copper};
+}
+function formatCurrency(copperAmount){
+ const coins=currencyBreakdown(copperAmount),parts=[];
+ for(const [name,amount] of [["Platinum",coins.platinum],["Gold",coins.gold],["Silver",coins.silver],["Copper",coins.copper]])if(amount)parts.push(amount+" "+name);
+ return parts.join(" · ")||"0 Copper";
+}
+function formatWallet(copperAmount){
+ const coins=currencyBreakdown(copperAmount);
+ return coins.platinum+" Platinum · "+coins.gold+" Gold · "+coins.silver+" Silver · "+coins.copper+" Copper";
+}
 const validDate=value=>typeof value==="string"&&Number.isFinite(Date.parse(value));
 const clone=value=>JSON.parse(JSON.stringify(value));
 const itemKinds=new Set(["document","light","bag","spellbook","scroll","equipment","misc"]);
@@ -298,7 +315,7 @@ function resolveRpgAction(profile,action,{random=Math.random,now=Date.now,return
    if(lootRoll<=42)lootId="healing-poultice";else if(lootRoll<=72)lootId="waybread";else if(lootRoll<=90)lootId="iron-shard";else{const rare={"night-harbor":"saltwind-knife",underdocks:"deep-forged-edge",penshaw:"thornwood-bow",faelindral:"branchguard","ail-vorith":"liftwarden-coat"};lootId=rare[foe.locationId]||"saltwind-knife"}
    const loot=addRpgItem(rpg,profile,lootId,1);const lootText=loot.ok?"Loot: "+RPG_ITEM_DEFS[lootId].name+".":"The pack is full; "+RPG_ITEM_DEFS[lootId].name+" is left at the scene.";
    rpg.encounter=null;rpg.guarding=false;save.combat.autoAttack=false;
-   const line="Victory over "+foe.name+". +"+xp.amount+" custom XP, +"+coins+" custom copper. "+lootText+(xp.levels.length?" Level up: "+xp.levels.join(", ")+".":"");logRpg(rpg,line);
+   const line="Victory over "+foe.name+". +"+xp.amount+" custom XP, +"+formatCurrency(coins)+". "+lootText+(xp.levels.length?" Level up: "+xp.levels.join(", ")+".":"");logRpg(rpg,line);
    return {victory:true,enemy:foe.name,xp:xp.amount,restedBonus:xp.restedBonus,coins,loot:loot.ok?lootId:null,lootError:loot.error||null,levels:xp.levels,line,roll:rolled};
   }
   const incoming=enemyExchange(save,profile,foe,random);logRpg(rpg,incoming.line);
@@ -357,8 +374,8 @@ function purchaseRpgItem(profile,id,quantity=1,locationId){
   if(locationId!=="night-harbor")return {error:"Travel to Night Harbor to shop."};
   if(save.rpg.encounter)return {error:"Finish the encounter before shopping."};
   const item=RPG_ITEM_DEFS[id],count=Math.trunc(Number(quantity));if(!item||!Number.isInteger(count)||count<1||count>10)return {error:"Choose a valid item and quantity."};
-  const cost=item.price*count;if(save.rpg.coppers<cost)return {error:"You need "+cost+" custom copper for that purchase."};
-  const added=addRpgItem(save.rpg,profile,id,count);if(!added.ok)return {error:added.error};save.rpg.coppers-=cost;logRpg(save.rpg,"Bought "+count+" "+item.name+(count===1?"":"s")+" for "+cost+" custom copper.");return {item:id,quantity:count,cost};
+  const cost=item.price*count;if(save.rpg.coppers<cost)return {error:"You need "+formatCurrency(cost)+" for that purchase."};
+  const added=addRpgItem(save.rpg,profile,id,count);if(!added.ok)return {error:added.error};save.rpg.coppers-=cost;logRpg(save.rpg,"Bought "+count+" "+item.name+(count===1?"":"s")+" for "+formatCurrency(cost)+".");return {item:id,quantity:count,cost};
  });
 }
 function sellRpgItem(profile,id,quantity=1,locationId){
@@ -369,7 +386,7 @@ function sellRpgItem(profile,id,quantity=1,locationId){
   if(item.price<=0)return {error:"That item has no custom resale value."};
   if(Object.values(save.rpg.equipment).includes(id))return {error:"Unequip that item before selling it."};
   const entry=save.rpg.inventory.find(row=>row.id===id);if(entry.quantity<count)return {error:"You do not have that many."};
-  removeRpgItem(save.rpg,id,count);const coins=Math.max(1,Math.floor(item.price*.4))*count;save.rpg.coppers+=coins;logRpg(save.rpg,"Sold "+item.name+" for "+coins+" custom copper.");return {item:id,quantity:count,coins};
+  removeRpgItem(save.rpg,id,count);const coins=Math.max(1,Math.floor(item.price*.4))*count;save.rpg.coppers+=coins;logRpg(save.rpg,"Sold "+item.name+" for "+formatCurrency(coins)+".");return {item:id,quantity:count,coins};
  });
 }
 function toggleCandle(profile){
@@ -493,7 +510,7 @@ function renderProgress(profile,onChange,context={}){
  const bar=document.createElement("div");bar.className="soa-mnm-system-card";const barTitle=document.createElement("h3");barTitle.textContent="Experience";bar.append(barTitle);
  const xp=document.createElement("p");xp.textContent=save.level>=MAX_LEVEL?"Maximum level reached · "+rpg.totalXp+" total custom XP":rpg.xp+" / "+next+" XP to level "+(save.level+1)+" · "+rpg.totalXp+" total custom XP";bar.append(xp);
  const meter=document.createElement("div");meter.className="soa-mnm-meter-track";const fill=document.createElement("i");fill.style.width=(fraction*100)+"%";meter.append(fill);bar.append(meter);panel.append(bar);
- panel.append(card("Adventuring record",rpg.kills+" custom encounters won · "+rpg.claimedStories.length+" story rewards claimed · "+rpg.coppers+" custom copper."));
+ panel.append(card("Adventuring record",rpg.kills+" custom encounters won · "+rpg.claimedStories.length+" story rewards claimed · Wallet: "+formatWallet(rpg.coppers)+"."));
  const rest=document.createElement("section");rest.className="soa-mnm-system-card";const rh=document.createElement("h3");rh.textContent="Rest and recovery";rest.append(rh);
  const rp=document.createElement("p");rp.textContent="Rested bank: "+save.restedMinutes+" / "+RESTED_CAP_MINUTES+" minutes. A safe two-minute rest in a settlement fully restores health and Focus and banks up to 20 Rested minutes. This custom interface spends one banked minute per reward; the exact official consumption rate is not published.";rest.append(rp);
  const status=statusNode();rest.append(status);rest.append(makeSystemButton("Rest at a safe haven",()=>{const result=restAtSafeHaven(profile,context.locationId);updateFromResult(result,onChange,status)},!!rpg.encounter||!SAFE_HAVENS.has(context.locationId)));panel.append(rest);
@@ -510,11 +527,12 @@ function renderInventory(profile,onChange,context={}){
  const state=read(profile);if(!state.ok){panel.append(card("Inventory paused",state.error));return panel}
  const save=state.save,inv=save.inventory,rpg=save.rpg;
  const custom=document.createElement("section");custom.className="soa-mnm-system-card";const customTitle=document.createElement("h3");customTitle.textContent="Adventurer's pack · custom rules";custom.append(customTitle);
- const customWeight=rpgInventoryWeight(rpg),capacity=rpgCarryCapacity(profile),purse=document.createElement("p");purse.textContent="Custom load "+customWeight+" / "+capacity+" units · Purse "+rpg.coppers+" custom copper";custom.append(purse);
+ const customWeight=rpgInventoryWeight(rpg),capacity=rpgCarryCapacity(profile),purse=document.createElement("p");purse.textContent="Custom load "+customWeight+" / "+capacity+" units · Purse: "+formatWallet(rpg.coppers);custom.append(purse);
+ const currencyNote=document.createElement("p");currencyNote.className="soa-mnm-note";currencyNote.textContent="Coin values convert automatically: "+CURRENCY_EXCHANGE;custom.append(currencyNote);
  const customList=document.createElement("div");customList.className="soa-mnm-item-list";
  for(const entry of rpg.inventory){const item=RPG_ITEM_DEFS[entry.id];if(!item)continue;const row=document.createElement("article");row.className="soa-mnm-item-row";
   const name=document.createElement("strong");name.textContent=item.name+(entry.quantity>1?" × "+entry.quantity:"")+(Object.values(rpg.equipment).includes(entry.id)?" · Equipped":"");row.append(name);
-  const detail=document.createElement("p");detail.textContent=item.description+" Custom weight "+item.weight+" · Value "+item.price+" copper"+(item.kind==="weapon"?" · Attack +"+item.attack+" · Damage +"+item.damage:item.kind==="armor"?" · Defense +"+item.defense:item.kind==="consumable"?" · Heal "+item.heal+" · Focus "+item.focus:"");row.append(detail);
+  const detail=document.createElement("p");detail.textContent=item.description+" Custom weight "+item.weight+" · Value "+formatCurrency(item.price)+(item.kind==="weapon"?" · Attack +"+item.attack+" · Damage +"+item.damage:item.kind==="armor"?" · Defense +"+item.defense:item.kind==="consumable"?" · Heal "+item.heal+" · Focus "+item.focus:"");row.append(detail);
   const actions=document.createElement("div");actions.className="soa-mnm-choice-grid";
   if(item.kind==="weapon"||item.kind==="armor"){const slot=item.slot;actions.append(makeSystemButton(rpg.equipment[slot]===entry.id?"Equipped":"Equip",()=>{const result=equipRpgItem(profile,entry.id);updateFromResult(result,onChange,status)},!!rpg.encounter||rpg.equipment[slot]===entry.id))}
   if(item.kind==="consumable"){const useful=!!((item.heal&&rpg.hp<rpg.maxHp)||(item.focus&&rpg.focus<rpg.maxFocus));actions.append(makeSystemButton("Use",()=>{const result=useRpgItem(profile,entry.id);updateFromResult(result,onChange,status)},!useful||!!rpg.encounter))}
@@ -522,8 +540,8 @@ function renderInventory(profile,onChange,context={}){
   row.append(actions);customList.append(row);
  }
  if(!rpg.inventory.length)customList.append(card("Pack empty","Travel to a settlement market or defeat a custom story foe to find gear."));custom.append(customList);panel.append(custom);
- const market=document.createElement("section");market.className="soa-mnm-system-card";const mh=document.createElement("h3");mh.textContent="Night Harbor market · custom stock";market.append(mh);const mp=document.createElement("p");mp.textContent=context.locationId==="night-harbor"?"Prices, copper amounts, stock, and carry limits are original M&M: RPG rules. These supplies are sold by Night Harbor merchants.":"Night Harbor merchants sell this custom stock. Travel there to buy or sell.";market.append(mp);
- for(const id of ["healing-poultice","waybread","iron-shard","saltwind-knife","liftwarden-coat","thornwood-bow","blightmantle","deep-forged-edge","branchguard"]){const item=RPG_ITEM_DEFS[id],row=document.createElement("div");row.className="soa-mnm-item-row";const title=document.createElement("strong");title.textContent=item.name+" · "+item.price+" custom copper";const description=document.createElement("p");description.textContent=item.description;row.append(title,description,makeSystemButton("Buy 1",()=>{const result=purchaseRpgItem(profile,id,1,context.locationId);updateFromResult(result,onChange,status)},rpg.coppers<item.price||!!rpg.encounter||context.locationId!=="night-harbor"));market.append(row)}panel.append(market);
+ const market=document.createElement("section");market.className="soa-mnm-system-card";const mh=document.createElement("h3");mh.textContent="Night Harbor market · stock";market.append(mh);const mp=document.createElement("p");mp.textContent=context.locationId==="night-harbor"?"Item prices and carry limits are original M&M: RPG rules. "+CURRENCY_EXCHANGE:"Night Harbor merchants sell this stock. Travel there to buy or sell.";market.append(mp);
+ for(const id of ["healing-poultice","waybread","iron-shard","saltwind-knife","liftwarden-coat","thornwood-bow","blightmantle","deep-forged-edge","branchguard"]){const item=RPG_ITEM_DEFS[id],row=document.createElement("div");row.className="soa-mnm-item-row";const title=document.createElement("strong");title.textContent=item.name+" · "+formatCurrency(item.price);const description=document.createElement("p");description.textContent=item.description;row.append(title,description,makeSystemButton("Buy 1",()=>{const result=purchaseRpgItem(profile,id,1,context.locationId);updateFromResult(result,onChange,status)},rpg.coppers<item.price||!!rpg.encounter||context.locationId!=="night-harbor"));market.append(row)}panel.append(market);
  const backpack=document.createElement("section");backpack.className="soa-mnm-system-card";const bh=document.createElement("h3");bh.textContent="Documented starting items";backpack.append(bh);const list=document.createElement("div");list.className="soa-mnm-item-list";
  for(const item of inv.backpack){const row=document.createElement("article");row.className="soa-mnm-item-row";const name=document.createElement("strong");name.textContent=item.name;row.append(name);const detail=document.createElement("p");detail.textContent=item.id==="class-guild-note"?"Official guide starting note. Read it to learn about your class guild; its class-specific text and guild master are not modeled here.":item.id==="trainees-candle"?"Documented light source. Its fuel and burn duration are not published here.":"Weight "+(item.weight===null?"not supplied":item.weight);row.append(detail);
   if(item.id==="class-guild-note")row.append(makeSystemButton(item.read?"Note read":"Read guild note",()=>{const result=markGuildNoteRead(profile);if(result.ok)onChange?.()}));
@@ -565,5 +583,6 @@ function render(view,profile,onChange,context={}){
  if(view==="inventory")return renderInventory(profile,onChange,context);
  return null;
 }
-window.soaMnmSystems=Object.freeze({key:KEY,maxLevel:MAX_LEVEL,actionSlots:ACTION_SLOTS,createSave,validSave,read,progressFor,render,groupExperienceEligibility,corpseDurationMs,weightSummary,recordDeath,recoverCorpse,recordRestInterval,experienceMultiplier,scribeAbility,memorizeAbility,startEncounter,resolveRpgAction,claimStoryReward,restAtSafeHaven,useRpgItem,equipRpgItem,discardRpgItem,purchaseRpgItem,sellRpgItem,setAutoAttack,stopAutoAttackRunner});
+window.soaMnmSystems=Object.freeze({key:KEY,maxLevel:MAX_LEVEL,actionSlots:ACTION_SLOTS,createSave,validSave,read,progressFor,render,formatCurrency,formatWallet,currencyExchange:CURRENCY_EXCHANGE,groupExperienceEligibility,corpseDurationMs,weightSummary,recordDeath,recoverCorpse,recordRestInterval,experienceMultiplier,scribeAbility,memorizeAbility,startEncounter,resolveRpgAction,claimStoryReward,restAtSafeHaven,useRpgItem,equipRpgItem,discardRpgItem,purchaseRpgItem,sellRpgItem,setAutoAttack,stopAutoAttackRunner});
 })();
+
