@@ -356,7 +356,7 @@ function drawMenu(){
  form.onsubmit=e=>{
   e.preventDefault();const n=name.value.trim();
   if(n.length<2||n.length>36){warning.textContent="Enter a name between 2 and 36 characters.";return}
-  if(!r.isValidSelection({system:"mnm",raceId:race.value,classId:klass.value})||!r.raceById(race.value)?.selectable){warning.textContent="That race and class combination is not available in the current character creator.";return}
+  if(!r.isValidSelection({system:"mnm",raceId:race.value,classId:klass.value})||!r.isSelectableRace(race.value)){warning.textContent="That race and class combination is not available in the current character creator.";return}
   if(roster.characters.some(x=>x.name.toLowerCase()===n.toLowerCase())){warning.textContent="That character name is already in your roster.";return}
   create({system:"mnm",name:n,gender:gender.value,raceId:race.value,classId:klass.value,startingLocation:r.startLocationForRace(race.value)});
  };
