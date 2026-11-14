@@ -126,7 +126,16 @@ function socialSkills(){
  const mod=skill=>window.soaAbilities?.modifier?.(skill)||0;
  return {bluff:base.bluff+si7+hidden+(trained?.("bluff")||0)+mod("bluff"),bribe:base.bribe+(trained?.("bribe")||0)+mod("bribe"),romance:base.romance+(trained?.("romance")||0)+mod("romance"),threaten:base.threaten+(trained?.("threaten")||0)+mod("threaten")};
 }
-function selectedProfile(){if(active.system==="mnm")return {...active,level:active.level||1};return {...active,form:active.className==="Druid"?window.soaDruid?.form?.():undefined,factionPath:active.race==="Skyborne"?skybornePath(active.faction):null,level:window.soaProgression?.level?.()||10,professions:Object.fromEntries(Object.entries(active.professions||{}).map(([k,v])=>[k,v.skill||1]))}}
+function selectedProfile(){if(active.system==="mnm")return {...active,level:window.soaMnmSystems?.progressFor?.(active)?.level||active.level||1};return {...active,form:active.className==="Druid"?window.soaDruid?.form?.():undefined,factionPath:active.race==="Skyborne"?skybornePath(active.faction):null,level:window.soaProgression?.level?.()||10,professions:Object.fromEntries(Object.entries(active.professions||{}).map(([k,v])=>[k,v.skill||1]))}}
+function characterLevel(profile){
+ if(profile?.system!=="mnm")return Number(profile?.level)||profile?.startLevel||1;
+ if(profile.id===active?.id)return window.soaMnmSystems?.progressFor?.(profile)?.level||profile.level||1;
+ try{
+  const slot=read(SLOT_PREFIX+profile.id),raw=slot?.["soa-mnm-systems-v1"],saved=raw?JSON.parse(raw):null;
+  if(saved?.characterId===profile.id&&Number.isInteger(saved.level)&&saved.level>=1&&saved.level<=60)return saved.level;
+ }catch{}
+ return Number(profile.level)||1;
+}
 function commitRoster(){return write(ROSTER_KEY,roster)}
 function enter(id){
  if(window.soaSaveRules.isIntegrityBlocked()){alert("Character changes are paused until the saved data has been recovered.");return}
@@ -295,7 +304,7 @@ function drawMenu(){
  const list=make("div",undefined,"soa-character-list");
  for(const p of roster.characters){
   const item=make("div",undefined,"soa-character-item");
-  const level=p.system==="mnm"?(p.level||1):(p.id===active.id?(window.soaProgression?.level?.()||p.startLevel||10):(()=>{const slot=read(SLOT_PREFIX+p.id);try{return Number(JSON.parse(slot?.["soa-progression-v1"]||"null")?.actors?.hero?.level)||p.startLevel||10}catch{return p.startLevel||10}})());
+  const level=p.system==="mnm"?characterLevel(p):(p.id===active.id?(window.soaProgression?.level?.()||p.startLevel||10):(()=>{const slot=read(SLOT_PREFIX+p.id);try{return Number(JSON.parse(slot?.["soa-progression-v1"]||"null")?.actors?.hero?.level)||p.startLevel||10}catch{return p.startLevel||10}})());
   const startLabel=p.system==="mnm"?" · "+mnmStartingZone(p):"";
   const desc=p.system==="mnm"?"M&M · "+p.race+" "+p.className+startLabel+" · Level "+level:"Legacy · "+factionDisplay(p)+" · "+p.race+" "+p.className+" · Level "+level;
   const description=make("div");description.append(make("strong",p.name),make("span",desc));
@@ -350,7 +359,7 @@ function drawMenu(){
  race.onchange=updateClassList;klass.onchange=updateStartingStats;updateClassList();
  form.append(labeled("Character name",name),labeled("Gender",gender),labeled("Race",race),labeled("Class",klass),startingCity,statPanel,racialFeature);
  form.append(make("p","Starting scores use a base of 10 plus the selected race and class modifiers. This is an M&M: RPG rebalance; no extra allocation points are granted during character creation. Deep Dwarf, High Elf, and Troll are unavailable for new characters until their in-game stat lines are confirmed.","muted soa-mnm-note"));
- form.append(make("p","This creates an M&M character with a playable offline first chapter. No Warcraft faction, professions, starting kit, or silver are assigned. The chapter uses clearly marked custom story rules; official M&M combat, abilities, equipment, and progression remain in conversion.","soa-mnm-warning"));
+ form.append(make("p","This creates an M&M character with a playable offline first chapter, a road-worn weapon, patched travel coat, two healing poultices, two waybread, and 24 custom coppers. Those starter items, their prices, and the gameplay rules are original M&M: RPG content, not official M&M data.","soa-mnm-warning"));
  const warning=make("p","","soa-menu-error");warning.setAttribute("aria-live","polite");form.append(warning);
  const submit=make("button","Create M&M Character");submit.type="submit";form.append(submit);
  form.onsubmit=e=>{
@@ -464,9 +473,10 @@ function drawProfessions(){
  if(active.system==="mnm"){
   root.classList.add("soa-mnm-record");
   const rules=window.soaMnmRules,race=rules.raceById(active.raceId||active.race),klass=rules.classById(active.classId);
+  const progress=window.soaMnmSystems?.progressFor?.(active),level=progress?.level||active.level||1;
   let sheet;
   try{sheet=rules.startingStats(race.id,klass.id)}catch{sheet=null}
-  root.append(make("p","This character uses the seven-stat M&M starting sheet. Values combine a base 10 with race and class modifiers. Chapter One is playable; official M&M combat, abilities, equipment, and progression are still being converted.","muted soa-mnm-warning"));
+  root.append(make("p","This character uses the seven-stat M&M starting sheet and the playable custom combat, progression, and item systems. House-rule values remain separate from official M&M data.","muted soa-mnm-warning"));
   if(sheet){
    if(sheet.provisional)root.append(make("p","PROVISIONAL RACIAL MODIFIERS · "+race.name+" uses a logical stat line from the supplied pattern.","soa-mnm-provisional"));
    const grid=make("div",undefined,"soa-mnm-record-grid"),labels={str:"Strength",sta:"Stamina",dex:"Dexterity",agi:"Agility",int:"Intelligence",wis:"Wisdom",cha:"Charisma"};
@@ -478,7 +488,8 @@ function drawProfessions(){
    root.append(grid);
    const feature=rules.racialAbilities[race.id];
    if(feature){const ability=make("section",undefined,"soa-mnm-racial-ability");ability.append(make("span","CUSTOM RACIAL FEATURE · ORIGINAL GAME RULE","soa-mnm-custom-label"),make("h3",feature.name),make("p",feature.description),make("p","Effect: "+feature.effect),make("small","Once per chapter in the custom story. This is an M&M: RPG rule, not an official M&M racial trait."));root.append(ability)}
-   root.append(make("p","LEVEL "+(active.level||1)+" · "+active.classPrefix+" · No extra point allocation is included; these are the complete starting totals.","soa-mnm-note"));
+   const xpLine=level>=60?level+" · "+(progress?.totalXp||0)+" total custom XP":level+" · "+(progress?.xp||0)+" / "+(progress?.xpToNext||100)+" custom XP to next level";
+   root.append(make("p","LEVEL "+xpLine+" · "+active.classPrefix+" · No extra point allocation is included; these are the complete starting totals.","soa-mnm-note"));
   }else root.append(make("p","No verified starting-stat line is available for this saved race/class combination. Existing profile data is preserved.","soa-mnm-warning"));
   return;
  }

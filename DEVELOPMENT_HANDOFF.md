@@ -1,5 +1,5 @@
 # M&M: RPG — Development Handoff
-Updated: 2026-10-17
+Updated: 2026-11-13
 
 ## Repository
 GitHub: configured project repository
@@ -7,6 +7,14 @@ Cloudflare Pages connects to main. Static files: public/. Server endpoints: func
 
 ## Game
 Offline-first iPhone PWA; Gemini online living campaign; original Snacky Lugnuts save must be preserved. Player decisions resolve deterministically through local JS, Gemini writes validated narrative. Campaign continuity comes from saved game state, NOT ChatGPT conversation context.
+
+## Current M&M: RPG gameplay status (2026-11-13)
+- The M&M profile has a separate offline story and save system, an optional Gemini Chronicle, and original custom combat, progression, and item rules approved by the user. These are clearly labeled as house rules, not official M&M data.
+- Combat supports regional foes, Q auto-attacks that resolve repeated turns, class techniques using Focus, guard, consumables, flee, random project loot, XP/coppers, defeat, bind-point return, and corpse recovery in the encounter region.
+- Progress connects to the character record and roster, uses a custom level curve, awards one-time custom XP only when the player claims completed fixed/AI story rewards, and provides safe settlement rest. Itemization includes starter gear, equipped slots, consumables, the Night Harbor market, sell/discard, custom carrying limits, and custom loot.
+- Verified M&M guide facts remain distinct: ten ability slots, ability pages and spellbook gates, Q toggle, group XP eligibility, Rested XP, starting note/candle, container slots, weight-based encumbrance, and corpse recovery windows. Exact official combat, ability, progression, and item tables remain unavailable.
+- The service worker cache was bumped to v142 after changing gameplay files. Six focused custom-RPG tests cover creation/migration, combat rewards, Focus/consumables, market/carry/rest, corpse return/recovery, and repeated auto-attacks.
+- Live Gemini generation still depends on production Cloudflare secrets; do not report a successful live generation unless tested with configured credentials. The Graphify CLI refresh is currently blocked because graphify, uv, and a working Python executable are unavailable in this Windows environment.
 
 ## Approved character requirements
 - Male/female creation option.

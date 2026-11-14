@@ -123,8 +123,18 @@ function render(profile,save,onChange){
  if(campaign.objective)panel.append(element("p","Current aim · "+campaign.objective,"soa-mnm-feature-status"));
  if(!currentMatches){const move=element("button","Generate a scene in "+region.name,"soa-mnm-system-button soa-mnm-ai-primary");move.type="button";move.onclick=()=>startChapter(profile,save,panel,status,onChange,codeInput.value.trim()||getCode());panel.append(element("p","You traveled from the scene's region. Start a fresh scene at your current destination before continuing."),move);return panel}
  if(campaign.status==="chapter-complete"){
-  panel.append(element("p","Chapter summary · "+campaign.summary,"soa-mnm-feature-status"),element("p","This narrative chapter grants no XP, currency, abilities, or inventory. Official M&M reward values remain separate from this custom story mode."));
-  const next=element("button","Generate the next chapter","soa-mnm-system-button soa-mnm-ai-primary");next.type="button";next.onclick=()=>startChapter(profile,save,panel,status,onChange,codeInput.value.trim()||getCode());panel.append(next);
+  panel.append(element("p","Chapter summary · "+campaign.summary,"soa-mnm-feature-status"),element("p","The player may claim 90 custom XP for completing this chapter. The reward amount and leveling curve are original M&M: RPG rules; they are not official M&M values."));
+  const rewardId="ai-chapter-"+campaign.chapter,systems=window.soaMnmSystems,systemSave=systems?.read?.(profile),rewardClaimed=!!(systemSave?.ok&&systemSave.save.rpg.claimedStories.includes(rewardId));
+  if(rewardClaimed)panel.append(element("p","This chapter's custom XP reward has already been claimed."));
+  else{
+   const claim=element("button","Claim 90 custom XP","soa-mnm-system-button");claim.type="button";claim.onclick=()=>{
+    const result=systems?.claimStoryReward?.(profile,rewardId,90);
+    if(!result?.ok){status.textContent=result?.error||"The chapter reward could not be saved.";return}
+    status.textContent="Claimed "+result.result.xp+" custom XP for this AI chapter.";onChange?.();
+   };panel.append(claim);
+  }
+  const next=element("button","Generate the next chapter","soa-mnm-system-button soa-mnm-ai-primary");next.type="button";next.disabled=!rewardClaimed;next.onclick=()=>startChapter(profile,save,panel,status,onChange,codeInput.value.trim()||getCode());panel.append(next);
+  if(!rewardClaimed)panel.append(element("small","Claim this chapter's custom reward before continuing so it cannot be missed.","soa-mnm-note"));
  }else{
   const grid=element("div",undefined,"soa-mnm-choice-grid");
   campaign.scene.choices.forEach(choice=>{const button=element("button",undefined,"soa-mnm-choice soa-mnm-ai-choice");button.type="button";button.append(element("strong",choice.text),element("span",STAT_NAMES[choice.stat]+" · "+choice.difficulty+" · DC "+choice.dc+" (custom story check)"));button.onclick=()=>chooseAction(profile,save,panel,status,onChange,codeInput.value.trim()||getCode(),choice);grid.append(button)});

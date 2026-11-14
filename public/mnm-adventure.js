@@ -1,5 +1,6 @@
 (()=>{"use strict";
 const KEY="soa-mnm-adventure-v1",VERSION=1;
+let activeBindPointReturn=()=>false;
 const STATS=["str","sta","dex","agi","int","wis","cha"];
 const STAT_NAMES={str:"Strength",sta:"Stamina",dex:"Dexterity",agi:"Agility",int:"Intelligence",wis:"Wisdom",cha:"Charisma"};
 const REGIONS=[
@@ -302,6 +303,15 @@ function boot(){
   try{save.updatedAt=new Date().toISOString();localStorage.setItem(KEY,JSON.stringify(save));statusText="AI Chronicle saved to this character's story.";render();return true}
   catch{save.updatedAt=previousUpdatedAt;statusText="AI Chronicle could not be saved. Your previous saved story is intact.";return false}
  }
+ activeBindPointReturn=destination=>{
+  if(blocked||!save)return false;
+  const target=REGIONS.find(region=>region.id===String(destination))||REGIONS.find(region=>region.id===startingRegionForProfile(profile))||REGIONS[0];
+  const next=clone(save);
+  next.currentLocation=target.id;
+  addJournal(next,"Defeat returned you to your bind point in "+target.name+". Your belongings remain on a recoverable corpse.");
+  try{localStorage.setItem(KEY,JSON.stringify(next));save=next;view="inventory";statusText="You wake in "+target.name+". Travel back to the encounter region to recover your corpse.";render();return true}
+  catch{statusText="You were defeated, but your return to the bind point could not be saved. Your previous adventure remains intact.";render();return false}
+ };
  function renderOrigin(panel){
   const start=REGIONS.find(region=>region.id===startingRegionForProfile(profile));
   panel.append(el("p","Your "+profile.race+" begins in "+start.name+(start.zone?", in "+start.zone:"") +". Use the World tab to travel between connected locations.","soa-mnm-rule-note"));
@@ -379,7 +389,14 @@ function boot(){
  function renderComplete(panel){
   panel.append(el("div","CHAPTER ONE \u00b7 COMPLETE","soa-mnm-kicker"),el("h2","The Quiet Signal at Dune Gate"));
   panel.append(el("p","The caravan route is marked safe, and your account of the encounter is preserved. Open the Journey Log to review your choices and rolls."));
-  panel.append(el("p","This first chapter does not award XP, equipment, or levels yet; those systems are still being converted to the new game."));
+  const rewardId="chapter-one",systems=window.soaMnmSystems,systemSave=systems?.read?.(profile),claimed=!!(systemSave?.ok&&systemSave.save.rpg.claimedStories.includes(rewardId));
+  panel.append(el("p","This chapter has a player-claimed reward of 100 custom XP. The amount and leveling curve are original M&M: RPG rules, not an official M&M reward value."));
+  if(claimed)panel.append(el("p","Chapter One's custom XP reward has already been claimed."));
+  else panel.append(button("Claim 100 custom XP","Record this one-time chapter reward in your character's progression.",()=>{
+   const result=systems?.claimStoryReward?.(profile,rewardId,100);
+   if(result?.ok){statusText="Claimed "+result.result.xp+" custom XP for completing Chapter One.";render()}
+   else{statusText=result?.error||"The chapter reward could not be saved.";render()}
+  },"med"));
   panel.append(button("Review the Journey Log","See region choice, checks, encounter actions, and quest outcome.",()=>setView("journal",false)));
  }
  function renderJournal(panel){
@@ -408,7 +425,9 @@ function boot(){
   const hero=el("section",undefined,"soa-mnm-game-heading");
   hero.append(el("div","MONSTERS & MEMORIES \u00b7 ORIGINAL ADVENTURE","soa-mnm-kicker"),el("h1",profile.name));
   const current=REGIONS.find(x=>x.id===save?.currentLocation);
-  hero.append(el("p",profile.race+" "+profile.className+" \u00b7 Level "+(profile.level||1)+" \u00b7 "+(current?"In "+current.name+(current.zone?" · "+current.zone:""):"Choose an opening region"),"soa-mnm-subtitle"));
+  const currentLevel=window.soaMnmSystems?.progressFor?.(profile)?.level||profile.level||1;
+  const currentProfile={...profile,level:currentLevel};
+  hero.append(el("p",profile.race+" "+profile.className+" \u00b7 Level "+currentLevel+" \u00b7 "+(current?"In "+current.name+(current.zone?" · "+current.zone:""):"Choose an opening region"),"soa-mnm-subtitle"));
   const racial=window.soaMnmRules.racialAbilities?.[profile.raceId];if(racial)hero.append(el("p","CUSTOM RACIAL FEATURE · "+racial.name+" - "+racial.description+" Effect: "+racial.effect,"soa-mnm-feature"));
   app.append(hero);
   const tabs=el("div",undefined,"soa-mnm-tabs");tabs.setAttribute("role","tablist");tabs.setAttribute("aria-label","M&M character views");
@@ -426,11 +445,11 @@ function boot(){
   }else if(view==="world"){
    const pane=el("section",undefined,"soa-mnm-adventure-panel");renderWorld(pane);app.append(pane);
   }else if(view==="ai"){
-   const aiPanel=window.soaMnmAiChronicle?.render?.(profile,save,persistAiCampaign);
+   const aiPanel=window.soaMnmAiChronicle?.render?.(currentProfile,save,persistAiCampaign);
    if(aiPanel)app.append(aiPanel);
    else{const pane=el("section",undefined,"soa-mnm-adventure-panel");pane.append(el("h2","AI Chronicle unavailable"),el("p","The AI story module did not load. Your offline adventure remains available."));app.append(pane)}
   }else if(view==="combat"||view==="progress"||view==="inventory"){
-   const systemPanel=window.soaMnmSystems?.render?.(view,profile,()=>render());
+   const systemPanel=window.soaMnmSystems?.render?.(view,currentProfile,()=>render(),{locationId:save.currentLocation,returnToBindPoint:destination=>activeBindPointReturn(destination)});
    if(systemPanel)app.append(systemPanel);
    else{const pane=el("section",undefined,"soa-mnm-adventure-panel");pane.append(el("h2","M&M system unavailable"),el("p","The M&M rules module did not load."));app.append(pane)}
   }else{
@@ -447,7 +466,7 @@ function boot(){
   }
   const rules=el("details",undefined,"soa-mnm-rules-disclosure");
   rules.append(el("summary","Story rules and M&M source note"));
-  rules.append(el("p","Checks use this project's existing d20 helper: d20 + floor((starting stat \u2212 10) / 2) against the printed DC; natural 20 succeeds and natural 1 fails. DCs and the Resolve/Pressure encounter are custom M&M: RPG story rules. The Combat, Progress, and Items views expose documented M&M rules, but do not resolve damage, award or level XP, or create catalog items until official formulas and data are available."));
+  rules.append(el("p","The fixed chapter's checks and the Combat, Progress, and Items systems use clearly labeled custom M&M: RPG rules. The optional AI Chronicle creates original scenes and choices; checks resolve locally and rewards require the player's claim. Confirmed M&M facts remain source-linked and separate from house rules. Custom attack, XP, item, carry, and shop values are not official M&M formulas or catalog data."));
   app.append(rules);
   const roster=el("button","\u2630 Character Select","soa-mnm-roster-button");roster.type="button";roster.onclick=()=>window.soaCharacters?.showMenu?.();app.append(roster);
  }
@@ -458,7 +477,7 @@ function boot(){
  render();
 }
 function start(){window.soaCharacters?.organizeSections?.();boot()}
-window.soaMnmAdventure=Object.freeze({key:KEY,humanStartRegion:"night-harbor",createSave,validSave,transition,migrateStartingLocation,migrateHumanStartingCity:migrateStartingLocation,regions:REGIONS.map(x=>({...x})),travelRoutes:TRAVEL_ROUTES.map(x=>({...x})),approaches:APPROACHES.map(x=>({...x})),encounter:ENCOUNTER.map(x=>({...x})),boot});
+window.soaMnmAdventure=Object.freeze({key:KEY,humanStartRegion:"night-harbor",createSave,validSave,transition,migrateStartingLocation,migrateHumanStartingCity:migrateStartingLocation,regions:REGIONS.map(x=>({...x})),travelRoutes:TRAVEL_ROUTES.map(x=>({...x})),approaches:APPROACHES.map(x=>({...x})),encounter:ENCOUNTER.map(x=>({...x})),returnToBindPoint:destination=>activeBindPointReturn(destination),boot});
 if(document.readyState==="complete")start();else window.addEventListener("load",start,{once:true});
 })();
 
