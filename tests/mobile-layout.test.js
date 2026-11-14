@@ -15,6 +15,7 @@ const serviceWorker = fs.readFileSync(path.join(__dirname, "..", "public", "sw.j
 const layoutCss = fs.readFileSync(path.join(__dirname, "..", "public", "mobile-layout.css"), "utf8");
 const characterCss = fs.readFileSync(path.join(__dirname, "..", "public", "characters.css"), "utf8");
 const portraitCss = fs.readFileSync(path.join(__dirname, "..", "public", "portraits.css"), "utf8");
+const mnmUiCss = fs.readFileSync(path.join(__dirname, "..", "public", "mnm-ui.css"), "utf8");
 const tabIds = ["adventure", "quest", "character", "dungeons", "settings"];
 
 function element(tagName, id = "", tab = "") {
@@ -108,6 +109,14 @@ test("one five-destination bottom navigation is loaded and cached for offline pl
   assert.match(layoutCss, /#soa-mobile-nav\{position:fixed;z-index:999;bottom:0/);
   assert.match(source, /function createNavigation\(\)/);
   assert.doesNotMatch(characters, /soa-quick-nav/);
+});
+
+test("M&M adventure tabs use readable desktop and phone grids",()=>{
+ assert.match(mnmUiCss,/\.soa-ruleset-mnm #soa-character-screen \.soa-mnm-tabs\{display:grid!important;grid-template-columns:repeat\(8,minmax\(0,1fr\)\)/);
+ assert.match(mnmUiCss,/@media\(max-width:900px\)\{[\s\S]*?\.soa-ruleset-mnm #soa-character-screen \.soa-mnm-tabs\{grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
+ assert.match(mnmUiCss,/\.soa-ruleset-mnm \.soa-mnm-tab\{[^}]*text-align:center[^}]*white-space:normal/);
+ assert.match(html,/href="\.\/mnm-ui\.css\?v=11"/);
+ assert.match(serviceWorker,/\.\/mnm-ui\.css\?v=11/);
 });
 
 test("contract and bounty board belongs to the Quest tab",()=>{

@@ -17,6 +17,7 @@ Read this file before changing project code, content, configuration, or deployme
 - The user supplied stat lines for the playable races and classes. Deep Dwarf, High Elf, and Troll use inferred provisional values only for older-profile compatibility; keep them excluded from new character creation until their in-game stat lines are supplied. Var'nai remains available only to old profiles because no stat line was supplied.
 - Starting homes: Human, Halfling, Gnome, Dwarf → Night Harbor; Deep Gnome, Deep Elf, Goblin, Ogre → the Underdocks; Wood Elf → Penshaw in Keepers Bight as a custom M&M: RPG start assignment. The Underdocks lift links to Night Harbor. All races can sail from Twilight Harbor in Night Harbor to Penshaw. Existing Deep Dwarf, High Elf, and Troll profiles use Night Harbor fallback.
 - Racial features and class techniques are original project abilities. Keep them lore-aware, generalized, and clearly labeled as custom; their displayed descriptions must not mention specific quest items or props. Do not call them official M&M abilities.
+- The M&M adventure uses eight view tabs: an eight-column row on wide screens and a four-column grid on phone/tablet widths. Keep tab labels centered and wrapping only at spaces.
 
 ## Playable custom rules and official facts
 
@@ -33,7 +34,7 @@ Read this file before changing project code, content, configuration, or deployme
 - M&M profiles receive a road-worn weapon, patched travel coat, two healing poultices, two waybread, and 24 custom coppers. They do not receive legacy faction, professions, legacy equipment, or legacy currency.
 - The adventure, world travel, AI Chronicle, and journal use soa-mnm-adventure-v1; official-rule and custom RPG system state uses soa-mnm-systems-v1. Both keys participate in character switching, archive backup/restore, and local saves.
 - public/mnm-ai-chronicle.js generates original scenes and three choices per scene through Gemini; local d20 checks resolve outcomes. The AI API cannot edit game state. Live generation requires Cloudflare GEMINI_API_KEY and AI_ACCESS_CODE secrets. Never commit or print these secrets.
-- public/sw.js cache version must be incremented when cached gameplay files change. The current source version is mm-rpg-v144; activation removes both superseded M&M caches and the prior cache namespace.
+- public/sw.js cache version must be incremented when cached gameplay files change. The current source version is mm-rpg-v145; activation removes both superseded M&M caches and the prior cache namespace.
 - Preserve legacy characters and saves; never silently reinterpret, reset, or erase local data.
 
 ## Graphify workflow
