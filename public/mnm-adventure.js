@@ -1,5 +1,5 @@
 (()=>{"use strict";
-const KEY="soa-mnm-adventure-v1",VERSION=1;
+const KEY="soa-mnm-adventure-v1",VERSION=2;
 let activeBindPointReturn=()=>false;
 const STATS=["str","sta","dex","agi","int","wis","cha"];
 const STAT_NAMES={str:"Strength",sta:"Stamina",dex:"Dexterity",agi:"Agility",int:"Intelligence",wis:"Wisdom",cha:"Charisma"};
@@ -25,15 +25,6 @@ const APPROACHES=[
  {id:"tracks",label:"Read the ground",stat:"wis",dc:12,detail:"Study wind-scoured footprints and the disturbed sand."},
  {id:"question",label:"Question the haulers",stat:"cha",dc:13,detail:"Ask the caravan hands what they heard before the bell went quiet."}
 ];
-const ENCOUNTER=[
- {id:"str",label:"Drive it back",stat:"str",dc:14,detail:"Meet its force and break its hold on the route slate."},
- {id:"sta",label:"Hold the breach",stat:"sta",dc:12,detail:"Keep your footing as the loose ground shifts beneath you."},
- {id:"dex",label:"Strike at its grip",stat:"dex",dc:13,detail:"Use a precise opening to make it drop what it stole."},
- {id:"agi",label:"Slip inside its reach",stat:"agi",dc:12,detail:"Turn its lunge aside and take the safer ground."},
- {id:"int",label:"Read its feint",stat:"int",dc:13,detail:"Watch the creature's movement and answer the real threat."},
- {id:"wis",label:"Wait for its overreach",stat:"wis",dc:12,detail:"Keep calm, watch its balance, and counter when it commits."},
- {id:"cha",label:"Command it to yield",stat:"cha",dc:14,detail:"Make your voice carry over the wind and leave no doubt."}
-];
 const clone=value=>JSON.parse(JSON.stringify(value));
 const cleanText=value=>String(value??"").replace(/[<>]/g,"").slice(0,220);
 function startingRegionForProfile(profile){
@@ -42,11 +33,7 @@ function startingRegionForProfile(profile){
 }
 function createSave(profile){
  const origin=startingRegionForProfile(profile),region=REGIONS.find(item=>item.id===origin);
- return {version:VERSION,characterId:String(profile?.id||""),stage:"briefing",origin,currentLocation:origin,clue:false,approachUsed:"",enemyResolve:3,enemyPressure:0,outcome:"",completed:false,racialFeatureUsed:false,trollAdaptationReady:false,titanBraceReady:false,calafreyWardReady:false,spiritLatticeReady:false,wyrdpathReady:false,journal:["You begin in "+region.name+(region.zone?" in "+region.zone:"")+(origin==="night-harbor"?", the world's trade hub.":".")],aiCampaign:window.soaMnmAiChronicle?.createCampaign?.(profile)||null,updatedAt:new Date().toISOString()};
-}
-function statLine(profile){
- const scores=profile?.stats||{};
- return Object.fromEntries(STATS.map(key=>[key,Math.trunc(Number(scores[key])||10)]));
+ return {version:VERSION,characterId:String(profile?.id||""),stage:"briefing",origin,currentLocation:origin,clue:false,approachUsed:"",outcome:"",completed:false,racialFeatureUsed:false,combatEncounterId:"",combatKillsAtStart:0,combatFoeName:"",journal:["You begin in "+region.name+(region.zone?" in "+region.zone:"")+(origin==="night-harbor"?", the world's trade hub.":".")],aiCampaign:window.soaMnmAiChronicle?.createCampaign?.(profile)||null,updatedAt:new Date().toISOString()};
 }
 function validSave(value,profile){
  if(!value||typeof value!=="object"||Array.isArray(value)||value.version!==VERSION||value.characterId!==String(profile?.id||""))return false;
@@ -56,15 +43,31 @@ function validSave(value,profile){
  if(value.origin&&!REGIONS.some(region=>region.id===value.origin))return false;
  if(value.currentLocation===undefined)value.currentLocation=value.origin||startingRegionForProfile(profile);
  if(typeof value.currentLocation!=="string"||!REGIONS.some(region=>region.id===value.currentLocation))return false;
- if(typeof value.clue!=="boolean"||!Number.isInteger(value.enemyResolve)||value.enemyResolve<0||value.enemyResolve>3||!Number.isInteger(value.enemyPressure)||value.enemyPressure<0||value.enemyPressure>3)return false;
+ if(typeof value.clue!=="boolean")return false;
  if(value.approachUsed===undefined)value.approachUsed="";
  if(typeof value.approachUsed!=="string"||value.approachUsed!==""&&!APPROACHES.some(item=>item.id===value.approachUsed))return false;
+ if(value.combatEncounterId===undefined)value.combatEncounterId="";
+ if(value.combatKillsAtStart===undefined)value.combatKillsAtStart=0;
+ if(value.combatFoeName===undefined)value.combatFoeName="";
+ if(typeof value.combatEncounterId!=="string"||value.combatEncounterId.length>100||!Number.isInteger(value.combatKillsAtStart)||value.combatKillsAtStart<0||typeof value.combatFoeName!=="string"||value.combatFoeName.length>220)return false;
  if(!["","victory","driven-off","withdrew","mapped","parley"].includes(value.outcome)||typeof value.completed!=="boolean"||!Array.isArray(value.journal)||value.journal.length>100||value.journal.some(x=>typeof x!=="string"))return false;
- if(value.racialFeatureUsed!==undefined&&typeof value.racialFeatureUsed!=="boolean"||value.trollAdaptationReady!==undefined&&typeof value.trollAdaptationReady!=="boolean")return false;
+ if(value.racialFeatureUsed!==undefined&&typeof value.racialFeatureUsed!=="boolean")return false;
  if(value.racialFeatureUsed===undefined)value.racialFeatureUsed=false;
- if(value.trollAdaptationReady===undefined)value.trollAdaptationReady=false;
- for(const key of ["titanBraceReady","calafreyWardReady","spiritLatticeReady","wyrdpathReady"]){if(value[key]===undefined)value[key]=false;if(typeof value[key]!=="boolean")return false;}
  return value.stage!=="complete"||value.completed===true;
+}
+function migrateAdventureSave(value){
+ if(!value||typeof value!=="object"||Array.isArray(value))return {save:value,changed:false};
+ let changed=false;
+ if(value.version===1){
+  value.version=VERSION;changed=true;
+  for(const key of ["enemyResolve","enemyPressure","trollAdaptationReady","titanBraceReady","calafreyWardReady","spiritLatticeReady","wyrdpathReady"])delete value[key];
+ }
+ if(value.version===VERSION){
+  for(const [key,fallback] of [["combatEncounterId",""],["combatKillsAtStart",0],["combatFoeName",""]]){
+   if(value[key]===undefined){value[key]=fallback;changed=true;}
+  }
+ }
+ return {save:value,changed};
 }
 function check(profile,stat,dc,roll,storyBonus=0){
  const n=Math.trunc(Number(roll));
@@ -88,18 +91,6 @@ function migrateStartingLocation(save,profile){
  return true;
 }
 function useRacialFeature(save){if(save.racialFeatureUsed)throw new Error("This racial feature has already been used this chapter.");save.racialFeatureUsed=true;}
-function raiseDanger(save,profile){
- if(save.titanBraceReady){save.titanBraceReady=false;return " Titan's Craft holds your position steady; Danger does not rise."}
- if(save.calafreyWardReady){save.calafreyWardReady=false;return " Calafrey Discipline absorbs the setback; Danger does not rise."}
- save.enemyPressure=Math.min(3,save.enemyPressure+1);
- if(profile?.raceId==="troll"&&!save.racialFeatureUsed&&save.enemyPressure===3){
-  save.racialFeatureUsed=true;save.enemyPressure=2;save.enemyResolve=Math.max(0,save.enemyResolve-1);
-  if(save.enemyResolve===0){save.stage="aftermath";save.outcome="victory";return " Tempered Survivor turns a near withdrawal into a counter; the opposition yields."}
-  return " Tempered Survivor holds the opposition at Danger 2 and removes 1 Resolve."
- }
- if(save.enemyPressure>=3){save.stage="aftermath";save.outcome="driven-off";return " Danger reaches 3; the scavenger escapes through a narrow cut."}
- return " Danger rises to "+save.enemyPressure+"."
-}
 function transition(current,profile,action,roll){
  if(!validSave(current,profile))throw new Error("M&M adventure save does not match this character.");
  const next=clone(current);
@@ -125,116 +116,54 @@ function transition(current,profile,action,roll){
  }
  if(action?.type==="approach"&&next.stage==="approach"){
   const option=APPROACHES.find(item=>item.id===action.id);if(!option)throw new Error("Choose an investigation approach.");
-  const result=check(profile,option.stat,option.dc,roll);next.approachUsed=option.id;next.clue=result.success;next.enemyResolve=result.success?2:3;next.enemyPressure=0;next.stage="encounter";
-  const outcome=result.success?"You find a useful lead before the scavenger blocks the route.":"The clues remain uncertain, but the stolen signal slate draws you to the creature.";
+  const result=check(profile,option.stat,option.dc,roll);next.approachUsed=option.id;next.clue=result.success;next.outcome="";next.combatEncounterId="";next.combatKillsAtStart=0;next.combatFoeName="";next.stage="encounter";
+  const message=result.success?"You find a useful lead at the broken marker. Something is guarding the route.":"The clues remain uncertain, but a hostile creature blocks the route.";
   addJournal(next,option.label+": d20 "+result.roll+" "+(result.modifier>=0?"+":"")+result.modifier+" = "+result.total+" vs DC "+result.dc+" - "+(result.success?"success":"failure")+".");
-  return {state:next,message:outcome,roll:result};
+  return {state:next,message,roll:result};
  }
  if(action?.type==="humanRetry"&&next.stage==="encounter"){
-  if(profile?.raceId!=="human"||next.racialFeatureUsed||next.clue)throw new Error("Many Roads is only available after a failed investigation.");
+  if(profile?.raceId!=="human"||next.racialFeatureUsed||next.clue||next.combatEncounterId)throw new Error("Many Roads is only available after a failed investigation, before combat starts.");
   const option=APPROACHES.find(item=>item.id===action.id);if(!option||option.id===next.approachUsed)throw new Error("Choose a different investigation approach.");
   useRacialFeature(next);
   const result=check(profile,option.stat,option.dc,roll);
-  if(result.success){next.clue=true;next.enemyResolve=Math.min(next.enemyResolve,2);}
+  if(result.success)next.clue=true;
   addJournal(next,"Many Roads - "+option.label+": d20 "+result.roll+" "+(result.modifier>=0?"+":"")+result.modifier+" = "+result.total+" vs DC "+result.dc+" - "+(result.success?"success":"failure")+".");
-  return {state:next,message:result.success?"A different human perspective uncovers the route clue.":"The second approach fails to clarify the trail, but reveals how the scavenger is moving.",roll:result};
+  return {state:next,message:result.success?"A different human perspective uncovers a useful clue.":"The second approach fails to clarify the trail, but you can still face the threat or report a detour.",roll:result};
  }
  if(action?.type==="racial"){
   if(action.id!==profile?.raceId||next.racialFeatureUsed)throw new Error("This racial feature is not available to this character.");
   if(profile.raceId==="gnome"&&next.stage==="approach"){
-   useRacialFeature(next);next.clue=true;next.enemyResolve=2;next.enemyPressure=0;next.approachUsed="";next.stage="encounter";
+   useRacialFeature(next);next.clue=true;next.approachUsed="";next.stage="encounter";
    addJournal(next,"Eureka - a patient insight reveals the missing signal trail without a check.");
-   return {state:next,message:"Eureka! A decisive detail comes into focus without a roll. The opposition begins at 2 Resolve."};
+   return {state:next,message:"Eureka! A decisive detail comes into focus without a roll."};
   }
-  if(profile.raceId==="deep_gnome"&&next.stage==="encounter"){
+  if(profile.raceId==="deep_gnome"&&next.stage==="encounter"&&!next.combatEncounterId){
    useRacialFeature(next);next.stage="aftermath";next.outcome="mapped";
-   addJournal(next,"Spiral Cartographer - mapped a safe alternate route past the opposition.");
-   return {state:next,message:"The deep gnome maps a safe alternate route and leaves a reliable warning, securing a safe outcome even though the opposition remains."};
+   addJournal(next,"Spiral Cartographer - mapped a safe alternate route around the threat.");
+   return {state:next,message:"The deep gnome maps a safe alternate route and leaves a reliable warning for the caravan."};
   }
-  if(profile.raceId==="dwarf"&&next.stage==="encounter"){
-   useRacialFeature(next);
-   if(next.enemyPressure>0)next.enemyPressure--;
-   else next.titanBraceReady=true;
-   addJournal(next,next.titanBraceReady?"Titan's Craft - reinforced the position against the next setback.":"Titan's Craft - stabilized the situation and removed 1 Danger.");
-   return {state:next,message:next.titanBraceReady?"You reinforce your position; the next Danger increase is canceled.":"You stabilize the situation under pressure, reducing Danger by 1."};
-  }
-  if(profile.raceId==="deep_dwarf"&&next.stage==="encounter"){
-   useRacialFeature(next);next.spiritLatticeReady=true;
-   addJournal(next,"Spirit Lattice - prepared a bound spirit to catch the opposition's next opening.");
-   return {state:next,message:"A spirit is bound into a precise lattice. The next failed exchange will cost the opposition 1 Resolve, though Danger will still rise."};
-  }
-  if(profile.raceId==="high_elf"&&next.stage==="encounter"){
-   useRacialFeature(next);next.calafreyWardReady=true;
-   addJournal(next,"Calafrey Discipline - prepared a measured ward against one setback.");
-   return {state:next,message:"A measured ward takes shape. The next failed exchange will not raise Danger."};
-  }
-  if(profile.raceId==="wood_elf"&&next.stage==="encounter"){
-   useRacialFeature(next);next.wyrdpathReady=true;
-   addJournal(next,"Wyrdpath - followed living signs to take a flanking line.");
-   return {state:next,message:"The wood elf follows signs in the scrub and takes a living flank. The next successful exchange removes 2 Resolve instead of 1."};
-  }
-  if(profile.raceId==="deep_elf"&&next.stage==="encounter"&&next.clue&&next.enemyResolve>0){
-   useRacialFeature(next);next.enemyResolve=Math.max(0,next.enemyResolve-1);
-   if(next.enemyResolve===0){next.stage="aftermath";next.outcome="victory"}
-   addJournal(next,"Shadow's Veil - used the known opening to strike unseen and remove 1 Resolve.");
-   return {state:next,message:next.outcome==="victory"?"The known opening lets the deep elf secure the objective from the shadows.":"The deep elf uses the discovered opening to strike unseen, removing 1 Resolve without increasing Danger."};
-  }
-  if(profile.raceId==="ogre"&&next.stage==="encounter"){
-   useRacialFeature(next);next.enemyResolve=Math.max(0,next.enemyResolve-1);
-   if(next.enemyResolve===0){next.stage="aftermath";next.outcome="victory";addJournal(next,"Storm Coast Fury - a committed assault broke the opposition's hold on the objective.");return {state:next,message:"The committed assault breaks the opposition's hold on the objective. The threat yields before another exchange."}}
-   const danger=raiseDanger(next,profile);addJournal(next,"Storm Coast Fury - removed 1 Resolve and risked 1 Danger.");
-   return {state:next,message:"The ogre lands a committed blow, removing 1 Resolve."+danger};
-  }
-  if(profile.raceId==="halfling"&&next.stage==="encounter"&&next.enemyResolve===1){
-   useRacialFeature(next);next.stage="aftermath";next.outcome="parley";
-   addJournal(next,"Fontborn Memory - settled the encounter with a remembered wayfarer's tale.");
-   return {state:next,message:"An old road-tale gives both sides a way to stand down and reach a peaceful resolution."};
-  }
-  if(profile.raceId==="goblin"&&next.stage==="encounter"&&next.clue){
+  if(profile.raceId==="goblin"&&next.stage==="encounter"&&next.clue&&!next.combatEncounterId){
    useRacialFeature(next);
    const result=check(profile,"dex",13,roll);
-   if(result.success){next.stage="aftermath";next.outcome="victory"}
-   else raiseDanger(next,profile);
+   if(result.success){next.stage="aftermath";next.outcome="mapped"}
    addJournal(next,"Secret-Sense - hidden-route Dexterity check: d20 "+result.roll+" "+(result.modifier>=0?"+":"")+result.modifier+" = "+result.total+" vs DC 13 - "+(result.success?"success":"failure")+".");
-   const message=result.success?"The goblin spots an opening and reaches the objective by a hidden route.":next.outcome==="driven-off"?"The hidden route closes as the opposition withdraws through another passage.":"The hidden route is watched; Danger rises to "+next.enemyPressure+".";
+   const message=result.success?"The goblin finds a hidden route around the creature and signals the caravan safely.":"The hidden route is watched. You can still face the threat or report a detour.";
    return {state:next,message,roll:result};
   }
   throw new Error("This racial feature is not available at this point in the chapter.");
  }
- if(action?.type==="combat"&&next.stage==="encounter"){
-  const option=ENCOUNTER.find(item=>item.id===action.id)||(action.id==="class"?{id:"class",label:"Use "+profile.className+" training",stat:bestClassStat(profile),dc:14,detail:"Use your strongest class stat."}:null);if(!option)throw new Error("Choose an encounter action.");
-  const result=check(profile,option.stat,option.dc,roll);let featureMessage="";
-  if(result.success){
-   const progress=next.wyrdpathReady?2:1;
-   if(next.wyrdpathReady){next.wyrdpathReady=false;featureMessage=" Wyrdpath turns the flank into a decisive opening."}
-   next.enemyResolve=Math.max(0,next.enemyResolve-progress);
-   if(next.enemyResolve===0){next.stage="aftermath";next.outcome="victory"}
-  }else{
-   if(next.spiritLatticeReady){next.spiritLatticeReady=false;next.enemyResolve=Math.max(0,next.enemyResolve-1);featureMessage=" Spirit Lattice catches the opposition in a bound spirit, removing 1 Resolve."}
-   if(next.enemyResolve===0){next.stage="aftermath";next.outcome="victory"}
-   else featureMessage+=raiseDanger(next,profile);
-  }
-  addJournal(next,option.label+": d20 "+result.roll+" "+(result.modifier>=0?"+":"")+result.modifier+" = "+result.total+" vs DC "+result.dc+" - "+(result.success?"success":"failure")+".");
-  let message=result.success?"Your move turns the encounter in your favor.":"The scavenger forces you to give ground.";
-  if(next.outcome==="victory")message="The scavenger yields the route slate and retreats into the broken ground.";
-  if(next.outcome==="driven-off")message="The scavenger slips away through a narrow cut. You keep the trail and can still finish the job.";
-  return {state:next,message:message+featureMessage,roll:result};
- }
  if(action?.type==="retreat"&&next.stage==="encounter"){
-  next.stage="aftermath";next.outcome="withdrew";addJournal(next,"Withdrew from the encounter and chose a safer route back.");
-  return {state:next,message:"You withdraw before the ground can trap you. The route can still be reported honestly."};
+  if(next.combatEncounterId)throw new Error("Use Try to escape in the Combat panel before leaving this encounter.");
+  next.stage="aftermath";next.outcome="withdrew";addJournal(next,"Chose a safe detour around the threat and warned the caravan.");
+  return {state:next,message:"You choose a safer route and warn the caravan crew. The chapter can still be completed."};
  }
  if(action?.type==="complete"&&next.stage==="aftermath"){
   next.stage="complete";next.completed=true;
-  const resultText=next.outcome==="victory"?"Recovered the Dune Gate signal slate after driving off the scavenger.":next.outcome==="parley"?"Recovered the signal slate through a peaceful parley.":next.outcome==="mapped"?"Mapped a reliable safe route around the scavenger; the signal slate remains missing.":next.outcome==="driven-off"?"Marked the scavenger's escape route and restored a safe warning at Dune Gate.":"Mapped a safer approach to Dune Gate and warned the caravan crew.";
+  const resultText=next.outcome==="victory"?"Cleared the broken signal marker and helped restore the warning bell.":next.outcome==="parley"?"Reached a peaceful resolution and helped restore the warning bell.":next.outcome==="mapped"?"Mapped a reliable safe route and warned the caravan.":next.outcome==="driven-off"?"Marked the threat's escape route and restored a safe warning at Dune Gate.":"Reported a safe detour so the caravan could pass Dune Gate.";
   addJournal(next,"Chapter complete: "+resultText);
   return {state:next,message:"Chapter complete. The signal route is recorded in the journal."};
  }
  throw new Error("That action is not available in the current chapter.");
-}
-function bestClassStat(profile){
- const bonus=profile?.classBonuses||{};
- return STATS.reduce((best,key)=>Number(bonus[key]||0)>Number(bonus[best]||0)?key:best,STATS[0]);
 }
 function boot(){
  const profile=window.soaCharacters?.profile?.();
@@ -248,9 +177,11 @@ function boot(){
    else{
     const parsed=JSON.parse(raw);
     const needsAiMigration=parsed?.aiCampaign===undefined;
-    if(!validSave(parsed,profile))throw new Error("The M&M adventure save does not match the active character or current save format.");
-    save=parsed;
-    if(migrateStartingLocation(save,profile)||needsAiMigration)localStorage.setItem(KEY,JSON.stringify(save));
+    const migration=migrateAdventureSave(parsed);
+    save=migration.save;
+    if(!validSave(save,profile))throw new Error("The M&M adventure save does not match the active character or current save format.");
+    const locationMigrated=migrateStartingLocation(save,profile);
+    if(migration.changed||locationMigrated||needsAiMigration)localStorage.setItem(KEY,JSON.stringify(save));
    }
   }
  }catch(error){
@@ -282,7 +213,7 @@ function boot(){
   view=name;render();
   if(focus)app.querySelector('[data-view="'+name+'"]')?.focus();
  }
- function perform(action,needsRoll,extra){
+ function perform(action,needsRoll){
   if(blocked||!save)return;
   if(window.soaSaveRules?.isIntegrityBlocked?.()){blocked=true;statusText="Saved data is paused until the character archive is recovered.";render();return;}
   const before=save;
@@ -291,7 +222,7 @@ function boot(){
    const result=transition(save,profile,action,roll);
    save=result.state;
    localStorage.setItem(KEY,JSON.stringify(save));
-   statusText=result.message+(result.roll?" Roll "+result.roll.roll+" + "+result.roll.modifier+" = "+result.roll.total+" vs DC "+result.roll.dc+" \u00b7 "+(result.roll.success?"Success":"Failure")+".":"");
+   statusText=result.message+(result.roll?" Roll "+result.roll.roll+" + "+result.roll.modifier+" = "+result.roll.total+" vs DC "+result.roll.dc+" · "+(result.roll.success?"Success":"Failure")+".":"");
   }catch(error){save=before;statusText=error.message}
   render();
   app.querySelector("h2")?.focus();
@@ -305,6 +236,7 @@ function boot(){
  }
  activeBindPointReturn=destination=>{
   if(blocked||!save)return false;
+  synchronizeStoryCombat();
   const target=REGIONS.find(region=>region.id===String(destination))||REGIONS.find(region=>region.id===startingRegionForProfile(profile))||REGIONS[0];
   const next=clone(save);
   next.currentLocation=target.id;
@@ -329,66 +261,116 @@ function boot(){
  }
  function renderApproach(panel){
   panel.append(el("div","QUEST · INVESTIGATE","soa-mnm-kicker"),el("h2","Find the missing signal"));
-  panel.append(el("p","The trail leaves the caravan road at a half-buried marker. Choose how "+profile.name+" looks for the missing route slate. A failed check still advances the story, but leaves the scavenger harder to corner."));
+  panel.append(el("p","The trail leaves the caravan road at a half-buried marker. Choose how "+profile.name+" searches for the missing signal. A failed check still advances the story; you can fight the threat or take a safe detour."));
   panel.append(actionList(APPROACHES,"approach"));
-  if(profile.raceId==="gnome"&&!save.racialFeatureUsed)panel.append(button("Eureka - reveal the clue","Use a once-per-chapter insight instead of rolling. The opposition begins less prepared at 2 Resolve.",()=>perform({type:"racial",id:"gnome"},false),"med"));
+  if(profile.raceId==="gnome"&&!save.racialFeatureUsed)panel.append(button("Eureka - reveal the clue","Use a once-per-chapter insight to uncover the trail without a roll.",()=>perform({type:"racial",id:"gnome"},false),"med"));
+ }
+ const STORY_COMBAT_TACTICS={
+  dwarf:{id:"brace",label:"Titan's Craft",detail:"Brace against the next incoming strike."},
+  deep_dwarf:{id:"weaken",label:"Spirit Lattice",detail:"Bind a spirit to weaken the foe's next strike."},
+  high_elf:{id:"ward",label:"Calafrey Discipline",detail:"Set a ward that weakens the foe's next strike."},
+  wood_elf:{id:"flank",label:"Wyrdpath",detail:"Follow living signs and deal a quick 4 damage from the flank."},
+  deep_elf:{id:"ambush",label:"Shadow's Veil",detail:"Use a discovered opening to deal 5 damage unseen.",requiresClue:true},
+  ogre:{id:"assault",label:"Storm Coast Fury",detail:"Commit to a forceful opening and deal 7 damage."},
+  troll:{id:"recover",label:"Tempered Survivor",detail:"Recover 8 Health and 2 Focus."},
+  halfling:{id:"parley",label:"Fontborn Memory",detail:"At low foe Health, use a road-tale to settle the encounter peacefully.",requiresYield:true}
+ };
+ function currentStoryProfile(){
+  const state=window.soaMnmSystems?.read?.(profile);
+  return {...profile,level:state?.ok?state.save.level:profile.level||1};
+ }
+ function persistAdventure(next,message){
+  if(blocked||window.soaSaveRules?.isIntegrityBlocked?.()){blocked=true;statusText="Saved data is paused until the character archive is recovered.";return false}
+  try{next.updatedAt=new Date().toISOString();localStorage.setItem(KEY,JSON.stringify(next));save=next;if(message!==undefined)statusText=message;return true}
+  catch{statusText="The adventure could not be saved. Your previous story remains intact.";return false}
+ }
+ function finishStoryCombat(outcomeOverride){
+  if(!save?.combatEncounterId)return false;
+  const systemState=window.soaMnmSystems?.read?.(profile);
+  if(!systemState?.ok){statusText=systemState?.error||"Combat data could not be read.";return false}
+  const outcome=outcomeOverride||(systemState.save.rpg.kills>save.combatKillsAtStart?"victory":"withdrew");
+  const foeName=save.combatFoeName||"the threat";
+  const next=clone(save);next.stage="aftermath";next.outcome=outcome;next.combatEncounterId="";next.combatFoeName="";next.combatKillsAtStart=systemState.save.rpg.kills;
+  const line=outcome==="victory"?"Defeated "+foeName+" and cleared the broken signal marker.":outcome==="parley"?"Settled the encounter with "+foeName+" through a peaceful exchange.":"Withdrew from "+foeName+" and helped Sera mark a safe detour.";
+  addJournal(next,line);
+  return persistAdventure(next,outcome==="victory"?"The threat is defeated. Sera can restore the warning bell.":outcome==="parley"?"The encounter ended peacefully; the caravan is safe.":"You reached safety. Sera marks a detour for the caravan.");
+ }
+ function synchronizeStoryCombat(){
+  if(save?.stage!=="encounter"||!save.combatEncounterId)return false;
+  const state=window.soaMnmSystems?.read?.(profile);
+  if(!state?.ok||state.save.rpg.encounter?.id===save.combatEncounterId)return false;
+  return finishStoryCombat();
+ }
+ function beginStoryCombat(){
+  if(blocked||!save||save.stage!=="encounter")return;
+  if(window.soaSaveRules?.isIntegrityBlocked?.()){blocked=true;statusText="Saved data is paused until the character archive is recovered.";render();return}
+  const systems=window.soaMnmSystems,state=systems?.read?.(profile);
+  if(!state?.ok){statusText=state?.error||"Turn-based combat is unavailable right now.";render();return}
+  let systemState=state.save,foe=systemState.rpg.encounter;
+  if(!foe){
+   const started=systems.startEncounter(currentStoryProfile(),save.currentLocation);
+   if(!started?.ok){statusText=started?.error||"A fight could not be started. Recover Health or finish the active encounter first.";render();return}
+   systemState=started.save;foe=systemState.rpg.encounter||started.result?.encounter;
+  }
+  if(!foe){statusText="No active foe was found. Try starting the encounter again.";render();return}
+  const next=clone(save);next.combatEncounterId=foe.id;next.combatKillsAtStart=systemState.rpg.kills;next.combatFoeName=cleanText(foe.name);
+  if(!persistAdventure(next,"You face "+foe.name+". Use Health, Focus, attacks, class techniques, items, or escape.")){render();return}
+  render();
+ }
+ function useStoryCombatTactic(tactic){
+  if(!tactic||save.racialFeatureUsed)return;
+  const before=clone(save),next=clone(save);next.racialFeatureUsed=true;addJournal(next,"Used "+tactic.label+" during the encounter.");
+  if(!persistAdventure(next))return;
+  const result=window.soaMnmSystems?.useRacialCombatTactic?.(profile,tactic.id);
+  if(!result?.ok){
+   persistAdventure(before,result?.error||"The racial feature could not be used.");
+   render();return;
+  }
+  if(result.result?.parley)finishStoryCombat("parley");
+  else statusText=result.result?.line||tactic.label+" takes effect.";
+  render();
  }
  function renderEncounter(panel){
-  panel.append(el("div","ENCOUNTER · ORIGINAL STORY RULES","soa-mnm-kicker"),el("h2","A scavenger blocks the marker"));
-  panel.append(el("p","A masked scavenger drags the route slate into the broken ground. This is a custom narrative encounter, not a creature or combat rule from the official game."));
-  const meters=el("div",undefined,"soa-mnm-encounter-meters");
-  meters.append(meter("Scavenger resolve",save.enemyResolve,save.clue?2:3),meter("Danger",save.enemyPressure,3));
-  panel.append(meters,el("p","Win by reducing Resolve to zero. Three Danger lets the scavenger escape; retreat remains available. Racial features are original M&M: RPG rules."));
+  panel.append(el("div","ENCOUNTER · TURN-BASED COMBAT","soa-mnm-kicker"),el("h2","A threat blocks the marker"));
+  panel.append(el("p","A hostile creature has occupied the broken signal marker. Clear the route in the same turn-based combat used in the Combat tab, then help Sera restore the warning bell. These combat rules are original M&M: RPG rules."));
   const racial=window.soaMnmRules.racialAbilities?.[profile.raceId];
-  if(racial){
-   const states=[];
-   if(save.racialFeatureUsed)states.push("used this chapter");
-   else if(profile.raceId==="troll")states.push("passive safeguard ready");
-   else states.push("available once this chapter");
-   if(save.titanBraceReady)states.push("Titan's brace prepared");
-   if(save.calafreyWardReady)states.push("Calafrey ward prepared");
-   if(save.spiritLatticeReady)states.push("Spirit Lattice prepared");
-   if(save.wyrdpathReady)states.push("Wyrdpath flank prepared");
-   panel.append(el("p",racial.name+" · "+states.join(" · ")+" - "+racial.effect,"soa-mnm-feature-status"));
+  if(racial)panel.append(el("p",racial.name+" · Original racial feature: "+racial.effect,"soa-mnm-feature-status"));
+  if(!save.racialFeatureUsed&&profile.raceId==="human"&&!save.clue){
+   const alternatives=APPROACHES.filter(item=>item.id!==save.approachUsed);
+   const options=el("div",undefined,"soa-mnm-racial-options");
+   options.append(el("h3","Many Roads - change your approach"),el("p","The first investigation failed. Choose a different method for one fresh roll; it gets no racial modifier."));
+   for(const item of alternatives)options.append(button(item.label,item.detail+" · "+STAT_NAMES[item.stat]+" · DC "+item.dc,()=>perform({type:"humanRetry",id:item.id},true),"low"));
+   panel.append(options);
   }
-  if(!save.racialFeatureUsed){
-   const use=(label,detail,id,needsRoll=false)=>panel.append(button(label,detail,()=>perform({type:"racial",id},needsRoll),"med"));
-   if(profile.raceId==="human"&&!save.clue){
-    const alternatives=APPROACHES.filter(item=>item.id!==save.approachUsed);
-    const options=el("div",undefined,"soa-mnm-racial-options");
-    options.append(el("h3","Many Roads - change your approach"),el("p","The first investigation failed. Choose a different method for one fresh roll; it gets no racial modifier."));
-    for(const item of alternatives)options.append(button(item.label,item.detail+" · "+STAT_NAMES[item.stat]+" · DC "+item.dc,()=>perform({type:"humanRetry",id:item.id},true),"low"));
-    panel.append(options);
+  if(!save.racialFeatureUsed&&!save.combatEncounterId&&profile.raceId==="deep_gnome")panel.append(button("Spiral Cartographer - map a safe route","Leave a reliable warning and secure a safe outcome without fighting.",()=>perform({type:"racial",id:"deep_gnome"},false),"med"));
+  if(!save.racialFeatureUsed&&!save.combatEncounterId&&profile.raceId==="goblin"&&save.clue)panel.append(button("Secret-Sense - find a hidden route","Try a Dexterity check, DC 13. Success secures the route without a fight.",()=>perform({type:"racial",id:"goblin"},true),"med"));
+  const systems=window.soaMnmSystems,state=systems?.read?.(profile);
+  if(save.combatEncounterId){
+   const foe=state?.ok?state.save.rpg.encounter:null;
+   const tactic=STORY_COMBAT_TACTICS[profile.raceId];
+   if(foe?.id===save.combatEncounterId&&tactic&&!save.racialFeatureUsed&&(!tactic.requiresClue||save.clue)&&(!tactic.requiresYield||foe.hp<=Math.ceil(foe.maxHp*.25))){
+    panel.append(button(tactic.label,tactic.detail,()=>useStoryCombatTactic(tactic),"med"));
+   }else if(tactic?.requiresYield&&!save.racialFeatureUsed&&foe?.id===save.combatEncounterId){
+    panel.append(el("p","Fontborn Memory is ready once the foe's Health falls below one quarter.","soa-mnm-feature-status"));
    }
-   if(profile.raceId==="deep_gnome")use("Spiral Cartographer - map a safe route","Secure a safe outcome and leave a reliable warning, even if the opposition remains.","deep_gnome");
-   if(profile.raceId==="dwarf")use("Titan's Craft - brace or repair","Remove 1 Danger, or reinforce your position to cancel the next Danger increase.","dwarf");
-   if(profile.raceId==="deep_dwarf")use("Spirit Lattice - prepare a bound spirit","Your next failed exchange also removes 1 opponent Resolve; Danger still rises.","deep_dwarf");
-   if(profile.raceId==="high_elf")use("Calafrey Discipline - prepare a ward","The next failed exchange will not increase Danger.","high_elf");
-   if(profile.raceId==="wood_elf")use("Wyrdpath - take a living flank","The next successful exchange removes 2 Resolve instead of 1; no roll bonus.","wood_elf");
-   if(profile.raceId==="deep_elf"&&save.clue&&save.enemyResolve>0)use("Shadow's Veil - strike unseen","Use the known opening to remove 1 Resolve without increasing Danger.","deep_elf");
-   if(profile.raceId==="ogre")use("Storm Coast Fury - committed assault","Remove 1 Resolve and add 1 Danger.","ogre");
-   if(profile.raceId==="halfling"&&save.enemyResolve===1)use("Fontborn Memory - parley","Use a remembered tale to de-escalate and reach a peaceful resolution.","halfling");
-   if(profile.raceId==="goblin"&&save.clue)use("Secret-Sense - slip through a hidden route","Unmodified Dexterity check, DC 13. Success secures the objective by a hidden route; failure adds Danger.","goblin",true);
+   const combat=systems?.render?.("combat",currentStoryProfile(),()=>{synchronizeStoryCombat();render()},{locationId:save.currentLocation,returnToBindPoint:destination=>activeBindPointReturn(destination)});
+   if(combat)panel.append(combat);
+   else panel.append(el("p","Combat could not be loaded. Your saved encounter is still intact.","soa-mnm-live"));
+  }else{
+   const foe=state?.ok?state.save.rpg.encounter:null;
+   panel.append(button(foe?"Resume the active fight":"Fight to clear the marker",foe?"Continue the current turn-based encounter.":"Start a regional foe encounter using Health, Focus, equipment, and class techniques.",beginStoryCombat,"med"));
+   panel.append(button("Take a safe detour","Avoid the fight, warn the caravan, and complete the chapter with a safe route report.",()=>perform({type:"retreat"},false),"low"));
   }
-  const classStat=bestClassStat(profile),classBonus=Number(profile.classBonuses?.[classStat]||0);
-  const signature={id:"class",label:"Use "+profile.className+" training",stat:classStat,dc:14,detail:"Make the encounter fit your strongest class stat ("+STAT_NAMES[classStat]+", class modifier "+(classBonus>=0?"+":"")+classBonus+")."};
-  panel.append(actionList(ENCOUNTER.filter(x=>x.id!=="sta"),"combat"));
-  panel.append(actionList([ENCOUNTER.find(x=>x.id==="sta"),signature],"combat"));
-  panel.append(button("Withdraw safely","End the encounter and return with a route report.",()=>perform({type:"retreat"},false),"low"));
- }
- function meter(label,value,max){
-  const wrap=el("div",undefined,"soa-mnm-meter");wrap.append(el("span",label),el("strong",value+" / "+max));
-  const track=el("div",undefined,"soa-mnm-meter-track"),fill=el("i");fill.style.width=(max?Math.max(0,Math.min(100,value/max*100)):0)+"%";track.append(fill);wrap.append(track);return wrap;
  }
  function renderAftermath(panel){
-  panel.append(el("div","QUEST · RETURN","soa-mnm-kicker"),el("h2",save.outcome==="victory"?"The route is safe":save.outcome==="parley"?"The slate is returned":save.outcome==="mapped"?"A safe route is mapped":save.outcome==="driven-off"?"The threat is marked":"A safer route home"));
-  const line=save.outcome==="victory"?"The signal slate is recovered. Sera restores the warning bell before the caravan reaches the broken ground.":save.outcome==="parley"?"The scavenger returns the signal slate after a peaceful exchange, and Sera restores the warning bell.":save.outcome==="mapped"?"The slate remains missing, but the safe alternate route is mapped and Sera can warn every caravan.":save.outcome==="driven-off"?"Sera records the danger and marks the scavenger's escape route.":"Sera Fen records the danger and marks a safer route around the damaged signal post.";
+  panel.append(el("div","QUEST · RETURN","soa-mnm-kicker"),el("h2",save.outcome==="victory"?"The route is safe":save.outcome==="parley"?"The threat stands down":save.outcome==="mapped"?"A safe route is mapped":"A safer route home"));
+  const line=save.outcome==="victory"?"With the threat cleared, Sera restores the warning bell before the caravan arrives.":save.outcome==="parley"?"The creature turns away after a peaceful exchange, and Sera restores the warning bell.":save.outcome==="mapped"?"The threat remains, but the safe alternate route is marked and Sera warns the caravan.":"You fall back from the threat. Sera marks a safe detour so the caravan can pass.";
   panel.append(el("p",line),el("p","Your choices and the encounter are saved in the Journey Log."));
   panel.append(button("Record the chapter","Complete the quest and preserve its outcome in the journal.",()=>perform({type:"complete"},false),"med"));
  }
  function renderComplete(panel){
-  panel.append(el("div","CHAPTER ONE \u00b7 COMPLETE","soa-mnm-kicker"),el("h2","The Quiet Signal at Dune Gate"));
-  panel.append(el("p","The caravan route is marked safe, and your account of the encounter is preserved. Open the Journey Log to review your choices and rolls."));
+  panel.append(el("div","CHAPTER ONE · COMPLETE","soa-mnm-kicker"),el("h2","The Quiet Signal at Dune Gate"));
+  panel.append(el("p","The caravan route is marked safe, and your account of the encounter is preserved. Open the Journey Log to review your choices and combat."));
   const rewardId="chapter-one",systems=window.soaMnmSystems,systemSave=systems?.read?.(profile),claimed=!!(systemSave?.ok&&systemSave.save.rpg.claimedStories.includes(rewardId));
   panel.append(el("p","This chapter has a player-claimed reward of 100 custom XP. The amount and leveling curve are original M&M: RPG rules, not an official M&M reward value."));
   if(claimed)panel.append(el("p","Chapter One's custom XP reward has already been claimed."));
@@ -397,7 +379,8 @@ function boot(){
    if(result?.ok){statusText="Claimed "+result.result.xp+" custom XP for completing Chapter One.";render()}
    else{statusText=result?.error||"The chapter reward could not be saved.";render()}
   },"med"));
-  panel.append(button("Review the Journey Log","See region choice, checks, encounter actions, and quest outcome.",()=>setView("journal",false)));
+  panel.append(button("Continue to the next chapter","Open the AI Chronicle and generate what happens next.",()=>setView("ai",true),"med"));
+  panel.append(button("Review the Journey Log","See region choice, checks, combat, and quest outcome.",()=>setView("journal",false)));
  }
  function renderJournal(panel){
   panel.append(el("div","YOUR ADVENTURE \u00b7 LOCAL JOURNAL","soa-mnm-kicker"),el("h2","Journey Log"));
@@ -421,6 +404,7 @@ function boot(){
  }
  function render(){
   if(!app.isConnected)return;
+  if(!blocked)synchronizeStoryCombat();
   app.replaceChildren();
   const hero=el("section",undefined,"soa-mnm-game-heading");
   hero.append(el("div","MONSTERS & MEMORIES \u00b7 ORIGINAL ADVENTURE","soa-mnm-kicker"),el("h1",profile.name));
@@ -477,7 +461,7 @@ function boot(){
  render();
 }
 function start(){window.soaCharacters?.organizeSections?.();boot()}
-window.soaMnmAdventure=Object.freeze({key:KEY,humanStartRegion:"night-harbor",createSave,validSave,transition,migrateStartingLocation,migrateHumanStartingCity:migrateStartingLocation,regions:REGIONS.map(x=>({...x})),travelRoutes:TRAVEL_ROUTES.map(x=>({...x})),approaches:APPROACHES.map(x=>({...x})),encounter:ENCOUNTER.map(x=>({...x})),returnToBindPoint:destination=>activeBindPointReturn(destination),boot});
+window.soaMnmAdventure=Object.freeze({key:KEY,version:VERSION,humanStartRegion:"night-harbor",createSave,validSave,migrateAdventureSave,transition,migrateStartingLocation,migrateHumanStartingCity:migrateStartingLocation,regions:REGIONS.map(x=>({...x})),travelRoutes:TRAVEL_ROUTES.map(x=>({...x})),approaches:APPROACHES.map(x=>({...x})),returnToBindPoint:destination=>activeBindPointReturn(destination),boot});
 if(document.readyState==="complete")start();else window.addEventListener("load",start,{once:true});
 })();
 
