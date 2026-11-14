@@ -18,15 +18,15 @@
     "semantic_hash": ""
   },
   "functions/api/campaign.js": {
-    "mtime": 1794619101.6791036,
-    "seen": 1794619589.1617832,
-    "ast_hash": "16878abeaf4a4724f3d801087c2a365c",
+    "mtime": 1794626341.2107089,
+    "seen": 1794626464.1430998,
+    "ast_hash": "aab7a209c8ec42fa3f320b8d4b7dd064",
     "semantic_hash": ""
   },
   "functions/api/story.js": {
-    "mtime": 1794619101.6791036,
-    "seen": 1794619589.1617832,
-    "ast_hash": "3723d93889040590cdbc870237df8dcd",
+    "mtime": 1794626341.2117097,
+    "seen": 1794626464.1430998,
+    "ast_hash": "35979be104c7ad487ea8d84cd8d3e70c",
     "semantic_hash": ""
   },
   "package.json": {
@@ -60,15 +60,15 @@
     "semantic_hash": ""
   },
   "public/characters.js": {
-    "mtime": 1794625379.8999865,
-    "seen": 1794625442.483325,
-    "ast_hash": "753fe208114226c77f22df7552271257",
+    "mtime": 1794626450.9965246,
+    "seen": 1794626464.1430998,
+    "ast_hash": "b02aef9fcde4233cc6c57f2810fd8429",
     "semantic_hash": ""
   },
   "public/chronicle.js": {
-    "mtime": 1794619101.6871054,
-    "seen": 1794619589.1617832,
-    "ast_hash": "3bea513b4c972e9f090563de37b18c0d",
+    "mtime": 1794626341.4457717,
+    "seen": 1794626464.1430998,
+    "ast_hash": "4aa553b4de04cdec3f4a152eaa78a127",
     "semantic_hash": ""
   },
   "public/class-abilities.js": {
@@ -90,9 +90,9 @@
     "semantic_hash": ""
   },
   "public/companions.js": {
-    "mtime": 1794619101.6891067,
-    "seen": 1794619589.1617832,
-    "ast_hash": "54aea8057d3b09759f710d78db0cdb7f",
+    "mtime": 1794626341.4487715,
+    "seen": 1794626464.1430998,
+    "ast_hash": "f71346b3ce2fa245f6f2efbe4c201419",
     "semantic_hash": ""
   },
   "public/crafting.js": {
@@ -138,9 +138,9 @@
     "semantic_hash": ""
   },
   "public/mnm-rules.js": {
-    "mtime": 1794625379.652066,
-    "seen": 1794625442.483325,
-    "ast_hash": "d7c2ea57035e4f6112024b8a4d112eb5",
+    "mtime": 1794626622.4099452,
+    "seen": 1794626683.358093,
+    "ast_hash": "6bf6d1654ea7db80f8bd66fea9683d84",
     "semantic_hash": ""
   },
   "public/mobile-layout.js": {
@@ -252,9 +252,9 @@
     "semantic_hash": ""
   },
   "tests/chronicle-anchor.test.js": {
-    "mtime": 1794619101.7376993,
-    "seen": 1794619589.1617832,
-    "ast_hash": "04d3dc31bb16fd5fcf8d1b54ffb1e5e5",
+    "mtime": 1794626341.4467702,
+    "seen": 1794626464.1430998,
+    "ast_hash": "1e002538c7036e98461570903c5b1077",
     "semantic_hash": ""
   },
   "tests/chronicle-pacing.test.js": {
@@ -420,33 +420,33 @@
     "semantic_hash": ""
   },
   "CAMPAIGN_BIBLE.md": {
-    "mtime": 1794619101.6745589,
-    "seen": 1794619589.1617832,
-    "ast_hash": "61d204baf318c319e1d4b720f24ced78",
+    "mtime": 1794626341.1732452,
+    "seen": 1794626464.1430998,
+    "ast_hash": "39f2f81c40af0fbeeb7846aa7bc83683",
     "semantic_hash": ""
   },
   "DEVELOPMENT_HANDOFF.md": {
-    "mtime": 1794619101.6755593,
-    "seen": 1794619589.1617832,
-    "ast_hash": "628327e62615dd94ba147b0cb0e9defc",
+    "mtime": 1794626402.9721363,
+    "seen": 1794626464.1430998,
+    "ast_hash": "00ac9bbb82d71401999ea7b2a2f693af",
     "semantic_hash": ""
   },
   "MNM_REWRITE_PLAN.md": {
-    "mtime": 1794625418.7668579,
-    "seen": 1794625442.483325,
-    "ast_hash": "a47dfe62af5629dfac341dd3fcddf495",
+    "mtime": 1794626341.2031996,
+    "seen": 1794626464.1430998,
+    "ast_hash": "3a3afaafec1c6c8a87454a543d621484",
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1794619101.67809,
-    "seen": 1794619589.1617832,
-    "ast_hash": "3a621f73668bdd8f90bd4b9f6884f6b3",
+    "mtime": 1794626341.4603739,
+    "seen": 1794626464.1430998,
+    "ast_hash": "9471e51a80fba8f6b7ba1c08f6cdc7ff",
     "semantic_hash": ""
   },
   "public/index.html": {
-    "mtime": 1794619101.7111037,
-    "seen": 1794619589.1617832,
-    "ast_hash": "96f0dc8f4e22632a085078e196856b3a",
+    "mtime": 1794626341.4442604,
+    "seen": 1794626464.1430998,
+    "ast_hash": "94c2900f394b8114f6ace7c34f71c223",
     "semantic_hash": ""
   },
   "public/druid-vines.svg": {
@@ -474,15 +474,15 @@
     "semantic_hash": ""
   },
   "PROJECT_MEMORY.md": {
-    "mtime": 1794625401.5722353,
-    "seen": 1794625442.483325,
-    "ast_hash": "1918d79b778b43f9a6d1426913f0e934",
+    "mtime": 1794626673.9783444,
+    "seen": 1794626683.358093,
+    "ast_hash": "b90cf971860140452c3a316a1f90c4ff",
     "semantic_hash": ""
   },
   "public/mnm-adventure.js": {
-    "mtime": 1794624192.538633,
-    "seen": 1794624230.6811602,
-    "ast_hash": "a3a7abca17bbcec4c1696575e13f02c5",
+    "mtime": 1794626341.2721057,
+    "seen": 1794626464.1430998,
+    "ast_hash": "e6753da821e23405f341bc282c807801",
     "semantic_hash": ""
   },
   "public/mnm-systems.js": {
@@ -492,9 +492,9 @@
     "semantic_hash": ""
   },
   "MNM_RACE_LORE.md": {
-    "mtime": 1794620691.1932466,
-    "seen": 1794620956.396081,
-    "ast_hash": "d98cff37959260b705df9b2b013ded2d",
+    "mtime": 1794626341.2047064,
+    "seen": 1794626464.1430998,
+    "ast_hash": "cf2298f2006f82b9af384a4d8ef0b681",
     "semantic_hash": ""
   },
   "public/frontier-menu.png": {

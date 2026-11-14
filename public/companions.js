@@ -234,7 +234,7 @@ function draw(){
  target.replaceChildren();
  const top=add("div","ALLIES, FACTION STANDING & ENEMIES");top.className="soa-kicker";target.append(top);
  const heading=add("h2","Allies & Standing");heading.className="soa-section-title";target.append(heading);
- const intro=add("p","Companion bonds, faction standings and enemies shape your reputation across Azeroth. Friendship, romance and rivalries remain part of your story.");intro.className="muted";target.append(intro);
+ const intro=add("p","Companion bonds, faction standings and enemies shape your reputation across the realm. Friendship, romance and rivalries remain part of your story.");intro.className="muted";target.append(intro);
  const views=add("div","");views.className="soa-reputation-view-tabs";views.setAttribute("role","group");views.setAttribute("aria-label","Allies and faction standing");
  const companionsButton=add("button","Companions & Romance"),factionsButton=add("button","Factions & Enemies");
  for(const btn of [companionsButton,factionsButton]){btn.type="button";btn.className="soa-reputation-view-button";views.append(btn)}

@@ -1,4 +1,4 @@
-# Shadows of Azeroth — Living Campaign (v0.3)
+# M&M: RPG — Living Campaign (v0.3)
 
 Cloudflare Pages iPhone offline-first game with an OPTIONAL Gemini 3.5 Flash-Lite living campaign.
 
@@ -52,7 +52,7 @@ Independent fan-created project; not affiliated with Blizzard Entertainment.
 
 
 
-## Bonds of Azeroth — relationship expansion
+## Companion Bonds — relationship expansion
 
 The former **Flirt** interaction is now part of a broader optional relationship system. The companion panel has **Trust**, **Affection** and **Respect** meters, relationship stages (**Acquaintance**, **Friend**, **Close friend**, **Rival**, **Enemy**), and romantic stages (**Dating**, **Partners**, **Engaged**, **Married**). Actions include Show Interest, Deepen Friendship, Make Amends, Confess Feelings, Become Partners, Propose Marriage, Hold Wedding, Challenge Values, and Betray Trust. Major conflicts can be recorded using the `soaCompanions.applyStoryConsequence(id,kind)` hook with `protect`, `honor`, `deceive`, `cruelty`, or `betray`.
 
@@ -63,7 +63,7 @@ Previous companion saves under `soa-companions-v1` are read and migrated **in pl
 ### Test relationships on iPhone
 
 1. Reload online once to update offline assets (service-worker cache v7).
-2. In Bonds of Azeroth, select Pippa → Show Interest, Deepen Friendship, or Ask Advice and check the meters/journal.
+2. In Companion Bonds, select Pippa → Show Interest, Deepen Friendship, or Ask Advice and check the meters/journal.
 3. Select Challenge Values or Betray Trust to test rivalry; select Make Amends to test rebuilding trust. The changes are deliberate, so avoid these choices in a valued romance playthrough unless you want those story outcomes.
 4. Continue playing, then try Confess Feelings → Become Partners → Propose Marriage → Hold Wedding once their stage and requirements permit. Wedding requires a peaceful in-game location.
 5. Reload and verify the same stages/journal remain. Check that HP, Energy, gold, alarm, and main mission location remain unchanged by optional social interactions.
@@ -154,7 +154,7 @@ Smoke test: after loading a Living Campaign scene, confirm Gemini options are le
 
 ## Reputation overhaul (v17)
 
-The former **Bonds of Azeroth** panel is now **Reputation**. Existing Pippa/Bromli/Lethariel Trust, Affection, Respect, romance and conflict actions remain unchanged in their original save and are displayed beneath the new heading. A **View faction standings & known enemies** shortcut jumps to the faction ledger.
+The former **Companion Bonds** panel is now **Reputation**. Existing Pippa/Bromli/Lethariel Trust, Affection, Respect, romance and conflict actions remain unchanged in their original save and are displayed beneath the new heading. A **View faction standings & known enemies** shortcut jumps to the faction ledger.
 
 ### Faction standings
 Known factions: SI:7, Stormwind, Night Watch, Ironforge, Horde, Defias Brotherhood and Scarlet Crusade. Each has a separate -100 to +100 standing and **Neutral / Friendly / Honored / Exalted / Unfriendly / Hostile / Hunted** labels. Initial values are narrative starting estimates reflecting character alignment (not claims about externally verified in-game faction reputation). Filter **All / Allies / Hostiles**. Snacky's existing enemies and uncertain figures (Thorne, Harlan Vex, Corvin, Valecroft) also appear as individually tracked standings. The separate-character reputation save key `soa-reputation-v1` is copied with the rest of that hero's snapshot; new heroes begin with their own affiliation-sensitive baseline.
@@ -230,7 +230,7 @@ The **Character Record** now has an avatar preview, **Upload Portrait / Change P
 
 Portraits are **independent of gameplay saves**: changing one cannot modify inventory, relationships, story or character stats. Existing characters begin without a portrait until one is uploaded. The **Download All Character Saves** archive includes a `portraits` object with all stored character portraits; no secret or external image hosting is involved. The older one-character export still does not include portraits. The character menu now supports validated full-roster restore from an all-character archive.
 
-**How to use:** save the generated portrait image to Photos or Files on your iPhone, open Shadows of Azeroth, select Snacky, scroll/tap Professions (Character Record), tap Upload Portrait, choose the image, and confirm it appears both in the character sheet and on the main menu. Portrait selection/removal needs explicit confirmation for removal. Other heroes can upload separate photos.
+**How to use:** save the generated portrait image to Photos or Files on your iPhone, open M&M: RPG, select Snacky, scroll/tap Professions (Character Record), tap Upload Portrait, choose the image, and confirm it appears both in the character sheet and on the main menu. Portrait selection/removal needs explicit confirmation for removal. Other heroes can upload separate photos.
 
 **Smoke test:** upload image for Snacky; reload and switch characters; verify it follows Snacky only. Replace with another image and inspect roster display. Remove and verify an initial returns. Test dark Classic and Alternative parchment. Download All Character Saves and verify the `portraits` object in the JSON. Refresh after Cloudflare deploys cache version v22. Source syntax verified, but live iPhone image-picking is not yet verified.
 

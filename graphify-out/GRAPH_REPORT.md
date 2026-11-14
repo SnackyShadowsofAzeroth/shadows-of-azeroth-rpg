@@ -1,7 +1,7 @@
 # Graph Report - game-custom-choices  (2026-11-13)
 
 ## Corpus Check
-- 81 files · ~79,730 words
+- 81 files · ~79,761 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 15 file(s) not represented in the graph (top: .css 11, (none) 2, .webmanifest 1)
 
@@ -17,11 +17,11 @@
 
 ## Community Hubs (Navigation)
 - public/campaign.js
-- Shadows of Azeroth — Development Handoff
+- M&M: RPG — Development Handoff
 - characters.js
 - druid.js
 - chronicle.js
-- Shadows of Azeroth — Living Campaign (v0.3)
+- M&M: RPG — Living Campaign (v0.3)
 - progression.js
 - steps
 - dungeons.test.js
@@ -55,7 +55,7 @@
 - combat-resource-display.test.js
 - enemy-phase.test.js
 - progression-storage.test.js
-- Shadows of Azeroth — Campaign Bible and Quality Standard
+- M&M: RPG — Campaign Bible and Quality Standard
 - portraits.js
 - worker-preview.test.js
 - chronicle-pacing.test.js
@@ -82,7 +82,7 @@
 - Stability and calculation corrections (v50)
 - Multi-pass stability and iPhone polish review (v38)
 - sw.js
-- Bonds of Azeroth — relationship expansion
+- Companion Bonds — relationship expansion
 - Character selection, new heroes, and professions (v13)
 - Classic dungeon expeditions (October 23, 2026)
 - Companion moments and visual refresh
@@ -98,13 +98,13 @@
 - ref_node_vm
 
 ## God Nodes (most connected - your core abstractions)
-1. `Shadows of Azeroth — Development Handoff` - 38 edges
-2. `Shadows of Azeroth — Living Campaign (v0.3)` - 37 edges
+1. `M&M: RPG — Development Handoff` - 38 edges
+2. `M&M: RPG — Living Campaign (v0.3)` - 37 edges
 3. `choose()` - 26 edges
 4. `draw()` - 26 edges
 5. `livingEnemies()` - 23 edges
-6. `boot()` - 19 edges
-7. `advance()` - 19 edges
+6. `advance()` - 19 edges
+7. `boot()` - 19 edges
 8. `fightExchange()` - 17 edges
 9. `result()` - 17 edges
 10. `status()` - 17 edges
@@ -112,12 +112,12 @@
 ## Surprising Connections (you probably didn't know these)
 - `Mission ledger phase 2 (2026-10-16)` --references--> `save()`  [INFERRED]
   DEVELOPMENT_HANDOFF.md → public/companions.js
-- `perform()` --indirect_call--> `save()`  [INFERRED]
-  public/mnm-adventure.js → public/companions.js
-- `render()` --indirect_call--> `view()`  [INFERRED]
-  public/mnm-adventure.js → public/chronicle.js
 - `questPanel()` --indirect_call--> `current()`  [INFERRED]
   public/chronicle.js → public/druid.js
+- `render()` --indirect_call--> `view()`  [INFERRED]
+  public/mnm-adventure.js → public/chronicle.js
+- `perform()` --indirect_call--> `save()`  [INFERRED]
+  public/mnm-adventure.js → public/companions.js
 - `organizeGameSections()` --indirect_call--> `get()`  [INFERRED]
   public/characters.js → public/class-abilities.js
 
@@ -130,7 +130,7 @@
 Cohesion: 0.10
 Nodes (75): accessCode(), actionOdds(), advance(), bribeCopper(), canonicalStoryChoice(), chanceLabel(), choose(), chooseArena() (+67 more)
 
-### Community 1 - "Shadows of Azeroth — Development Handoff"
+### Community 1 - "M&M: RPG — Development Handoff"
 Cohesion: 0.05
 Nodes (38): 2026-10-16 equipment visibility and legacy narration cleanup, Approved character requirements, Automatic class UI skins: Druid woodland (2026-10-22), Character-card equipped gear relocation (2026-10-16), Classic dungeon expeditions (2026-10-23), Code review and consistency hardening (2026-10-16), Combat overhaul (2026-10-16), Companion combat update (2026-10-16) (+30 more)
 
@@ -146,7 +146,7 @@ Nodes (29): abilities(), atMentor(), atQuestObjective(), available(), castAtEnvi
 Cohesion: 0.22
 Nodes (24): attach(), banner(), completedMilestones(), completedTime(), completeObjective(), confirm(), context(), dismiss() (+16 more)
 
-### Community 5 - "Shadows of Azeroth — Living Campaign (v0.3)"
+### Community 5 - "M&M: RPG — Living Campaign (v0.3)"
 Cohesion: 0.08
 Nodes (24): Architecture, Campaign Chronicle, chapter system and Quest Journal (v30), Campaign continuity audit and guardrails (v20), Canonical story transition: Hollow Raven → Stormwind (v21), Combat health and damage ledger (v29), Companion conversations in Adventure (v32), Companion identities and class specializations (v34), Custom dialogue now changes relationships (+16 more)
 
@@ -282,9 +282,9 @@ Nodes (9): assert, block(), fs, path, setup(), source, spell, {test} (+1 more)
 Cohesion: 0.20
 Nodes (8): assert, fs, path, progressionSource, root, rulesSource, test, vm
 
-### Community 39 - "Shadows of Azeroth — Campaign Bible and Quality Standard"
+### Community 39 - "M&M: RPG — Campaign Bible and Quality Standard"
 Cohesion: 0.22
-Nodes (8): Canonical state — Chapter I, Part LXXIX, Creative and presentation direction, Last action and next decision, Quality gates for every turn, Rules invariant, Shadows of Azeroth — Campaign Bible and Quality Standard, Stats and position, Web-app engineering review (status as of 2026-10-17)
+Nodes (8): Canonical state — Chapter I, Part LXXIX, Creative and presentation direction, Last action and next decision, M&M: RPG — Campaign Bible and Quality Standard, Quality gates for every turn, Rules invariant, Stats and position, Web-app engineering review (status as of 2026-10-17)
 
 ### Community 40 - "portraits.js"
 Cohesion: 0.47
@@ -396,7 +396,7 @@ Nodes (27): addJournal(), bestClassStat(), boot(), actionList(), button(), el(),
 
 ### Community 84 - "M&M Race Lore and Class Eligibility"
 Cohesion: 0.29
-Nodes (6): Current patch exception, Custom racial features - Shadows of Azeroth, M&M Race Lore and Class Eligibility, Race and class restrictions, Race descriptions, Writing guidance
+Nodes (6): Current patch exception, Custom racial features - M&M: RPG, M&M Race Lore and Class Eligibility, Race and class restrictions, Race descriptions, Writing guidance
 
 ### Community 85 - "ref_node_path"
 Cohesion: 0.15
@@ -412,17 +412,17 @@ Nodes (6): assert, context, fs, path, test, vm
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `save()` connect `companions.js` to `Shadows of Azeroth — Development Handoff`, `boot`, `ref_node_path`?**
+- **Why does `save()` connect `companions.js` to `M&M: RPG — Development Handoff`, `boot`, `ref_node_path`?**
   _High betweenness centrality (0.135) - this node is a cross-community bridge._
 - **Should `public/campaign.js` be split into smaller, more focused modules?**
   _Cohesion score 0.09996754300551769 - nodes in this community are weakly interconnected._
 - **Why does `perform()` connect `boot` to `companions.js`?**
   _High betweenness centrality (0.083) - this node is a cross-community bridge._
-- **Should `Shadows of Azeroth — Development Handoff` be split into smaller, more focused modules?**
+- **Should `M&M: RPG — Development Handoff` be split into smaller, more focused modules?**
   _Cohesion score 0.05128205128205128 - nodes in this community are weakly interconnected._
 - **Why does `render()` connect `boot` to `chronicle.js`?**
   _High betweenness centrality (0.061) - this node is a cross-community bridge._
 - **Should `characters.js` be split into smaller, more focused modules?**
   _Cohesion score 0.11261261261261261 - nodes in this community are weakly interconnected._
-- **Should `Shadows of Azeroth — Living Campaign (v0.3)` be split into smaller, more focused modules?**
+- **Should `M&M: RPG — Living Campaign (v0.3)` be split into smaller, more focused modules?**
   _Cohesion score 0.08 - nodes in this community are weakly interconnected._

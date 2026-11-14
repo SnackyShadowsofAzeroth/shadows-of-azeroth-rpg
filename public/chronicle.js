@@ -32,7 +32,7 @@ function makeQuest(id,title,objectives,complete=false){
 function initial(){
  const person=window.soaCharacters?.profile?.();
  if(person?.id==="snacky"||!person){
-  return {schema:1,act:1,actTitle:"Azeroth Adventures",chapter:1,chapterTitle:"A New Journey",startedAtTurn:0,archives:[],quests:[makeQuest("personal-quest","The First Adventure",["Follow the opening lead"],false)],pendingMilestone:null,lastPresented:"",banner:null};
+  return {schema:1,act:1,actTitle:"A New Adventure",chapter:1,chapterTitle:"A New Journey",startedAtTurn:0,archives:[],quests:[makeQuest("personal-quest","The First Adventure",["Follow the opening lead"],false)],pendingMilestone:null,lastPresented:"",banner:null};
  }
  return {schema:1,act:1,actTitle:"An Adventurer's Beginning",chapter:1,chapterTitle:"A New Path",startedAtTurn:0,archives:[],quests:[makeQuest("personal-quest","The First Adventure",["Follow the opening lead"],false)],pendingMilestone:null,lastPresented:"",banner:null};
 }

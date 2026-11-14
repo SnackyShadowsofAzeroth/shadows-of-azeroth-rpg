@@ -1,4 +1,4 @@
-# Shadows of Azeroth — Campaign Bible and Quality Standard
+# M&M: RPG — Campaign Bible and Quality Standard
 
 **Canonical interactive-chat checkpoint (2026-10-16):** Chapter I, Part LXXIX, **11:29 PM game time**. Snacky has completed TEST on the Archive inner-perimeter service interface (roll 16+7=23, DC19). Its readout confirms that his **active emergency supervisory override permits his individual crossing**; crossing will be logged. **He has NOT crossed.** The pressure strip and silver conductors are active and unchanged; ISOLATE and RESET untouched; the unlocked Archive antechamber door remains ajar. Record 07-13 remains separately restricted. Facility alarm count **zero**.
 

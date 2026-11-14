@@ -240,7 +240,7 @@ function exportRosterBackup(){
  try{
   const blob=new Blob([JSON.stringify(archive,null,2)],{type:"application/json"});
   const url=URL.createObjectURL(blob),link=document.createElement("a");
-  link.href=url;link.download="shadows-of-azeroth-all-characters.json";
+  link.href=url;link.download="mm-rpg-all-characters.json";
   document.body.append(link);link.click();link.remove();
   setTimeout(()=>URL.revokeObjectURL(url),3000);
   return true;
@@ -340,7 +340,7 @@ function drawMenu(){
   }
   const feature=r.racialAbilities[race.value];
   racialFeature.replaceChildren();
-  if(feature)racialFeature.append(make("span","CUSTOM RACIAL FEATURE · ORIGINAL GAME RULE","soa-mnm-custom-label"),make("strong",feature.name),make("p",feature.description),make("p","Effect: "+feature.effect),make("small","Once per chapter in the custom story. This is a Shadows of Azeroth rule, not an official M&M racial trait."));
+  if(feature)racialFeature.append(make("span","CUSTOM RACIAL FEATURE · ORIGINAL GAME RULE","soa-mnm-custom-label"),make("strong",feature.name),make("p",feature.description),make("p","Effect: "+feature.effect),make("small","Once per chapter in the custom story. This is an M&M: RPG rule, not an official M&M racial trait."));
   const sourceNote=make("p",raceInfo?.provisional?"Race modifiers for "+raceInfo.name+" are provisional, based on the supplied stat pattern.":"Race and class modifiers are from the supplied in-game table.","muted soa-mnm-note");
   if(raceInfo?.selectable===false)sourceNote.textContent="No current in-game stat line supplied for "+(raceInfo?.name||"this race")+"; new character creation is disabled for it.";
   statPanel.querySelector(".soa-mnm-stat-source")?.remove();
@@ -349,7 +349,7 @@ function drawMenu(){
  };
  race.onchange=updateClassList;klass.onchange=updateStartingStats;updateClassList();
  form.append(labeled("Character name",name),labeled("Gender",gender),labeled("Race",race),labeled("Class",klass),startingCity,statPanel,racialFeature);
- form.append(make("p","Starting scores use a base of 10 plus the selected race and class modifiers. This is a Shadows of Azeroth rebalance; no extra allocation points are granted during character creation. Deep Dwarf, High Elf, and Troll are unavailable for new characters until their in-game stat lines are confirmed.","muted soa-mnm-note"));
+ form.append(make("p","Starting scores use a base of 10 plus the selected race and class modifiers. This is an M&M: RPG rebalance; no extra allocation points are granted during character creation. Deep Dwarf, High Elf, and Troll are unavailable for new characters until their in-game stat lines are confirmed.","muted soa-mnm-note"));
  form.append(make("p","This creates an M&M character with a playable offline first chapter. No Warcraft faction, professions, starting kit, or silver are assigned. The chapter uses clearly marked custom story rules; official M&M combat, abilities, equipment, and progression remain in conversion.","soa-mnm-warning"));
  const warning=make("p","","soa-menu-error");warning.setAttribute("aria-live","polite");form.append(warning);
  const submit=make("button","Create M&M Character");submit.type="submit";form.append(submit);
@@ -371,7 +371,7 @@ function drawMenu(){
 }
 function profilePanel(){
  const head=document.querySelector("header");if(!head)return;
- const title=get("soa-player-name"),tag=get("soa-player-class");const isMnm=active.system==="mnm";document.body.classList.toggle("soa-ruleset-mnm",isMnm);const kicker=get("soa-brand-kicker"),brand=get("soa-brand-name"),tagline=get("soa-brand-tagline");if(kicker)kicker.textContent=isMnm?"MONSTERS & MEMORIES · CHARACTER RECORD":"An unofficial Azeroth-inspired adventure";if(brand)brand.textContent=isMnm?"THE ADVENTURER’S JOURNAL":"SHADOWS OF AZEROTH";if(tagline)tagline.textContent=isMnm?"AÊTHORIL · QUESTS · SEVEN STATS":"Your Story · Your Choices · Your Legacy";if(title)title.textContent=active.name;if(tag)tag.textContent=isMnm?"M&M · "+active.race+" "+active.className:active.id==="snacky"?"SI:7 · Combat Swords":"LEGACY · "+factionDisplay(active)+" · "+active.race+" "+active.className;
+ const title=get("soa-player-name"),tag=get("soa-player-class");const isMnm=active.system==="mnm";document.body.classList.toggle("soa-ruleset-mnm",isMnm);const kicker=get("soa-brand-kicker"),brand=get("soa-brand-name"),tagline=get("soa-brand-tagline");if(kicker)kicker.textContent=isMnm?"M&M: RPG · CHARACTER RECORD":"M&M: RPG";if(brand)brand.textContent="M&M: RPG";if(tagline)tagline.textContent=isMnm?"AÊTHORIL · QUESTS · SEVEN STATS":"Your Story · Your Choices · Your Legacy";if(title)title.textContent=active.name;if(tag)tag.textContent=isMnm?"M&M · "+active.race+" "+active.className:active.id==="snacky"?"SI:7 · Combat Swords":"LEGACY · "+factionDisplay(active)+" · "+active.race+" "+active.className;
  if(typeof render==="function")render();
  window.soaEquipment?.renderStatus?.();
  const menu=make("button","☰ Characters");menu.id="soa-characters-button";menu.type="button";menu.onclick=drawMenu;head.append(menu);
@@ -477,7 +477,7 @@ function drawProfessions(){
    }
    root.append(grid);
    const feature=rules.racialAbilities[race.id];
-   if(feature){const ability=make("section",undefined,"soa-mnm-racial-ability");ability.append(make("span","CUSTOM RACIAL FEATURE · ORIGINAL GAME RULE","soa-mnm-custom-label"),make("h3",feature.name),make("p",feature.description),make("p","Effect: "+feature.effect),make("small","Once per chapter in the custom story. This is a Shadows of Azeroth rule, not an official M&M racial trait."));root.append(ability)}
+   if(feature){const ability=make("section",undefined,"soa-mnm-racial-ability");ability.append(make("span","CUSTOM RACIAL FEATURE · ORIGINAL GAME RULE","soa-mnm-custom-label"),make("h3",feature.name),make("p",feature.description),make("p","Effect: "+feature.effect),make("small","Once per chapter in the custom story. This is an M&M: RPG rule, not an official M&M racial trait."));root.append(ability)}
    root.append(make("p","LEVEL "+(active.level||1)+" · "+active.classPrefix+" · No extra point allocation is included; these are the complete starting totals.","soa-mnm-note"));
   }else root.append(make("p","No verified starting-stat line is available for this saved race/class combination. Existing profile data is preserved.","soa-mnm-warning"));
   return;

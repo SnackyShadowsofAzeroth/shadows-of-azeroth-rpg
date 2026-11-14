@@ -1,8 +1,8 @@
-# Shadows of Azeroth — Development Handoff
+# M&M: RPG — Development Handoff
 Updated: 2026-10-17
 
 ## Repository
-GitHub: SnackyShadowsofAzeroth/shadows-of-azeroth-rpg
+GitHub: configured project repository
 Cloudflare Pages connects to main. Static files: public/. Server endpoints: functions/api/story.js and functions/api/campaign.js. Google Gemini default: gemini-3.5-flash-lite (Cloudflare environment may override). NEVER commit or print API secrets.
 
 ## Game
@@ -139,7 +139,7 @@ Added three region-bound, engine-authored missions with immutable reward terms a
 - Snacky can retrain one existing primary profession into Enchanting only after explicit destructive confirmation; the current Mining and Engineering are not changed automatically. No profession skills are erased except the one player deliberately replaces.
 - Client UI shows enchanting in the Living Campaign, applies receipts and wallet charges locally, and persists campaign data. Two ring slots now canonical finger1 and finger2; quest equipment enchant keys include inventory index to avoid transferring enchant across different item instances. All scripts load from index.html; offline cache v34 includes new modules.
 - Source syntax checks passed for modules. Isolated test: +9000 copper NPC Weapon Striking; duplicate enchant rejected; insufficient gold rejected; self-enchant blocked for non-enchanter; equipment modifier updates. End-to-end Cloudflare deployment/iPhone interactions remain UNVERIFIED.
-- Enchant costs, difficulty, output and Arcane Dust economy are Shadows of Azeroth RPG rules, NOT exact WoW Forever recipe economics. Equipment enchant UI currently does not simulate time-based vendor schedules, a dedicated enchant vendor shop, detailed reagent purchasing, or item durability.
+- Enchant costs, difficulty, output and Arcane Dust economy are custom M&M: RPG rules, NOT exact WoW Forever recipe economics. Equipment enchant UI currently does not simulate time-based vendor schedules, a dedicated enchant vendor shop, detailed reagent purchasing, or item durability.
 - Rollback by unlinking public/forever-items.js and public/enchanting.js and reverting the targeted integrations in public/equipment.js, public/campaign.js and public/characters.js; bump service-worker version. Don't delete user's local campaign saves.
 
 
