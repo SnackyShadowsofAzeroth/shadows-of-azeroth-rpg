@@ -364,7 +364,7 @@ function drawMenu(){
  race.onchange=updateClassList;klass.onchange=updateStartingStats;updateClassList();
  form.append(labeled("Character name",name),labeled("Gender",gender),labeled("Race",race),labeled("Class",klass),startingCity,statPanel,racialFeature);
  form.append(make("p","Starting scores use a base of 10 plus the selected race and class modifiers. This is an M&M: RPG rebalance; no extra allocation points are granted during character creation. Deep Dwarf, High Elf, and Troll are unavailable for new characters until their in-game stat lines are confirmed.","muted soa-mnm-note"));
- form.append(make("p","This creates an M&M character with a playable offline first chapter, a road-worn weapon, patched travel coat, two healing poultices, two waybread, and 24 custom copper. Those starter items, their prices, and the gameplay rules are original M&M: RPG content, not official M&M data.","soa-mnm-warning"));
+ form.append(make("p","This creates an M&M character with a playable offline first chapter, a road-worn weapon, patched travel coat, two healing poultices, two waybread, and 24 Copper. Coinage converts at 100 Copper = 1 Silver, 100 Silver = 1 Gold, and 100 Gold = 1 Platinum. Those starter items, their prices, and the gameplay rules are original M&M: RPG content, not official M&M data.","soa-mnm-warning"));
  const warning=make("p","","soa-menu-error");warning.setAttribute("aria-live","polite");form.append(warning);
  const submit=make("button","Save Character & Play");submit.type="submit";form.append(submit);
  form.onsubmit=e=>{
@@ -602,4 +602,5 @@ document.addEventListener("DOMContentLoaded",()=>{
  try{const createdName=sessionStorage.getItem(CREATED_NOTICE_KEY),screen=get("soa-character-screen");if(createdName&&screen){sessionStorage.removeItem(CREATED_NOTICE_KEY);const notice=make("p",createdName+" saved to this browser. Your character and adventure are ready.","soa-character-save-confirmation");notice.setAttribute("role","status");notice.setAttribute("aria-live","polite");screen.prepend(notice)}}catch(e){}
 });
 })();
+
 

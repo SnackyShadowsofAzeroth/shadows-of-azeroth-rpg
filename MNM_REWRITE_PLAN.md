@@ -10,7 +10,7 @@ Build M&M: RPG as an offline-first, mobile fantasy RPG inspired by Monsters & Me
 - The dedicated M&M interface uses original Night Harbor art, parchment, wood, iron, and bronze details. It does not use M&M game assets.
 - The fixed offline chapter, The Quiet Signal at Dune Gate, has exploration, branching encounters, race-specific custom story features, retreat, a local journal, and a player-claimed 100 custom XP completion reward.
 - The optional AI Chronicle uses Gemini to generate original scenes and three choices at a time. Checks resolve locally with custom d20 rules. Players may claim 90 custom XP after a chapter. The AI cannot alter the character sheet or issue items, currency, abilities, travel, or rewards. Live generation depends on Cloudflare GEMINI_API_KEY and AI_ACCESS_CODE.
-- Combat is playable with regional custom foes, repeated Q auto-attacks, class techniques, Focus, guard, consumables, escape checks, death, bind-point return, and location-aware corpse recovery. Victory awards custom XP, custom copper, and randomized project loot.
+- Combat is playable with regional custom foes, repeated Q auto-attacks, class techniques, Focus, guard, consumables, escape checks, death, bind-point return, and location-aware corpse recovery. Victory awards custom XP, Copper-based coin, and randomized project loot.
 - Progress is playable with a custom level curve, player-claimed chapter rewards, level-based Health and Focus growth, settlement rest, and the documented group-XP eligibility display. The 60-level cap and 15% Rested XP bonus are source-backed; custom thresholds and award values are not official.
 - Items include an original starter kit, an equipped weapon and armor slot, consumables, custom weights and carry capacity, a Night Harbor market, discard/sell actions, and custom loot. The UI also retains guide-backed guild-note, candle, belt/bag, spellbook, and corpse information.
 - All custom combat, progression, ability, item, and racial values are labeled as M&M: RPG house rules. They must not be described as official M&M formulas or catalog entries.
@@ -29,9 +29,9 @@ Build M&M: RPG as an offline-first, mobile fantasy RPG inspired by Monsters & Me
 | AI-generated story | Gemini generates original chapters and choices; local checks determine outcomes. A completed AI chapter offers a one-time 90 custom XP claim. Requires the production API key and separate access code. |
 | Combat | Turn-based custom combat works with foes, auto-attacks, class techniques, Focus, guard, consumables, flee, loot, XP, defeat, bind-point return, and corpse recovery. Its numbers are original. |
 | Level and XP | Custom XP, levels, character record, and roster values are connected. The official level cap, group eligibility, and Rested bonus remain distinct from the house-rule curve and award values. |
-| Items | Custom gear, equipment, consumables, prices, custom copper, market, carry limit, and loot are playable. Official weight formulas and full item catalog remain unknown. |
+| Items | Custom gear, equipment, consumables, prices, four coin denominations with 100:1 conversion, market, carry limit, and loot are playable. Official weight formulas and full item catalog remain unknown. |
 | Abilities | Custom class techniques are separate from official abilities. Official scroll names, ranks, and learning data still require verified references. |
-| Offline and mobile delivery | Gameplay scripts are cached by the service worker. Cache version is v142. Save integrity and migration tests are required for changes to these systems. |
+| Offline and mobile delivery | Gameplay scripts are cached by the service worker. Cache version is v149. Save integrity and migration tests are required for changes to these systems. |
 
 ## Remaining work
 1. Replace custom values with sourced official combat, XP, ability, item, weight, and carrying data only when reliable in-game references are available.
@@ -46,3 +46,4 @@ Build M&M: RPG as an offline-first, mobile fantasy RPG inspired by Monsters & Me
 - Level eligibility does not mean an ability is known.
 - Keep custom racial features and class techniques labeled as original game rules.
 - Preserve legacy profiles and local saves. Never silently reinterpret or erase them.
+
