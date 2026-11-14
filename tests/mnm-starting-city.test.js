@@ -67,6 +67,33 @@ test("new M&M adventure saves begin in each race's assigned starting city", () =
   assert.match(fs.readFileSync(path.join(__dirname, "..", "public", "mnm-adventure.js"), "utf8"), /custom M&M: RPG starting home in Keepers Bight/);
 });
 
+test("fixed story ability checks report d20 totals and advance on success or failure", () => {
+  const normalized = rules.normalizeCharacter({ id: "skill-check-hero", raceId: "human", classId: "fighter" });
+  const profile = { ...normalized, stats: { ...normalized.stats, int: 14 } };
+  const opening = adventure.transition(adventure.createSave(profile), profile, { type: "accept" }).state;
+
+  const success = adventure.transition(opening, profile, { type: "approach", id: "chart" }, 10);
+  assert.equal(success.roll.roll, 10);
+  assert.equal(success.roll.stat, "int");
+  assert.equal(success.roll.modifier, 2);
+  assert.equal(success.roll.total, 12);
+  assert.equal(success.roll.dc, 12);
+  assert.equal(success.roll.success, true);
+  assert.equal(success.state.stage, "encounter");
+  assert.match(success.state.journal[success.state.journal.length - 1], /d20 10 \+2 = 12 vs DC 12 - success/);
+
+  const failure = adventure.transition(opening, profile, { type: "approach", id: "chart" }, 9);
+  assert.equal(failure.roll.total, 11);
+  assert.equal(failure.roll.success, false);
+  assert.equal(failure.state.stage, "encounter", "a failed check must still leave a playable next step");
+
+  const naturalOne = adventure.transition(opening, { ...profile, stats: { ...profile.stats, int: 20 } }, { type: "approach", id: "chart" }, 1);
+  assert.equal(naturalOne.roll.success, false, "a natural 1 fails even with a high ability score");
+  const naturalTwenty = adventure.transition(opening, profile, { type: "approach", id: "chart" }, 20);
+  assert.equal(naturalTwenty.roll.success, true);
+  assert.equal(naturalTwenty.roll.critical, true);
+});
+
 test("race starting cities cannot be changed through the old origin picker", () => {
   const gnome = rules.normalizeCharacter({ id: "gnome-3", raceId: "gnome", classId: "fighter" });
   const legacyOriginSave = { ...adventure.createSave(gnome), stage: "origin", origin: "" };
