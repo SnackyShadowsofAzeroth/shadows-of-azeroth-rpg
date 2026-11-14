@@ -1,51 +1,48 @@
 # M&M Rules Conversion Plan
 
 ## Goal
-Rebuild M&M: RPG around the user's Monsters & Memories rules and an original fantasy world. Preserve local/offline play, mobile usability, and all existing saves. An original fantasy-MMO interface redesign proceeds alongside the rules conversion.
+Build M&M: RPG as an offline-first, mobile fantasy RPG inspired by Monsters & Memories, while preserving the original game and all existing saves. Confirmed M&M rules and original house rules must remain clearly distinguished. Use original art and interface work rather than M&M game assets.
 
 ## Current implementation
-- The interface uses original Night Harbor harbor-at-dusk art, a wide parchment character-creation desk, compact score rows, and squared iron, wood, and bronze surfaces. It uses original art rather than M&M game assets.
-- The character creator uses the seven in-game M&M stats: Strength, Stamina, Dexterity, Agility, Intelligence, Wisdom, and Charisma.
-- Starting totals update as race and class change: 10 base + the corresponding racial and class modifiers supplied by the user. This is a deliberate M&M: RPG rebalance, not exact M&M score-scale parity.
-- Deep Dwarf, High Elf, and Troll retain provisional modifiers for saved-profile compatibility but are excluded from new character creation until their actual in-game stat lines are supplied. Var'nai remains readable in old profiles but is also not offered for new creation.
-- Deep Gnome Bard is included per the latest official patch note.
-- New M&M profiles save the seven-stat starting sheet and both modifier vectors without changing legacy saves. Character creation grants no extra stat points; a later allocation system depends on combat tuning.
-- Race-specific starting homes are assigned at character creation: Human, Halfling, Gnome, and Dwarf start in Night Harbor; Deep Gnome, Deep Elf, Goblin, and Ogre start in the Underdocks; Wood Elves start in Penshaw, Keeper's Blight. Existing Deep Dwarf, High Elf, and Troll profiles use the accepted Night Harbor fallback, but these races are excluded from new creation until actual in-game stats are supplied. The World view makes Night Harbor playable, links the Underdocks by lift, and lets every race sail from Twilight Harbor in the Shaded Dunes to Penshaw. Travel is saved separately from story progress, and old unstarted origin saves migrate to their race's home while active stories are preserved.
-- Each selectable race has a distinct, lore-matched custom story feature in Chapter One. Human can retry an investigation through a different approach; the other races use varied clue, route, crafting, control, ward, flanking, stealth, assault, parley, survival, or hidden-route effects. They are limited to once per chapter, use no racial stat modifier, and are labeled as M&M: RPG rules rather than official M&M racial abilities.
-- A dedicated offline M&M story module provides one complete original chapter with exploration checks, a branching encounter, safe retreat, a saved journal, and a completion state. Its d20 checks and Resolve/Pressure encounter are custom M&M: RPG rules. The documented M&M Systems views now record the Q auto-attack toggle, ten action slots, ability pages/spellbook requirements, group XP eligibility, the Rested bank and 15% bonus, documented starting items and container slots, and corpse recovery windows. No official attack resolution, XP thresholds/rewards, item catalog, or encumbrance formula is invented.
-- The optional AI Chronicle generates original scenes and three stat-based choices through Gemini, resolves custom d20 story checks locally, retains a per-character story journal, and saves into the same adventure record. Its output cannot change character mechanics or grant official rewards. A working AI Chronicle requires the Production Cloudflare Pages `GEMINI_API_KEY` and `AI_ACCESS_CODE` secrets; the fixed Chapter One and documented system views remain available offline.
+- Character creation uses the seven M&M stats and the user-provided race/class bonuses, starting at 10 plus the selected modifiers. Deep Dwarf, High Elf, and Troll remain unavailable for new characters until their in-game stat lines are supplied; Var'nai is retained only for older profiles.
+- New M&M characters can be Female or Male. Character records save the seven scores and modifier vectors without changing legacy profiles.
+- Humans, Halflings, Gnomes, and Dwarves begin in Night Harbor. Deep Gnomes, Deep Elves, Goblins, and Ogres begin in the Underdocks. Wood Elves begin in Penshaw, Keeper's Blight. The lift connects the Underdocks with Night Harbor; every race can sail between Night Harbor's Twilight Harbor and Penshaw.
+- The dedicated M&M interface uses original Night Harbor art, parchment, wood, iron, and bronze details. It does not use M&M game assets.
+- The fixed offline chapter, The Quiet Signal at Dune Gate, has exploration, branching encounters, race-specific custom story features, retreat, a local journal, and a player-claimed 100 custom XP completion reward.
+- The optional AI Chronicle uses Gemini to generate original scenes and three choices at a time. Checks resolve locally with custom d20 rules. Players may claim 90 custom XP after a chapter. The AI cannot alter the character sheet or issue items, currency, abilities, travel, or rewards. Live generation depends on Cloudflare GEMINI_API_KEY and AI_ACCESS_CODE.
+- Combat is playable with regional custom foes, repeated Q auto-attacks, class techniques, Focus, guard, consumables, escape checks, death, bind-point return, and location-aware corpse recovery. Victory awards custom XP, custom coppers, and randomized project loot.
+- Progress is playable with a custom level curve, player-claimed chapter rewards, level-based Health and Focus growth, settlement rest, and the documented group-XP eligibility display. The 60-level cap and 15% Rested XP bonus are source-backed; custom thresholds and award values are not official.
+- Items include an original starter kit, an equipped weapon and armor slot, consumables, custom weights and carry capacity, a Night Harbor market, discard/sell actions, and custom loot. The UI also retains guide-backed guild-note, candle, belt/bag, spellbook, and corpse information.
+- All custom combat, progression, ability, item, and racial values are labeled as M&M: RPG house rules. They must not be described as official M&M formulas or catalog entries.
+- M&M saves are separate from legacy saves and included in character switching, archive backup/restore, and service-worker caching.
 
 ## Readiness audit (2026-11-13)
 
-**The M&M version now has a playable first-chapter vertical slice, but it is not yet a full RPG.** M&M characters enter a dedicated, offline story screen. Legacy Warcraft campaign startup is explicitly disabled for them.
+**The M&M mode now has a playable custom-rule RPG loop and an optional AI-generated narrative mode. It is not an official-rule-accurate combat, progression, or item conversion because M&M has not published all required numeric tables.**
 
 | System | Current state |
 | --- | --- |
-| Race/class creation and starting stats | Connected to the M&M creator. User-provided modifiers update all seven totals from a base of 10. Deep Dwarf, High Elf, and Troll are excluded from new character creation pending their actual in-game stat lines; Var'nai remains unavailable without a stat line. |
-| Character record and roster | M&M stats remain separate from legacy profiles. Adventure progress is stored under `soa-mnm-adventure-v1`, included in character switching and archive backup, and initialized independently per character. |
-| M&M setting and origins | Race-specific starts place characters in Night Harbor, the Underdocks, or Penshaw. A playable World view connects the Underdocks to Night Harbor by lift and Night Harbor's Twilight Harbor to Penshaw by boat for all races. Travel location is saved independently; unstarted older saves migrate to the race start while active stories are preserved. |
-| Quest and exploration | One complete original quest, **The Quiet Signal at Dune Gate**, has an investigation branch. Checks are driven by the seven M&M starting stats; failed checks still advance the story. Choices and results appear in the local Journey Log. |
-| AI-generated story | Optional Chronicle mode generates a fresh M&M-inspired chapter, three actionable choices per scene, and a local d20 story outcome. The story is saved with the active character; generated scenes cannot grant XP, levels, gear, abilities, currency, or location changes. |
-| Encounter | One repeatable-until-resolved story encounter uses custom Resolve/Pressure counters, safe retreat, and a no-death fallback. It is explicitly labeled as a M&M: RPG narrative rule, not official M&M combat. |
-| Combat rules surface | The M&M Combat view records Q auto-attack state, shows Archer/Ranger ranged-auto rules, the 10-slot bar, skill/innate/spell pages, and spellbook gates. The text chapter has no target, weapons, enemy data, or official damage/defense formulas, so no attacks resolve. |
-| Level and XP rules surface | The M&M Progress view caps profiles at level 60, calculates the documented group-XP eligibility rule, and records Rested time at 10 minutes banked per minute at a fire/inn, up to 20 minutes, with the documented 15% XP bonus. It does not award XP or calculate level progress because award values and thresholds are unpublished. |
-| Item rules surface | The M&M Items view starts with the guide-documented class guild note and Trainee's Candle, provides the 1 backpack / 3 bag / 3 belt layout, candle toggle, weight limitations, and corpse-expiry rules. Unlisted class scrolls, item catalog, weights, bag restrictions, and carry formula remain unconfigured. System state is included in per-character saves and archive restore. |
-| Class and racial abilities | No official M&M ability catalog is available in the project. The systems view enforces the documented scribe, memorized-slot, and spellbook conditions when verified ability records are supplied; the current bar and book pages are empty. Chapter One has twelve different once-per-chapter, lore-matched racial effects labeled as original M&M: RPG rules, not official M&M traits. |
-| XP, levels, gear, and rewards | The level-60 cap and group XP eligibility are implemented in M&M rules; Rested XP uses the documented 15% bonus and 20-minute bank. The first chapter awards no XP, equipment, or currency, so it remains level 1. No XP curve or item catalog is used. |
-| Offline and mobile delivery | The new adventure module and its UI are in the service-worker shell cache. Its save key participates in character switching, backup, restore, and older-backup compatibility. |
+| Race/class creation and starting stats | Connected to the M&M creator using user-supplied modifiers. Unsupported provisional races stay excluded from new creation. |
+| Character, roster, and saves | Seven-stat M&M profiles and separate adventure/system saves participate in switching and archive backup/restore. Legacy saves remain isolated. |
+| Setting and travel | Race-specific starts are implemented with playable Night Harbor, Underdocks lift, and all-race boat travel to Penshaw. |
+| Fixed story | One original offline chapter uses local custom checks, distinct custom racial story features, saved outcomes, and a one-time 100 custom XP reward. |
+| AI-generated story | Gemini generates original chapters and choices; local checks determine outcomes. A completed AI chapter offers a one-time 90 custom XP claim. Requires the production API key and separate access code. |
+| Combat | Turn-based custom combat works with foes, auto-attacks, class techniques, Focus, guard, consumables, flee, loot, XP, defeat, bind-point return, and corpse recovery. Its numbers are original. |
+| Level and XP | Custom XP, levels, character record, and roster values are connected. The official level cap, group eligibility, and Rested bonus remain distinct from the house-rule curve and award values. |
+| Items | Custom gear, equipment, consumables, prices, coppers, market, carry limit, and loot are playable. Official weight formulas and full item catalog remain unknown. |
+| Abilities | Custom class techniques are separate from official abilities. Official scroll names, ranks, and learning data still require verified references. |
+| Offline and mobile delivery | Gameplay scripts are cached by the service worker. Cache version is v142. Save integrity and migration tests are required for changes to these systems. |
 
-## Remaining conversion order
-1. **Rules and catalogs** — obtain verified ability/rank tables, XP thresholds and award values, combat formulas, item definitions, weights, bag constraints, and carrying limits. The documented rules surface is in place; these remaining values stay unconfigured.
-2. **Character progression** — connect kill, quest, dungeon, campfire, and rested events to official XP awards once their values, thresholds, and rounding behavior are sourced. Keep the level-60 cap. The current creator grants no extra points.
-3. **Combat and adventuring** — implement initiative, turns, attacks, defenses, class abilities, checks, retreat, loot, XP, equipment, and branching quests.
-4. **Original setting and content** — replace Warcraft setting text with original locations, NPCs, enemies, quests, trainers, and item catalogs.
-5. **Save and offline rollout** — maintain legacy save recovery, M&M profile integrity, service worker cache coverage, and mobile behavior.
-6. **Visual refinement** — continue the original M&M-inspired interface while gameplay systems are replaced; never present legacy mechanics as M&M.
+## Remaining work
+1. Replace custom values with sourced official combat, XP, ability, item, weight, and carrying data only when reliable in-game references are available.
+2. Expand the original world with quests, settlements, enemies, trainers, item variety, and longer campaign arcs.
+3. Verify live Gemini generation with correctly configured Cloudflare secrets; retain a useful offline path when the service is unavailable.
+4. Continue mobile, accessibility, save migration, archive recovery, and offline-cache validation.
+5. Keep original art and M&M-inspired interface work aligned with the setting, without using M&M assets.
 
 ## Guardrails
-- Official M&M class abilities keep exact class prefix, name, rank, source requirements, and learned state.
-- Level eligibility does not mean an ability is already known.
-- Do not invent stat-allocation caps, class/rank tables, starting details, gear catalogs, or progression curves.
-- User-authored/custom racial features must remain labeled as custom; their mechanics apply only in implemented M&M: RPG content and must not be presented as official M&M traits.
-- Preserve legacy characters and local saves; never silently reinterpret or erase them.
-
+- Never present invented values as official M&M facts. The user authorized clearly labeled custom combat, leveling, and item rules on 2026-11-13.
+- Official M&M class abilities keep their correct class prefix, name, rank, source, and learned state.
+- Level eligibility does not mean an ability is known.
+- Keep custom racial features and class techniques labeled as original game rules.
+- Preserve legacy profiles and local saves. Never silently reinterpret or erase them.
