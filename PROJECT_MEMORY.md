@@ -24,7 +24,7 @@ Read this file before changing project code, content, configuration, or deployme
 ## Playable custom rules and official facts
 
 - On 2026-11-13 the user explicitly authorized clearly labeled original custom combat, leveling, and item rules when official formulas or catalogs are unavailable. Confirmed M&M facts and project house rules must remain clearly separate.
-- public/mnm-systems.js now provides a local playable loop: auto-attacks repeat while the Combat view is open; class techniques spend Focus; foes are selected from regional custom tables; victory awards custom XP and custom copper; levels improve Health and Focus; the player can claim one-time rewards for completed fixed or AI chapters; items can be equipped, used, sold, bought, or discarded; carry limits, safe rests, and location-aware corpse recovery are custom.
+- public/mnm-systems.js now provides a local playable loop: auto-attacks repeat while the Combat view is open; class techniques spend Focus; foes are selected from regional custom tables; victory awards custom XP and Copper-based coinage; levels improve Health and Focus; the player can claim one-time rewards for completed fixed or AI chapters; items can be equipped, used, sold, bought, or discarded; carry limits, safe rests, and location-aware corpse recovery are custom.
 - All combat math, foe values, custom item definitions and weights, prices, carry limits, XP thresholds and rewards, healing amounts, rest healing, and custom racial/class mechanics are original M&M: RPG house rules. Do not present them as official M&M values.
 - Official guide-backed mechanics remain source-linked: Q toggles auto-attack; learned/memorized abilities use ten slots and page/spellbook rules; group XP has documented eligibility constraints; Rested XP has a 15% bonus and a 20-minute bank; the guide documents a guild note, candle, bag/belt slots, corpse recovery, and weight-based encumbrance. Some exact official rates and formulas remain unpublished.
 - Official class abilities must preserve class prefix, name, rank, source, and learned requirements. The custom class technique is separate from the empty/unprovided official ability catalog.
@@ -33,11 +33,11 @@ Read this file before changing project code, content, configuration, or deployme
 
 ## Save, AI, and offline behavior
 
-- M&M profiles receive a road-worn weapon, patched travel coat, two healing poultices, two waybread, and 24 custom copper. They do not receive legacy faction, professions, legacy equipment, or legacy currency.
-- Display the custom game currency as “custom copper” (a mass unit); keep the stored `coppers` property unchanged for existing saves.
+- M&M profiles receive a road-worn weapon, patched travel coat, two healing poultices, two waybread, and 24 Copper. They do not receive legacy faction, professions, legacy equipment, or legacy currency.
+- M&M coinage is stored as an integer Copper balance and displayed as Platinum, Gold, Silver, and Copper. Each 100 lower-denomination coins convert to one coin of the next denomination; preserve the existing `coppers` save property.
 - The adventure, world travel, AI Chronicle, and journal use soa-mnm-adventure-v1; official-rule and custom RPG system state uses soa-mnm-systems-v1. Both keys participate in character switching, archive backup/restore, and local saves.
 - public/mnm-ai-chronicle.js generates original scenes and three choices per scene through Gemini; local d20 checks resolve outcomes. The AI API cannot edit game state. Live generation requires Cloudflare GEMINI_API_KEY and AI_ACCESS_CODE secrets. Never commit or print these secrets.
-- public/sw.js cache version must be incremented when cached gameplay files change. The current source version is mm-rpg-v148; activation removes both superseded M&M caches and the prior cache namespace.
+- public/sw.js cache version must be incremented when cached gameplay files change. The current source version is mm-rpg-v149; activation removes both superseded M&M caches and the prior cache namespace.
 - Preserve legacy characters and saves; never silently reinterpret, reset, or erase local data.
 
 ## Graphify workflow
@@ -47,3 +47,4 @@ Read this file before changing project code, content, configuration, or deployme
 - After code changes run graphify update . so graphify-out/graph.json and GRAPH_REPORT.md reflect the source.
 - Graphify refresh was attempted on 2026-11-14, but the graphify CLI is unavailable in this environment. The user directed proceeding with the requested fixes; retry the refresh before future code edits when the tool is available. The checked-in graph was built at commit 81fc81b and is stale relative to the current branch.
 - The M&M creator treats an omitted race selectable flag as available and explicitly rejects only selectable:false. Mount the adventure after character section organization so startup cannot race the character layout.
+
