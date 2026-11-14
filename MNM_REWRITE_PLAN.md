@@ -14,7 +14,7 @@ Build M&M: RPG as an offline-first, mobile fantasy RPG inspired by Monsters & Me
 - Progress is playable with a custom level curve, player-claimed chapter rewards, level-based Health and Focus growth, settlement rest, and the documented group-XP eligibility display. The 60-level cap and 15% Rested XP bonus are source-backed; custom thresholds and award values are not official.
 - Items include an original starter kit, an equipped weapon and armor slot, consumables, custom weights and carry capacity, a Night Harbor market, discard/sell actions, and custom loot. The UI also retains guide-backed guild-note, candle, belt/bag, spellbook, and corpse information.
 - All custom combat, progression, ability, item, and racial values are labeled as M&M: RPG house rules. They must not be described as official M&M formulas or catalog entries.
-- M&M saves are separate from legacy saves and included in character switching, archive backup/restore, and service-worker caching.
+- The character roster contains M&M profiles only. M&M saves remain character-bound across switching and M&M archive backup/restore; old default characters are never recreated on an empty roster.
 
 ## Readiness audit (2026-11-13)
 
@@ -23,7 +23,7 @@ Build M&M: RPG as an offline-first, mobile fantasy RPG inspired by Monsters & Me
 | System | Current state |
 | --- | --- |
 | Race/class creation and starting stats | Connected to the M&M creator using user-supplied modifiers. Unsupported provisional races stay excluded from new creation. |
-| Character, roster, and saves | Seven-stat M&M profiles and separate adventure/system saves participate in switching and archive backup/restore. Legacy saves remain isolated. |
+| Character, roster, and saves | M&M profiles and separate adventure/system saves participate in switching and M&M archive backup/restore. The selector and archive importer exclude non-M&M profiles. |
 | Setting and travel | Race-specific starts are implemented with playable Night Harbor, Underdocks lift, and all-race boat travel to Penshaw. |
 | Fixed story | One original offline chapter uses local custom checks, distinct custom racial story features, saved outcomes, and a one-time 100 custom XP reward. |
 | AI-generated story | Gemini generates original chapters and choices; local checks determine outcomes. A completed AI chapter offers a one-time 90 custom XP claim. Requires the production API key and separate access code. |
@@ -31,7 +31,7 @@ Build M&M: RPG as an offline-first, mobile fantasy RPG inspired by Monsters & Me
 | Level and XP | Custom XP, levels, character record, and roster values are connected. The official level cap, group eligibility, and Rested bonus remain distinct from the house-rule curve and award values. |
 | Items | Custom gear, equipment, consumables, prices, four coin denominations with 100:1 conversion, market, carry limit, and loot are playable. Official weight formulas and full item catalog remain unknown. |
 | Abilities | Custom class techniques are separate from official abilities. Official scroll names, ranks, and learning data still require verified references. |
-| Offline and mobile delivery | Gameplay scripts are cached by the service worker. Cache version is v149. Save integrity and migration tests are required for changes to these systems. |
+| Offline and mobile delivery | Gameplay scripts are cached by the service worker. Cache version is v150. Save integrity and migration tests are required for changes to these systems. |
 
 ## Remaining work
 1. Replace custom values with sourced official combat, XP, ability, item, weight, and carrying data only when reliable in-game references are available.
@@ -45,5 +45,5 @@ Build M&M: RPG as an offline-first, mobile fantasy RPG inspired by Monsters & Me
 - Official M&M class abilities keep their correct class prefix, name, rank, source, and learned state.
 - Level eligibility does not mean an ability is known.
 - Keep custom racial features and class techniques labeled as original game rules.
-- Preserve legacy profiles and local saves. Never silently reinterpret or erase them.
+- Preserve existing M&M profiles and local saves during roster cleanup. Do not recreate a deleted legacy profile or restore non-M&M profiles into the M&M roster.
 
