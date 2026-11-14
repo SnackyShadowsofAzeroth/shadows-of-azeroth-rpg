@@ -173,5 +173,12 @@ test("race class access matches the maintained M&M lore matrix", () => {
     );
   }
   assert.equal(rules.raceById("varnai").selectable, false);
+  for (const race of rules.selectableRaces()) {
+    assert.equal(rules.isSelectableRace(race.id), true, race.id);
+  }
+  for (const raceId of ["deep_dwarf", "high_elf", "troll", "varnai"]) {
+    assert.equal(rules.isSelectableRace(raceId), false, raceId);
+  }
+  assert.equal(rules.isSelectableRace("unknown"), false);
 });
 
