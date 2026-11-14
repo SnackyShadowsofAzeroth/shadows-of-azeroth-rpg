@@ -457,7 +457,8 @@ function boot(){
  if(blocked&&!save)save=createSave(profile);
  render();
 }
+function start(){window.soaCharacters?.organizeSections?.();boot()}
 window.soaMnmAdventure=Object.freeze({key:KEY,humanStartRegion:"night-harbor",createSave,validSave,transition,migrateStartingLocation,migrateHumanStartingCity:migrateStartingLocation,regions:REGIONS.map(x=>({...x})),travelRoutes:TRAVEL_ROUTES.map(x=>({...x})),approaches:APPROACHES.map(x=>({...x})),encounter:ENCOUNTER.map(x=>({...x})),boot});
-document.addEventListener("DOMContentLoaded",boot);
+if(document.readyState==="loading"||document.readyState==="interactive")document.addEventListener("DOMContentLoaded",start,{once:true});else start();
 })();
 
