@@ -5,6 +5,7 @@ Read this file before changing project code, content, configuration, or deployme
 ## Product and architecture
 
 - M&M: RPG is an offline-first mobile web RPG delivered through Cloudflare Pages. Client files live in public/; Pages API handlers live in functions/api/; worker.mjs adapts those handlers for local/Workers preview; public/sw.js controls offline asset caching. Never put deployment secrets in the repository.
+- Character rosters, adventure saves, and portraits are stored locally in the current browser/device; they do not sync between devices. The character selector distinguishes the saved roster from an unfinished creation draft, labels the commit action “Save Character & Play,” verifies localStorage writes by reading them back, cleans up failed creation slots before rollback, and shows a success message after creation.
 - Legacy profiles retain the original Warcraft-inspired game flow and local saves. M&M profiles use a separate seven-stat creator, race-specific starts, world travel, a fixed offline story, optional AI Chronicle, and character-bound system saves. Keep these systems isolated.
 - Read CAMPAIGN_BIBLE.md for campaign and quality standards, DEVELOPMENT_HANDOFF.md for implementation history, and MNM_REWRITE_PLAN.md for conversion scope.
 - M&M race descriptions and eligibility come from MNM_RACE_LORE.md, with Deep Gnome Bard updated from the later official patch note.
@@ -43,5 +44,5 @@ Read this file before changing project code, content, configuration, or deployme
 - This project has a Graphify skill at .codex/skills/graphify/ and checked-in navigation files under graphify-out/.
 - When graphify-out/graph.json exists, run graphify query before codebase source searches, graphify path for relationships, and graphify explain for a focused concept. If graphify-out/wiki/index.md exists, use it for broad navigation. Read GRAPH_REPORT.md only for broad architecture review or when narrower queries are insufficient.
 - After code changes run graphify update . so graphify-out/graph.json and GRAPH_REPORT.md reflect the source.
-- Graphify refresh was attempted on 2026-11-13 but could not run because graphify, uv, and a working Python interpreter were unavailable in this environment. The checked-in graph was built at commit 81fc81b and is stale relative to the current branch; refresh it before the next code edit.
+- Graphify refresh was attempted on 2026-11-14, but the graphify CLI is unavailable in this environment. The user directed proceeding with the requested fixes; retry the refresh before future code edits when the tool is available. The checked-in graph was built at commit 81fc81b and is stale relative to the current branch.
 - The M&M creator treats an omitted race selectable flag as available and explicitly rejects only selectable:false. Mount the adventure after character section organization so startup cannot race the character layout.
