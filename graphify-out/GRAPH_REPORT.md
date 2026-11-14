@@ -1,18 +1,19 @@
-# Graph Report - Shadows of Azeroth RPG  (2026-11-12)
+# Graph Report - game-custom-choices  (2026-11-13)
 
 ## Corpus Check
-- 77 files · ~70,546 words
+- 81 files · ~78,643 words
 - Verdict: corpus is large enough that graph structure adds value.
-- Unclassified: 13 file(s) not represented in the graph (top: .css 10, (none) 1, .webmanifest 1)
+- Unclassified: 15 file(s) not represented in the graph (top: .css 11, (none) 2, .webmanifest 1)
 
 ## Summary
-- 908 nodes · 1591 edges · 82 communities (65 shown, 17 thin omitted)
-- Extraction: 89% EXTRACTED · 11% INFERRED · 0% AMBIGUOUS · INFERRED: 179 edges (avg confidence: 0.85)
+- 989 nodes · 1781 edges · 86 communities (69 shown, 17 thin omitted)
+- Extraction: 89% EXTRACTED · 11% INFERRED · 0% AMBIGUOUS · INFERRED: 200 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from the current project source and project memory included in this branch.
-- Refresh after code changes with `graphify update .` (no API cost).
+- Built from commit: `81fc81b3`
+- Run `git rev-parse HEAD` and compare to check if the graph is stale.
+- Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - public/campaign.js
@@ -63,14 +64,14 @@
 - arena.js
 - crafting.js
 - init
-- ref_node_fs
-- ref_node_path
 - ref_node_vm
+- check-syntax.cjs
+- ref_node_path
 - character-rules.test.js
 - class-themes.test.js
 - quests-migration.test.js
 - resource-rules.test.js
-- scripts
+- package.json
 - mnm-rules.js
 - story-actions.js
 - character-rules.js
@@ -90,6 +91,10 @@
 - UI refinement and safety pass (v18)
 - Reversible Stormwind SI:7 visual theme (v10)
 - AGENTS.md
+- mnm-systems.js
+- boot
+- M&M Race Lore and Class Eligibility
+- ref_node_path
 
 ## God Nodes (most connected - your core abstractions)
 1. `Shadows of Azeroth — Development Handoff` - 38 edges
@@ -98,27 +103,27 @@
 4. `draw()` - 26 edges
 5. `livingEnemies()` - 23 edges
 6. `advance()` - 19 edges
-7. `fightExchange()` - 17 edges
-8. `result()` - 17 edges
-9. `status()` - 17 edges
-10. `resourceForecast()` - 16 edges
+7. `boot()` - 18 edges
+8. `fightExchange()` - 17 edges
+9. `result()` - 17 edges
+10. `status()` - 17 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `Mission ledger phase 2 (2026-10-16)` --references--> `save()`  [INFERRED]
   DEVELOPMENT_HANDOFF.md → public/companions.js
+- `perform()` --indirect_call--> `save()`  [INFERRED]
+  public/mnm-adventure.js → public/companions.js
+- `render()` --indirect_call--> `view()`  [INFERRED]
+  public/mnm-adventure.js → public/chronicle.js
 - `questPanel()` --indirect_call--> `current()`  [INFERRED]
   public/chronicle.js → public/druid.js
 - `organizeGameSections()` --indirect_call--> `get()`  [INFERRED]
   public/characters.js → public/class-abilities.js
-- `draw()` --indirect_call--> `selected()`  [INFERRED]
-  public/companions.js → public/specializations.js
-- `interact()` --indirect_call--> `selected()`  [INFERRED]
-  public/companions.js → public/specializations.js
 
 ## Import Cycles
 - None detected.
 
-## Communities (82 total, 17 thin omitted)
+## Communities (86 total, 17 thin omitted)
 
 ### Community 0 - "public/campaign.js"
 Cohesion: 0.10
@@ -130,7 +135,7 @@ Nodes (38): 2026-10-16 equipment visibility and legacy narration cleanup, Approv
 
 ### Community 2 - "characters.js"
 Cohesion: 0.11
-Nodes (33): applyProfession(), baseState(), commitRoster(), create(), defaults(), deleteCharacter(), drawMenu(), update() (+25 more)
+Nodes (32): applyProfession(), baseState(), commitRoster(), create(), defaults(), deleteCharacter(), drawMenu(), drawProfessions() (+24 more)
 
 ### Community 3 - "druid.js"
 Cohesion: 0.18
@@ -185,8 +190,8 @@ Cohesion: 0.23
 Nodes (10): readStoredJSON(), reportCorruption(), validateCampaignSave(), validateCharacterRoster(), validateChronicle(), validateCompanionsSave(), validateOfflineSave(), validateProgressionSave() (+2 more)
 
 ### Community 16 - "ref_node_assert"
-Cohesion: 0.25
-Nodes (3): assert, campaignModule, test
+Cohesion: 0.10
+Nodes (13): assert, credentials, storyModule, test, assert, campaignModule, test, assert (+5 more)
 
 ### Community 17 - "reputation.js"
 Cohesion: 0.29
@@ -197,8 +202,8 @@ Cohesion: 0.15
 Nodes (11): assert, campaign, chronicleCss, fs, oldDruidStrike, path, resourcesContext, root (+3 more)
 
 ### Community 19 - "racial-abilities.test.js"
-Cohesion: 0.08
-Nodes (20): files, fs, html, path, roots, { spawnSync }, visit(), vm (+12 more)
+Cohesion: 0.15
+Nodes (12): abilitiesSource, assert, berserking, berserkingRow, context, expected, fs, path (+4 more)
 
 ### Community 20 - "crafting.test.js"
 Cohesion: 0.21
@@ -312,15 +317,15 @@ Nodes (7): addItem(), buy(), craft(), panel(), recover(), recoverable(), require
 Cohesion: 0.46
 Nodes (7): createNavigation(), group(), init(), render(), select(), removeLegacyNavigation(), sections()
 
-### Community 48 - "ref_node_fs"
+### Community 48 - "ref_node_vm"
 Cohesion: 0.25
 Nodes (5): assert, fs, path, {test}, vm
 
-### Community 49 - "ref_node_path"
-Cohesion: 0.25
-Nodes (6): assert, context, fs, path, test, vm
+### Community 49 - "check-syntax.cjs"
+Cohesion: 0.20
+Nodes (8): files, fs, html, path, roots, { spawnSync }, visit(), vm
 
-### Community 50 - "ref_node_vm"
+### Community 50 - "ref_node_path"
 Cohesion: 0.25
 Nodes (6): assert, context, fs, path, test, vm
 
@@ -329,8 +334,8 @@ Cohesion: 0.25
 Nodes (7): assert, context, fs, path, rulesPath, sharedSkyborneClasses, vm
 
 ### Community 52 - "class-themes.test.js"
-Cohesion: 0.14
-Nodes (10): assert, credentials, storyModule, test, assert, fs, path, source (+2 more)
+Cohesion: 0.25
+Nodes (6): assert, fs, path, source, test, vm
 
 ### Community 53 - "quests-migration.test.js"
 Cohesion: 0.25
@@ -340,13 +345,13 @@ Nodes (7): assert, context, fs, path, sourcePath, test, vm
 Cohesion: 0.25
 Nodes (7): assert, context, fs, path, source, test, vm
 
-### Community 55 - "scripts"
-Cohesion: 0.29
-Nodes (6): name, private, scripts, build, check, test
+### Community 55 - "package.json"
+Cohesion: 0.22
+Nodes (9): devDependencies, wrangler@4.161.0, name, private, scripts, build, check, test (+1 more)
 
 ### Community 56 - "mnm-rules.js"
-Cohesion: 0.48
-Nodes (6): abilityModifier(), abilityModifiers(), abilityRequirement(), canUseAbility(), d20Check(), normalizeCharacter()
+Cohesion: 0.39
+Nodes (8): abilityModifier(), abilityModifiers(), abilityRequirement(), canUseAbility(), d20Check(), isValidSelection(), normalizeCharacter(), startingStats()
 
 ### Community 57 - "story-actions.js"
 Cohesion: 0.43
@@ -357,8 +362,8 @@ Cohesion: 0.47
 Nodes (4): classesFor(), displayFaction(), pathForFaction(), validSelection()
 
 ### Community 59 - "M&M Rules Conversion Plan"
-Cohesion: 0.40
-Nodes (4): Conversion order, Current foundation, Goal, M&M Rules Conversion Plan
+Cohesion: 0.29
+Nodes (6): Current implementation, Goal, Guardrails, M&M Rules Conversion Plan, Readiness audit (2026-11-13), Remaining conversion order
 
 ### Community 60 - "Reputation overhaul (v17)"
 Cohesion: 0.50
@@ -380,6 +385,22 @@ Nodes (3): Current calculation rules, Save, API, and runtime protections, Stabil
 Cohesion: 0.67
 Nodes (3): Improvements, Multi-pass stability and iPhone polish review (v38), Regression review
 
+### Community 82 - "mnm-systems.js"
+Cohesion: 0.15
+Nodes (34): card(), corpseDurationMs(), createItem(), createSave(), emptyInventory(), equippedSpellbook(), experienceMultiplier(), formatDuration() (+26 more)
+
+### Community 83 - "boot"
+Cohesion: 0.23
+Nodes (25): addJournal(), bestClassStat(), boot(), actionList(), button(), el(), meter(), perform() (+17 more)
+
+### Community 84 - "M&M Race Lore and Class Eligibility"
+Cohesion: 0.29
+Nodes (6): Current patch exception, Custom racial features - Shadows of Azeroth, M&M Race Lore and Class Eligibility, Race and class restrictions, Race descriptions, Writing guidance
+
+### Community 85 - "ref_node_path"
+Cohesion: 0.25
+Nodes (6): assert, context, fs, path, test, vm
+
 ## Knowledge Gaps
 - **17 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -387,13 +408,13 @@ Nodes (3): Improvements, Multi-pass stability and iPhone polish review (v38), Re
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `level()` connect `progression.js` to `story-actions.test.js`?**
-  _High betweenness centrality (0.020) - this node is a cross-community bridge._
+  _High betweenness centrality (0.017) - this node is a cross-community bridge._
 - **Should `public/campaign.js` be split into smaller, more focused modules?**
   _Cohesion score 0.09996754300551769 - nodes in this community are weakly interconnected._
 - **Should `Shadows of Azeroth — Development Handoff` be split into smaller, more focused modules?**
   _Cohesion score 0.05128205128205128 - nodes in this community are weakly interconnected._
 - **Should `characters.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.10953058321479374 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.11261261261261261 - nodes in this community are weakly interconnected._
 - **Should `Shadows of Azeroth — Living Campaign (v0.3)` be split into smaller, more focused modules?**
   _Cohesion score 0.08 - nodes in this community are weakly interconnected._
 - **Should `steps` be split into smaller, more focused modules?**

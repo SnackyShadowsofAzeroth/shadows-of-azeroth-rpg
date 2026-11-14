@@ -25,7 +25,8 @@ const ENCOUNTER=[
 const clone=value=>JSON.parse(JSON.stringify(value));
 const cleanText=value=>String(value??"").replace(/[<>]/g,"").slice(0,220);
 function createSave(profile){
- return {version:VERSION,characterId:String(profile?.id||""),stage:"origin",origin:"",clue:false,approachUsed:"",enemyResolve:3,enemyPressure:0,outcome:"",completed:false,racialFeatureUsed:false,trollAdaptationReady:false,titanBraceReady:false,calafreyWardReady:false,spiritLatticeReady:false,wyrdpathReady:false,journal:[],updatedAt:new Date().toISOString()};
+ const origin=profile?.raceId==="human"?"night-harbor":"";
+ return {version:VERSION,characterId:String(profile?.id||""),stage:origin?"briefing":"origin",origin,clue:false,approachUsed:"",enemyResolve:3,enemyPressure:0,outcome:"",completed:false,racialFeatureUsed:false,trollAdaptationReady:false,titanBraceReady:false,calafreyWardReady:false,spiritLatticeReady:false,wyrdpathReady:false,journal:origin?["You begin in Night Harbor, the world's western trade hub."]:[],updatedAt:new Date().toISOString()};
 }
 function statLine(profile){
  const scores=profile?.stats||{};
@@ -57,6 +58,12 @@ function addJournal(save,line){
  if(save.journal.length>100)save.journal=save.journal.slice(-100);
  save.updatedAt=new Date().toISOString();
 }
+function migrateHumanStartingCity(save,profile){
+ if(profile?.raceId!=="human"||save?.stage!=="origin")return false;
+ save.origin="night-harbor";save.stage="briefing";
+ addJournal(save,"You begin in Night Harbor, the world's western trade hub.");
+ return true;
+}
 function useRacialFeature(save){if(save.racialFeatureUsed)throw new Error("This racial feature has already been used this chapter.");save.racialFeatureUsed=true;}
 function raiseDanger(save,profile){
  if(save.titanBraceReady){save.titanBraceReady=false;return " Titan's Craft holds the marker steady; Danger does not rise."}
@@ -76,6 +83,7 @@ function transition(current,profile,action,roll){
  if(action?.type==="origin"&&next.stage==="origin"){
   const region=REGIONS.find(item=>item.id===action.region);
   if(!region)throw new Error("Choose a listed starting region.");
+  if(profile?.raceId==="human"&&region.id!=="night-harbor")throw new Error("Human characters begin in Night Harbor, the world's western trade hub.");
   next.origin=region.id;next.stage="briefing";addJournal(next,"Story begins in "+region.name+".");
   return {state:next,message:"Your story begins in "+region.name+"."};
  }
@@ -209,6 +217,7 @@ function boot(){
     const parsed=JSON.parse(raw);
     if(!validSave(parsed,profile))throw new Error("The M&M adventure save does not match the active character or current save format.");
     save=parsed;
+    if(migrateHumanStartingCity(save,profile))localStorage.setItem(KEY,JSON.stringify(save));
    }
   }
  }catch(error){
@@ -255,15 +264,18 @@ function boot(){
   app.querySelector("h2")?.focus();
  }
  function renderOrigin(panel){
-  panel.append(el("p","Choose the opening region for this custom story chapter on A\u00eathoril. The official game's starting-city eligibility can depend on race, faith/deity, and class; this story-origin choice does not enforce that full matrix.","soa-mnm-rule-note"));
+  const human=profile.raceId==="human";
+  panel.append(el("p",human?"Humans begin in Night Harbor, the world's western trade hub on A\u00eathoril's coast. The official faith/class city gate is not modeled here.":"Choose the opening region for this custom story chapter on A\u00eathoril. The official game's starting-city eligibility can depend on race, faith/deity, and class; this story-origin choice does not enforce that full matrix.","soa-mnm-rule-note"));
   const grid=el("div",undefined,"soa-mnm-origin-grid");
-  for(const region of REGIONS)grid.append(button(region.name,region.description+" "+region.lore,()=>perform({type:"origin",region:region.id},false)));
+  const regions=human?REGIONS.filter(region=>region.id==="night-harbor"):REGIONS;
+  for(const region of regions)grid.append(button(region.name,region.description+" "+region.lore,()=>perform({type:"origin",region:region.id},false)));
   panel.append(grid);
  }
  function renderBriefing(panel){
   const region=REGIONS.find(item=>item.id===save.origin);
   panel.append(el("div","ORIGINAL PROJECT STORY \u00b7 CHAPTER ONE","soa-mnm-kicker"),el("h2","The Quiet Signal at Dune Gate"));
-  panel.append(el("p","From "+region.name+", you travel toward the outer reaches of Szuur. Sera Fen, a caravan signal-keeper, says the warning bell at Dune Gate has gone silent. A route slate is missing, and the next caravan is already on the road."));
+  const departure=profile.raceId==="human"?"From Night Harbor, the world's western trade hub, you travel toward the outer reaches of Szuur.":"From "+region.name+", you travel toward the outer reaches of Szuur.";
+  panel.append(el("p",departure+" Sera Fen, a caravan signal-keeper, says the warning bell at Dune Gate has gone silent. A route slate is missing, and the next caravan is already on the road."));
   panel.append(el("p","The Szuur route and its missing signal are original story material for this game. Your race and class shape your character sheet; no official M&M class abilities are being simulated in this chapter."));
   panel.append(button("Take the trail","Accept the signal-keeper's request and investigate the marker.",()=>perform({type:"accept"},false),"med"));
  }
@@ -386,6 +398,6 @@ function boot(){
  if(blocked&&!save)save=createSave(profile);
  render();
 }
-window.soaMnmAdventure=Object.freeze({key:KEY,createSave,validSave,transition,regions:REGIONS.map(x=>({...x})),approaches:APPROACHES.map(x=>({...x})),encounter:ENCOUNTER.map(x=>({...x})),boot});
+window.soaMnmAdventure=Object.freeze({key:KEY,humanStartRegion:"night-harbor",createSave,validSave,transition,migrateHumanStartingCity,regions:REGIONS.map(x=>({...x})),approaches:APPROACHES.map(x=>({...x})),encounter:ENCOUNTER.map(x=>({...x})),boot});
 document.addEventListener("DOMContentLoaded",boot);
 })();
