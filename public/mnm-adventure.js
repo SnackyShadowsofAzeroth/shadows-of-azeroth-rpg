@@ -3,10 +3,21 @@ const KEY="soa-mnm-adventure-v1",VERSION=1;
 const STATS=["str","sta","dex","agi","int","wis","cha"];
 const STAT_NAMES={str:"Strength",sta:"Stamina",dex:"Dexterity",agi:"Agility",int:"Intelligence",wis:"Wisdom",cha:"Charisma"};
 const REGIONS=[
- {id:"night-harbor",name:"Night Harbor",description:"A\u00eathoril's western port, where the coastal charts point out toward Szuur.",lore:"Night Harbor is the Crown Jewel of the West, a great port on A\u00eathoril's western coast."},
- {id:"underdocks",name:"The Underdocks",description:"A shadowed port beneath Night Harbor, carrying trade down toward the Deep.",lore:"The Underdocks lie far below Night Harbor and connect its trade routes with the Deep."},
- {id:"faelindral",name:"Faelindral",description:"A city in the trees in the enchanted lands of Calafrey.",lore:"Faelindral stands north of Szuur among the green lands of Calafrey."},
- {id:"ail-vorith",name:"Ail'vorith",description:"The Deep Elves' dark capital beneath eastern Calafrey.",lore:"Ail'vorith rests deep below the eastern lands of Calafrey."}
+ {id:"night-harbor",name:"Night Harbor",zone:"Shaded Dunes",description:"The world's trade hub on A\u00eathoril, with ships, caravans, and roads leading in every direction.",lore:"Night Harbor is the Crown Jewel of the West. Twilight Harbor is its busy waterfront in the Shaded Dunes."},
+ {id:"underdocks",name:"The Underdocks",zone:"Beneath Night Harbor",description:"A subterranean port and starting home for Deep Gnomes, Deep Elves, Goblins, and Ogres.",lore:"A guarded lift links the Underdocks to the streets and waterfront of Night Harbor."},
+ {id:"penshaw",name:"Penshaw",zone:"Keeper's Blight",description:"A Wood Elf city and starting home at the edge of Keeper's Blight.",lore:"Boats sail between Penshaw and Twilight Harbor in Night Harbor. Travelers of every race can take the passage."},
+ {id:"faelindral",name:"Faelindral",zone:"Calafrey",description:"A city in the trees in the enchanted lands of Calafrey.",lore:"Faelindral stands north of Szuur among the green lands of Calafrey."},
+ {id:"ail-vorith",name:"Ail'vorith",zone:"Eastern Calafrey",description:"The Deep Elves' dark capital beneath eastern Calafrey.",lore:"Ail'vorith rests deep below the eastern lands of Calafrey."}
+];
+const TRAVEL_ROUTES=[
+ {from:"night-harbor",to:"underdocks",name:"The Underdocks Lift",method:"Lift",detail:"Descend from Night Harbor into the Underdocks below."},
+ {from:"underdocks",to:"night-harbor",name:"Night Harbor Lift",method:"Lift",detail:"Ride the lift up from the Underdocks into Night Harbor."},
+ {from:"night-harbor",to:"penshaw",name:"Twilight Harbor Passage",method:"Boat",detail:"Sail from Twilight Harbor in the Shaded Dunes to Penshaw in Keeper's Blight. All races may book passage."},
+ {from:"penshaw",to:"night-harbor",name:"Twilight Harbor Passage",method:"Boat",detail:"Sail from Penshaw back to Twilight Harbor in Night Harbor."},
+ {from:"faelindral",to:"night-harbor",name:"Calafrey Trade Road",method:"Caravan",detail:"Follow the established trade road west to Night Harbor."},
+ {from:"night-harbor",to:"faelindral",name:"Calafrey Trade Road",method:"Caravan",detail:"Travel north from Night Harbor toward the wooded lands of Calafrey."},
+ {from:"ail-vorith",to:"underdocks",name:"Deep Trade Passage",method:"Passage",detail:"Follow the deep trade route to the Underdocks beneath Night Harbor."},
+ {from:"underdocks",to:"ail-vorith",name:"Deep Trade Passage",method:"Passage",detail:"Travel through the deep route toward Ail'vorith beneath eastern Calafrey."}
 ];
 const APPROACHES=[
  {id:"chart",label:"Compare the route chart",stat:"int",dc:12,detail:"Follow the old marks and find where the signal route bends."},
@@ -24,9 +35,13 @@ const ENCOUNTER=[
 ];
 const clone=value=>JSON.parse(JSON.stringify(value));
 const cleanText=value=>String(value??"").replace(/[<>]/g,"").slice(0,220);
+function startingRegionForProfile(profile){
+ const requested=window.soaMnmRules?.startLocationForRace?.(profile?.raceId)||profile?.startingLocation||"night-harbor";
+ return REGIONS.some(region=>region.id===requested)?requested:"night-harbor";
+}
 function createSave(profile){
- const origin=profile?.raceId==="human"?"night-harbor":"";
- return {version:VERSION,characterId:String(profile?.id||""),stage:origin?"briefing":"origin",origin,clue:false,approachUsed:"",enemyResolve:3,enemyPressure:0,outcome:"",completed:false,racialFeatureUsed:false,trollAdaptationReady:false,titanBraceReady:false,calafreyWardReady:false,spiritLatticeReady:false,wyrdpathReady:false,journal:origin?["You begin in Night Harbor, the world's western trade hub."]:[],updatedAt:new Date().toISOString()};
+ const origin=startingRegionForProfile(profile),region=REGIONS.find(item=>item.id===origin);
+ return {version:VERSION,characterId:String(profile?.id||""),stage:"briefing",origin,currentLocation:origin,clue:false,approachUsed:"",enemyResolve:3,enemyPressure:0,outcome:"",completed:false,racialFeatureUsed:false,trollAdaptationReady:false,titanBraceReady:false,calafreyWardReady:false,spiritLatticeReady:false,wyrdpathReady:false,journal:["You begin in "+region.name+(region.zone?" in "+region.zone:"")+(origin==="night-harbor"?", the world's trade hub.":".")],updatedAt:new Date().toISOString()};
 }
 function statLine(profile){
  const scores=profile?.stats||{};
@@ -36,6 +51,8 @@ function validSave(value,profile){
  if(!value||typeof value!=="object"||Array.isArray(value)||value.version!==VERSION||value.characterId!==String(profile?.id||""))return false;
  if(!["origin","briefing","approach","encounter","aftermath","complete"].includes(value.stage))return false;
  if(value.origin&&!REGIONS.some(region=>region.id===value.origin))return false;
+ if(value.currentLocation===undefined)value.currentLocation=value.origin||startingRegionForProfile(profile);
+ if(typeof value.currentLocation!=="string"||!REGIONS.some(region=>region.id===value.currentLocation))return false;
  if(typeof value.clue!=="boolean"||!Number.isInteger(value.enemyResolve)||value.enemyResolve<0||value.enemyResolve>3||!Number.isInteger(value.enemyPressure)||value.enemyPressure<0||value.enemyPressure>3)return false;
  if(value.approachUsed===undefined)value.approachUsed="";
  if(typeof value.approachUsed!=="string"||value.approachUsed!==""&&!APPROACHES.some(item=>item.id===value.approachUsed))return false;
@@ -58,10 +75,13 @@ function addJournal(save,line){
  if(save.journal.length>100)save.journal=save.journal.slice(-100);
  save.updatedAt=new Date().toISOString();
 }
-function migrateHumanStartingCity(save,profile){
- if(profile?.raceId!=="human"||save?.stage!=="origin")return false;
- save.origin="night-harbor";save.stage="briefing";
- addJournal(save,"You begin in Night Harbor, the world's western trade hub.");
+function migrateStartingLocation(save,profile){
+ let changed=false;
+ if(save?.currentLocation===undefined){save.currentLocation=save.origin||startingRegionForProfile(profile);changed=true;}
+ if(save?.stage!=="origin"||save.origin)return changed;
+ const origin=startingRegionForProfile(profile),region=REGIONS.find(item=>item.id===origin);
+ save.origin=origin;save.currentLocation=origin;save.stage="briefing";
+ addJournal(save,"You begin in "+region.name+(region.zone?" in "+region.zone:"")+(origin==="night-harbor"?", the world's trade hub.":"."));
  return true;
 }
 function useRacialFeature(save){if(save.racialFeatureUsed)throw new Error("This racial feature has already been used this chapter.");save.racialFeatureUsed=true;}
@@ -83,9 +103,18 @@ function transition(current,profile,action,roll){
  if(action?.type==="origin"&&next.stage==="origin"){
   const region=REGIONS.find(item=>item.id===action.region);
   if(!region)throw new Error("Choose a listed starting region.");
-  if(profile?.raceId==="human"&&region.id!=="night-harbor")throw new Error("Human characters begin in Night Harbor, the world's western trade hub.");
-  next.origin=region.id;next.stage="briefing";addJournal(next,"Story begins in "+region.name+".");
+  const required=startingRegionForProfile(profile);
+  if(region.id!==required)throw new Error("This race begins in "+REGIONS.find(item=>item.id===required).name+".");
+  next.origin=region.id;next.currentLocation=region.id;next.stage="briefing";addJournal(next,"Story begins in "+region.name+".");
   return {state:next,message:"Your story begins in "+region.name+"."};
+ }
+ if(action?.type==="travel"){
+  const route=TRAVEL_ROUTES.find(item=>item.from===next.currentLocation&&item.to===action.to);
+  if(!route)throw new Error("There is no direct route from this location.");
+  const from=REGIONS.find(item=>item.id===route.from),to=REGIONS.find(item=>item.id===route.to);
+  next.currentLocation=route.to;
+  addJournal(next,"Traveled from "+from.name+" to "+to.name+" by "+route.method.toLowerCase()+".");
+  return {state:next,message:"You arrive in "+to.name+(to.zone?", "+to.zone:".")};
  }
  if(action?.type==="accept"&&next.stage==="briefing"){
   next.stage="approach";addJournal(next,"Accepted the signal-keeper's request to investigate the quiet marker at Dune Gate.");
@@ -217,7 +246,7 @@ function boot(){
     const parsed=JSON.parse(raw);
     if(!validSave(parsed,profile))throw new Error("The M&M adventure save does not match the active character or current save format.");
     save=parsed;
-    if(migrateHumanStartingCity(save,profile))localStorage.setItem(KEY,JSON.stringify(save));
+    if(migrateStartingLocation(save,profile))localStorage.setItem(KEY,JSON.stringify(save));
    }
   }
  }catch(error){
@@ -264,11 +293,10 @@ function boot(){
   app.querySelector("h2")?.focus();
  }
  function renderOrigin(panel){
-  const human=profile.raceId==="human";
-  panel.append(el("p",human?"Humans begin in Night Harbor, the world's western trade hub on A\u00eathoril's coast. The official faith/class city gate is not modeled here.":"Choose the opening region for this custom story chapter on A\u00eathoril. The official game's starting-city eligibility can depend on race, faith/deity, and class; this story-origin choice does not enforce that full matrix.","soa-mnm-rule-note"));
+  const start=REGIONS.find(region=>region.id===startingRegionForProfile(profile));
+  panel.append(el("p","Your "+profile.race+" begins in "+start.name+(start.zone?", in "+start.zone:"") +". Use the World tab to travel between connected locations.","soa-mnm-rule-note"));
   const grid=el("div",undefined,"soa-mnm-origin-grid");
-  const regions=human?REGIONS.filter(region=>region.id==="night-harbor"):REGIONS;
-  for(const region of regions)grid.append(button(region.name,region.description+" "+region.lore,()=>perform({type:"origin",region:region.id},false)));
+  grid.append(button(start.name,start.description+" "+start.lore,()=>perform({type:"origin",region:start.id},false)));
   panel.append(grid);
  }
  function renderBriefing(panel){
@@ -350,16 +378,31 @@ function boot(){
   else{const list=el("ol",undefined,"soa-mnm-journal");for(const line of save.journal)list.append(el("li",line));panel.append(list)}
   panel.append(el("p","Saved on this device with the selected character's other save data. It is included in the character archive backup."));
  }
+ function renderWorld(panel){
+  const current=REGIONS.find(region=>region.id===save.currentLocation)||REGIONS[0];
+  panel.append(el("div","A\u00caTHORIL \u00b7 WORLD","soa-mnm-kicker"),el("h2",current.name));
+  panel.append(el("p",(current.zone?current.zone+" \u00b7 ":"")+current.description+" "+current.lore));
+  if(current.id==="night-harbor")panel.append(el("p","Twilight Harbor is Night Harbor's waterfront in the Shaded Dunes. Every race can sail from here to Penshaw, in Keeper's Blight; travelers from the Underdocks ride the lift up first."));
+  const routes=TRAVEL_ROUTES.filter(route=>route.from===current.id);
+  if(routes.length){
+   panel.append(el("h3","Travel from here"));
+   const grid=el("div",undefined,"soa-mnm-choice-grid");
+   for(const route of routes)grid.append(button(route.name,route.method+" \u00b7 "+route.detail,()=>perform({type:"travel",to:route.to},false)));
+   panel.append(grid);
+  }
+  panel.append(button("Continue the story","Return to Chapter One and continue from your saved step.",()=>setView("adventure",false),"med"));
+ }
  function render(){
   if(!app.isConnected)return;
   app.replaceChildren();
   const hero=el("section",undefined,"soa-mnm-game-heading");
   hero.append(el("div","MONSTERS & MEMORIES \u00b7 ORIGINAL ADVENTURE","soa-mnm-kicker"),el("h1",profile.name));
-  hero.append(el("p",profile.race+" "+profile.className+" \u00b7 Level "+(profile.level||1)+" \u00b7 "+(save?.origin?REGIONS.find(x=>x.id===save.origin)?.name:"Choose an opening region"),"soa-mnm-subtitle"));
+  const current=REGIONS.find(x=>x.id===save?.currentLocation);
+  hero.append(el("p",profile.race+" "+profile.className+" \u00b7 Level "+(profile.level||1)+" \u00b7 "+(current?"In "+current.name+(current.zone?" · "+current.zone:""):"Choose an opening region"),"soa-mnm-subtitle"));
   const racial=window.soaMnmRules.racialAbilities?.[profile.raceId];if(racial)hero.append(el("p","CUSTOM RACIAL FEATURE · "+racial.name+" - "+racial.description+" Effect: "+racial.effect,"soa-mnm-feature"));
   app.append(hero);
   const tabs=el("div",undefined,"soa-mnm-tabs");tabs.setAttribute("role","tablist");tabs.setAttribute("aria-label","M&M character views");
-  for(const [id,label] of [["adventure","Adventure"],["character","Character"],["journal","Journey Log"],["combat","Combat"],["progress","Progress"],["inventory","Items"]]){
+  for(const [id,label] of [["adventure","Adventure"],["world","World"],["character","Character"],["journal","Journey Log"],["combat","Combat"],["progress","Progress"],["inventory","Items"]]){
    const b=el("button",label,"soa-mnm-tab");b.type="button";b.dataset.view=id;b.setAttribute("role","tab");b.setAttribute("aria-selected",String(view===id));b.onclick=()=>setView(id,false);tabs.append(b);
   }
   app.append(tabs);
@@ -370,6 +413,8 @@ function boot(){
    else app.append(el("p","The character record is temporarily unavailable."));
   }else if(view==="journal"){
    const pane=el("section",undefined,"soa-mnm-adventure-panel");renderJournal(pane);app.append(pane);
+  }else if(view==="world"){
+   const pane=el("section",undefined,"soa-mnm-adventure-panel");renderWorld(pane);app.append(pane);
   }else if(view==="combat"||view==="progress"||view==="inventory"){
    const systemPanel=window.soaMnmSystems?.render?.(view,profile,()=>render());
    if(systemPanel)app.append(systemPanel);
@@ -398,6 +443,6 @@ function boot(){
  if(blocked&&!save)save=createSave(profile);
  render();
 }
-window.soaMnmAdventure=Object.freeze({key:KEY,humanStartRegion:"night-harbor",createSave,validSave,transition,migrateHumanStartingCity,regions:REGIONS.map(x=>({...x})),approaches:APPROACHES.map(x=>({...x})),encounter:ENCOUNTER.map(x=>({...x})),boot});
+window.soaMnmAdventure=Object.freeze({key:KEY,humanStartRegion:"night-harbor",createSave,validSave,transition,migrateStartingLocation,migrateHumanStartingCity:migrateStartingLocation,regions:REGIONS.map(x=>({...x})),travelRoutes:TRAVEL_ROUTES.map(x=>({...x})),approaches:APPROACHES.map(x=>({...x})),encounter:ENCOUNTER.map(x=>({...x})),boot});
 document.addEventListener("DOMContentLoaded",boot);
 })();

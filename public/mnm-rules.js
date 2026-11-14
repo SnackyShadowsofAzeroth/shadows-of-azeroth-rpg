@@ -98,7 +98,8 @@ const raceByName=name=>RACES.find(x=>x.name===name)||null;
 const classById=id=>CLASSES.find(x=>x.id===id)||null;
 const classesForRace=id=>(AVAILABILITY[id]||[]).map(classById).filter(Boolean);
 const selectableRaces=()=>RACES.filter(x=>x.selectable!==false);
-const startLocationForRace=id=>raceById(id)?.id==="human"?"night-harbor":"";
+const STARTING_LOCATIONS=Object.freeze({human:"night-harbor",halfling:"night-harbor",gnome:"night-harbor",dwarf:"night-harbor",deep_gnome:"underdocks",deep_elf:"underdocks",goblin:"underdocks",ogre:"underdocks",wood_elf:"penshaw",deep_dwarf:"night-harbor",high_elf:"night-harbor",troll:"night-harbor",varnai:"night-harbor"});
+const startLocationForRace=id=>STARTING_LOCATIONS[raceById(id)?.id]||"night-harbor";
 function isValidSelection(p={}){const race=raceById(p.raceId||p.race)||raceByName(p.race);const klass=classById(p.classId)||CLASSES.find(x=>x.name===p.className);return !!race&&!!klass&&AVAILABILITY[race.id]?.includes(klass.id);}
 function startingStats(raceId,classId){
  const race=raceById(raceId),klass=classById(classId);
@@ -115,7 +116,7 @@ function normalizeCharacter(input={}){
  const sheet=startingStats(race.id,klass.id),level=Math.max(1,Math.min(MAX_LEVEL,Math.trunc(Number(input.level)||1)));
  const learned=Array.isArray(input.learnedAbilities)?[...new Set(input.learnedAbilities)]:[];
  const legacyScores=input.abilities?Object.fromEntries(ABILITIES.map(key=>[key,Math.max(3,Math.min(25,Math.trunc(Number(input.abilities[key]??10))))])):undefined;
- const startingLocation=startLocationForRace(race.id)||String(input.startingLocation||"");
+ const startingLocation=startLocationForRace(race.id);
  return {...input,startingLocation,system:"mnm",raceId:race.id,race:race.name,classId:klass.id,className:klass.name,classPrefix:klass.prefix,level,baseStats:sheet.base,racialBonuses:sheet.racialBonuses,classBonuses:sheet.classBonuses,stats:sheet.stats,statRulesVersion:1,provisionalRaceStats:sheet.provisional,availableForCreation:sheet.available,racialAbility:RACIAL_ABILITIES[race.id]||null,...(legacyScores?{abilities:legacyScores,modifiers:abilityModifiers(legacyScores)}:{}),learnedAbilities:learned};
 }
 function d20Check({roll,ability="dex",scores={},skillBonus=0,proficiency=0,dc}){const die=Math.trunc(Number(roll));if(die<1||die>20)throw new RangeError("d20 roll must be 1–20.");const total=die+abilityModifier(scores[ability]??10)+Math.trunc(Number(skillBonus)||0)+Math.trunc(Number(proficiency)||0);return {roll:die,total,dc:Number(dc),success:die===20||die!==1&&total>=Number(dc),critical:die===20};}
