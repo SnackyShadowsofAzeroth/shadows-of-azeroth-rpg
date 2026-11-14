@@ -33,32 +33,38 @@ function keepGameSectionsExpanded(root=document){
 keepGameSectionsExpanded();
 const read=(key)=>{const result=window.soaSaveRules.readStoredJSON(key);if(!result.ok&&result.unavailable)window.soaReportStorageFailure?.("Character save could not be read because device storage is unavailable.");return result.ok?result.value:null};
 const write=(key,val)=>{if(window.soaSaveRules.isIntegrityBlocked()||(key===ROSTER_KEY&&rosterLoadBlocked))return false;try{const raw=JSON.stringify(val);localStorage.setItem(key,raw);if(localStorage.getItem(key)!==raw){window.soaReportStorageFailure?.("Character data could not be verified after saving. Check browser storage.");return false}return true}catch{window.soaReportStorageFailure?.("Character data could not be saved. Check available browser storage.");return false}};
-function defaults(){
- const professions={Mining:{skill:225,events:0},Engineering:{skill:225,events:0}};
- return {id:"snacky",name:"Snacky Lugnuts",gender:"Male",race:"Gnome",faction:"Alliance",className:"Rogue",specialization:"Combat Swords",professions,secondary:Object.fromEntries(SECONDARY.map(x=>[x,{skill:1,events:0}])),professionLog:[],professionEvents:[],origin:"legacy"};
-}
+function clearLegacySaveState(){try{for(const key of SAVES.slice(0,6)){localStorage.removeItem(key);window.soaSaveRules.clearCorruption(key)}return true}catch{return false}}
+function clearCharacterSaveState(){try{for(const key of SAVES){localStorage.removeItem(key);window.soaSaveRules.clearCorruption(key)}return true}catch{return false}}
+function removeProfileArtifacts(id){try{localStorage.removeItem(SLOT_PREFIX+id);localStorage.removeItem("soa-portrait-v1-"+id)}catch{}}
 function init(){
  const loaded=window.soaSaveRules.readStoredJSON(ROSTER_KEY);
  let storedRoster=null,invalidRoster=false;
  if(loaded.ok&&!loaded.missing)try{storedRoster=window.soaSaveRules.validateCharacterRoster(loaded.value)}catch{invalidRoster=true;window.soaSaveRules.reportCorruption(ROSTER_KEY)}
  if(!loaded.ok||invalidRoster){
-  rosterLoadBlocked=true;roster={version:1,active:"snacky",characters:[defaults()]};active=roster.characters[0];return;
+  rosterLoadBlocked=true;roster={version:1,active:null,characters:[]};active=null;return;
  }
  roster=storedRoster;
- if(loaded.missing){roster={version:1,active:"snacky",characters:[defaults()]};if(!window.soaSaveRules.isIntegrityBlocked()){write(ROSTER_KEY,roster);snapshot("snacky")}active=roster.characters[0];return}
- if(window.soaSaveRules.isIntegrityBlocked()){active=roster.characters.find(x=>x?.id===roster.active)||roster.characters[0];return}
- for(const p of roster.characters){p.professions ||= {};p.secondary ||= {};if(p.id==="snacky"&&!p.gender)p.gender="Male";p.professionLog ||= [];p.professionEvents ||= []}
- // One-time correction for Snacky only. Preserve any progress above the established 225 baseline.
- const snacky=roster.characters.find(p=>p.id==="snacky");
- if(snacky&&!roster.snackyProfession225Applied){
-  for(const profession of ["Mining","Engineering"]){
-   const current=snacky.professions[profession];
-   if(current&&typeof current==="object")current.skill=Math.max(225,Number(current.skill)||0);
-   else snacky.professions[profession]={skill:225,events:0};
-  }
-  roster.snackyProfession225Applied=true;
+ if(loaded.missing){roster={version:1,active:null,characters:[]};active=null;clearLegacySaveState();return}
+ const previousActiveId=roster.active,legacy=roster.characters.filter(person=>person.system!=="mnm");
+ if(legacy.length){
+  roster.characters=roster.characters.filter(person=>person.system==="mnm");
+  active=roster.characters.find(person=>person.id===previousActiveId)||roster.characters[0]||null;
+  roster.active=active?.id||null;
+  if(active&&active.id!==previousActiveId){clearLegacySaveState();if(!window.soaSaveRules.isIntegrityBlocked()&&!restore(active.id,true))clearLegacySaveState()}
+  if(!active)clearLegacySaveState();
+  for(const person of legacy)removeProfileArtifacts(person.id);
+  if(!roster.characters.length){try{localStorage.removeItem(ROSTER_KEY)}catch{}}
+  else if(!window.soaSaveRules.isIntegrityBlocked())write(ROSTER_KEY,roster);
  }
- active=roster.characters.find(x=>x.id===roster.active)||roster.characters[0];roster.active=active.id;write(ROSTER_KEY,roster);
+ if(window.soaSaveRules.isIntegrityBlocked()){
+  roster.characters=roster.characters.filter(person=>person.system==="mnm");
+  active=roster.characters.find(person=>person.id===roster.active)||roster.characters[0]||null;
+  return;
+ }
+ for(const p of roster.characters){p.professions ||= {};p.secondary ||= {};p.professionLog ||= [];p.professionEvents ||= []}
+ active=roster.characters.find(x=>x.id===roster.active)||roster.characters[0]||null;
+ roster.active=active?.id||null;
+ if(active)write(ROSTER_KEY,roster);
 }
 function snapshot(id){
  if(window.soaSaveRules.isIntegrityBlocked())return false;
@@ -101,7 +107,7 @@ function restore(id,silent=false){
 }
 function baseState(profile){if(profile.system==="mnm")return {equipment:[],id:"new-hero-start",hp:0,en:0,money:0,time:0,alert:0,seen:[],flags:{},enemy:null,log:["M&M character created. Begin Chapter One from the Adventure tab."]};return {equipment:[...(profile.startingEquipment||BASIC_GEAR[profile.className]||[])],id:"new-hero-start",hp:100,en:100,money:1500,time:0,alert:0,seen:[],flags:{},enemy:null,log:["A new journey begins for "+profile.name+" in "+startingZone(profile)+".","You have 15 silver and no companions."]}}
 function newCampaign(profile){
- if(profile.system==="mnm")return {turn:0,scene:null,history:[],journal:[],startingZone:startingZone(profile),lastError:"",lastAction:"M&M story progress is stored separately from the legacy campaign.",lastResult:"Use the dedicated M&M Adventure screen for Chapter One.",pending:null};
+ if(profile.system==="mnm")return {turn:0,scene:null,history:[],journal:[],startingZone:startingZone(profile),lastError:"",lastAction:"M&M story progress is stored separately from the campaign.",lastResult:"Use the dedicated M&M Adventure screen for Chapter One.",pending:null};
  const zone=startingZone(profile);
  return {turn:0,scene:null,history:[],journal:[],startingZone:zone,lastError:"",lastAction:"Begin the FIRST scene of a completely new adventure for "+profile.name+", a LEVEL 1 "+profile.race+" "+profile.className+" of the "+profile.faction+(profile.race==="Skyborne"?" ("+skybornePath(profile.faction)+")":"")+". STARTING LOCATION: "+zone+". The character starts PHYSICALLY IN THIS STARTING ZONE, ALONE, with exactly 15 silver (1,500 copper), basic class starter equipment only, and no existing allies, companions, party, completed missions, faction standing, personal relationships, or earned equipment beyond the starter kit. Treat faction identity as background only; do not assign numeric standing or relationship scores before an in-world event establishes them. Record relationships and faction standing only after meaningful encounters and choices. "+(profile.race==="Skyborne"&&profile.className==="Druid"?"Skyborne Druids have unique bird-inspired forms; preserve that racial identity in descriptions. ":"")+"Introduce a modest class-appropriate first task and six distinct action choices. No travel skips, established companions, Hollow Raven or Snacky's storyline. Do not grant XP, extra currency, equipment, specialization, or followers in the opening narration.",lastResult:"Level 1 newcomer in "+zone+". Starting funds: 15 silver. Faction standing and personal relationships are unestablished; no previous battles, companions, or rewards.",pending:null};
 }
@@ -119,14 +125,14 @@ const SOCIAL_BASE={
  Druid:{bluff:2,bribe:2,romance:4,threaten:2}
 };
 function socialSkills(){
- const base=SOCIAL_BASE[active.className]||SOCIAL_BASE.Rogue;
+ const base=SOCIAL_BASE[active?.className]||SOCIAL_BASE.Rogue;
  // Snacky's training as an SI:7 operative is reflected in his bluff score.
- const si7=active.id==="snacky"?1:0;const hidden=isSnackyEgg(active)?1:0;
+ const si7=active?.id==="snacky"?1:0;const hidden=isSnackyEgg(active)?1:0;
  const trained=window.soaProgression?.bonus;
  const mod=skill=>window.soaAbilities?.modifier?.(skill)||0;
  return {bluff:base.bluff+si7+hidden+(trained?.("bluff")||0)+mod("bluff"),bribe:base.bribe+(trained?.("bribe")||0)+mod("bribe"),romance:base.romance+(trained?.("romance")||0)+mod("romance"),threaten:base.threaten+(trained?.("threaten")||0)+mod("threaten")};
 }
-function selectedProfile(){if(active.system==="mnm")return {...active,level:window.soaMnmSystems?.progressFor?.(active)?.level||active.level||1};return {...active,form:active.className==="Druid"?window.soaDruid?.form?.():undefined,factionPath:active.race==="Skyborne"?skybornePath(active.faction):null,level:window.soaProgression?.level?.()||10,professions:Object.fromEntries(Object.entries(active.professions||{}).map(([k,v])=>[k,v.skill||1]))}}
+function selectedProfile(){if(!active)return null;if(active.system==="mnm")return {...active,level:window.soaMnmSystems?.progressFor?.(active)?.level||active.level||1};return {...active,form:active.className==="Druid"?window.soaDruid?.form?.():undefined,factionPath:active.race==="Skyborne"?skybornePath(active.faction):null,level:window.soaProgression?.level?.()||10,professions:Object.fromEntries(Object.entries(active.professions||{}).map(([k,v])=>[k,v.skill||1]))}}
 function characterLevel(profile){
  if(profile?.system!=="mnm")return Number(profile?.level)||profile?.startLevel||1;
  if(profile.id===active?.id)return window.soaMnmSystems?.progressFor?.(profile)?.level||profile.level||1;
@@ -136,19 +142,19 @@ function characterLevel(profile){
  }catch{}
  return Number(profile.level)||1;
 }
-function commitRoster(){return write(ROSTER_KEY,roster)}
+function commitRoster(){if(!roster.characters.length){try{localStorage.removeItem(ROSTER_KEY);return localStorage.getItem(ROSTER_KEY)===null}catch{return false}}return write(ROSTER_KEY,roster)}
 function enter(id){
  if(window.soaSaveRules.isIntegrityBlocked()){alert("Character changes are paused until the saved data has been recovered.");return}
  if(!roster.characters.some(x=>x.id===id))return;
- if(id!==active.id){
-  const previousId=active.id;
-  if(!snapshot(previousId)){alert("Cannot switch: unable to back up your current character. Check available device storage.");return}
+ if(id!==active?.id){
+  const previousId=active?.id||null;
+  if(previousId&&!snapshot(previousId)){alert("Cannot switch: unable to back up your current character. Check available device storage.");return}
   if(!restore(id))return;
   const next=roster.characters.find(x=>x.id===id);
   roster.active=id;
   if(!commitRoster()){
    roster.active=previousId;
-   restore(previousId);
+   if(previousId)restore(previousId);
    alert("Unable to save the active character selection. Your previous character was retained.");
    return;
   }
@@ -161,25 +167,24 @@ function deleteCharacter(id){
  if(window.soaSaveRules.isIntegrityBlocked()){alert("Character deletion is paused until the saved data has been recovered.");return}
  const target=roster.characters.find(x=>x.id===id);
  if(!target)return;
- if(roster.characters.length<=1){alert("Keep at least one character in your roster. Create another hero before deleting this one.");return}
  if(!window.confirm("Permanently delete "+target.name+" and this character's local story, progression, inventory and portrait? This cannot be undone unless you have a backup."))return;
- const previousCharacters=roster.characters.slice(),previousActive=active,previousId=active.id;
+ const previousCharacters=roster.characters.slice(),previousActive=active,previousId=active?.id||null;
  // Save the live character before changing the active slot or roster.
- if(!snapshot(previousId)){alert("Unable to secure the current adventure. Nothing was deleted.");return}
+ if(previousId&&!snapshot(previousId)){alert("Unable to secure the current adventure. Nothing was deleted.");return}
  if(id===previousId){
   const replacement=roster.characters.find(x=>x.id!==id);
-  if(!replacement||!restore(replacement.id))return;
-  active=replacement;
+  if(replacement){if(!restore(replacement.id))return;active=replacement}
+  else {if(!clearCharacterSaveState()){restore(previousId,true);alert("Unable to clear this character's save. Nothing was deleted.");return}active=null}
  }
  roster.characters=roster.characters.filter(x=>x.id!==id);
- roster.active=active.id;
+ roster.active=active?.id||null;
  if(!commitRoster()){
   roster.characters=previousCharacters;roster.active=previousId;active=previousActive;
-  if(id===previousId)restore(id);
+  if(id===previousId&&previousId){write(ROSTER_KEY,roster);restore(previousId)}
   alert("Unable to save the roster change. Your character and save were restored; nothing was deleted.");
   return;
  }
- try{localStorage.removeItem(SLOT_PREFIX+id);localStorage.removeItem("soa-portrait-v1-"+id)}catch{}
+ removeProfileArtifacts(id);
  if(id===previousId){
   try{sessionStorage.setItem(ENTER_KEY,"1")}catch{}
   location.reload();
@@ -202,8 +207,8 @@ function create(profile,feedback){
   p={...profile,factionPath:profile.race==="Skyborne"?skybornePath(profile.faction):null,id,origin:"custom",startLevel:1,startingZone:startingZone(profile),startingEquipment:[...(BASIC_GEAR[profile.className]||[])],specialization:"Unchosen",professions:Object.fromEntries(profile.professionNames.map(n=>[n,{skill:1,events:0}])),secondary:Object.fromEntries(SECONDARY.map(n=>[n,{skill:1,events:0}])),professionEvents:[],professionLog:[]};
   delete p.professionNames;
  }
- const previous=active.id;
- if(!snapshot(previous)){notify("Unable to back up your current adventure. Character creation has been stopped to protect your save.");return}
+ const previous=active?.id||null;
+ if(previous&&!snapshot(previous)){notify("Unable to back up your current adventure. Character creation has been stopped to protect your save.");return}
  try{
   if(!write("soa-save-v1",baseState(p))||!write("soa-campaign-v1",newCampaign(p)))throw Error("Insufficient storage for new character data");
   if(isMnm){
@@ -226,9 +231,9 @@ function create(profile,feedback){
  }catch(err){
   roster.characters=roster.characters.filter(x=>x.id!==id);
   roster.active=previous;
-  active=roster.characters.find(x=>x.id===previous)||active;
-  try{localStorage.removeItem(SLOT_PREFIX+id);localStorage.removeItem("soa-portrait-v1-"+id)}catch(e){}
-  const restored=restore(previous,true),rosterRestored=commitRoster();
+  active=roster.characters.find(x=>x.id===previous)||null;
+  removeProfileArtifacts(id);
+  const restored=previous?restore(previous,true):clearCharacterSaveState(),rosterRestored=commitRoster();
   notify(restored&&rosterRestored?"Creation was canceled: "+err.message+". Your previous character and adventure were restored.":"Creation failed: "+err.message+". Recovery could not be verified; keep this browser data intact and use Restore All Character Saves if needed.");
   return;
  }
@@ -240,6 +245,7 @@ function selectOptions(select,values){select.replaceChildren();for(const item of
 // The current live working save is snapshotted before the archive is generated.
 function exportRosterBackup(){
  if(window.soaSaveRules.isIntegrityBlocked()){alert("Backup export is paused because saved data could not be read. Restore a known good backup first.");return false}
+ if(!active||!roster.characters.length){alert("Create an M&M character before downloading a save archive.");return false}
  if(!snapshot(active.id)){alert("Couldn't safely read your current save for export. No data was changed.");return false}
  const slots={};
  for(const p of roster.characters){
@@ -260,8 +266,9 @@ function exportRosterBackup(){
 function restoreRosterBackup(archive){
  let checked;
  try{checked=window.soaSaveRules.validateRosterBackup(archive)}catch(e){alert("Cannot restore backup: "+e.message);return false}
+ if(checked.roster.characters.some(person=>person.system!=="mnm")){alert("Only M&M character archives can be restored here.");return false}
  if(!confirm("Replace all characters and their local saves with this backup? This also replaces their portraits."))return false;
- if(!rosterLoadBlocked&&!window.soaSaveRules.isIntegrityBlocked()&&!snapshot(active.id)){alert("Restore stopped because the current save could not be backed up. No data was changed.");return false}
+ if(active?.id&&!rosterLoadBlocked&&!window.soaSaveRules.isIntegrityBlocked()&&!snapshot(active.id)){alert("Restore stopped because the current save could not be backed up. No data was changed.");return false}
  const previous=new Map(),affected=new Set([...SAVES,ROSTER_KEY]);let snapshotComplete=false,mutationStarted=false;
  try{
   for(let i=0;i<localStorage.length;i++){
@@ -306,18 +313,17 @@ function drawMenu(){
  const list=make("div",undefined,"soa-character-list");
  for(const p of roster.characters){
   const item=make("div",undefined,"soa-character-item");
-  const level=p.system==="mnm"?characterLevel(p):(p.id===active.id?(window.soaProgression?.level?.()||p.startLevel||10):(()=>{const slot=read(SLOT_PREFIX+p.id);try{return Number(JSON.parse(slot?.["soa-progression-v1"]||"null")?.actors?.hero?.level)||p.startLevel||10}catch{return p.startLevel||10}})());
-  const startLabel=p.system==="mnm"?" · "+mnmStartingZone(p):"";
-  const desc=p.system==="mnm"?"M&M · "+p.race+" "+p.className+startLabel+" · Level "+level:"Legacy · "+factionDisplay(p)+" · "+p.race+" "+p.className+" · Level "+level;
+  const level=characterLevel(p),startLabel=" · "+mnmStartingZone(p);
+  const desc="M&M · "+p.race+" "+p.className+startLabel+" · Level "+level;
   const description=make("div");description.append(make("strong",p.name),make("span",desc));
-  const button=make("button",p.id===active.id?"Playing":"Switch & Play");button.type="button";button.onclick=()=>enter(p.id);
+  const button=make("button",p.id===active?.id?"Playing":"Switch & Play");button.type="button";button.onclick=()=>enter(p.id);
   const actions=make("div",undefined,"soa-character-actions");actions.append(button);
   const remove=make("button","Delete");remove.type="button";remove.className="soa-delete-character";remove.setAttribute("aria-label","Delete "+p.name);remove.onclick=()=>deleteCharacter(p.id);actions.append(remove);
   item.append(description,actions);list.append(item);
  }
  shell.append(list);
  const savedCount=roster.characters.length;
- const saveNote=make("p",savedCount+" saved "+(savedCount===1?"character":"characters")+" in this browser. The open form is a draft until you tap Save Character & Play. Character data stays on this device; use Download All Character Saves to move it to another device.","soa-menu-save-note");
+ const saveNote=make("p",savedCount?savedCount+" saved "+(savedCount===1?"M&M character":"M&M characters")+" in this browser. The open form is a draft until you tap Save Character & Play. Character data stays on this device.":"No M&M characters are saved in this browser. Create your first adventurer below.","soa-menu-save-note");
  saveNote.setAttribute("role","status");shell.append(saveNote);
  const createToggle=make("button","＋ Create M&M Character");createToggle.type="button";createToggle.className="soa-roster-backup";createToggle.setAttribute("aria-expanded","true");createToggle.setAttribute("aria-controls","soa-character-creation");shell.append(createToggle);
  const expand=make("section");expand.id="soa-character-creation";expand.className="soa-create-new";expand.setAttribute("aria-label","Create a new M&M character");
@@ -376,19 +382,21 @@ function drawMenu(){
  };
  expand.append(form);shell.append(expand);
  createToggle.onclick=()=>{const opening=expand.hidden;expand.hidden=!opening;createToggle.setAttribute("aria-expanded",String(opening));createToggle.textContent=opening?"Close Character Creation":"＋ Create M&M Character";if(opening){name.focus({preventScroll:true});expand.scrollIntoView({behavior:"smooth",block:"nearest"})}};
- const backup=make("button","Download All Character Saves");backup.type="button";backup.className="soa-roster-backup";backup.onclick=exportRosterBackup;shell.append(backup);
+ const backup=make("button","Download All Character Saves");backup.type="button";backup.className="soa-roster-backup";backup.disabled=!savedCount;backup.onclick=exportRosterBackup;shell.append(backup);
  const restore=make("button","Restore All Character Saves");restore.type="button";restore.className="soa-roster-backup";restore.onclick=()=>get("soa-roster-restore-file").click();shell.append(restore);
  const restoreInput=make("input");restoreInput.type="file";restoreInput.id="soa-roster-restore-file";restoreInput.accept="application/json,.json";restoreInput.hidden=true;restoreInput.onchange=importRosterBackupFile;shell.append(restoreInput);
- shell.append(make("p","Existing legacy characters and their saves remain in this roster. Back up or restore the complete local character archive.","soa-menu-help"));
- const close=make("button","Return to Game");close.className="soa-menu-back";close.onclick=()=>{overlay.remove();document.documentElement.classList.remove("soa-character-menu-open");try{sessionStorage.setItem(ENTER_KEY,"1")}catch(e){}};
- shell.append(close);overlay.append(shell);document.body.append(overlay);document.documentElement.classList.add("soa-character-menu-open");window.soaPortraits?.refreshMenu?.();
+ shell.append(make("p","M&M characters and story progress are saved on this device. Download an archive to keep a backup.","soa-menu-help"));
+ if(active){const close=make("button","Return to Game");close.className="soa-menu-back";close.onclick=()=>{overlay.remove();document.documentElement.classList.remove("soa-character-menu-open");try{sessionStorage.setItem(ENTER_KEY,"1")}catch(e){}};shell.append(close)}
+ overlay.append(shell);document.body.append(overlay);document.documentElement.classList.add("soa-character-menu-open");window.soaPortraits?.refreshMenu?.();
 }
 function profilePanel(){
  const head=document.querySelector("header");if(!head)return;
- const title=get("soa-player-name"),tag=get("soa-player-class");const isMnm=active.system==="mnm";document.body.classList.toggle("soa-ruleset-mnm",isMnm);const kicker=get("soa-brand-kicker"),brand=get("soa-brand-name"),tagline=get("soa-brand-tagline");if(kicker)kicker.textContent=isMnm?"M&M: RPG · CHARACTER RECORD":"M&M: RPG";if(brand)brand.textContent="M&M: RPG";if(tagline)tagline.textContent=isMnm?"AÊTHORIL · QUESTS · SEVEN STATS":"Your Story · Your Choices · Your Legacy";if(title)title.textContent=active.name;if(tag)tag.textContent=isMnm?"M&M · "+active.race+" "+active.className:active.id==="snacky"?"SI:7 · Combat Swords":"LEGACY · "+factionDisplay(active)+" · "+active.race+" "+active.className;
- if(typeof render==="function")render();
- window.soaEquipment?.renderStatus?.();
+ const title=get("soa-player-name"),tag=get("soa-player-class"),isMnm=!active||active.system==="mnm";document.body.classList.toggle("soa-ruleset-mnm",isMnm);const kicker=get("soa-brand-kicker"),brand=get("soa-brand-name"),tagline=get("soa-brand-tagline");if(kicker)kicker.textContent="M&M: RPG · CHARACTER SELECT";if(brand)brand.textContent="M&M: RPG";if(tagline)tagline.textContent="AÊTHORIL · QUESTS · SEVEN STATS";if(title)title.textContent=active?.name||"Create Your Adventurer";if(tag)tag.textContent=active?"M&M · "+active.race+" "+active.className:"M&M · Create a character to begin";
+ if(active&&typeof render==="function")render();
+ if(active)window.soaEquipment?.renderStatus?.();
+ if(!active)document.querySelectorAll("main > section").forEach(section=>section.hidden=true);
  const menu=make("button","☰ Characters");menu.id="soa-characters-button";menu.type="button";menu.onclick=drawMenu;head.append(menu);
+ if(!active)return;
  const pane=make("section");pane.className="panel soa-profession-panel";pane.id="soa-profession-panel";
  head.after(pane);drawProfessions();window.soaPortraits?.refresh?.();
 }
@@ -397,6 +405,7 @@ function profilePanel(){
 // must not decide which section players encounter first.
 function organizeGameSections(){
  const main=document.querySelector("main");if(!main)return;
+ if(!active)return;
  if(active.system==="mnm"){
   const status=get("soa-character-status"),profession=get("soa-profession-panel");
   let screen=get("soa-character-screen");
@@ -473,6 +482,7 @@ function formatProfessionLog(entry){
  return match[1]+" +1 profession point · Rank "+journey.rank+"/60 · "+journey.pointsInRank+"/5 training points";
 }
 function drawProfessions(){
+ if(!active)return;
  const root=get("soa-profession-panel");if(!root)return;get("soa-character-status")?.querySelectorAll(".soa-ability-sheet").forEach(sheet=>sheet.remove());root.replaceChildren();
  root.append(make("div",active.system==="mnm"?"M&M CHARACTER RECORD":"CHARACTER RECORD","soa-roster-kicker"),make("h2",active.name+" · "+active.race+" "+active.className));
  if(active.system==="mnm"){
@@ -591,13 +601,13 @@ function retrainPrimaryProfession(dropName,newName){
  drawProfessions();return {message:"Unlearned "+dropName+" and trained "+newName+" at skill 1. Previous profession progress is lost."};
 }
 init();
-window.soaCharacters={retrainPrimaryProfession,updateCraftSkill,profile:selectedProfile,startingEquipment:()=>[...(active.startingEquipment||[])],isNewCharacter:()=>active.origin==="custom",initialLocalState:baseState,applyProfession,showMenu:drawMenu,refreshProfessions:drawProfessions,organizeSections:organizeGameSections,exportRosterBackup,getSocialSkills:socialSkills};
-window.addEventListener("pagehide",()=>snapshot(active.id));
+window.soaCharacters={retrainPrimaryProfession,updateCraftSkill,profile:selectedProfile,startingEquipment:()=>[...(active?.startingEquipment||[])],isNewCharacter:()=>active?.origin==="custom",initialLocalState:baseState,applyProfession,showMenu:drawMenu,refreshProfessions:drawProfessions,organizeSections:organizeGameSections,exportRosterBackup,getSocialSkills:socialSkills};
+window.addEventListener("pagehide",()=>{if(active?.id)snapshot(active.id)});
 document.addEventListener("DOMContentLoaded",()=>{
  profilePanel();
- try{if(rosterLoadBlocked||window.soaSaveRules.isIntegrityBlocked()||sessionStorage.getItem(ENTER_KEY)!=="1")drawMenu()}catch(e){drawMenu()}
+ try{if(!active||rosterLoadBlocked||window.soaSaveRules.isIntegrityBlocked()||sessionStorage.getItem(ENTER_KEY)!=="1")drawMenu()}catch(e){drawMenu()}
  // New-character adventures need their own future companions. Snacky's fixed party should not be shown as theirs.
- if(active.origin==="custom"){const pane=get("companion-panel");if(pane){pane.hidden=true;pane.dataset.soaUnavailable="true"}const rep=document.createElement("section");rep.className="panel soa-standalone-reputation";rep.id="soa-standalone-reputation";rep.append(document.createElement("h2"));rep.firstChild.textContent="Faction standing";get("soa-profession-panel")?.after(rep);window.soaReputation?.renderInto?.(rep);const journal=get("journal");if(journal?.closest){const legacy=journal.closest("section.panel");if(legacy)legacy.hidden=true;legacy.dataset.soaUnavailable="true"}}
+ if(active?.origin==="custom"){const pane=get("companion-panel");if(pane){pane.hidden=true;pane.dataset.soaUnavailable="true"}const rep=document.createElement("section");rep.className="panel soa-standalone-reputation";rep.id="soa-standalone-reputation";rep.append(document.createElement("h2"));rep.firstChild.textContent="Faction standing";get("soa-profession-panel")?.after(rep);window.soaReputation?.renderInto?.(rep);const journal=get("journal");if(journal?.closest){const legacy=journal.closest("section.panel");if(legacy)legacy.hidden=true;legacy.dataset.soaUnavailable="true"}}
  organizeGameSections();
  try{const createdName=sessionStorage.getItem(CREATED_NOTICE_KEY),screen=get("soa-character-screen");if(createdName&&screen){sessionStorage.removeItem(CREATED_NOTICE_KEY);const notice=make("p",createdName+" saved to this browser. Your character and adventure are ready.","soa-character-save-confirmation");notice.setAttribute("role","status");notice.setAttribute("aria-live","polite");screen.prepend(notice)}}catch(e){}
 });
