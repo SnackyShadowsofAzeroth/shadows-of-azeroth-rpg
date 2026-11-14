@@ -15,7 +15,9 @@ Cloudflare Pages iPhone offline-first game with an OPTIONAL Gemini 3.5 Flash-Lit
 - `public/campaign.js`: living story state and auto-turn progression, separate persistent localStorage
 - `functions/api/campaign.js`: server-side Gemini structured output, validates JSON shape, holds encrypted Gemini key
 - `functions/api/story.js`: optional atmospheric narration endpoint
-- `worker.mjs` and `wrangler.jsonc`: Workers Builds preview adapter/config; it serves the same `public/` assets and routes the same two API handlers. Production Pages deployment remains configured separately below.
+- `public/mnm-adventure.js` and `public/mnm-ai-chronicle.js`: per-character M&M adventure, travel, offline chapter, and optional AI-generated Chronicle.
+- `functions/api/mnm-chronicle.js`: validates M&M Chronicle requests and Gemini-generated scenes; no Gemini key is sent to the browser.
+- `worker.mjs` and `wrangler.jsonc`: Workers Builds preview adapter/config; it serves the same `public/` assets and routes all three API handlers. Production Pages deployment remains configured separately below.
 - `public/sw.js`: offline shell cache
 
 Cloudflare Pages settings: branch `main`, framework none, build command blank, output `public`. Pages Functions deploy from the top-level `functions` directory.

@@ -1,5 +1,6 @@
 import * as story from "./functions/api/story.js";
 import * as campaign from "./functions/api/campaign.js";
+import * as mnmChronicle from "./functions/api/mnm-chronicle.js";
 
 const json = (body, status = 405) => new Response(JSON.stringify(body), {
   status,
@@ -13,7 +14,7 @@ const json = (body, status = 405) => new Response(JSON.stringify(body), {
 
 async function routeApi(path, request, env, ctx) {
   const route = path.replace(/\/$/, "");
-  const handlers = route === "/api/story" ? story : route === "/api/campaign" ? campaign : null;
+  const handlers = route === "/api/story" ? story : route === "/api/campaign" ? campaign : route === "/api/mnm-chronicle" ? mnmChronicle : null;
   if (!handlers) return json({ error: "Not found" }, 404);
 
   const handler = request.method === "GET" ? handlers.onRequestGet
@@ -32,3 +33,4 @@ export default {
     return env.ASSETS.fetch(request);
   },
 };
+

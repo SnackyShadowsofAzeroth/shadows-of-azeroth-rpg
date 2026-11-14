@@ -6,8 +6,8 @@ const path = require("node:path");
 const test = require("node:test");
 const vm = require("node:vm");
 
-const context = { window: {}, document: { addEventListener() {} } };
-for (const file of ["mnm-rules.js", "mnm-adventure.js"]) {
+const context = { window: { addEventListener() {} }, document: { readyState: "interactive", addEventListener() {} } };
+for (const file of ["mnm-rules.js", "mnm-ai-chronicle.js", "mnm-adventure.js"]) {
   const fullPath = path.join(__dirname, "..", "public", file);
   vm.runInNewContext(fs.readFileSync(fullPath, "utf8"), context, { filename: fullPath });
 }
@@ -38,6 +38,8 @@ test("new M&M adventure saves begin in each race's assigned starting city", () =
   assert.equal(humanSave.stage, "briefing");
   assert.equal(humanSave.origin, "night-harbor");
   assert.equal(humanSave.currentLocation, "night-harbor");
+  assert.equal(humanSave.aiCampaign.status, "idle");
+  assert.equal(humanSave.aiCampaign.locationId, "night-harbor");
   assert.equal(adventure.validSave(humanSave, human), true);
   assert.match(humanSave.journal[0], /Night Harbor/);
 
@@ -65,6 +67,21 @@ test("race starting cities cannot be changed through the old origin picker", () 
   );
   const save = adventure.createSave(gnome);
   assert.throws(() => adventure.transition(save, gnome, { type: "origin", region: "penshaw" }), /not available in the current chapter/);
+});
+
+test("M&M adventure startup organizes the character screen before mounting it", () => {
+  const calls = [];
+  let load;
+  const context = {
+    window: { soaCharacters: { organizeSections() { calls.push("organize"); }, profile() { calls.push("profile"); return null; } }, addEventListener(name, callback) { if (name === "load") load = callback; } },
+    document: { readyState: "interactive" }
+  };
+  const fullPath = path.join(__dirname, "..", "public", "mnm-adventure.js");
+  vm.runInNewContext(fs.readFileSync(fullPath, "utf8"), context, { filename: fullPath });
+  assert.equal(typeof load, "function");
+  assert.deepEqual(calls, []);
+  load();
+  assert.deepEqual(calls, ["organize", "profile"]);
 });
 
 test("unstarted saves migrate to the character's assigned starting city", () => {
@@ -171,4 +188,12 @@ test("race class access matches the maintained M&M lore matrix", () => {
     );
   }
   assert.equal(rules.raceById("varnai").selectable, false);
+  for (const race of rules.selectableRaces()) {
+    assert.equal(rules.isSelectableRace(race.id), true, race.id);
+  }
+  for (const raceId of ["deep_dwarf", "high_elf", "troll", "varnai"]) {
+    assert.equal(rules.isSelectableRace(raceId), false, raceId);
+  }
+  assert.equal(rules.isSelectableRace("unknown"), false);
 });
+

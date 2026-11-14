@@ -29,6 +29,11 @@ test("Workers preview serves assets and reuses both Pages API handlers", async (
   assert.equal(campaign.status, 200);
   assert.match((await campaign.json()).status, /endpoint online/i);
 
+  const mnm = await worker.fetch(new Request("https://game.example/api/mnm-chronicle", { headers: { "X-Story-Access": "test-code" } }), env, {});
+  assert.equal(mnm.status, 200);
+  assert.match((await mnm.json()).status, /chronicle connection ready/i);
+
   const missing = await worker.fetch(new Request("https://game.example/api/unknown"), env, {});
   assert.equal(missing.status, 404);
 });
+
