@@ -53,18 +53,18 @@ The race page's Deep Gnome list omits Bard, but the later official 0.30.6.0 patc
 
 The following effects are original, once-per-chapter features for the current custom story. They are not official M&M racial abilities, stat bonuses, or promises about future M&M rules. Their effects use the chapter's small Resolve/Danger encounter and are intentionally different from one another.
 
-| Race | Feature | What it does in the chapter | Lore connection |
+| Race | Feature | General custom effect | Lore connection |
 |---|---|---|---|
-| Human | Many Roads | After a failed investigation, try one different approach with a fresh roll and no racial modifier. | Human cultures and individuals vary widely; flexibility comes from choosing another way forward. |
-| Gnome | Eureka | Reveal the clue without a roll; the scavenger starts at 2 Resolve. | Inventive epiphanies and relentless truth-seeking. |
-| Deep Gnome | Spiral Cartographer | End the encounter with a safe mapped route and reliable warning; the slate remains unrecovered. | Multiversal, dreamscape, and astral-path exploration; it maps a route rather than opening a portal. |
-| Dwarf | Titan's Craft | Remove 1 Danger, or brace the marker to cancel the next Danger increase. | Craft, stone lore, and steadfastness; it does not assume every dwarf is a smith. |
-| Deep Dwarf | Spirit Lattice | The next failed encounter exchange also removes 1 Resolve, while Danger still rises. | Spirit-binding creations and precise work with corrupted stone. |
+| Human | Many Roads | After a failed effort to learn or discover something, try another approach with a fresh roll and no racial modifier. | Human cultures and individuals vary widely; flexibility comes from choosing another way forward. |
+| Gnome | Eureka | Notice a decisive detail without a roll; the opposition begins less prepared at 2 Resolve. | Inventive epiphanies and relentless truth-seeking. |
+| Deep Gnome | Spiral Cartographer | Map a safe alternate route and leave a reliable warning, even if the opposition remains. | Multiversal, dreamscape, and astral-path exploration; it maps a route rather than opening a portal. |
+| Dwarf | Titan's Craft | Reduce Danger by 1, or reinforce your position to prevent the next Danger increase. | Craft, stone lore, and steadfastness; it does not assume every dwarf is a smith. |
+| Deep Dwarf | Spirit Lattice | On the next failed encounter exchange, reduce an opponent's Resolve by 1 even if Danger rises. | Spirit-binding creations and precise work with corrupted stone. |
 | High Elf | Calafrey Discipline | Prepare a ward that prevents Danger rising on the next failed exchange. | Magical mastery, measured temperament, and Cilindrine doctrine. |
 | Wood Elf | Wyrdpath | Prepare a living flank; the next successful exchange removes 2 Resolve instead of 1, without a roll bonus. | Faelewyn affinity for forests and living paths; it does not create a Wyrdgate. |
-| Deep Elf | Shadow's Veil | After a clue is found, remove 1 Resolve without raising Danger. | Deliberate movement in the dark Deep beneath the Shadow. |
-| Ogre | Storm Coast Fury | Remove 1 Resolve and add 1 Danger with a committed assault. | Created for war, then shaped into a disciplined martial society. |
-| Halfling | Fontborn Memory | At 1 enemy Resolve, end the encounter peacefully and recover the slate through a remembered wayfarer's tale. | Ancient lorekeeping and stories of a world they have witnessed across ages. |
-| Troll | Tempered Survivor | When Danger would force the scavenger to escape, hold at 2 Danger and counter for 1 Resolve. | Resilience, adaptation, and survival craft. |
-| Goblin | Secret-Sense | With a clue, attempt an unmodified Dexterity check (DC 13) to recover the slate; failure adds Danger. | Hidden entrances, secrets, deception, and opportunistic perception. |
+| Deep Elf | Shadow's Veil | After identifying an opening, remove 1 Resolve without raising Danger. | Deliberate movement in the dark Deep beneath the Shadow. |
+| Ogre | Storm Coast Fury | Make a committed assault: remove 1 Resolve and add 1 Danger. | Created for war, then shaped into a disciplined martial society. |
+| Halfling | Fontborn Memory | When the opposition is close to yielding, use a remembered tale to de-escalate and end the encounter peacefully. | Ancient lorekeeping and stories of a world they have witnessed across ages. |
+| Troll | Tempered Survivor | When Danger would force the opposition to withdraw, hold at 2 Danger and counter to remove 1 Resolve. | Resilience, adaptation, and survival craft. |
+| Goblin | Secret-Sense | Attempt an unmodified Dexterity check (DC 13) to exploit a hidden route; failure increases Danger. | Hidden entrances, secrets, deception, and opportunistic perception. |
 

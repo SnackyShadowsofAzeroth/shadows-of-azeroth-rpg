@@ -14,6 +14,13 @@ for (const file of ["mnm-rules.js", "mnm-ai-chronicle.js", "mnm-adventure.js"]) 
 const rules = context.window.soaMnmRules;
 const adventure = context.window.soaMnmAdventure;
 
+test("racial feature copy stays general and avoids chapter-specific props", () => {
+  const featureCopy = Object.values(rules.racialAbilities)
+    .map(feature => `${feature.description} ${feature.effect}`)
+    .join(" ");
+  assert.doesNotMatch(featureCopy, /\b(?:slate|signal|marker|scavenger|Dune Gate|caravan)\b/i);
+});
+
 test("M&M race starts normalize to their assigned city and keep the expected starting stats", () => {
   const human = rules.normalizeCharacter({ id: "human-1", raceId: "human", classId: "fighter" });
   assert.equal(rules.startLocationForRace("human"), "night-harbor");

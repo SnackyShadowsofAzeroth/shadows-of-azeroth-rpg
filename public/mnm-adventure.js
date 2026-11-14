@@ -89,13 +89,13 @@ function migrateStartingLocation(save,profile){
 }
 function useRacialFeature(save){if(save.racialFeatureUsed)throw new Error("This racial feature has already been used this chapter.");save.racialFeatureUsed=true;}
 function raiseDanger(save,profile){
- if(save.titanBraceReady){save.titanBraceReady=false;return " Titan's Craft holds the marker steady; Danger does not rise."}
+ if(save.titanBraceReady){save.titanBraceReady=false;return " Titan's Craft holds your position steady; Danger does not rise."}
  if(save.calafreyWardReady){save.calafreyWardReady=false;return " Calafrey Discipline absorbs the setback; Danger does not rise."}
  save.enemyPressure=Math.min(3,save.enemyPressure+1);
  if(profile?.raceId==="troll"&&!save.racialFeatureUsed&&save.enemyPressure===3){
   save.racialFeatureUsed=true;save.enemyPressure=2;save.enemyResolve=Math.max(0,save.enemyResolve-1);
-  if(save.enemyResolve===0){save.stage="aftermath";save.outcome="victory";return " Tempered Survivor turns the near escape into a counter; the scavenger yields the slate."}
-  return " Tempered Survivor keeps the scavenger from escaping, holding Danger at 2 and removing 1 Resolve."
+  if(save.enemyResolve===0){save.stage="aftermath";save.outcome="victory";return " Tempered Survivor turns a near withdrawal into a counter; the opposition yields."}
+  return " Tempered Survivor holds the opposition at Danger 2 and removes 1 Resolve."
  }
  if(save.enemyPressure>=3){save.stage="aftermath";save.outcome="driven-off";return " Danger reaches 3; the scavenger escapes through a narrow cut."}
  return " Danger rises to "+save.enemyPressure+"."
@@ -144,24 +144,24 @@ function transition(current,profile,action,roll){
   if(profile.raceId==="gnome"&&next.stage==="approach"){
    useRacialFeature(next);next.clue=true;next.enemyResolve=2;next.enemyPressure=0;next.approachUsed="";next.stage="encounter";
    addJournal(next,"Eureka - a patient insight reveals the missing signal trail without a check.");
-   return {state:next,message:"Eureka! A puzzling detail resolves into a clear lead. The scavenger begins at 2 Resolve."};
+   return {state:next,message:"Eureka! A decisive detail comes into focus without a roll. The opposition begins at 2 Resolve."};
   }
   if(profile.raceId==="deep_gnome"&&next.stage==="encounter"){
    useRacialFeature(next);next.stage="aftermath";next.outcome="mapped";
-   addJournal(next,"Spiral Cartographer - mapped a safe alternate route past the scavenger.");
-   return {state:next,message:"The deep gnome maps a safe route through the broken ground. The slate remains lost, but the caravan receives a reliable warning."};
+   addJournal(next,"Spiral Cartographer - mapped a safe alternate route past the opposition.");
+   return {state:next,message:"The deep gnome maps a safe alternate route and leaves a reliable warning, securing a safe outcome even though the opposition remains."};
   }
   if(profile.raceId==="dwarf"&&next.stage==="encounter"){
    useRacialFeature(next);
    if(next.enemyPressure>0)next.enemyPressure--;
    else next.titanBraceReady=true;
-   addJournal(next,next.titanBraceReady?"Titan's Craft - braced the marker against the next setback.":"Titan's Craft - repaired the marker and removed 1 Danger.");
-   return {state:next,message:next.titanBraceReady?"You brace the signal marker; the next Danger increase is canceled.":"You repair the marker under pressure, reducing Danger by 1."};
+   addJournal(next,next.titanBraceReady?"Titan's Craft - reinforced the position against the next setback.":"Titan's Craft - stabilized the situation and removed 1 Danger.");
+   return {state:next,message:next.titanBraceReady?"You reinforce your position; the next Danger increase is canceled.":"You stabilize the situation under pressure, reducing Danger by 1."};
   }
   if(profile.raceId==="deep_dwarf"&&next.stage==="encounter"){
    useRacialFeature(next);next.spiritLatticeReady=true;
-   addJournal(next,"Spirit Lattice - prepared a bound spirit to catch the scavenger's next opening.");
-   return {state:next,message:"A spirit is bound into a precise lattice. The next failed exchange will cost the scavenger 1 Resolve, though Danger will still rise."};
+   addJournal(next,"Spirit Lattice - prepared a bound spirit to catch the opposition's next opening.");
+   return {state:next,message:"A spirit is bound into a precise lattice. The next failed exchange will cost the opposition 1 Resolve, though Danger will still rise."};
   }
   if(profile.raceId==="high_elf"&&next.stage==="encounter"){
    useRacialFeature(next);next.calafreyWardReady=true;
@@ -177,18 +177,18 @@ function transition(current,profile,action,roll){
    useRacialFeature(next);next.enemyResolve=Math.max(0,next.enemyResolve-1);
    if(next.enemyResolve===0){next.stage="aftermath";next.outcome="victory"}
    addJournal(next,"Shadow's Veil - used the known opening to strike unseen and remove 1 Resolve.");
-   return {state:next,message:next.outcome==="victory"?"The known opening lets the deep elf take the signal slate from the shadows.":"The deep elf uses the clue to strike unseen, removing 1 Resolve without increasing Danger."};
+   return {state:next,message:next.outcome==="victory"?"The known opening lets the deep elf secure the objective from the shadows.":"The deep elf uses the discovered opening to strike unseen, removing 1 Resolve without increasing Danger."};
   }
   if(profile.raceId==="ogre"&&next.stage==="encounter"){
    useRacialFeature(next);next.enemyResolve=Math.max(0,next.enemyResolve-1);
-   if(next.enemyResolve===0){next.stage="aftermath";next.outcome="victory";addJournal(next,"Storm Coast Fury - a committed assault broke the scavenger's hold on the signal slate.");return {state:next,message:"The committed assault takes the slate. The scavenger yields before another exchange."}}
+   if(next.enemyResolve===0){next.stage="aftermath";next.outcome="victory";addJournal(next,"Storm Coast Fury - a committed assault broke the opposition's hold on the objective.");return {state:next,message:"The committed assault breaks the opposition's hold on the objective. The threat yields before another exchange."}}
    const danger=raiseDanger(next,profile);addJournal(next,"Storm Coast Fury - removed 1 Resolve and risked 1 Danger.");
    return {state:next,message:"The ogre lands a committed blow, removing 1 Resolve."+danger};
   }
   if(profile.raceId==="halfling"&&next.stage==="encounter"&&next.enemyResolve===1){
    useRacialFeature(next);next.stage="aftermath";next.outcome="parley";
    addJournal(next,"Fontborn Memory - settled the encounter with a remembered wayfarer's tale.");
-   return {state:next,message:"An old road-tale gives both sides a way to stand down. The scavenger returns the slate peacefully."};
+   return {state:next,message:"An old road-tale gives both sides a way to stand down and reach a peaceful resolution."};
   }
   if(profile.raceId==="goblin"&&next.stage==="encounter"&&next.clue){
    useRacialFeature(next);
@@ -196,7 +196,7 @@ function transition(current,profile,action,roll){
    if(result.success){next.stage="aftermath";next.outcome="victory"}
    else raiseDanger(next,profile);
    addJournal(next,"Secret-Sense - hidden-route Dexterity check: d20 "+result.roll+" "+(result.modifier>=0?"+":"")+result.modifier+" = "+result.total+" vs DC 13 - "+(result.success?"success":"failure")+".");
-   const message=result.success?"The goblin spots an unguarded seam, slips through, and recovers the slate.":next.outcome==="driven-off"?"The hidden route closes as the scavenger escapes through another cut.":"The hidden route is watched; Danger rises to "+next.enemyPressure+".";
+   const message=result.success?"The goblin spots an opening and reaches the objective by a hidden route.":next.outcome==="driven-off"?"The hidden route closes as the opposition withdraws through another passage.":"The hidden route is watched; Danger rises to "+next.enemyPressure+".";
    return {state:next,message,roll:result};
   }
   throw new Error("This racial feature is not available at this point in the chapter.");
@@ -210,7 +210,7 @@ function transition(current,profile,action,roll){
    next.enemyResolve=Math.max(0,next.enemyResolve-progress);
    if(next.enemyResolve===0){next.stage="aftermath";next.outcome="victory"}
   }else{
-   if(next.spiritLatticeReady){next.spiritLatticeReady=false;next.enemyResolve=Math.max(0,next.enemyResolve-1);featureMessage=" Spirit Lattice catches the scavenger in a bound spirit, removing 1 Resolve."}
+   if(next.spiritLatticeReady){next.spiritLatticeReady=false;next.enemyResolve=Math.max(0,next.enemyResolve-1);featureMessage=" Spirit Lattice catches the opposition in a bound spirit, removing 1 Resolve."}
    if(next.enemyResolve===0){next.stage="aftermath";next.outcome="victory"}
    else featureMessage+=raiseDanger(next,profile);
   }
@@ -331,7 +331,7 @@ function boot(){
   panel.append(el("div","QUEST · INVESTIGATE","soa-mnm-kicker"),el("h2","Find the missing signal"));
   panel.append(el("p","The trail leaves the caravan road at a half-buried marker. Choose how "+profile.name+" looks for the missing route slate. A failed check still advances the story, but leaves the scavenger harder to corner."));
   panel.append(actionList(APPROACHES,"approach"));
-  if(profile.raceId==="gnome"&&!save.racialFeatureUsed)panel.append(button("Eureka - reveal the clue","Use a once-per-chapter insight instead of rolling. The scavenger begins at 2 Resolve.",()=>perform({type:"racial",id:"gnome"},false),"med"));
+  if(profile.raceId==="gnome"&&!save.racialFeatureUsed)panel.append(button("Eureka - reveal the clue","Use a once-per-chapter insight instead of rolling. The opposition begins less prepared at 2 Resolve.",()=>perform({type:"racial",id:"gnome"},false),"med"));
  }
  function renderEncounter(panel){
   panel.append(el("div","ENCOUNTER · ORIGINAL STORY RULES","soa-mnm-kicker"),el("h2","A scavenger blocks the marker"));
@@ -360,15 +360,15 @@ function boot(){
     for(const item of alternatives)options.append(button(item.label,item.detail+" · "+STAT_NAMES[item.stat]+" · DC "+item.dc,()=>perform({type:"humanRetry",id:item.id},true),"low"));
     panel.append(options);
    }
-   if(profile.raceId==="deep_gnome")use("Spiral Cartographer - map a safe route","Complete with a reliable warning instead of recovering the slate.","deep_gnome");
-   if(profile.raceId==="dwarf")use("Titan's Craft - brace or repair","Remove 1 Danger, or brace the marker to cancel the next Danger increase.","dwarf");
-   if(profile.raceId==="deep_dwarf")use("Spirit Lattice - prepare a bound spirit","The next failed exchange also removes 1 scavenger Resolve; Danger still rises.","deep_dwarf");
+   if(profile.raceId==="deep_gnome")use("Spiral Cartographer - map a safe route","Secure a safe outcome and leave a reliable warning, even if the opposition remains.","deep_gnome");
+   if(profile.raceId==="dwarf")use("Titan's Craft - brace or repair","Remove 1 Danger, or reinforce your position to cancel the next Danger increase.","dwarf");
+   if(profile.raceId==="deep_dwarf")use("Spirit Lattice - prepare a bound spirit","Your next failed exchange also removes 1 opponent Resolve; Danger still rises.","deep_dwarf");
    if(profile.raceId==="high_elf")use("Calafrey Discipline - prepare a ward","The next failed exchange will not increase Danger.","high_elf");
    if(profile.raceId==="wood_elf")use("Wyrdpath - take a living flank","The next successful exchange removes 2 Resolve instead of 1; no roll bonus.","wood_elf");
    if(profile.raceId==="deep_elf"&&save.clue&&save.enemyResolve>0)use("Shadow's Veil - strike unseen","Use the known opening to remove 1 Resolve without increasing Danger.","deep_elf");
    if(profile.raceId==="ogre")use("Storm Coast Fury - committed assault","Remove 1 Resolve and add 1 Danger.","ogre");
-   if(profile.raceId==="halfling"&&save.enemyResolve===1)use("Fontborn Memory - parley","End the encounter peacefully and recover the slate through an old wayfarer's tale.","halfling");
-   if(profile.raceId==="goblin"&&save.clue)use("Secret-Sense - slip through the hidden route","Unmodified Dexterity check, DC 13. Success takes the slate; failure adds Danger.","goblin",true);
+   if(profile.raceId==="halfling"&&save.enemyResolve===1)use("Fontborn Memory - parley","Use a remembered tale to de-escalate and reach a peaceful resolution.","halfling");
+   if(profile.raceId==="goblin"&&save.clue)use("Secret-Sense - slip through a hidden route","Unmodified Dexterity check, DC 13. Success secures the objective by a hidden route; failure adds Danger.","goblin",true);
   }
   const classStat=bestClassStat(profile),classBonus=Number(profile.classBonuses?.[classStat]||0);
   const signature={id:"class",label:"Use "+profile.className+" training",stat:classStat,dc:14,detail:"Make the encounter fit your strongest class stat ("+STAT_NAMES[classStat]+", class modifier "+(classBonus>=0?"+":"")+classBonus+")."};
