@@ -327,6 +327,35 @@ function resolveRpgAction(profile,action,{random=Math.random,now=Date.now,return
  }
  return result;
 }
+function useRacialCombatTactic(profile,tacticId){
+ const tactics={
+  brace:{line:"You brace behind Titan's Craft; the next incoming strike is reduced."},
+  weaken:{line:"A bound spirit weakens the foe's next strike."},
+  ward:{line:"A measured ward weakens the foe's next strike."},
+  flank:{line:"You follow the living signs and deal 4 damage from the flank."},
+  ambush:{line:"You strike through a known opening for 5 damage."},
+  assault:{line:"You commit to a forceful opening for 7 damage."},
+  recover:{line:"You recover 8 Health and 2 Focus."},
+  parley:{line:"A remembered road-tale settles the encounter peacefully."}
+ };
+ const tactic=tactics[tacticId];if(!tactic)return {ok:false,error:"That racial combat feature is unavailable."};
+ return mutate(profile,save=>{
+  const rpg=save.rpg,foe=rpg.encounter;if(!foe)return {error:"A foe must be present to use this feature."};
+  if(tacticId==="brace")rpg.guarding=true;
+  else if(tacticId==="weaken"||tacticId==="ward")foe.weakened=true;
+  else if(tacticId==="flank")foe.hp=Math.max(1,foe.hp-4);
+  else if(tacticId==="ambush")foe.hp=Math.max(1,foe.hp-5);
+  else if(tacticId==="assault")foe.hp=Math.max(1,foe.hp-7);
+  else if(tacticId==="recover"){rpg.hp=Math.min(rpg.maxHp,rpg.hp+8);rpg.focus=Math.min(rpg.maxFocus,rpg.focus+2);}
+  else if(tacticId==="parley"){
+   if(foe.hp>Math.ceil(foe.maxHp*.25))return {error:"The foe must be near defeat before a peaceful parley can succeed."};
+   const enemy=foe.name;rpg.encounter=null;rpg.guarding=false;save.combat.autoAttack=false;
+   logRpg(rpg,tactic.line+" "+enemy+" withdraws without a reward.");return {parley:true,enemy,line:tactic.line};
+  }
+  logRpg(rpg,tactic.line);
+  return {enemyHp:foe.hp,health:rpg.hp,focus:rpg.focus,line:tactic.line};
+ });
+}
 function claimStoryReward(profile,storyId,baseXp=90){
  return mutate(profile,save=>{
   const id=String(storyId||"");if(!/^[a-z0-9:_-]{1,120}$/i.test(id))return {error:"Story reward identifier is invalid."};
@@ -583,6 +612,6 @@ function render(view,profile,onChange,context={}){
  if(view==="inventory")return renderInventory(profile,onChange,context);
  return null;
 }
-window.soaMnmSystems=Object.freeze({key:KEY,maxLevel:MAX_LEVEL,actionSlots:ACTION_SLOTS,createSave,validSave,read,progressFor,render,formatCurrency,formatWallet,currencyExchange:CURRENCY_EXCHANGE,groupExperienceEligibility,corpseDurationMs,weightSummary,recordDeath,recoverCorpse,recordRestInterval,experienceMultiplier,scribeAbility,memorizeAbility,startEncounter,resolveRpgAction,claimStoryReward,restAtSafeHaven,useRpgItem,equipRpgItem,discardRpgItem,purchaseRpgItem,sellRpgItem,setAutoAttack,stopAutoAttackRunner});
+window.soaMnmSystems=Object.freeze({key:KEY,maxLevel:MAX_LEVEL,actionSlots:ACTION_SLOTS,createSave,validSave,read,progressFor,render,formatCurrency,formatWallet,currencyExchange:CURRENCY_EXCHANGE,groupExperienceEligibility,corpseDurationMs,weightSummary,recordDeath,recoverCorpse,recordRestInterval,experienceMultiplier,scribeAbility,memorizeAbility,startEncounter,resolveRpgAction,useRacialCombatTactic,claimStoryReward,restAtSafeHaven,useRpgItem,equipRpgItem,discardRpgItem,purchaseRpgItem,sellRpgItem,setAutoAttack,stopAutoAttackRunner});
 })();
 
