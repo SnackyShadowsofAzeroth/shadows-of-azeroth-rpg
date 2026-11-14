@@ -6,7 +6,7 @@ const path = require("node:path");
 const test = require("node:test");
 const vm = require("node:vm");
 
-const context = { window: {}, document: { addEventListener() {} } };
+const context = { window: { addEventListener() {} }, document: { readyState: "interactive", addEventListener() {} } };
 for (const file of ["mnm-rules.js", "mnm-ai-chronicle.js", "mnm-adventure.js"]) {
   const fullPath = path.join(__dirname, "..", "public", file);
   vm.runInNewContext(fs.readFileSync(fullPath, "utf8"), context, { filename: fullPath });
@@ -71,16 +71,16 @@ test("race starting cities cannot be changed through the old origin picker", () 
 
 test("M&M adventure startup organizes the character screen before mounting it", () => {
   const calls = [];
-  let ready;
+  let load;
   const context = {
-    window: { soaCharacters: { organizeSections() { calls.push("organize"); }, profile() { calls.push("profile"); return null; } } },
-    document: { readyState: "interactive", addEventListener(name, callback) { if (name === "DOMContentLoaded") ready = callback; } }
+    window: { soaCharacters: { organizeSections() { calls.push("organize"); }, profile() { calls.push("profile"); return null; } }, addEventListener(name, callback) { if (name === "load") load = callback; } },
+    document: { readyState: "interactive" }
   };
   const fullPath = path.join(__dirname, "..", "public", "mnm-adventure.js");
   vm.runInNewContext(fs.readFileSync(fullPath, "utf8"), context, { filename: fullPath });
-  assert.equal(typeof ready, "function");
+  assert.equal(typeof load, "function");
   assert.deepEqual(calls, []);
-  ready();
+  load();
   assert.deepEqual(calls, ["organize", "profile"]);
 });
 
