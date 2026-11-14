@@ -41,7 +41,7 @@ function startingRegionForProfile(profile){
 }
 function createSave(profile){
  const origin=startingRegionForProfile(profile),region=REGIONS.find(item=>item.id===origin);
- return {version:VERSION,characterId:String(profile?.id||""),stage:"briefing",origin,currentLocation:origin,clue:false,approachUsed:"",enemyResolve:3,enemyPressure:0,outcome:"",completed:false,racialFeatureUsed:false,trollAdaptationReady:false,titanBraceReady:false,calafreyWardReady:false,spiritLatticeReady:false,wyrdpathReady:false,journal:["You begin in "+region.name+(region.zone?" in "+region.zone:"")+(origin==="night-harbor"?", the world's trade hub.":".")],updatedAt:new Date().toISOString()};
+ return {version:VERSION,characterId:String(profile?.id||""),stage:"briefing",origin,currentLocation:origin,clue:false,approachUsed:"",enemyResolve:3,enemyPressure:0,outcome:"",completed:false,racialFeatureUsed:false,trollAdaptationReady:false,titanBraceReady:false,calafreyWardReady:false,spiritLatticeReady:false,wyrdpathReady:false,journal:["You begin in "+region.name+(region.zone?" in "+region.zone:"")+(origin==="night-harbor"?", the world's trade hub.":".")],aiCampaign:window.soaMnmAiChronicle?.createCampaign?.(profile)||null,updatedAt:new Date().toISOString()};
 }
 function statLine(profile){
  const scores=profile?.stats||{};
@@ -49,6 +49,8 @@ function statLine(profile){
 }
 function validSave(value,profile){
  if(!value||typeof value!=="object"||Array.isArray(value)||value.version!==VERSION||value.characterId!==String(profile?.id||""))return false;
+ if(value.aiCampaign===undefined)value.aiCampaign=window.soaMnmAiChronicle?.createCampaign?.(profile)||null;
+ if(value.aiCampaign!==null&&window.soaMnmAiChronicle&&!window.soaMnmAiChronicle.validCampaign(value.aiCampaign,profile))return false;
  if(!["origin","briefing","approach","encounter","aftermath","complete"].includes(value.stage))return false;
  if(value.origin&&!REGIONS.some(region=>region.id===value.origin))return false;
  if(value.currentLocation===undefined)value.currentLocation=value.origin||startingRegionForProfile(profile);
@@ -244,9 +246,10 @@ function boot(){
    if(raw===null){save=createSave(profile);localStorage.setItem(KEY,JSON.stringify(save));}
    else{
     const parsed=JSON.parse(raw);
+    const needsAiMigration=parsed?.aiCampaign===undefined;
     if(!validSave(parsed,profile))throw new Error("The M&M adventure save does not match the active character or current save format.");
     save=parsed;
-    if(migrateStartingLocation(save,profile))localStorage.setItem(KEY,JSON.stringify(save));
+    if(migrateStartingLocation(save,profile)||needsAiMigration)localStorage.setItem(KEY,JSON.stringify(save));
    }
   }
  }catch(error){
@@ -291,6 +294,13 @@ function boot(){
   }catch(error){save=before;statusText=error.message}
   render();
   app.querySelector("h2")?.focus();
+ }
+ function persistAiCampaign(){
+  if(blocked||!save)return false;
+  if(window.soaSaveRules?.isIntegrityBlocked?.()){blocked=true;statusText="Saved data is paused until the character archive is recovered.";render();return false;}
+  const previousUpdatedAt=save.updatedAt;
+  try{save.updatedAt=new Date().toISOString();localStorage.setItem(KEY,JSON.stringify(save));statusText="AI Chronicle saved to this character's story.";render();return true}
+  catch{save.updatedAt=previousUpdatedAt;statusText="AI Chronicle could not be saved. Your previous saved story is intact.";return false}
  }
  function renderOrigin(panel){
   const start=REGIONS.find(region=>region.id===startingRegionForProfile(profile));
@@ -402,7 +412,7 @@ function boot(){
   const racial=window.soaMnmRules.racialAbilities?.[profile.raceId];if(racial)hero.append(el("p","CUSTOM RACIAL FEATURE · "+racial.name+" - "+racial.description+" Effect: "+racial.effect,"soa-mnm-feature"));
   app.append(hero);
   const tabs=el("div",undefined,"soa-mnm-tabs");tabs.setAttribute("role","tablist");tabs.setAttribute("aria-label","M&M character views");
-  for(const [id,label] of [["adventure","Adventure"],["world","World"],["character","Character"],["journal","Journey Log"],["combat","Combat"],["progress","Progress"],["inventory","Items"]]){
+  for(const [id,label] of [["adventure","Adventure"],["ai","AI Chronicle"],["world","World"],["character","Character"],["journal","Journey Log"],["combat","Combat"],["progress","Progress"],["inventory","Items"]]){
    const b=el("button",label,"soa-mnm-tab");b.type="button";b.dataset.view=id;b.setAttribute("role","tab");b.setAttribute("aria-selected",String(view===id));b.onclick=()=>setView(id,false);tabs.append(b);
   }
   app.append(tabs);
@@ -415,6 +425,10 @@ function boot(){
    const pane=el("section",undefined,"soa-mnm-adventure-panel");renderJournal(pane);app.append(pane);
   }else if(view==="world"){
    const pane=el("section",undefined,"soa-mnm-adventure-panel");renderWorld(pane);app.append(pane);
+  }else if(view==="ai"){
+   const aiPanel=window.soaMnmAiChronicle?.render?.(profile,save,persistAiCampaign);
+   if(aiPanel)app.append(aiPanel);
+   else{const pane=el("section",undefined,"soa-mnm-adventure-panel");pane.append(el("h2","AI Chronicle unavailable"),el("p","The AI story module did not load. Your offline adventure remains available."));app.append(pane)}
   }else if(view==="combat"||view==="progress"||view==="inventory"){
    const systemPanel=window.soaMnmSystems?.render?.(view,profile,()=>render());
    if(systemPanel)app.append(systemPanel);
@@ -446,3 +460,4 @@ function boot(){
 window.soaMnmAdventure=Object.freeze({key:KEY,humanStartRegion:"night-harbor",createSave,validSave,transition,migrateStartingLocation,migrateHumanStartingCity:migrateStartingLocation,regions:REGIONS.map(x=>({...x})),travelRoutes:TRAVEL_ROUTES.map(x=>({...x})),approaches:APPROACHES.map(x=>({...x})),encounter:ENCOUNTER.map(x=>({...x})),boot});
 document.addEventListener("DOMContentLoaded",boot);
 })();
+

@@ -7,7 +7,7 @@ const test = require("node:test");
 const vm = require("node:vm");
 
 const context = { window: {}, document: { addEventListener() {} } };
-for (const file of ["mnm-rules.js", "mnm-adventure.js"]) {
+for (const file of ["mnm-rules.js", "mnm-ai-chronicle.js", "mnm-adventure.js"]) {
   const fullPath = path.join(__dirname, "..", "public", file);
   vm.runInNewContext(fs.readFileSync(fullPath, "utf8"), context, { filename: fullPath });
 }
@@ -38,6 +38,8 @@ test("new M&M adventure saves begin in each race's assigned starting city", () =
   assert.equal(humanSave.stage, "briefing");
   assert.equal(humanSave.origin, "night-harbor");
   assert.equal(humanSave.currentLocation, "night-harbor");
+  assert.equal(humanSave.aiCampaign.status, "idle");
+  assert.equal(humanSave.aiCampaign.locationId, "night-harbor");
   assert.equal(adventure.validSave(humanSave, human), true);
   assert.match(humanSave.journal[0], /Night Harbor/);
 
@@ -172,3 +174,4 @@ test("race class access matches the maintained M&M lore matrix", () => {
   }
   assert.equal(rules.raceById("varnai").selectable, false);
 });
+
