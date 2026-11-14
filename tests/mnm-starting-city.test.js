@@ -14,55 +14,75 @@ for (const file of ["mnm-rules.js", "mnm-adventure.js"]) {
 const rules = context.window.soaMnmRules;
 const adventure = context.window.soaMnmAdventure;
 
-test("Human characters normalize to Night Harbor and show the expected starting stats", () => {
+test("M&M race starts normalize to their assigned city and keep the expected starting stats", () => {
   const human = rules.normalizeCharacter({ id: "human-1", raceId: "human", classId: "fighter" });
   assert.equal(rules.startLocationForRace("human"), "night-harbor");
   assert.equal(human.startingLocation, "night-harbor");
   assert.deepEqual(JSON.parse(JSON.stringify(human.stats)), {
     str: 14, sta: 14, dex: 10, agi: 11, int: 10, wis: 10, cha: 11
   });
+  assert.equal(rules.startLocationForRace("halfling"), "night-harbor");
+  assert.equal(rules.startLocationForRace("gnome"), "night-harbor");
+  assert.equal(rules.startLocationForRace("dwarf"), "night-harbor");
+  assert.equal(rules.startLocationForRace("deep_gnome"), "underdocks");
+  assert.equal(rules.startLocationForRace("deep_elf"), "underdocks");
+  assert.equal(rules.startLocationForRace("goblin"), "underdocks");
+  assert.equal(rules.startLocationForRace("ogre"), "underdocks");
+  assert.equal(rules.startLocationForRace("wood_elf"), "penshaw");
+  for (const race of ["deep_dwarf", "high_elf", "troll"]) assert.equal(rules.startLocationForRace(race), "night-harbor");
 });
 
-test("new Human adventure saves begin in Night Harbor while other races retain the origin picker", () => {
+test("new M&M adventure saves begin in each race's assigned starting city", () => {
   const human = rules.normalizeCharacter({ id: "human-2", raceId: "human", classId: "fighter" });
   const humanSave = adventure.createSave(human);
   assert.equal(humanSave.stage, "briefing");
   assert.equal(humanSave.origin, "night-harbor");
+  assert.equal(humanSave.currentLocation, "night-harbor");
   assert.equal(adventure.validSave(humanSave, human), true);
   assert.match(humanSave.journal[0], /Night Harbor/);
 
   const gnome = rules.normalizeCharacter({ id: "gnome-1", raceId: "gnome", classId: "fighter" });
   const gnomeSave = adventure.createSave(gnome);
-  assert.equal(gnomeSave.stage, "origin");
-  assert.equal(gnomeSave.origin, "");
+  assert.equal(gnomeSave.stage, "briefing");
+  assert.equal(gnomeSave.origin, "night-harbor");
+  assert.equal(gnomeSave.currentLocation, "night-harbor");
+  const deepElf = rules.normalizeCharacter({ id: "deep-elf-1", raceId: "deep_elf", classId: "wizard" });
+  const deepElfSave = adventure.createSave(deepElf);
+  assert.equal(deepElfSave.origin, "underdocks");
+  assert.equal(deepElfSave.currentLocation, "underdocks");
+  const woodElf = rules.normalizeCharacter({ id: "wood-elf-1", raceId: "wood_elf", classId: "ranger" });
+  const woodElfSave = adventure.createSave(woodElf);
+  assert.equal(woodElfSave.origin, "penshaw");
+  assert.equal(woodElfSave.currentLocation, "penshaw");
 });
 
-test("Human origin actions cannot select a different city", () => {
-  const human = { id: "human-3", raceId: "human" };
-  const legacyOriginSave = adventure.createSave({ id: human.id, raceId: "gnome" });
+test("race starting cities cannot be changed through the old origin picker", () => {
+  const gnome = rules.normalizeCharacter({ id: "gnome-3", raceId: "gnome", classId: "fighter" });
+  const legacyOriginSave = { ...adventure.createSave(gnome), stage: "origin", origin: "" };
   assert.throws(
-    () => adventure.transition(legacyOriginSave, human, { type: "origin", region: "faelindral" }),
-    /Human characters begin in Night Harbor/
+    () => adventure.transition(legacyOriginSave, gnome, { type: "origin", region: "faelindral" }),
+    /This race begins in Night Harbor/
   );
-  const selected = adventure.transition(legacyOriginSave, human, { type: "origin", region: "night-harbor" });
-  assert.equal(selected.state.origin, "night-harbor");
-  assert.equal(selected.state.stage, "briefing");
+  const save = adventure.createSave(gnome);
+  assert.throws(() => adventure.transition(save, gnome, { type: "origin", region: "penshaw" }), /not available in the current chapter/);
 });
 
-test("unstarted Human saves migrate to Night Harbor; other saves stay untouched", () => {
+test("unstarted saves migrate to the character's assigned starting city", () => {
   const human = { id: "human-4", raceId: "human" };
-  const pending = adventure.createSave({ id: human.id, raceId: "gnome" });
+  const pending = { ...adventure.createSave({ id: human.id, raceId: "gnome" }), stage: "origin", origin: "" };
   assert.equal(adventure.migrateHumanStartingCity(pending, human), true);
   assert.equal(pending.origin, "night-harbor");
+  assert.equal(pending.currentLocation, "night-harbor");
   assert.equal(pending.stage, "briefing");
   assert.match(pending.journal[0], /Night Harbor/);
   assert.equal(adventure.migrateHumanStartingCity(pending, human), false);
 
   const gnome = { id: "gnome-2", raceId: "gnome" };
-  const gnomePending = adventure.createSave(gnome);
-  assert.equal(adventure.migrateHumanStartingCity(gnomePending, gnome), false);
-  assert.equal(gnomePending.stage, "origin");
-  assert.equal(gnomePending.origin, "");
+  const gnomePending = { ...adventure.createSave(gnome), stage: "origin", origin: "" };
+  assert.equal(adventure.migrateStartingLocation(gnomePending, gnome), true);
+  assert.equal(gnomePending.stage, "briefing");
+  assert.equal(gnomePending.origin, "night-harbor");
+  assert.equal(gnomePending.currentLocation, "night-harbor");
 });
 
 test("M&M race/class and stat rules keep representative supplied values", () => {

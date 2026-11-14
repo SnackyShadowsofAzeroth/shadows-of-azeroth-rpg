@@ -1,13 +1,13 @@
 # Graph Report - game-custom-choices  (2026-11-13)
 
 ## Corpus Check
-- 81 files · ~78,643 words
+- 81 files · ~79,730 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 15 file(s) not represented in the graph (top: .css 11, (none) 2, .webmanifest 1)
 
 ## Summary
-- 989 nodes · 1781 edges · 86 communities (69 shown, 17 thin omitted)
-- Extraction: 89% EXTRACTED · 11% INFERRED · 0% AMBIGUOUS · INFERRED: 200 edges (avg confidence: 0.85)
+- 991 nodes · 1794 edges · 87 communities (70 shown, 17 thin omitted)
+- Extraction: 89% EXTRACTED · 11% INFERRED · 0% AMBIGUOUS · INFERRED: 201 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
@@ -95,6 +95,7 @@
 - boot
 - M&M Race Lore and Class Eligibility
 - ref_node_path
+- ref_node_vm
 
 ## God Nodes (most connected - your core abstractions)
 1. `Shadows of Azeroth — Development Handoff` - 38 edges
@@ -102,8 +103,8 @@
 3. `choose()` - 26 edges
 4. `draw()` - 26 edges
 5. `livingEnemies()` - 23 edges
-6. `advance()` - 19 edges
-7. `boot()` - 18 edges
+6. `boot()` - 19 edges
+7. `advance()` - 19 edges
 8. `fightExchange()` - 17 edges
 9. `result()` - 17 edges
 10. `status()` - 17 edges
@@ -123,7 +124,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (86 total, 17 thin omitted)
+## Communities (87 total, 17 thin omitted)
 
 ### Community 0 - "public/campaign.js"
 Cohesion: 0.10
@@ -190,8 +191,8 @@ Cohesion: 0.23
 Nodes (10): readStoredJSON(), reportCorruption(), validateCampaignSave(), validateCharacterRoster(), validateChronicle(), validateCompanionsSave(), validateOfflineSave(), validateProgressionSave() (+2 more)
 
 ### Community 16 - "ref_node_assert"
-Cohesion: 0.10
-Nodes (13): assert, credentials, storyModule, test, assert, campaignModule, test, assert (+5 more)
+Cohesion: 0.25
+Nodes (3): assert, campaignModule, test
 
 ### Community 17 - "reputation.js"
 Cohesion: 0.29
@@ -391,13 +392,17 @@ Nodes (34): card(), corpseDurationMs(), createItem(), createSave(), emptyInvento
 
 ### Community 83 - "boot"
 Cohesion: 0.23
-Nodes (25): addJournal(), bestClassStat(), boot(), actionList(), button(), el(), meter(), perform() (+17 more)
+Nodes (27): addJournal(), bestClassStat(), boot(), actionList(), button(), el(), meter(), perform() (+19 more)
 
 ### Community 84 - "M&M Race Lore and Class Eligibility"
 Cohesion: 0.29
 Nodes (6): Current patch exception, Custom racial features - Shadows of Azeroth, M&M Race Lore and Class Eligibility, Race and class restrictions, Race descriptions, Writing guidance
 
 ### Community 85 - "ref_node_path"
+Cohesion: 0.15
+Nodes (10): assert, credentials, storyModule, test, assert, context, fs, path (+2 more)
+
+### Community 86 - "ref_node_vm"
 Cohesion: 0.25
 Nodes (6): assert, context, fs, path, test, vm
 
@@ -407,17 +412,17 @@ Nodes (6): assert, context, fs, path, test, vm
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `level()` connect `progression.js` to `story-actions.test.js`?**
-  _High betweenness centrality (0.017) - this node is a cross-community bridge._
+- **Why does `save()` connect `companions.js` to `Shadows of Azeroth — Development Handoff`, `boot`, `ref_node_path`?**
+  _High betweenness centrality (0.135) - this node is a cross-community bridge._
 - **Should `public/campaign.js` be split into smaller, more focused modules?**
   _Cohesion score 0.09996754300551769 - nodes in this community are weakly interconnected._
+- **Why does `perform()` connect `boot` to `companions.js`?**
+  _High betweenness centrality (0.083) - this node is a cross-community bridge._
 - **Should `Shadows of Azeroth — Development Handoff` be split into smaller, more focused modules?**
   _Cohesion score 0.05128205128205128 - nodes in this community are weakly interconnected._
+- **Why does `render()` connect `boot` to `chronicle.js`?**
+  _High betweenness centrality (0.061) - this node is a cross-community bridge._
 - **Should `characters.js` be split into smaller, more focused modules?**
   _Cohesion score 0.11261261261261261 - nodes in this community are weakly interconnected._
 - **Should `Shadows of Azeroth — Living Campaign (v0.3)` be split into smaller, more focused modules?**
   _Cohesion score 0.08 - nodes in this community are weakly interconnected._
-- **Should `steps` be split into smaller, more focused modules?**
-  _Cohesion score 0.08695652173913043 - nodes in this community are weakly interconnected._
-- **Should `dungeons.test.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.09090909090909091 - nodes in this community are weakly interconnected._

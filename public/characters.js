@@ -12,7 +12,9 @@ const SECONDARY=["Cooking","Fishing","First Aid"];
 const BASIC_GEAR={Warrior:["Worn Training Sword","Plain Shield","Simple Cloth Tunic"],Paladin:["Worn Training Mace","Plain Shield","Simple Cloth Tunic"],Hunter:["Worn Practice Bow","Small Quiver","Simple Cloth Tunic"],Rogue:["Worn Practice Dagger","Plain Cloth Tunic"],Priest:["Worn Wooden Staff","Plain Cloth Robe"],Shaman:["Worn Wooden Mace","Plain Cloth Tunic"],Mage:["Worn Wooden Staff","Plain Cloth Robe"],Warlock:["Worn Wooden Staff","Plain Cloth Robe"],Druid:["Worn Wooden Staff","Plain Cloth Tunic"]};
 const isSnackyEgg=p=>p?.name==="Snacky Lugnuts"&&p?.gender==="Male"&&p?.race==="Gnome"&&p?.className==="Rogue"&&Object.keys(p?.professions||{}).includes("Mining")&&Object.keys(p?.professions||{}).includes("Engineering");
 const START_ZONES={"Human":"Northshire Valley, Elwynn Forest","Dwarf":"Coldridge Valley, Dun Morogh","Gnome":"Coldridge Valley, Dun Morogh","Night Elf":"Shadowglen, Teldrassil","Orc":"Valley of Trials, Durotar","Troll":"Valley of Trials, Durotar","Undead":"Deathknell, Tirisfal Glades","Tauren":"Red Cloud Mesa, Mulgore","Skyborne":"Skyborne Enclave (original starting settlement)"};
-const startingZone=p=>p?.system==="mnm"?"":START_ZONES[p.race]||"a settlement in "+(p.faction==="Horde"?"Kalimdor":"the Eastern Kingdoms");
+const MNM_START_LABELS={"night-harbor":"Night Harbor · Shaded Dunes","underdocks":"The Underdocks · beneath Night Harbor","penshaw":"Penshaw · Keeper's Blight"};
+const mnmStartingZone=p=>MNM_START_LABELS[p?.startingLocation||window.soaMnmRules?.startLocationForRace?.(p?.raceId)]||"Night Harbor · Shaded Dunes";
+const startingZone=p=>p?.system==="mnm"?mnmStartingZone(p):START_ZONES[p.race]||"a settlement in "+(p.faction==="Horde"?"Kalimdor":"the Eastern Kingdoms");
 let roster,active,rosterLoadBlocked=false;
 const get=id=>document.getElementById(id);
 const make=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e};
@@ -99,7 +101,7 @@ function restore(id){
 }
 function baseState(profile){if(profile.system==="mnm")return {equipment:[],id:"new-hero-start",hp:0,en:0,money:0,time:0,alert:0,seen:[],flags:{},enemy:null,log:["M&M character created. Begin Chapter One from the Adventure tab."]};return {equipment:[...(profile.startingEquipment||BASIC_GEAR[profile.className]||[])],id:"new-hero-start",hp:100,en:100,money:1500,time:0,alert:0,seen:[],flags:{},enemy:null,log:["A new journey begins for "+profile.name+" in "+startingZone(profile)+".","You have 15 silver and no companions."]}}
 function newCampaign(profile){
- if(profile.system==="mnm")return {turn:0,scene:null,history:[],journal:[],startingZone:"",lastError:"",lastAction:"M&M story progress is stored separately from the legacy campaign.",lastResult:"Use the dedicated M&M Adventure screen for Chapter One.",pending:null};
+ if(profile.system==="mnm")return {turn:0,scene:null,history:[],journal:[],startingZone:startingZone(profile),lastError:"",lastAction:"M&M story progress is stored separately from the legacy campaign.",lastResult:"Use the dedicated M&M Adventure screen for Chapter One.",pending:null};
  const zone=startingZone(profile);
  return {turn:0,scene:null,history:[],journal:[],startingZone:zone,lastError:"",lastAction:"Begin the FIRST scene of a completely new adventure for "+profile.name+", a LEVEL 1 "+profile.race+" "+profile.className+" of the "+profile.faction+(profile.race==="Skyborne"?" ("+skybornePath(profile.faction)+")":"")+". STARTING LOCATION: "+zone+". The character starts PHYSICALLY IN THIS STARTING ZONE, ALONE, with exactly 15 silver (1,500 copper), basic class starter equipment only, and no existing allies, companions, party, completed missions, faction standing, personal relationships, or earned equipment beyond the starter kit. Treat faction identity as background only; do not assign numeric standing or relationship scores before an in-world event establishes them. Record relationships and faction standing only after meaningful encounters and choices. "+(profile.race==="Skyborne"&&profile.className==="Druid"?"Skyborne Druids have unique bird-inspired forms; preserve that racial identity in descriptions. ":"")+"Introduce a modest class-appropriate first task and six distinct action choices. No travel skips, established companions, Hollow Raven or Snacky's storyline. Do not grant XP, extra currency, equipment, specialization, or followers in the opening narration.",lastResult:"Level 1 newcomer in "+zone+". Starting funds: 15 silver. Faction standing and personal relationships are unestablished; no previous battles, companions, or rewards.",pending:null};
 }
@@ -184,7 +186,7 @@ function create(profile){
  let p;
  if(isMnm){
   const normalized=window.soaMnmRules.normalizeCharacter({...profile,level:1});
-  p={...normalized,id,origin:"mnm",startLevel:1,startingZone:normalized.startingLocation||"",startingEquipment:[],specialization:"Unchosen",learnedAbilities:[],professions:{},secondary:{},professionEvents:[],professionLog:[]};
+  p={...normalized,id,origin:"mnm",startLevel:1,startingZone:mnmStartingZone(normalized),startingEquipment:[],specialization:"Unchosen",learnedAbilities:[],professions:{},secondary:{},professionEvents:[],professionLog:[]};
   delete p.faction;delete p.professionNames;
  }else{
   p={...profile,factionPath:profile.race==="Skyborne"?skybornePath(profile.faction):null,id,origin:"custom",startLevel:1,startingZone:startingZone(profile),startingEquipment:[...(BASIC_GEAR[profile.className]||[])],specialization:"Unchosen",professions:Object.fromEntries(profile.professionNames.map(n=>[n,{skill:1,events:0}])),secondary:Object.fromEntries(SECONDARY.map(n=>[n,{skill:1,events:0}])),professionEvents:[],professionLog:[]};
@@ -294,7 +296,7 @@ function drawMenu(){
  for(const p of roster.characters){
   const item=make("div",undefined,"soa-character-item");
   const level=p.system==="mnm"?(p.level||1):(p.id===active.id?(window.soaProgression?.level?.()||p.startLevel||10):(()=>{const slot=read(SLOT_PREFIX+p.id);try{return Number(JSON.parse(slot?.["soa-progression-v1"]||"null")?.actors?.hero?.level)||p.startLevel||10}catch{return p.startLevel||10}})());
-  const startLabel=p.startingLocation==="night-harbor"?" · Night Harbor":"";
+  const startLabel=p.system==="mnm"?" · "+mnmStartingZone(p):"";
   const desc=p.system==="mnm"?"M&M · "+p.race+" "+p.className+startLabel+" · Level "+level:"Legacy · "+factionDisplay(p)+" · "+p.race+" "+p.className+" · Level "+level;
   const description=make("div");description.append(make("strong",p.name),make("span",desc));
   const button=make("button",p.id===active.id?"Playing":"Switch & Play");button.type="button";button.onclick=()=>enter(p.id);
@@ -315,7 +317,7 @@ function drawMenu(){
  const statPanel=make("fieldset",undefined,"soa-mnm-scores"),statLegend=make("legend","RACE + CLASS STARTING STATS");
  const statGrid=make("div",undefined,"soa-mnm-stat-grid");statPanel.append(statLegend,statGrid);
  const racialFeature=make("aside",undefined,"soa-mnm-racial-ability");
- const startingCity=make("p","Human starting city: Night Harbor · the trade hub of the world.","muted soa-mnm-note");
+ const startingCity=make("p","Starting location: Night Harbor · Shaded Dunes.","muted soa-mnm-note");
  const labels={str:"Strength",sta:"Stamina",dex:"Dexterity",agi:"Agility",int:"Intelligence",wis:"Wisdom",cha:"Charisma"};
  const signed=n=>(n>0?"+":"")+String(n);
  const updateClassList=()=>{
@@ -328,7 +330,8 @@ function drawMenu(){
  const updateStartingStats=()=>{
   const raceInfo=r.raceById(race.value),classInfo=r.classById(klass.value);
   const city=r.startLocationForRace(race.value);
-  startingCity.textContent=city==="night-harbor"?"Human starting city: Night Harbor · the trade hub of the world. Official city access depends on faith/class; this creator does not model that gate.":"Chapter origin: chosen when your story begins.";
+  startingCity.textContent=city==="night-harbor"?"Starting location: Night Harbor, the world's trade hub in the Shaded Dunes. All races can sail from Twilight Harbor to Penshaw in Keeper's Blight.":city==="underdocks"?"Starting location: The Underdocks, below Night Harbor. Ride the lift up to the city, then board a boat at Twilight Harbor.":city==="penshaw"?"Starting location: Penshaw in Keeper's Blight. All races can reach it by boat from Twilight Harbor in Night Harbor.":"Starting location: Night Harbor.";
+  if(["deep_dwarf","high_elf","troll"].includes(race.value))startingCity.textContent+=" This is the accepted Night Harbor fallback until a separate home is defined.";
   const sheet=r.startingStats(race.value,klass.value);statGrid.replaceChildren();
   for(const key of r.statKeys){
    const card=make("div",undefined,"soa-mnm-stat-tile");
