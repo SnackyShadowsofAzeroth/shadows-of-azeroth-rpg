@@ -6,7 +6,8 @@ Read this file before changing project code, content, configuration, or deployme
 
 - M&M: RPG is an offline-first mobile web RPG delivered through Cloudflare Pages. Client files live in public/; Pages API handlers live in functions/api/; worker.mjs adapts those handlers for local/Workers preview; public/sw.js controls offline asset caching. Never put deployment secrets in the repository.
 - Character rosters, adventure saves, and portraits are stored locally in the current browser/device; they do not sync between devices. The character selector distinguishes the saved roster from an unfinished creation draft, labels the commit action “Save Character & Play,” verifies localStorage writes by reading them back, cleans up failed creation slots before rollback, and shows a success message after creation.
-- Legacy profiles retain the original Warcraft-inspired game flow and local saves. M&M profiles use a separate seven-stat creator, race-specific starts, world travel, a fixed offline story, optional AI Chronicle, and character-bound system saves. Keep these systems isolated.
+- M&M character selection is M&M-only. Startup removes legacy roster entries and their save slots, clears orphaned shared legacy save keys, and never seeds the old default character. Existing M&M profiles and their character-bound data remain intact.
+- M&M profiles use a separate seven-stat creator, race-specific starts, world travel, a fixed offline story, optional AI Chronicle, and character-bound system saves.
 - Read CAMPAIGN_BIBLE.md for campaign and quality standards, DEVELOPMENT_HANDOFF.md for implementation history, and MNM_REWRITE_PLAN.md for conversion scope.
 - M&M race descriptions and eligibility come from MNM_RACE_LORE.md, with Deep Gnome Bard updated from the later official patch note.
 
@@ -35,10 +36,11 @@ Read this file before changing project code, content, configuration, or deployme
 
 - M&M profiles receive a road-worn weapon, patched travel coat, two healing poultices, two waybread, and 24 Copper. They do not receive legacy faction, professions, legacy equipment, or legacy currency.
 - M&M coinage is stored as an integer Copper balance and displayed as Platinum, Gold, Silver, and Copper. Each 100 lower-denomination coins convert to one coin of the next denomination; preserve the existing `coppers` save property.
+- An empty M&M roster stays empty until the player creates a character. The selector permits deleting the last character, removes that character's saves, and accepts only M&M character archives for restore.
 - The adventure, world travel, AI Chronicle, and journal use soa-mnm-adventure-v1; official-rule and custom RPG system state uses soa-mnm-systems-v1. Both keys participate in character switching, archive backup/restore, and local saves.
 - public/mnm-ai-chronicle.js generates original scenes and three choices per scene through Gemini; local d20 checks resolve outcomes. The AI API cannot edit game state. Live generation requires Cloudflare GEMINI_API_KEY and AI_ACCESS_CODE secrets. Never commit or print these secrets.
-- public/sw.js cache version must be incremented when cached gameplay files change. The current source version is mm-rpg-v149; activation removes both superseded M&M caches and the prior cache namespace.
-- Preserve legacy characters and saves; never silently reinterpret, reset, or erase local data.
+- public/sw.js cache version must be incremented when cached gameplay files change. The current source version is mm-rpg-v150; activation removes both superseded M&M caches and the prior cache namespace.
+- Preserve existing M&M characters and saves during roster cleanup; do not reintroduce legacy profiles into M&M selection or restore.
 
 ## Graphify workflow
 
