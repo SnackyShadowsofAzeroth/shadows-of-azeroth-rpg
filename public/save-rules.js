@@ -166,7 +166,8 @@ function validateCharacterRoster(value){
  return structuredClone(value);
 }
 function validateRosterBackup(value){
- if(!object(value)||value.kind!=="shadows-of-azeroth-multi-character-backup"||value.version!==1)fail("This is not a supported all-character backup.");
+ // Keep importing existing archives from the former product identity.
+ if(!object(value)||!["mm-rpg-multi-character-backup","shadows-of-azeroth-multi-character-backup"].includes(value.kind)||value.version!==1)fail("This is not a supported all-character backup.");
  const normalized=structuredClone(value);
  const roster=normalized.roster,slots=normalized.slots,portraits=normalized.portraits||{};
  if(!object(roster)||roster.version!==1||!Array.isArray(roster.characters)||roster.characters.length<1||roster.characters.length>16||!object(slots)||!object(portraits))fail("Backup roster is incomplete.");

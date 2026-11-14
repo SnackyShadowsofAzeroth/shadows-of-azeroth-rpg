@@ -12,7 +12,7 @@ const SECONDARY=["Cooking","Fishing","First Aid"];
 const BASIC_GEAR={Warrior:["Worn Training Sword","Plain Shield","Simple Cloth Tunic"],Paladin:["Worn Training Mace","Plain Shield","Simple Cloth Tunic"],Hunter:["Worn Practice Bow","Small Quiver","Simple Cloth Tunic"],Rogue:["Worn Practice Dagger","Plain Cloth Tunic"],Priest:["Worn Wooden Staff","Plain Cloth Robe"],Shaman:["Worn Wooden Mace","Plain Cloth Tunic"],Mage:["Worn Wooden Staff","Plain Cloth Robe"],Warlock:["Worn Wooden Staff","Plain Cloth Robe"],Druid:["Worn Wooden Staff","Plain Cloth Tunic"]};
 const isSnackyEgg=p=>p?.name==="Snacky Lugnuts"&&p?.gender==="Male"&&p?.race==="Gnome"&&p?.className==="Rogue"&&Object.keys(p?.professions||{}).includes("Mining")&&Object.keys(p?.professions||{}).includes("Engineering");
 const START_ZONES={"Human":"Northshire Valley, Elwynn Forest","Dwarf":"Coldridge Valley, Dun Morogh","Gnome":"Coldridge Valley, Dun Morogh","Night Elf":"Shadowglen, Teldrassil","Orc":"Valley of Trials, Durotar","Troll":"Valley of Trials, Durotar","Undead":"Deathknell, Tirisfal Glades","Tauren":"Red Cloud Mesa, Mulgore","Skyborne":"Skyborne Enclave (original starting settlement)"};
-const MNM_START_LABELS={"night-harbor":"Night Harbor · Shaded Dunes","underdocks":"The Underdocks · beneath Night Harbor","penshaw":"Penshaw · Keeper's Blight"};
+const MNM_START_LABELS={"night-harbor":"Night Harbor · Shaded Dunes","underdocks":"The Underdocks · beneath Night Harbor","penshaw":"Penshaw · Keepers Bight"};
 const mnmStartingZone=p=>MNM_START_LABELS[p?.startingLocation||window.soaMnmRules?.startLocationForRace?.(p?.raceId)]||"Night Harbor · Shaded Dunes";
 const startingZone=p=>p?.system==="mnm"?mnmStartingZone(p):START_ZONES[p.race]||"a settlement in "+(p.faction==="Horde"?"Kalimdor":"the Eastern Kingdoms");
 let roster,active,rosterLoadBlocked=false;
@@ -245,7 +245,7 @@ function exportRosterBackup(){
   if(!saved){alert("Backup stopped: a save slot for "+p.name+" is missing.");return false}
   slots[p.id]=saved;
  }
- const archive={kind:"shadows-of-azeroth-multi-character-backup",version:1,createdAt:new Date().toISOString(),roster:roster,slots:slots,portraits:window.soaPortraits?.exportPortraits?.(roster.characters.map(p=>p.id))||{}};
+ const archive={kind:"mm-rpg-multi-character-backup",version:1,createdAt:new Date().toISOString(),roster:roster,slots:slots,portraits:window.soaPortraits?.exportPortraits?.(roster.characters.map(p=>p.id))||{}};
  try{
   const blob=new Blob([JSON.stringify(archive,null,2)],{type:"application/json"});
   const url=URL.createObjectURL(blob),link=document.createElement("a");
@@ -339,7 +339,7 @@ function drawMenu(){
  const updateStartingStats=()=>{
   const raceInfo=r.raceById(race.value),classInfo=r.classById(klass.value);
   const city=r.startLocationForRace(race.value);
-  startingCity.textContent=city==="night-harbor"?"Starting location: Night Harbor, the world's trade hub in the Shaded Dunes. All races can sail from Twilight Harbor to Penshaw in Keeper's Blight.":city==="underdocks"?"Starting location: The Underdocks, below Night Harbor. Ride the lift up to the city, then board a boat at Twilight Harbor.":city==="penshaw"?"Starting location: Penshaw in Keeper's Blight. All races can reach it by boat from Twilight Harbor in Night Harbor.":"Starting location: Night Harbor.";
+  startingCity.textContent=city==="night-harbor"?"Starting location: Night Harbor, the world's trade hub in the Shaded Dunes. All races can sail from Twilight Harbor to Penshaw in Keepers Bight.":city==="underdocks"?"Starting location: The Underdocks, below Night Harbor. Ride the lift up to the city, then board a boat at Twilight Harbor.":city==="penshaw"?"Starting location: Penshaw in Keepers Bight. All races can reach it by boat from Twilight Harbor in Night Harbor.":"Starting location: Night Harbor.";
   if(["deep_dwarf","high_elf","troll"].includes(race.value))startingCity.textContent+=" This is the accepted Night Harbor fallback until a separate home is defined.";
   const sheet=r.startingStats(race.value,klass.value);statGrid.replaceChildren();
   for(const key of r.statKeys){

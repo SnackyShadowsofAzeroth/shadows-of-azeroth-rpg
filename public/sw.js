@@ -1,12 +1,13 @@
 // Static-shell offline cache. API requests are network-only and are never cached.
-const CACHE="shadows-of-azeroth-v142";
+const CACHE="mm-rpg-v143";
 const CRAFTING_FILE="./crafting.js";
 const FILES=["./","./index.html","./manifest.webmanifest","./icon.svg","./campaign.js","./racial-abilities.js","./specializations.js","./class-abilities.js","./druid.js","./druid-vines.svg","./class-themes.js","./class-themes.css","./mnm-ui.css?v=10","./mnm-world.png","./frontier-menu.png","./night-harbor-hero.jpg","./mnm-ai-chronicle.js","./quests.js","./equipment.js","./forever-items.js","./enchanting.js","./combat-rules.js","./companions.js","./theme.css","./characters.css","./characters.js","./mnm-adventure.js","./mnm-systems.js","./character-rules.js","./mnm-rules.js","./resource-rules.js","./save-rules.js","./reputation.css","./reputation.js","./portraits.css","./portraits.js","./chronicle.css","./chapters.css","./chronicle.js","./progression.js","./progression.css","./abilities.js","./abilities.css","./mobile-layout.js","./mobile-layout.css","./arena.js"];
 self.addEventListener("install",event=>{
   event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll([...FILES,CRAFTING_FILE,"./story-actions.js","./dungeon-data.js","./dungeons.js"])).then(()=>self.skipWaiting()));
 });
 self.addEventListener("activate",event=>{
-  event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith("shadows-of-azeroth-")&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim()));
+  // Remove both this app's prior cache namespace and superseded M&M caches.
+  event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>(key.startsWith("shadows-of-azeroth-")||key.startsWith("mm-rpg-v"))&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim()));
 });
 self.addEventListener("fetch",event=>{
   const req=event.request,url=new URL(req.url);

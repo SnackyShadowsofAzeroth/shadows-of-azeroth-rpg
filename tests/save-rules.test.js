@@ -68,7 +68,7 @@ function validArchive(overrides = {}) {
     "soa-progression-v1": null,
   };
   return {
-    kind: "shadows-of-azeroth-multi-character-backup", version: 1,
+    kind: "mm-rpg-multi-character-backup", version: 1,
     roster: { version: 1, active: "snacky", characters: [person] },
     slots: { snacky: slot }, portraits: {},
     ...overrides,
@@ -90,6 +90,11 @@ test("accepts a complete roster archive and rejects broken character/save mappin
   assert.throws(() => rules.validateRosterBackup(validArchive({
     portraits: { snacky: "data:image/png;base64,AAAA" },
   })), /portrait data/);
+});
+
+test("continues accepting all-character backups exported before the rebrand", () => {
+  const legacy = rules.validateRosterBackup(validArchive({ kind: "shadows-of-azeroth-multi-character-backup" }));
+  assert.equal(legacy.roster.active, "snacky");
 });
 
 test("rejects malformed quest objectives and personal journal entries in imported backups", () => {

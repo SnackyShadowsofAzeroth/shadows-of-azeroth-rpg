@@ -6,14 +6,14 @@ const STAT_NAMES={str:"Strength",sta:"Stamina",dex:"Dexterity",agi:"Agility",int
 const REGIONS=[
  {id:"night-harbor",name:"Night Harbor",zone:"Shaded Dunes",description:"The world's trade hub on A\u00eathoril, with ships, caravans, and roads leading in every direction.",lore:"Night Harbor is the Crown Jewel of the West. Twilight Harbor is its busy waterfront in the Shaded Dunes."},
  {id:"underdocks",name:"The Underdocks",zone:"Beneath Night Harbor",description:"A subterranean port and starting home for Deep Gnomes, Deep Elves, Goblins, and Ogres.",lore:"A guarded lift links the Underdocks to the streets and waterfront of Night Harbor."},
- {id:"penshaw",name:"Penshaw",zone:"Keeper's Blight",description:"A Wood Elf city and starting home at the edge of Keeper's Blight.",lore:"Boats sail between Penshaw and Twilight Harbor in Night Harbor. Travelers of every race can take the passage."},
+ {id:"penshaw",name:"Penshaw",zone:"Keepers Bight",description:"A Wood Elf city and custom M&M: RPG starting home in Keepers Bight.",lore:"Boats sail between Penshaw and Twilight Harbor in Night Harbor. Travelers of every race can take the passage."},
  {id:"faelindral",name:"Faelindral",zone:"Calafrey",description:"A city in the trees in the enchanted lands of Calafrey.",lore:"Faelindral stands north of Szuur among the green lands of Calafrey."},
  {id:"ail-vorith",name:"Ail'vorith",zone:"Eastern Calafrey",description:"The Deep Elves' dark capital beneath eastern Calafrey.",lore:"Ail'vorith rests deep below the eastern lands of Calafrey."}
 ];
 const TRAVEL_ROUTES=[
  {from:"night-harbor",to:"underdocks",name:"The Underdocks Lift",method:"Lift",detail:"Descend from Night Harbor into the Underdocks below."},
  {from:"underdocks",to:"night-harbor",name:"Night Harbor Lift",method:"Lift",detail:"Ride the lift up from the Underdocks into Night Harbor."},
- {from:"night-harbor",to:"penshaw",name:"Twilight Harbor Passage",method:"Boat",detail:"Sail from Twilight Harbor in the Shaded Dunes to Penshaw in Keeper's Blight. All races may book passage."},
+ {from:"night-harbor",to:"penshaw",name:"Twilight Harbor Passage",method:"Boat",detail:"Sail from Twilight Harbor in the Shaded Dunes to Penshaw in Keepers Bight. All races may book passage."},
  {from:"penshaw",to:"night-harbor",name:"Twilight Harbor Passage",method:"Boat",detail:"Sail from Penshaw back to Twilight Harbor in Night Harbor."},
  {from:"faelindral",to:"night-harbor",name:"Calafrey Trade Road",method:"Caravan",detail:"Follow the established trade road west to Night Harbor."},
  {from:"night-harbor",to:"faelindral",name:"Calafrey Trade Road",method:"Caravan",detail:"Travel north from Night Harbor toward the wooded lands of Calafrey."},
@@ -409,7 +409,7 @@ function boot(){
   const current=REGIONS.find(region=>region.id===save.currentLocation)||REGIONS[0];
   panel.append(el("div","A\u00caTHORIL \u00b7 WORLD","soa-mnm-kicker"),el("h2",current.name));
   panel.append(el("p",(current.zone?current.zone+" \u00b7 ":"")+current.description+" "+current.lore));
-  if(current.id==="night-harbor")panel.append(el("p","Twilight Harbor is Night Harbor's waterfront in the Shaded Dunes. Every race can sail from here to Penshaw, in Keeper's Blight; travelers from the Underdocks ride the lift up first."));
+  if(current.id==="night-harbor")panel.append(el("p","Twilight Harbor is Night Harbor's waterfront in the Shaded Dunes. Every race can sail from here to Penshaw, in Keepers Bight; travelers from the Underdocks ride the lift up first."));
   const routes=TRAVEL_ROUTES.filter(route=>route.from===current.id);
   if(routes.length){
    panel.append(el("h3","Travel from here"));
