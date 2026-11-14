@@ -1,6 +1,6 @@
 /* M&M in-game stat model for Shadows of Azeroth.
  * Race/class modifiers were supplied by the user. The seven stat keys follow the in-game character sheet; this project's starting baseline is 10.
- * Three unreleased race modifiers are explicitly provisional; Var'nai is kept for old saves but not offered for new creation.
+ * Deep Dwarf, High Elf, and Troll modifiers are provisional and retained for saved profiles, but those races are not offered for new creation until in-game values are supplied. Var'nai is also kept for old saves only.
  */
 (()=>{"use strict";
 const ABILITIES=Object.freeze(["str","dex","con","int","wis","cha"]); // legacy six-score helper, retained for compatibility
@@ -8,9 +8,9 @@ const STAT_KEYS=Object.freeze(["str","sta","dex","agi","int","wis","cha"]);
 const STAT_BASE=10,MAX_LEVEL=60;
 const RACES=Object.freeze([
  {id:"human",name:"Human"},{id:"gnome",name:"Gnome"},{id:"deep_gnome",name:"Deep Gnome"},
- {id:"dwarf",name:"Dwarf"},{id:"deep_dwarf",name:"Deep Dwarf",provisional:true},
- {id:"high_elf",name:"High Elf",provisional:true},{id:"wood_elf",name:"Wood Elf"},{id:"deep_elf",name:"Deep Elf"},
- {id:"ogre",name:"Ogre"},{id:"halfling",name:"Halfling"},{id:"troll",name:"Troll",provisional:true},
+ {id:"dwarf",name:"Dwarf"},{id:"deep_dwarf",name:"Deep Dwarf",provisional:true,selectable:false},
+ {id:"high_elf",name:"High Elf",provisional:true,selectable:false},{id:"wood_elf",name:"Wood Elf"},{id:"deep_elf",name:"Deep Elf"},
+ {id:"ogre",name:"Ogre"},{id:"halfling",name:"Halfling"},{id:"troll",name:"Troll",provisional:true,selectable:false},
  {id:"goblin",name:"Goblin"},{id:"varnai",name:"Var’nai",selectable:false}
 ]);
 const CLASSES=Object.freeze([

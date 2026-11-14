@@ -349,7 +349,7 @@ function drawMenu(){
  };
  race.onchange=updateClassList;klass.onchange=updateStartingStats;updateClassList();
  form.append(labeled("Character name",name),labeled("Gender",gender),labeled("Race",race),labeled("Class",klass),startingCity,statPanel,racialFeature);
- form.append(make("p","Starting scores use a base of 10 plus the selected race and class modifiers. This is a Shadows of Azeroth rebalance; no extra allocation points are granted during character creation. Three race lines are marked provisional.","muted soa-mnm-note"));
+ form.append(make("p","Starting scores use a base of 10 plus the selected race and class modifiers. This is a Shadows of Azeroth rebalance; no extra allocation points are granted during character creation. Deep Dwarf, High Elf, and Troll are unavailable for new characters until their in-game stat lines are confirmed.","muted soa-mnm-note"));
  form.append(make("p","This creates an M&M character with a playable offline first chapter. No Warcraft faction, professions, starting kit, or silver are assigned. The chapter uses clearly marked custom story rules; official M&M combat, abilities, equipment, and progression remain in conversion.","soa-mnm-warning"));
  const warning=make("p","","soa-menu-error");warning.setAttribute("aria-live","polite");form.append(warning);
  const submit=make("button","Create M&M Character");submit.type="submit";form.append(submit);
