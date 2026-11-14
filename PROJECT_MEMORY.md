@@ -1,5 +1,4 @@
-#- UI direction: use a warm dune palette of parchment, sandstone, bronze, and terracotta; avoid broad green accents. Keep the Night Harbor art visible and use the official M&M site for layout inspiration rather than copying its branding or assets.
- Project Memory
+# Project Memory
 
 Read this file before changing project code, content, configuration, or deployment settings. Query graphify-out/graph.json for the relevant systems before source searches or reads. Treat inferred edges as hypotheses and confirm behavior in source. After code changes, refresh the graph and report; update this memory when durable decisions or architecture change.
 
@@ -19,6 +18,7 @@ Read this file before changing project code, content, configuration, or deployme
 - Starting homes: Human, Halfling, Gnome, Dwarf → Night Harbor; Deep Gnome, Deep Elf, Goblin, Ogre → the Underdocks; Wood Elf → Penshaw in Keepers Bight as a custom M&M: RPG start assignment. The Underdocks lift links to Night Harbor. All races can sail from Twilight Harbor in Night Harbor to Penshaw. Existing Deep Dwarf, High Elf, and Troll profiles use Night Harbor fallback.
 - Racial features and class techniques are original project abilities. Keep them lore-aware, generalized, and clearly labeled as custom; their displayed descriptions must not mention specific quest items or props. Do not call them official M&M abilities.
 - The M&M adventure uses eight view tabs: an eight-column row on wide screens and a four-column grid on phone/tablet widths. Keep tab labels centered and wrapping only at spaces.
+- UI direction: use a warm dune palette of parchment, sandstone, bronze, and terracotta; avoid broad green accents. Keep the Night Harbor art visible and use the official M&M site for layout inspiration rather than copying its branding or assets.
 
 ## Playable custom rules and official facts
 
