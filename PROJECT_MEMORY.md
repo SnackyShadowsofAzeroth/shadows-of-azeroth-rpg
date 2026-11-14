@@ -1,4 +1,5 @@
-# Project Memory
+#- UI direction: use a warm dune palette of parchment, sandstone, bronze, and terracotta; avoid broad green accents. Keep the Night Harbor art visible and use the official M&M site for layout inspiration rather than copying its branding or assets.
+ Project Memory
 
 Read this file before changing project code, content, configuration, or deployment settings. Query graphify-out/graph.json for the relevant systems before source searches or reads. Treat inferred edges as hypotheses and confirm behavior in source. After code changes, refresh the graph and report; update this memory when durable decisions or architecture change.
 
@@ -34,7 +35,7 @@ Read this file before changing project code, content, configuration, or deployme
 - M&M profiles receive a road-worn weapon, patched travel coat, two healing poultices, two waybread, and 24 custom coppers. They do not receive legacy faction, professions, legacy equipment, or legacy currency.
 - The adventure, world travel, AI Chronicle, and journal use soa-mnm-adventure-v1; official-rule and custom RPG system state uses soa-mnm-systems-v1. Both keys participate in character switching, archive backup/restore, and local saves.
 - public/mnm-ai-chronicle.js generates original scenes and three choices per scene through Gemini; local d20 checks resolve outcomes. The AI API cannot edit game state. Live generation requires Cloudflare GEMINI_API_KEY and AI_ACCESS_CODE secrets. Never commit or print these secrets.
-- public/sw.js cache version must be incremented when cached gameplay files change. The current source version is mm-rpg-v145; activation removes both superseded M&M caches and the prior cache namespace.
+- public/sw.js cache version must be incremented when cached gameplay files change. The current source version is mm-rpg-v146; activation removes both superseded M&M caches and the prior cache namespace.
 - Preserve legacy characters and saves; never silently reinterpret, reset, or erase local data.
 
 ## Graphify workflow
