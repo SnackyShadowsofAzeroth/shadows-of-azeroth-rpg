@@ -38,7 +38,7 @@ test("new campaigns do not receive a preset quest and hide the opening placehold
  assert.equal(context.primaryQuest,null);
  assert.equal(context.activeQuests.length,0);
  assert.equal(save.chronicle.quests[0].title,"The First Adventure");
- assert.equal(save.chronicle.actTitle,"Azeroth Adventures");
+ assert.equal(save.chronicle.actTitle,"A New Adventure");
 });
 
 test("an untouched legacy Stormwind seed is removed when the saved scene is elsewhere",()=>{

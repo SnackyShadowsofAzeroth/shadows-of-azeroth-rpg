@@ -46,10 +46,10 @@ The race page's Deep Gnome list omits Bard, but the later official 0.30.6.0 patc
 
 - Preserve the culture-specific details and tensions above; do not reduce a race to one personality or treat group traits as universal.
 - Distinguish source canon from SoA inventions. Add new local detail only when it fits the source themes, and do not rewrite named canon, history, or affiliations.
-- Do not assign a race a class outside its listed access. Human class access may depend on origin/start location. The Shadows of Azeroth character creator starts Humans in Night Harbor, the world's trade hub; it does not model the official faith/class city gate.
+- Do not assign a race a class outside its listed access. Human class access may depend on origin/start location. The M&M: RPG character creator starts Humans in Night Harbor, the world's trade hub; it does not model the official faith/class city gate.
 
 
-## Custom racial features - Shadows of Azeroth
+## Custom racial features - M&M: RPG
 
 The following effects are original, once-per-chapter features for the current custom story. They are not official M&M racial abilities, stat bonuses, or promises about future M&M rules. Their effects use the chapter's small Resolve/Danger encounter and are intentionally different from one another.
 

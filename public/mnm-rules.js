@@ -1,4 +1,4 @@
-/* M&M in-game stat model for Shadows of Azeroth.
+/* M&M in-game stat model for M&M: RPG.
  * Race/class modifiers were supplied by the user. The seven stat keys follow the in-game character sheet; this project's starting baseline is 10.
  * Deep Dwarf, High Elf, and Troll modifiers are provisional and retained for saved profiles, but those races are not offered for new creation until in-game values are supplied. Var'nai is also kept for old saves only.
  */
@@ -78,7 +78,7 @@ const CLASS_BONUSES=Object.freeze({
  spellblade:vector({str:2,dex:3,int:3}),
  wizard:vector({str:3,dex:1,int:4})
 });
-/* Original Shadows of Azeroth racial features. These are custom Chapter One mechanics, not official M&M abilities. */
+/* Original M&M: RPG racial features. These are custom Chapter One mechanics, not official M&M abilities. */
 const RACIAL_ABILITIES=Object.freeze({
  human:{name:"Many Roads",description:"Humans vary widely across Ba'Haara, Tarellian, Easthymn, and Sojourner traditions; no single disposition defines them.",effect:"After a failed investigation, try one different approach with a fresh roll and no racial modifier."},
  gnome:{name:"Eureka",description:"Patient curiosity and extraordinary epiphanies reflect the gnomes' relentless pursuit of truth.",effect:"During the investigation, reveal the clue without a roll; the scavenger begins the encounter with 2 Resolve."},

@@ -1,6 +1,6 @@
 {
-  "name": "Shadows of Azeroth",
-  "short_name": "Shadows",
+  "name": "M&M: RPG",
+  "short_name": "M&M: RPG",
   "description": "Offline-first interactive fantasy RPG",
   "start_url": "./",
   "display": "standalone",

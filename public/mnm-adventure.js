@@ -318,7 +318,7 @@ function boot(){
   panel.append(el("p","A masked scavenger drags the route slate into the broken ground. This is a custom narrative encounter, not a creature or combat rule from the official game."));
   const meters=el("div",undefined,"soa-mnm-encounter-meters");
   meters.append(meter("Scavenger resolve",save.enemyResolve,save.clue?2:3),meter("Danger",save.enemyPressure,3));
-  panel.append(meters,el("p","Win by reducing Resolve to zero. Three Danger lets the scavenger escape; retreat remains available. Racial features are original Shadows of Azeroth rules."));
+  panel.append(meters,el("p","Win by reducing Resolve to zero. Three Danger lets the scavenger escape; retreat remains available. Racial features are original M&M: RPG rules."));
   const racial=window.soaMnmRules.racialAbilities?.[profile.raceId];
   if(racial){
    const states=[];
@@ -433,7 +433,7 @@ function boot(){
   }
   const rules=el("details",undefined,"soa-mnm-rules-disclosure");
   rules.append(el("summary","Story rules and M&M source note"));
-  rules.append(el("p","Checks use this project's existing d20 helper: d20 + floor((starting stat \u2212 10) / 2) against the printed DC; natural 20 succeeds and natural 1 fails. DCs and the Resolve/Pressure encounter are custom Shadows of Azeroth story rules. The Combat, Progress, and Items views expose documented M&M rules, but do not resolve damage, award or level XP, or create catalog items until official formulas and data are available."));
+  rules.append(el("p","Checks use this project's existing d20 helper: d20 + floor((starting stat \u2212 10) / 2) against the printed DC; natural 20 succeeds and natural 1 fails. DCs and the Resolve/Pressure encounter are custom M&M: RPG story rules. The Combat, Progress, and Items views expose documented M&M rules, but do not resolve damage, award or level XP, or create catalog items until official formulas and data are available."));
   app.append(rules);
   const roster=el("button","\u2630 Character Select","soa-mnm-roster-button");roster.type="button";roster.onclick=()=>window.soaCharacters?.showMenu?.();app.append(roster);
  }
