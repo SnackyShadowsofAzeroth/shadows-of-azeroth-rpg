@@ -36,3 +36,4 @@ Read this file before changing project code, content, configuration, or deployme
 
 ### Character creation availability
 The M&M creator must treat an omitted race `selectable` flag as available and only reject a race when the flag is explicitly `false`. The regression is covered by `isSelectableRace` tests for supported and withheld races.
+- For the M&M creator, a race is available unless `selectable` is explicitly `false`; shared validation must preserve that default. Mount the M&M adventure after `organizeSections()` has created its screen, including on reload after character creation.
