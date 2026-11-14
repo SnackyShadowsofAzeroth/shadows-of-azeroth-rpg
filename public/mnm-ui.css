@@ -545,4 +545,8 @@ body.soa-ruleset-mnm .soa-druid-pool[data-resource="health"] i{background:linear
  body.soa-ruleset-mnm .soa-mnm-adventure-panel{padding:clamp(16px,4vw,24px)}
 }
 
-
+/* Keep text legible where the warm palette places it over art or parchment. */
+body.soa-ruleset-mnm .soa-mnm-game-heading .soa-mnm-kicker{color:#f2d49b!important;text-shadow:0 1px 3px #21140c}
+body.soa-ruleset-mnm .soa-mnm-game-heading .soa-mnm-subtitle{color:#f7ead5!important;text-shadow:0 1px 3px #21140c}
+body.soa-ruleset-mnm .soa-mnm-rules-disclosure>summary{color:#55371f!important;text-shadow:0 1px #fff1d8;font-size:clamp(15px,3.8vw,18px);line-height:1.4}
+body.soa-ruleset-mnm .soa-mnm-rules-disclosure>p{color:#49331f!important;font-size:13px;line-height:1.65}
