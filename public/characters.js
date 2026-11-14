@@ -349,7 +349,7 @@ function drawMenu(){
   }
   const feature=r.racialAbilities[race.value];
   racialFeature.replaceChildren();
-  if(feature)racialFeature.append(make("span","CUSTOM RACIAL FEATURE · ORIGINAL GAME RULE","soa-mnm-custom-label"),make("strong",feature.name),make("p",feature.description),make("p","Effect: "+feature.effect),make("small","Once per chapter in the custom story. This is an M&M: RPG rule, not an official M&M racial trait."));
+  if(feature)racialFeature.append(make("span","CUSTOM RACIAL FEATURE · ORIGINAL GAME RULE","soa-mnm-custom-label"),make("strong",feature.name),make("p",feature.description),make("p","General effect: "+feature.effect),make("small","Once per chapter in the custom story. This is an M&M: RPG rule, not an official M&M racial trait."));
   const sourceNote=make("p",raceInfo?.provisional?"Race modifiers for "+raceInfo.name+" are provisional, based on the supplied stat pattern.":"Race and class modifiers are from the supplied in-game table.","muted soa-mnm-note");
   if(raceInfo?.selectable===false)sourceNote.textContent="No current in-game stat line supplied for "+(raceInfo?.name||"this race")+"; new character creation is disabled for it.";
   statPanel.querySelector(".soa-mnm-stat-source")?.remove();
@@ -487,7 +487,7 @@ function drawProfessions(){
    }
    root.append(grid);
    const feature=rules.racialAbilities[race.id];
-   if(feature){const ability=make("section",undefined,"soa-mnm-racial-ability");ability.append(make("span","CUSTOM RACIAL FEATURE · ORIGINAL GAME RULE","soa-mnm-custom-label"),make("h3",feature.name),make("p",feature.description),make("p","Effect: "+feature.effect),make("small","Once per chapter in the custom story. This is an M&M: RPG rule, not an official M&M racial trait."));root.append(ability)}
+   if(feature){const ability=make("section",undefined,"soa-mnm-racial-ability");ability.append(make("span","CUSTOM RACIAL FEATURE · ORIGINAL GAME RULE","soa-mnm-custom-label"),make("h3",feature.name),make("p",feature.description),make("p","General effect: "+feature.effect),make("small","Once per chapter in the custom story. This is an M&M: RPG rule, not an official M&M racial trait."));root.append(ability)}
    const xpLine=level>=60?level+" · "+(progress?.totalXp||0)+" total custom XP":level+" · "+(progress?.xp||0)+" / "+(progress?.xpToNext||100)+" custom XP to next level";
    root.append(make("p","LEVEL "+xpLine+" · "+active.classPrefix+" · No extra point allocation is included; these are the complete starting totals.","soa-mnm-note"));
   }else root.append(make("p","No verified starting-stat line is available for this saved race/class combination. Existing profile data is preserved.","soa-mnm-warning"));
