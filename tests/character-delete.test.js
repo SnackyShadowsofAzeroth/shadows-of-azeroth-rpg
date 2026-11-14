@@ -27,6 +27,10 @@ function setup({ characters = [{ id: "hero-a", name: "Hero A" }, { id: "hero-b",
     snapshot: id => { events.snapshots.push(id); return snapshotOk; },
     restore: id => { events.restores.push(id); return true; },
     commitRoster: () => commitOk,
+    ROSTER_KEY: "roster",
+    write: () => true,
+    clearCharacterSaveState: () => { events.clearedSaveState = (events.clearedSaveState || 0) + 1; return true; },
+    removeProfileArtifacts: id => { events.removals.push("slot:" + id, "soa-portrait-v1-" + id); },
     localStorage: { removeItem: key => events.removals.push(key) },
     sessionStorage: { setItem: (key, value) => events.sessionSet = [key, value] },
     location: { reload: () => events.reloads++ },
@@ -61,7 +65,7 @@ test("deleting an inactive character keeps the active save selected", () => {
   assert.equal(events.reloads, 0);
 });
 
-test("deletion is cancelled safely and the last roster character cannot be removed", () => {
+test("deletion can be cancelled safely and the final character leaves an empty roster", () => {
   const cancelled = setup({ confirm: false });
   cancelled.context.runDeleteCharacter("hero-a");
   assert.equal(cancelled.context.roster.characters.length, 2);
@@ -69,9 +73,14 @@ test("deletion is cancelled safely and the last roster character cannot be remov
 
   const last = setup({ characters: [{ id: "hero-a", name: "Hero A" }] });
   last.context.runDeleteCharacter("hero-a");
-  assert.equal(last.context.roster.characters.length, 1);
-  assert.equal(last.events.confirms.length, 0);
-  assert.equal(last.events.alerts.length, 1);
+  assert.equal(last.context.roster.characters.length, 0);
+  assert.equal(last.context.roster.active, null);
+  assert.equal(last.context.active, null);
+  assert.equal(last.events.confirms.length, 1);
+  assert.equal(last.events.clearedSaveState, 1);
+  assert.deepEqual(last.events.removals, ["slot:hero-a", "soa-portrait-v1-hero-a"]);
+  assert.equal(last.events.reloads, 1);
+  assert.equal(last.events.alerts.length, 0);
 });
 
 test("a roster write failure restores the active character and keeps its save slot", () => {
