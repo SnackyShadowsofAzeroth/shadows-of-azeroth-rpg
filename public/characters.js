@@ -184,7 +184,7 @@ function create(profile){
  let p;
  if(isMnm){
   const normalized=window.soaMnmRules.normalizeCharacter({...profile,level:1});
-  p={...normalized,id,origin:"mnm",startLevel:1,startingZone:"",startingEquipment:[],specialization:"Unchosen",learnedAbilities:[],professions:{},secondary:{},professionEvents:[],professionLog:[]};
+  p={...normalized,id,origin:"mnm",startLevel:1,startingZone:normalized.startingLocation||"",startingEquipment:[],specialization:"Unchosen",learnedAbilities:[],professions:{},secondary:{},professionEvents:[],professionLog:[]};
   delete p.faction;delete p.professionNames;
  }else{
   p={...profile,factionPath:profile.race==="Skyborne"?skybornePath(profile.faction):null,id,origin:"custom",startLevel:1,startingZone:startingZone(profile),startingEquipment:[...(BASIC_GEAR[profile.className]||[])],specialization:"Unchosen",professions:Object.fromEntries(profile.professionNames.map(n=>[n,{skill:1,events:0}])),secondary:Object.fromEntries(SECONDARY.map(n=>[n,{skill:1,events:0}])),professionEvents:[],professionLog:[]};
@@ -294,7 +294,8 @@ function drawMenu(){
  for(const p of roster.characters){
   const item=make("div",undefined,"soa-character-item");
   const level=p.system==="mnm"?(p.level||1):(p.id===active.id?(window.soaProgression?.level?.()||p.startLevel||10):(()=>{const slot=read(SLOT_PREFIX+p.id);try{return Number(JSON.parse(slot?.["soa-progression-v1"]||"null")?.actors?.hero?.level)||p.startLevel||10}catch{return p.startLevel||10}})());
-  const desc=p.system==="mnm"?"M&M · "+p.race+" "+p.className+" · Level "+level:"Legacy · "+factionDisplay(p)+" · "+p.race+" "+p.className+" · Level "+level;
+  const startLabel=p.startingLocation==="night-harbor"?" · Night Harbor":"";
+  const desc=p.system==="mnm"?"M&M · "+p.race+" "+p.className+startLabel+" · Level "+level:"Legacy · "+factionDisplay(p)+" · "+p.race+" "+p.className+" · Level "+level;
   const description=make("div");description.append(make("strong",p.name),make("span",desc));
   const button=make("button",p.id===active.id?"Playing":"Switch & Play");button.type="button";button.onclick=()=>enter(p.id);
   const actions=make("div",undefined,"soa-character-actions");actions.append(button);
@@ -314,6 +315,7 @@ function drawMenu(){
  const statPanel=make("fieldset",undefined,"soa-mnm-scores"),statLegend=make("legend","RACE + CLASS STARTING STATS");
  const statGrid=make("div",undefined,"soa-mnm-stat-grid");statPanel.append(statLegend,statGrid);
  const racialFeature=make("aside",undefined,"soa-mnm-racial-ability");
+ const startingCity=make("p","Human starting city: Night Harbor · the trade hub of the world.","muted soa-mnm-note");
  const labels={str:"Strength",sta:"Stamina",dex:"Dexterity",agi:"Agility",int:"Intelligence",wis:"Wisdom",cha:"Charisma"};
  const signed=n=>(n>0?"+":"")+String(n);
  const updateClassList=()=>{
@@ -325,6 +327,8 @@ function drawMenu(){
  };
  const updateStartingStats=()=>{
   const raceInfo=r.raceById(race.value),classInfo=r.classById(klass.value);
+  const city=r.startLocationForRace(race.value);
+  startingCity.textContent=city==="night-harbor"?"Human starting city: Night Harbor · the trade hub of the world. Official city access depends on faith/class; this creator does not model that gate.":"Chapter origin: chosen when your story begins.";
   const sheet=r.startingStats(race.value,klass.value);statGrid.replaceChildren();
   for(const key of r.statKeys){
    const card=make("div",undefined,"soa-mnm-stat-tile");
@@ -341,7 +345,7 @@ function drawMenu(){
   statPanel.append(sourceNote);
  };
  race.onchange=updateClassList;klass.onchange=updateStartingStats;updateClassList();
- form.append(labeled("Character name",name),labeled("Gender",gender),labeled("Race",race),labeled("Class",klass),statPanel,racialFeature);
+ form.append(labeled("Character name",name),labeled("Gender",gender),labeled("Race",race),labeled("Class",klass),startingCity,statPanel,racialFeature);
  form.append(make("p","Starting scores use a base of 10 plus the selected race and class modifiers. This is a Shadows of Azeroth rebalance; no extra allocation points are granted during character creation. Three race lines are marked provisional.","muted soa-mnm-note"));
  form.append(make("p","This creates an M&M character with a playable offline first chapter. No Warcraft faction, professions, starting kit, or silver are assigned. The chapter uses clearly marked custom story rules; official M&M combat, abilities, equipment, and progression remain in conversion.","soa-mnm-warning"));
  const warning=make("p","","soa-menu-error");warning.setAttribute("aria-live","polite");form.append(warning);
@@ -351,7 +355,7 @@ function drawMenu(){
   if(n.length<2||n.length>36){warning.textContent="Enter a name between 2 and 36 characters.";return}
   if(!r.isValidSelection({system:"mnm",raceId:race.value,classId:klass.value})||!r.raceById(race.value)?.selectable){warning.textContent="That race and class combination is not available in the current character creator.";return}
   if(roster.characters.some(x=>x.name.toLowerCase()===n.toLowerCase())){warning.textContent="That character name is already in your roster.";return}
-  create({system:"mnm",name:n,gender:gender.value,raceId:race.value,classId:klass.value});
+  create({system:"mnm",name:n,gender:gender.value,raceId:race.value,classId:klass.value,startingLocation:r.startLocationForRace(race.value)});
  };
  expand.append(form);shell.append(expand);
  createToggle.onclick=()=>{const opening=expand.hidden;expand.hidden=!opening;createToggle.setAttribute("aria-expanded",String(opening));createToggle.textContent=opening?"Close Character Creation":"＋ Create M&M Character";if(opening){name.focus({preventScroll:true});expand.scrollIntoView({behavior:"smooth",block:"nearest"})}};

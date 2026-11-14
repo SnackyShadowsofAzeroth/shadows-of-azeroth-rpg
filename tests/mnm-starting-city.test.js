@@ -1,0 +1,154 @@
+"use strict";
+
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const test = require("node:test");
+const vm = require("node:vm");
+
+const context = { window: {}, document: { addEventListener() {} } };
+for (const file of ["mnm-rules.js", "mnm-adventure.js"]) {
+  const fullPath = path.join(__dirname, "..", "public", file);
+  vm.runInNewContext(fs.readFileSync(fullPath, "utf8"), context, { filename: fullPath });
+}
+const rules = context.window.soaMnmRules;
+const adventure = context.window.soaMnmAdventure;
+
+test("Human characters normalize to Night Harbor and show the expected starting stats", () => {
+  const human = rules.normalizeCharacter({ id: "human-1", raceId: "human", classId: "fighter" });
+  assert.equal(rules.startLocationForRace("human"), "night-harbor");
+  assert.equal(human.startingLocation, "night-harbor");
+  assert.deepEqual(JSON.parse(JSON.stringify(human.stats)), {
+    str: 14, sta: 14, dex: 10, agi: 11, int: 10, wis: 10, cha: 11
+  });
+});
+
+test("new Human adventure saves begin in Night Harbor while other races retain the origin picker", () => {
+  const human = rules.normalizeCharacter({ id: "human-2", raceId: "human", classId: "fighter" });
+  const humanSave = adventure.createSave(human);
+  assert.equal(humanSave.stage, "briefing");
+  assert.equal(humanSave.origin, "night-harbor");
+  assert.equal(adventure.validSave(humanSave, human), true);
+  assert.match(humanSave.journal[0], /Night Harbor/);
+
+  const gnome = rules.normalizeCharacter({ id: "gnome-1", raceId: "gnome", classId: "fighter" });
+  const gnomeSave = adventure.createSave(gnome);
+  assert.equal(gnomeSave.stage, "origin");
+  assert.equal(gnomeSave.origin, "");
+});
+
+test("Human origin actions cannot select a different city", () => {
+  const human = { id: "human-3", raceId: "human" };
+  const legacyOriginSave = adventure.createSave({ id: human.id, raceId: "gnome" });
+  assert.throws(
+    () => adventure.transition(legacyOriginSave, human, { type: "origin", region: "faelindral" }),
+    /Human characters begin in Night Harbor/
+  );
+  const selected = adventure.transition(legacyOriginSave, human, { type: "origin", region: "night-harbor" });
+  assert.equal(selected.state.origin, "night-harbor");
+  assert.equal(selected.state.stage, "briefing");
+});
+
+test("unstarted Human saves migrate to Night Harbor; other saves stay untouched", () => {
+  const human = { id: "human-4", raceId: "human" };
+  const pending = adventure.createSave({ id: human.id, raceId: "gnome" });
+  assert.equal(adventure.migrateHumanStartingCity(pending, human), true);
+  assert.equal(pending.origin, "night-harbor");
+  assert.equal(pending.stage, "briefing");
+  assert.match(pending.journal[0], /Night Harbor/);
+  assert.equal(adventure.migrateHumanStartingCity(pending, human), false);
+
+  const gnome = { id: "gnome-2", raceId: "gnome" };
+  const gnomePending = adventure.createSave(gnome);
+  assert.equal(adventure.migrateHumanStartingCity(gnomePending, gnome), false);
+  assert.equal(gnomePending.stage, "origin");
+  assert.equal(gnomePending.origin, "");
+});
+
+test("M&M race/class and stat rules keep representative supplied values", () => {
+  assert.equal(rules.isValidSelection({ raceId: "deep_gnome", classId: "bard" }), true);
+  const deepElfArcher = rules.startingStats("deep_elf", "archer");
+  assert.deepEqual(JSON.parse(JSON.stringify(deepElfArcher.stats)), {
+    str: 10, sta: 9, dex: 14, agi: 14, int: 13, wis: 11, cha: 9
+  });
+});
+test("user-supplied race and class modifier tables stay exact", () => {
+  const nonzero = vector => Object.fromEntries(
+    Object.entries(JSON.parse(JSON.stringify(vector))).filter(([, value]) => value !== 0)
+  );
+  const expectedRaces = {
+    deep_elf: { str: -2, sta: -1, agi: 2, int: 3, wis: 1, cha: -1 },
+    deep_gnome: { str: -2, sta: -1, agi: 2, dex: 2, int: 3, wis: -2 },
+    dwarf: { str: 1, sta: 1, agi: -1, dex: 2, cha: -1 },
+    gnome: { str: -2, sta: -1, dex: 3, int: 4, wis: -1, cha: -1 },
+    goblin: { str: -1, sta: -1, agi: 3, dex: 3, int: 1, cha: -3 },
+    halfling: { str: -1, sta: 1, agi: 1, int: -2, wis: 4, cha: -1 },
+    human: { sta: 1, cha: 1 },
+    ogre: { str: 4, sta: 3, agi: -2, dex: -1, wis: -1, cha: -1 },
+    wood_elf: { str: -2, sta: -2, agi: 4, dex: 2, int: -1, wis: 1 }
+  };
+  const expectedClasses = {
+    archer: { str: 2, agi: 2, dex: 4 },
+    bard: { str: 1, dex: 3, cha: 4 },
+    beastmaster: { str: 4, agi: 2, wis: 2 },
+    cleric: { str: 2, sta: 2, wis: 3, cha: 1 },
+    druid: { agi: 2, wis: 4, cha: 2 },
+    elementalist: { sta: 4, int: 4 },
+    enchanter: { int: 4, cha: 4 },
+    fighter: { str: 4, sta: 3, agi: 1 },
+    inquisitor: { str: 1, sta: 3, dex: 1, int: 2, cha: 1 },
+    monk: { str: 1, agi: 4, dex: 3 },
+    necromancer: { dex: 4, int: 4 },
+    paladin: { str: 2, sta: 4, wis: 2 },
+    ranger: { str: 1, agi: 2, dex: 3, wis: 2 },
+    rogue: { agi: 4, dex: 4 },
+    shadow_knight: { str: 3, sta: 2, int: 3 },
+    shaman: { str: 1, sta: 2, dex: 1, wis: 4 },
+    spellblade: { str: 2, dex: 3, int: 3 },
+    wizard: { str: 3, dex: 1, int: 4 }
+  };
+
+  for (const [raceId, expected] of Object.entries(expectedRaces)) {
+    assert.deepEqual(nonzero(rules.raceBonuses[raceId]), expected, raceId);
+  }
+  for (const [classId, expected] of Object.entries(expectedClasses)) {
+    assert.deepEqual(nonzero(rules.classBonuses[classId]), expected, classId);
+  }
+
+  for (const race of rules.selectableRaces()) {
+    for (const klass of rules.classesForRace(race.id)) {
+      const sheet = rules.startingStats(race.id, klass.id);
+      for (const key of rules.statKeys) {
+        assert.equal(
+          sheet.stats[key],
+          rules.statBase + sheet.racialBonuses[key] + sheet.classBonuses[key],
+          race.id + "/" + klass.id + "/" + key
+        );
+      }
+    }
+  }
+});
+test("race class access matches the maintained M&M lore matrix", () => {
+  const expected = {
+    human: ["archer", "bard", "beastmaster", "cleric", "druid", "elementalist", "enchanter", "fighter", "inquisitor", "monk", "necromancer", "paladin", "ranger", "rogue", "shadow_knight", "shaman", "spellblade", "wizard"],
+    gnome: ["cleric", "elementalist", "enchanter", "fighter", "necromancer", "paladin", "rogue", "spellblade", "wizard"],
+    deep_gnome: ["beastmaster", "bard", "druid", "elementalist", "enchanter", "necromancer", "rogue", "shaman", "wizard"],
+    dwarf: ["bard", "cleric", "elementalist", "enchanter", "fighter", "paladin", "ranger", "rogue", "spellblade", "wizard"],
+    deep_dwarf: ["cleric", "elementalist", "fighter", "inquisitor", "necromancer", "paladin", "shadow_knight", "spellblade"],
+    high_elf: ["archer", "cleric", "elementalist", "enchanter", "inquisitor", "paladin", "spellblade", "wizard"],
+    wood_elf: ["archer", "bard", "beastmaster", "druid", "fighter", "ranger", "rogue", "shaman"],
+    deep_elf: ["archer", "cleric", "elementalist", "enchanter", "fighter", "inquisitor", "monk", "necromancer", "paladin", "ranger", "rogue", "shadow_knight", "spellblade", "wizard"],
+    ogre: ["archer", "beastmaster", "elementalist", "fighter", "monk", "ranger", "shadow_knight", "shaman"],
+    halfling: ["archer", "bard", "beastmaster", "cleric", "druid", "fighter", "paladin", "ranger", "rogue"],
+    troll: ["beastmaster", "druid", "enchanter", "fighter", "necromancer", "rogue", "shadow_knight", "shaman"],
+    goblin: ["archer", "beastmaster", "druid", "enchanter", "fighter", "necromancer", "ranger", "rogue", "shadow_knight", "shaman"]
+  };
+  for (const [raceId, classIds] of Object.entries(expected)) {
+    assert.deepEqual(
+      Array.from(rules.classesForRace(raceId), klass => klass.id).sort(),
+      classIds.slice().sort(),
+      raceId
+    );
+  }
+  assert.equal(rules.raceById("varnai").selectable, false);
+});
