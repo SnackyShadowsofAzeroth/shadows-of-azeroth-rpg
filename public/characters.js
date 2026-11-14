@@ -401,7 +401,7 @@ function organizeGameSections(){
   const status=get("soa-character-status"),profession=get("soa-profession-panel");
   let screen=get("soa-character-screen");
   if(!screen){screen=make("section");screen.id="soa-character-screen";screen.className="soa-game-screen";screen.setAttribute("aria-label","M&M Adventure and Character Record");main.insertBefore(screen,main.querySelector(":scope > footer")||null)}
-  screen.replaceChildren();if(status)status.hidden=true;if(profession){profession.hidden=false;screen.append(profession)}
+  const savedNotice=screen.querySelector(".soa-character-save-confirmation");screen.replaceChildren();if(savedNotice)screen.append(savedNotice);if(status)status.hidden=true;if(profession){profession.hidden=false;screen.append(profession)}
   for(const child of main.children){if(child!==screen&&child.tagName!=="HEADER"&&child.tagName!=="FOOTER")child.hidden=true}
   return;
  }
@@ -595,11 +595,11 @@ window.soaCharacters={retrainPrimaryProfession,updateCraftSkill,profile:selected
 window.addEventListener("pagehide",()=>snapshot(active.id));
 document.addEventListener("DOMContentLoaded",()=>{
  profilePanel();
- try{const createdName=sessionStorage.getItem(CREATED_NOTICE_KEY);if(createdName){sessionStorage.removeItem(CREATED_NOTICE_KEY);const notice=make("p",createdName+" saved to this browser. Your character and adventure are ready.","soa-character-save-confirmation");notice.setAttribute("role","status");notice.setAttribute("aria-live","polite");get("soa-character-status")?.prepend(notice)}}catch(e){}
  try{if(rosterLoadBlocked||window.soaSaveRules.isIntegrityBlocked()||sessionStorage.getItem(ENTER_KEY)!=="1")drawMenu()}catch(e){drawMenu()}
  // New-character adventures need their own future companions. Snacky's fixed party should not be shown as theirs.
  if(active.origin==="custom"){const pane=get("companion-panel");if(pane){pane.hidden=true;pane.dataset.soaUnavailable="true"}const rep=document.createElement("section");rep.className="panel soa-standalone-reputation";rep.id="soa-standalone-reputation";rep.append(document.createElement("h2"));rep.firstChild.textContent="Faction standing";get("soa-profession-panel")?.after(rep);window.soaReputation?.renderInto?.(rep);const journal=get("journal");if(journal?.closest){const legacy=journal.closest("section.panel");if(legacy)legacy.hidden=true;legacy.dataset.soaUnavailable="true"}}
  organizeGameSections();
+ try{const createdName=sessionStorage.getItem(CREATED_NOTICE_KEY),screen=get("soa-character-screen");if(createdName&&screen){sessionStorage.removeItem(CREATED_NOTICE_KEY);const notice=make("p",createdName+" saved to this browser. Your character and adventure are ready.","soa-character-save-confirmation");notice.setAttribute("role","status");notice.setAttribute("aria-live","polite");screen.prepend(notice)}}catch(e){}
 });
 })();
 
