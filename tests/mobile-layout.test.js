@@ -103,7 +103,8 @@ test("one five-destination bottom navigation is loaded and cached for offline pl
   assert.match(source, /\["dungeons","Dungeons","soa-dungeons-screen"/);
   assert.doesNotMatch(source,/\["reputation","Reputation"/);
   assert.match(html, /id="soa-dungeons-screen"[\s\S]*id="soa-dungeons-controls"/);
-  assert.match(serviceWorker, /shadows-of-azeroth-v\d+/);
+  assert.match(serviceWorker, /mm-rpg-v\d+/);
+  assert.match(serviceWorker, /key\.startsWith\("shadows-of-azeroth-"\)/, "upgrades remove the previous app cache namespace");
   assert.match(layoutCss, /#soa-mobile-nav\{position:fixed;z-index:999;bottom:0/);
   assert.match(source, /function createNavigation\(\)/);
   assert.doesNotMatch(characters, /soa-quick-nav/);

@@ -56,6 +56,8 @@ test("new M&M adventure saves begin in each race's assigned starting city", () =
   const woodElfSave = adventure.createSave(woodElf);
   assert.equal(woodElfSave.origin, "penshaw");
   assert.equal(woodElfSave.currentLocation, "penshaw");
+  assert.match(fs.readFileSync(path.join(__dirname, "..", "public", "mnm-adventure.js"), "utf8"), /zone:"Keepers Bight"/);
+  assert.match(fs.readFileSync(path.join(__dirname, "..", "public", "mnm-adventure.js"), "utf8"), /custom M&M: RPG starting home in Keepers Bight/);
 });
 
 test("race starting cities cannot be changed through the old origin picker", () => {
