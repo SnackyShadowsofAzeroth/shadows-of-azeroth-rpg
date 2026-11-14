@@ -4,8 +4,8 @@
   "description": "Offline-first interactive fantasy RPG",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#121820",
-  "theme_color": "#131c27",
+  "background_color": "#ead9b5",
+  "theme_color": "#4c3423",
   "icons": [
     {
       "src": "icon.svg",

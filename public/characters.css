@@ -43,6 +43,8 @@ body.theme-alternative .soa-profession-panel h3{color:#523416}
 /* One-tap non-destructive save export from character selection. */
 .soa-menu-card button.soa-roster-backup{display:block;margin:16px auto 0;width:100%;max-width:360px;min-height:44px;border-color:#aa8351;background:linear-gradient(#584b39,#322b26);color:#f8ebcb;font-weight:700}
 .soa-menu-card .soa-menu-help{color:#624628;font:12px/1.6 system-ui;text-align:center;margin:9px auto 14px;max-width:400px}
+.soa-menu-card .soa-menu-save-note{margin:2px 0 12px;padding:10px 12px;border-left:4px solid #98713b;background:#ad955033;color:#4d3a22;font:600 12px/1.55 system-ui,sans-serif}
+.soa-character-save-confirmation{margin:0 0 14px;padding:10px 12px;border:1px solid #9b7845;border-left:5px solid #876338;background:linear-gradient(120deg,#f0dfb8,#dfc99a);color:#3f2d1b;font:700 13px/1.45 system-ui,sans-serif}
 
 #campaign-box,#companion-panel,#soa-profession-panel,#soa-standalone-reputation,#soa-save-settings{scroll-margin-top:calc(env(safe-area-inset-top,0px) + 82px)}
 

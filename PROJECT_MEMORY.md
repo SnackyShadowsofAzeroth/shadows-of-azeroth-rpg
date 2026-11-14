@@ -5,6 +5,7 @@ Read this file before changing project code, content, configuration, or deployme
 ## Product and architecture
 
 - M&M: RPG is an offline-first mobile web RPG delivered through Cloudflare Pages. Client files live in public/; Pages API handlers live in functions/api/; worker.mjs adapts those handlers for local/Workers preview; public/sw.js controls offline asset caching. Never put deployment secrets in the repository.
+- Character rosters, adventure saves, and portraits are stored locally in the current browser/device; they do not sync between devices. The character selector distinguishes the saved roster from an unfinished creation draft, labels the commit action “Save Character & Play,” verifies localStorage writes by reading them back, cleans up failed creation slots before rollback, and shows a success message after creation.
 - Legacy profiles retain the original Warcraft-inspired game flow and local saves. M&M profiles use a separate seven-stat creator, race-specific starts, world travel, a fixed offline story, optional AI Chronicle, and character-bound system saves. Keep these systems isolated.
 - Read CAMPAIGN_BIBLE.md for campaign and quality standards, DEVELOPMENT_HANDOFF.md for implementation history, and MNM_REWRITE_PLAN.md for conversion scope.
 - M&M race descriptions and eligibility come from MNM_RACE_LORE.md, with Deep Gnome Bard updated from the later official patch note.
@@ -18,6 +19,7 @@ Read this file before changing project code, content, configuration, or deployme
 - Starting homes: Human, Halfling, Gnome, Dwarf → Night Harbor; Deep Gnome, Deep Elf, Goblin, Ogre → the Underdocks; Wood Elf → Penshaw in Keepers Bight as a custom M&M: RPG start assignment. The Underdocks lift links to Night Harbor. All races can sail from Twilight Harbor in Night Harbor to Penshaw. Existing Deep Dwarf, High Elf, and Troll profiles use Night Harbor fallback.
 - Racial features and class techniques are original project abilities. Keep them lore-aware, generalized, and clearly labeled as custom; their displayed descriptions must not mention specific quest items or props. Do not call them official M&M abilities.
 - The M&M adventure uses eight view tabs: an eight-column row on wide screens and a four-column grid on phone/tablet widths. Keep tab labels centered and wrapping only at spaces.
+- UI direction: use a warm dune palette of parchment, sandstone, bronze, and terracotta; avoid broad green accents. Keep the Night Harbor art visible and use the official M&M site for layout inspiration rather than copying its branding or assets.
 
 ## Playable custom rules and official facts
 
@@ -34,7 +36,7 @@ Read this file before changing project code, content, configuration, or deployme
 - M&M profiles receive a road-worn weapon, patched travel coat, two healing poultices, two waybread, and 24 custom coppers. They do not receive legacy faction, professions, legacy equipment, or legacy currency.
 - The adventure, world travel, AI Chronicle, and journal use soa-mnm-adventure-v1; official-rule and custom RPG system state uses soa-mnm-systems-v1. Both keys participate in character switching, archive backup/restore, and local saves.
 - public/mnm-ai-chronicle.js generates original scenes and three choices per scene through Gemini; local d20 checks resolve outcomes. The AI API cannot edit game state. Live generation requires Cloudflare GEMINI_API_KEY and AI_ACCESS_CODE secrets. Never commit or print these secrets.
-- public/sw.js cache version must be incremented when cached gameplay files change. The current source version is mm-rpg-v145; activation removes both superseded M&M caches and the prior cache namespace.
+- public/sw.js cache version must be incremented when cached gameplay files change. The current source version is mm-rpg-v146; activation removes both superseded M&M caches and the prior cache namespace.
 - Preserve legacy characters and saves; never silently reinterpret, reset, or erase local data.
 
 ## Graphify workflow
@@ -42,5 +44,5 @@ Read this file before changing project code, content, configuration, or deployme
 - This project has a Graphify skill at .codex/skills/graphify/ and checked-in navigation files under graphify-out/.
 - When graphify-out/graph.json exists, run graphify query before codebase source searches, graphify path for relationships, and graphify explain for a focused concept. If graphify-out/wiki/index.md exists, use it for broad navigation. Read GRAPH_REPORT.md only for broad architecture review or when narrower queries are insufficient.
 - After code changes run graphify update . so graphify-out/graph.json and GRAPH_REPORT.md reflect the source.
-- Graphify refresh was attempted on 2026-11-13 but could not run because graphify, uv, and a working Python interpreter were unavailable in this environment. The checked-in graph was built at commit 81fc81b and is stale relative to the current branch; refresh it before the next code edit.
+- Graphify refresh was attempted on 2026-11-14, but the graphify CLI is unavailable in this environment. The user directed proceeding with the requested fixes; retry the refresh before future code edits when the tool is available. The checked-in graph was built at commit 81fc81b and is stale relative to the current branch.
 - The M&M creator treats an omitted race selectable flag as available and explicitly rejects only selectable:false. Mount the adventure after character section organization so startup cannot race the character layout.
