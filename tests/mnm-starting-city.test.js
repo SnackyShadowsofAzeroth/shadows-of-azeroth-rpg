@@ -69,6 +69,21 @@ test("race starting cities cannot be changed through the old origin picker", () 
   assert.throws(() => adventure.transition(save, gnome, { type: "origin", region: "penshaw" }), /not available in the current chapter/);
 });
 
+test("M&M adventure startup organizes the character screen before mounting it", () => {
+  const calls = [];
+  let ready;
+  const context = {
+    window: { soaCharacters: { organizeSections() { calls.push("organize"); }, profile() { calls.push("profile"); return null; } } },
+    document: { readyState: "interactive", addEventListener(name, callback) { if (name === "DOMContentLoaded") ready = callback; } }
+  };
+  const fullPath = path.join(__dirname, "..", "public", "mnm-adventure.js");
+  vm.runInNewContext(fs.readFileSync(fullPath, "utf8"), context, { filename: fullPath });
+  assert.equal(typeof ready, "function");
+  assert.deepEqual(calls, []);
+  ready();
+  assert.deepEqual(calls, ["organize", "profile"]);
+});
+
 test("unstarted saves migrate to the character's assigned starting city", () => {
   const human = { id: "human-4", raceId: "human" };
   const pending = { ...adventure.createSave({ id: human.id, raceId: "gnome" }), stage: "origin", origin: "" };
