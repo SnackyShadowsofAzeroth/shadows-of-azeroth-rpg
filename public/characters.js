@@ -309,7 +309,7 @@ function drawMenu(){
  const expand=make("section");expand.id="soa-character-creation";expand.className="soa-create-new";expand.setAttribute("aria-label","Create a new M&M character");
  const form=make("form");form.className="soa-create-form soa-mnm-form";
  const name=make("input");name.type="text";name.maxLength=36;name.minLength=2;name.required=true;name.placeholder="Character name";
- const gender=make("select");selectOptions(gender,["Female","Male","Nonbinary","Prefer not to say"]);
+ const gender=make("select");selectOptions(gender,["Female","Male"]);
  const race=make("select"),klass=make("select");
  const labeled=(title,field)=>{const label=make("label",title);label.append(field);return label};
  const r=window.soaMnmRules;
