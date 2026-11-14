@@ -345,3 +345,204 @@ body.soa-ruleset-mnm header{background:linear-gradient(180deg,#27312df2,#18201cf
 .soa-mnm-system-sources a:focus-visible{outline:2px solid #f4dd9f;outline-offset:3px}
 @media(max-width:640px){.soa-mnm-system-grid{grid-template-columns:1fr}.soa-mnm-action-slots{grid-template-columns:repeat(2,minmax(0,1fr))}.soa-mnm-system-button{width:100%;margin:6px 0}}
 
+/* Sun-warmed dune palette: parchment play surfaces, cedar controls, and bronze trim. */
+body.soa-ruleset-mnm{
+ --soa-green:#aa6742;
+ --soa-yellow:#d8a143;
+ --dune-ink:#3c2a1b;
+ --dune-muted:#71563b;
+ --dune-paper:#ead9b5;
+ --dune-paper-light:#f4e7ca;
+ --dune-paper-shadow:#cdb487;
+ --dune-bronze:#8a6238;
+ --dune-copper:#a85f37;
+ --dune-amber:#d4a14d;
+ color-scheme:light;
+ background:
+  linear-gradient(180deg,#b4773b38 0%,#85552c24 24%,#38251bd1 100%),
+  url("./night-harbor-hero.jpg") center 38%/cover fixed no-repeat;
+}
+body.soa-ruleset-mnm::before{background:linear-gradient(90deg,#3b21104f,transparent 20%,transparent 80%,#3b21104f);opacity:.7}
+body.soa-ruleset-mnm header{
+ border-color:#a17a48;border-top-color:#d6b575;border-bottom-color:#76502d;
+ background:linear-gradient(125deg,#583b27f5,#342319f2 64%,#261a14f5);
+ box-shadow:inset 0 0 0 2px #211711,inset 0 1px #fff3,0 12px 32px #21130b99;
+}
+body.soa-ruleset-mnm header h1{color:#f0d69c;text-shadow:0 2px #28190f,0 0 20px #24170f}
+body.soa-ruleset-mnm header .eyebrow{color:#e1c28b}
+body.soa-ruleset-mnm header::after{background:linear-gradient(90deg,transparent,#d9ad64 12%,#d9ad64 88%,transparent)}
+body.soa-ruleset-mnm .panel,
+body.soa-ruleset-mnm .soa-game-screen,
+body.soa-ruleset-mnm .soa-dungeon-panel,
+body.soa-ruleset-mnm .soa-arena-panel,
+body.soa-ruleset-mnm .soa-chronicle-panel,
+body.soa-ruleset-mnm .soa-profession-panel,
+body.soa-ruleset-mnm #campaign-box,
+body.soa-ruleset-mnm #companion-panel,
+body.soa-ruleset-mnm #soa-contract-board,
+body.soa-ruleset-mnm .soa-mnm-adventure-panel,
+body.soa-ruleset-mnm .soa-mnm-record,
+body.soa-ruleset-mnm .soa-mnm-system-view,
+body.soa-ruleset-mnm .soa-mnm-system-card,
+body.soa-ruleset-mnm .soa-mnm-rules-disclosure,
+body.soa-ruleset-mnm .soa-mnm-ai-connection,
+body.soa-ruleset-mnm .soa-mnm-ai-history{
+ color:var(--dune-ink);border:2px solid #a98b5d;border-top-color:#c3a977;border-radius:4px;
+ background:radial-gradient(ellipse at 14% 0%,#fff8dfb8,transparent 55%),repeating-linear-gradient(8deg,#73562b08 0 1px,transparent 1px 8px),linear-gradient(135deg,var(--dune-paper-light),var(--dune-paper) 58%,var(--dune-paper-shadow));
+ box-shadow:inset 0 0 0 2px #72563228,inset 0 1px #fff9,0 10px 28px #20140d73;
+}
+body.soa-ruleset-mnm .panel h2,
+body.soa-ruleset-mnm .panel h3,
+body.soa-ruleset-mnm .soa-mnm-adventure-panel h2,
+body.soa-ruleset-mnm .soa-mnm-system-view h3{color:#55371f;text-shadow:0 1px #fff1d8}
+body.soa-ruleset-mnm .panel p,
+body.soa-ruleset-mnm .panel #scene,
+body.soa-ruleset-mnm .soa-mnm-adventure-panel p,
+body.soa-ruleset-mnm .soa-mnm-system-view p{color:#4b3828}
+body.soa-ruleset-mnm .muted,
+body.soa-ruleset-mnm .soa-kicker,
+body.soa-ruleset-mnm .soa-mnm-kicker,
+body.soa-ruleset-mnm .soa-mnm-subtitle,
+body.soa-ruleset-mnm .soa-mnm-system-sources{color:#745739!important}
+body.soa-ruleset-mnm .tag,
+body.soa-ruleset-mnm .abilities,
+body.soa-ruleset-mnm .soa-mnm-ai-status{color:#745739!important}
+body.soa-ruleset-mnm .soa-mnm-game-heading{
+ border:3px ridge #b8955d;
+ background:linear-gradient(100deg,#352116ec 0%,#50341fe3 54%,#39261bb8 100%),url("./night-harbor-hero.jpg") center 42%/cover;
+ box-shadow:inset 0 0 0 2px #27180f,inset 0 1px #fff3,0 12px 28px #21130999;
+}
+body.soa-ruleset-mnm .soa-mnm-game-heading h1{color:#f1d79d;text-shadow:0 2px #28190f}
+body.soa-ruleset-mnm .soa-mnm-game-heading p{color:#f1e4ca}
+body.soa-ruleset-mnm .soa-mnm-tabs{
+ border:2px ridge #947044;border-radius:3px;
+ background:linear-gradient(180deg,#563b29f5,#302117f7);
+ box-shadow:inset 0 0 0 2px #21160f,0 7px 18px #1e120c80;
+}
+body.soa-ruleset-mnm .soa-mnm-tab,
+body.soa-ruleset-mnm .soa-mnm-system-button,
+body.soa-ruleset-mnm .soa-mnm-ai-primary{
+ color:#f8edd6;border:2px outset #b8945d;border-radius:3px;
+ background:linear-gradient(180deg,#79583a,#553720 52%,#3d291d);
+ box-shadow:inset 0 1px #fff3,0 3px 7px #3a231480;
+}
+body.soa-ruleset-mnm .soa-mnm-tab:hover,
+body.soa-ruleset-mnm .soa-mnm-system-button:hover,
+body.soa-ruleset-mnm .soa-mnm-ai-primary:hover{border-color:#e4c17c;background:linear-gradient(#93693e,#634225);filter:none}
+body.soa-ruleset-mnm .soa-mnm-tab[aria-selected="true"]{color:#fff4d7;border-color:#e6bd68;background:linear-gradient(#c28b3d,#875229);box-shadow:inset 0 0 0 1px #ffe0a355,0 0 10px #b2763038}
+body.soa-ruleset-mnm .soa-mnm-roster-button{border-color:#b8945d;background:linear-gradient(#79583a,#3d291d);color:#f8edd6}
+body.soa-ruleset-mnm button.low{border-left-color:#c2965b;background:linear-gradient(90deg,#785333,#4f3827)}
+body.soa-ruleset-mnm button.med{border-left-color:#e0ae55;background:linear-gradient(90deg,#8a6031,#543a26)}
+body.soa-ruleset-mnm button.high{border-left-color:#bd7053;background:linear-gradient(90deg,#774234,#4c3026)}
+body.soa-ruleset-mnm button.soa-person.selected{color:#fff3d3;border-color:#e5bc6b;background:linear-gradient(#a16d36,#694329)}
+body.soa-ruleset-mnm button:focus-visible,
+body.soa-ruleset-mnm input:focus-visible,
+body.soa-ruleset-mnm textarea:focus-visible,
+body.soa-ruleset-mnm select:focus-visible,
+body.soa-ruleset-mnm summary:focus-visible,
+body.soa-ruleset-mnm a:focus-visible{outline-color:#d99745}
+body.soa-ruleset-mnm input,
+body.soa-ruleset-mnm select,
+body.soa-ruleset-mnm textarea,
+body.soa-ruleset-mnm .ai-input,
+body.soa-ruleset-mnm .soa-mnm-system-input{
+ color:#3e2b1b;border:1px solid #a7895c;border-radius:3px;background:#fbf0d9;box-shadow:inset 0 1px 3px #785a3438;
+}
+body.soa-ruleset-mnm input::placeholder,
+body.soa-ruleset-mnm textarea::placeholder,
+body.soa-ruleset-mnm .ai-input::placeholder{color:#8b7151}
+body.soa-ruleset-mnm a{color:#8c4d2e}
+body.soa-ruleset-mnm .stat,
+body.soa-ruleset-mnm .soa-mnm-system-card,
+body.soa-ruleset-mnm .soa-mnm-stat-tile,
+body.soa-ruleset-mnm .soa-mnm-record-score,
+body.soa-ruleset-mnm .soa-mnm-meter,
+body.soa-ruleset-mnm .soa-mnm-action-slot,
+body.soa-ruleset-mnm .soa-mnm-item-row,
+body.soa-ruleset-mnm .soa-quest-entry,
+body.soa-ruleset-mnm .soa-journal-entries li{
+ color:#432e1d;border:1px solid #b2986c;
+ background:linear-gradient(145deg,#f6e8c9,#dfc99d);
+ box-shadow:inset 0 1px #fff8;
+}
+body.soa-ruleset-mnm .stat strong,
+body.soa-ruleset-mnm .num,
+body.soa-ruleset-mnm .soa-mnm-stat-total,
+body.soa-ruleset-mnm .soa-mnm-record-score strong,
+body.soa-ruleset-mnm .soa-mnm-item-row strong{color:#704321}
+body.soa-ruleset-mnm .soa-mnm-stat-name,
+body.soa-ruleset-mnm .soa-mnm-stat-breakdown,
+body.soa-ruleset-mnm .soa-mnm-record-score span,
+body.soa-ruleset-mnm .soa-mnm-record-score small,
+body.soa-ruleset-mnm .soa-mnm-meter>span,
+body.soa-ruleset-mnm .soa-mnm-meter>strong,
+body.soa-ruleset-mnm .soa-mnm-action-slot span,
+body.soa-ruleset-mnm .soa-mnm-item-row p{color:#665039}
+body.soa-ruleset-mnm .soa-mnm-choice{border-color:#a98a5b;background:linear-gradient(145deg,#79583a,#503623);box-shadow:inset 0 1px #fff3,0 3px 7px #3a231480}
+body.soa-ruleset-mnm .soa-mnm-choice strong{color:#f3dba7}
+body.soa-ruleset-mnm .soa-mnm-choice span{color:#f1e7d3}
+body.soa-ruleset-mnm .soa-mnm-live,
+body.soa-ruleset-mnm .soa-mnm-rule-note,
+body.soa-ruleset-mnm .soa-mnm-feature,
+body.soa-ruleset-mnm .soa-mnm-feature-status,
+body.soa-ruleset-mnm .soa-mnm-provisional,
+body.soa-ruleset-mnm .soa-mnm-warning,
+body.soa-ruleset-mnm .soa-mnm-racial-ability,
+body.soa-ruleset-mnm .soa-mnm-journal li,
+body.soa-ruleset-mnm .soa-mnm-ai-narrative{
+ color:#49331f!important;border-color:#b18a51;
+ background:linear-gradient(135deg,#f7e9ca,#dfc496);
+ box-shadow:inset 0 1px #fff8;
+}
+body.soa-ruleset-mnm .soa-mnm-live,
+body.soa-ruleset-mnm .soa-mnm-feature,
+body.soa-ruleset-mnm .soa-mnm-feature-status,
+body.soa-ruleset-mnm .soa-mnm-provisional,
+body.soa-ruleset-mnm .soa-mnm-warning,
+body.soa-ruleset-mnm .soa-mnm-ai-narrative{border-left-color:#a65c31}
+body.soa-ruleset-mnm .soa-mnm-ai-connection>summary,
+body.soa-ruleset-mnm .soa-mnm-ai-history>summary,
+body.soa-ruleset-mnm .soa-mnm-ai-connection label,
+body.soa-ruleset-mnm .soa-mnm-ai-connection p,
+body.soa-ruleset-mnm .soa-mnm-ai-history li,
+body.soa-ruleset-mnm .soa-mnm-ai-choice span,
+body.soa-ruleset-mnm .soa-mnm-system-label,
+body.soa-ruleset-mnm .soa-mnm-system-sources{color:#61472d!important}
+body.soa-ruleset-mnm .soa-mnm-system-sources a{color:#8c4d2e}
+body.soa-ruleset-mnm .soa-mnm-meter-track{border-color:#8a6b43;background:#6b4b2e}
+body.soa-ruleset-mnm .soa-mnm-meter-track i{background:linear-gradient(#efc66d,#b45f32)}
+body.soa-ruleset-mnm .bar{border-color:#8b6b42;background:#795a38}
+body.soa-ruleset-mnm .bar i{background:linear-gradient(#dc8862,#a54d37)}
+body.soa-ruleset-mnm .bar.energy i,
+body.soa-ruleset-mnm #resource-meter[data-resource="energy"] .bar i,
+body.soa-ruleset-mnm #resource-meter[data-resource="focus"] .bar i{background:linear-gradient(#f1d37f,#c88d37)}
+body.soa-ruleset-mnm .soa-relation-cell{border-color:#b2986c;background:linear-gradient(145deg,#f6e8c9,#dfc99d);color:#49331f}
+body.soa-ruleset-mnm .soa-relation-label{color:#61472d}
+body.soa-ruleset-mnm .soa-relation-rail{background:#b69a6d}
+body.soa-ruleset-mnm .soa-relation-fill{background:#b77a3c}
+body.soa-ruleset-mnm .soa-relation-fill.affection{background:#b96764}
+body.soa-ruleset-mnm .soa-relation-fill.respect{background:#8a6a50}
+body.soa-ruleset-mnm .soa-druid-panel{
+ --druid-ink:#49331f;--druid-muted:#71563b;--druid-heading:#704321;--druid-edge:#b18a51;
+ color:var(--druid-ink);border-color:#9d7648;
+ background:radial-gradient(ellipse at 16% 0%,#fff5d0,transparent 58%),linear-gradient(145deg,#ead9b5,#cdb487);
+ box-shadow:inset 0 0 0 2px #72563228,0 8px 18px #20140d73;
+}
+body.soa-ruleset-mnm .soa-druid-panel::before,
+body.soa-ruleset-mnm .soa-druid-panel::after{filter:sepia(.85) saturate(.7)}
+body.soa-ruleset-mnm .soa-druid-panel button{color:#f8edd6;border-color:#b8945d;background:linear-gradient(#79583a,#3d291d)}
+body.soa-ruleset-mnm .soa-druid-panel button[aria-pressed="true"]{border-color:#d9a44c;background:linear-gradient(#a46c35,#674229);box-shadow:inset 3px 0 #e3b65f,0 0 8px #aa662a33}
+body.soa-ruleset-mnm .soa-druid-pool,
+body.soa-ruleset-mnm .soa-druid-rail{border-color:#aa8959;background:#795a38;box-shadow:inset 0 1px 3px #4d321b55}
+body.soa-ruleset-mnm .soa-druid-pool strong,
+body.soa-ruleset-mnm .soa-druid-panel p,
+body.soa-ruleset-mnm .soa-druid-panel strong,
+body.soa-ruleset-mnm .soa-druid-panel summary{color:#49331f}
+body.soa-ruleset-mnm .soa-druid-pool[data-resource="health"] i{background:linear-gradient(#dc8862,#a54d37);box-shadow:inset 0 1px #fff4,0 0 8px #a54d3744}
+@media(max-width:700px){
+ body.soa-ruleset-mnm{background-attachment:scroll;background-position:center top}
+ body.soa-ruleset-mnm .soa-mnm-game-heading{background-position:center 35%}
+ body.soa-ruleset-mnm .soa-mnm-adventure-panel{padding:clamp(16px,4vw,24px)}
+}
+
+
