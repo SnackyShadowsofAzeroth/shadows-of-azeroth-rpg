@@ -368,7 +368,7 @@ function boot(){
    else panel.append(el("p","Combat could not be loaded. Your saved encounter is still intact.","soa-mnm-live"));
   }else{
    const foe=state?.ok?state.save.rpg.encounter:null;
-   panel.append(button(foe?"Resume the active fight":"Fight to clear the marker",foe?"Continue the current turn-based encounter.":"Start a regional foe encounter using Health, Focus, equipment, and class techniques.",beginStoryCombat,"med"));
+   panel.append(button(foe?"Resume the active fight":"Fight to clear the marker",foe?"Continue the current turn-based encounter.":"Start a regional foe encounter using Health, Focus, equipment, and verified memorized abilities.",beginStoryCombat,"med"));
    panel.append(button("Take a safe detour","Avoid the fight, warn the caravan, and complete the chapter with a safe route report.",()=>perform({type:"retreat"},false),"low"));
   }
  }
