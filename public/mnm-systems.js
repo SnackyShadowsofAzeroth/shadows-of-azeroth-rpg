@@ -500,7 +500,7 @@ function renderCombat(profile,onChange,context={}){
  const health=card("Health and Focus","Health "+rpg.hp+" / "+rpg.maxHp+" \u00b7 Focus "+rpg.focus+" / "+rpg.maxFocus+" \u00b7 Level "+save.level);
  panel.append(health);
  const status=statusNode();panel.append(status);
- panel.append(card("How auto-attack works","When enabled, your character makes a basic Strike every 1.6 seconds against the active foe. Each turn uses the custom d20 attack and gives the foe a chance to respond unless the strike defeats it. Strikes do not spend Focus; a hit restores 1 Focus. Auto-attack pauses when you leave Combat and resumes if the same fight is still active when you return. It stops when the encounter ends or you turn it off."));
+ panel.append(card("How auto-attack works","When enabled, your character makes a basic Strike every 1.6 seconds against the active foe. Each turn uses the custom d20 attack and gives the foe a chance to respond unless the strike defeats it. Strikes do not spend Focus; a hit restores 1 Focus. Auto-attack runs only while a Combat panel is open; Chapter One embeds it in Adventure during linked fights. Switching to a view without that panel pauses the timer, and returning resumes it if the same fight is still active. It stops when the encounter ends or you turn it off."));
  const toggle=makeSystemButton("Auto-attack: "+(save.combat.autoAttack?"On":"Off"),()=>{const result=setAutoAttack(profile,!save.combat.autoAttack);updateFromResult(result,onChange,status)});toggle.setAttribute("aria-pressed",String(save.combat.autoAttack));panel.append(toggle);
  const foe=rpg.encounter;
  if(!foe){
