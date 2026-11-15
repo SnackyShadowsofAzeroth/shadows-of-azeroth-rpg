@@ -284,6 +284,7 @@ function resolveRpgAction(profile,action,{random=Math.random,now=Date.now,return
   if(!foe)return {error:"Find a foe before choosing a combat action."};
   if(rpg.hp<=0)return {error:"Recover your character and gear before continuing."};
   let playerLine="",usedItem=null,rolled=null;
+  if(action==="technique"){if(rpg.focus<2)return {error:"Not enough Focus for the retired custom class technique."};return {error:"Custom class techniques were removed. Use a verified memorized ability."}}
   if(action==="attack"){
     if(profile.classId==="rogue"&&foe.playerHidden)return {error:"You are hidden; use Backstab while the opening lasts."};
     const strike=attackFoe(save,profile,foe,random);playerLine=strike.line;rolled={roll:strike.roll,total:strike.total,damage:strike.damage};
