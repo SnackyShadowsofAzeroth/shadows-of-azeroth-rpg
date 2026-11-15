@@ -342,7 +342,7 @@ function resolveRpgAction(profile,action,{random=Math.random,now=Date.now,return
 }
 function useRacialCombatTactic(profile,tacticId){
  const tactics={
-  brace:{line:"You brace behind Titan's Craft; the next incoming strike is reduced."},
+  brace:{line:"Titan's Craft braces you: +4 Defense against the next attack, and half damage if it hits."},
   weaken:{line:"A bound spirit weakens the foe's next strike."},
   ward:{line:"A measured ward weakens the foe's next strike."},
   flank:{line:"You follow the living signs and deal 4 damage from the flank."},
