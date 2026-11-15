@@ -500,7 +500,8 @@ function renderCombat(profile,onChange,context={}){
  const health=card("Health and Focus","Health "+rpg.hp+" / "+rpg.maxHp+" \u00b7 Focus "+rpg.focus+" / "+rpg.maxFocus+" \u00b7 Level "+save.level);
  panel.append(health);
  const status=statusNode();panel.append(status);
- const toggle=makeSystemButton("Q \u00b7 Auto-attack: "+(save.combat.autoAttack?"On":"Off"),()=>{const result=setAutoAttack(profile,!save.combat.autoAttack);updateFromResult(result,onChange,status)});toggle.setAttribute("aria-pressed",String(save.combat.autoAttack));panel.append(toggle);
+ panel.append(card("How auto-attack works","When enabled, your character makes a basic Strike every 1.6 seconds against the active foe. Each turn uses the custom d20 attack and gives the foe a chance to respond unless the strike defeats it. Strikes do not spend Focus; a hit restores 1 Focus. Auto-attack pauses when you leave Combat and resumes if the same fight is still active when you return. It stops when the encounter ends or you turn it off."));
+ const toggle=makeSystemButton("Auto-attack: "+(save.combat.autoAttack?"On":"Off"),()=>{const result=setAutoAttack(profile,!save.combat.autoAttack);updateFromResult(result,onChange,status)});toggle.setAttribute("aria-pressed",String(save.combat.autoAttack));panel.append(toggle);
  const foe=rpg.encounter;
  if(!foe){
   const regions=window.soaMnmAdventure?.regions||[],place=regions.find(row=>row.id===locationId);
@@ -588,24 +589,7 @@ function formatDuration(ms){
  const minutes=Math.ceil(ms/MINUTE),days=Math.floor(minutes/(24*60)),hours=Math.floor(minutes/60)%24,remaining=minutes%60;
  return [days?days+"d":"",hours?hours+"h":"",remaining?remaining+"m":""].filter(Boolean).join(" ")||"under 1m";
 }
-let keyHandlerInstalled=false;
-function installKeyHandler(){
- if(keyHandlerInstalled)return;keyHandlerInstalled=true;
- document.addEventListener("keydown",event=>{
-  if(event.key.toLowerCase()!=="q"||event.altKey||event.ctrlKey||event.metaKey||event.shiftKey)return;
-  const active=document.activeElement;
-  if(active&&(active.tagName==="INPUT"||active.tagName==="TEXTAREA"||active.tagName==="SELECT"||active.isContentEditable))return;
-  const profile=window.soaCharacters?.profile?.();
-  if(profile?.system!=="mnm"||!document.body.classList.contains("soa-ruleset-mnm"))return;
-  const loaded=read(profile);if(!loaded.ok)return;
-  event.preventDefault();setAutoAttack(profile,!loaded.save.combat.autoAttack);
-  const status=document.querySelector(".soa-mnm-system-view .soa-mnm-system-live");
-  if(status)status.textContent="Auto-attack "+(loaded.save.combat.autoAttack?"enabled":"disabled")+". No target or attack resolution is connected in this story chapter.";
-  document.querySelector(".soa-mnm-game")?.dispatchEvent(new CustomEvent("soa-mnm-system-update"));
- });
-}
 function render(view,profile,onChange,context={}){
- installKeyHandler();
  if(view!=="combat")stopAutoAttackRunner();
  if(view==="combat")return renderCombat(profile,onChange,context);
  if(view==="progress")return renderProgress(profile,onChange,context);

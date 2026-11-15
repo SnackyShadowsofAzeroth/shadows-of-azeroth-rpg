@@ -18,6 +18,7 @@ function character(overrides = {}) {
 function makeGame(profile = character(), { render = false, random = Math.random } = {}) {
   const values = new Map();
   const timers = new Map();
+  const listeners = new Map();
   let timerId = 0;
   const localStorage = {
     getItem(key) { return values.has(key) ? values.get(key) : null; },
@@ -43,7 +44,7 @@ function makeGame(profile = character(), { render = false, random = Math.random 
   const document = render ? {
     body: { classList: { contains: () => true } },
     activeElement: null,
-    addEventListener() {},
+    addEventListener(name, callback) { listeners.set(name, callback); },
     querySelector() { return null; },
     createElement: fakeNode,
   } : undefined;
@@ -76,7 +77,7 @@ function makeGame(profile = character(), { render = false, random = Math.random 
   const put = value => localStorage.setItem(systems.key, JSON.stringify(value));
   const stored = () => JSON.parse(localStorage.getItem(systems.key));
   put(systems.createSave(profile));
-  return { profile, systems, localStorage, timers, put, stored, context };
+  return { profile, systems, localStorage, timers, listeners, put, stored, context };
 }
 
 test("custom RPG initializes a valid starter kit and migrates older system saves", () => {
@@ -184,21 +185,32 @@ test("defeat returns to bind point and requires travel back to the corpse region
   assert.equal(game.stored().rpg.equipment.weapon, "road-worn-weapon");
 });
 
-test("Q auto-attack resolves repeated combat turns while the Combat view is open", () => {
+test("Auto-attack uses the visible toggle and repeats basic attacks without a Q shortcut", () => {
   const game = makeGame(character(), { render: true, random: () => 0.999 });
   game.systems.startEncounter(game.profile, "night-harbor", () => 0.999);
   let panel;
   const refresh = () => { panel = game.systems.render("combat", game.profile, refresh, { locationId: "night-harbor" }); };
   refresh();
-  const toggle = panel.children.find(node => String(node.textContent).startsWith("Q"));
+  const toggle = panel.children.find(node => String(node.textContent).startsWith("Auto-attack:"));
   assert.ok(toggle);
+  const textOf = node => [node.textContent || "", ...(node.children || []).map(textOf)].join(" ");
+  const renderedText = panel.children.map(textOf).join(" ");
+  assert.match(renderedText, /basic Strike every 1\.6 seconds/i);
+  assert.match(renderedText, /Strikes do not spend Focus/i);
+  assert.equal(toggle.textContent, "Auto-attack: Off");
+  assert.equal(game.listeners.has("keydown"), false);
   toggle.onclick();
   assert.equal(game.timers.size, 1);
+  let currentToggle = panel.children.find(node => String(node.textContent).startsWith("Auto-attack:"));
+  assert.equal(currentToggle.textContent, "Auto-attack: On");
   const timer = [...game.timers.values()][0];
+  assert.equal(timer.delay, 1600);
   game.timers.clear();
   timer.callback();
   assert.equal(game.stored().rpg.encounter.round, 1);
   assert.equal(game.timers.size, 1);
-  game.systems.stopAutoAttackRunner();
+  currentToggle = panel.children.find(node => String(node.textContent).startsWith("Auto-attack:"));
+  currentToggle.onclick();
+  assert.equal(game.stored().combat.autoAttack, false);
   assert.equal(game.timers.size, 0);
 });
