@@ -412,6 +412,8 @@ function boot(){
  function render(){
   if(!app.isConnected)return;
   if(!blocked)synchronizeStoryCombat();
+  const storyCombatVisible=view==="adventure"&&save?.stage==="encounter"&&Boolean(save?.combatEncounterId);
+  if(view!=="combat"&&!storyCombatVisible)window.soaMnmSystems?.stopAutoAttackRunner?.();
   app.replaceChildren();
   const hero=el("section",undefined,"soa-mnm-game-heading");
   hero.append(el("div","MONSTERS & MEMORIES \u00b7 ORIGINAL ADVENTURE","soa-mnm-kicker"),el("h1",profile.name));
