@@ -74,13 +74,13 @@ test("AI Chronicle rejects invalid origins and race/class combinations before ca
   }
 });
 
-test("AI Chronicle closes chapters at the eight-turn cap even if Gemini returns more choices", async () => {
+test("AI Chronicle closes chapters at the ten-turn cap even if Gemini returns more choices", async () => {
   const { onRequestPost } = await apiPromise;
   const previousFetch = global.fetch;
   global.fetch = async () => new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: JSON.stringify(generatedScene()) }] } }] }), { status: 200 });
   try {
     const body = payload({
-      kind: "turn", turn: 8,
+      kind: "turn", turn: 10,
       scene: { title: "The Unlit Signal", narration: generatedScene().narration, objective: "Find out why the beacon has gone dark." },
       action: { text: "Search the beacon stair for the missing signal slate.", stat: "int", difficulty: "standard" },
       roll: 12,

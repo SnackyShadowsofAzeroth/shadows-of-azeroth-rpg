@@ -183,7 +183,10 @@ function boot(){
    if(raw===null){save=createSave(profile);localStorage.setItem(KEY,JSON.stringify(save));}
    else{
     const parsed=JSON.parse(raw);
-    const needsAiMigration=parsed?.aiCampaign===undefined;
+    const storedCampaign=parsed?.aiCampaign,needsAiMigration=!storedCampaign||storedCampaign.version!==window.soaMnmAiChronicle?.version;
+    const migratedCampaign=storedCampaign?window.soaMnmAiChronicle?.migrateCampaign?.(storedCampaign,profile):window.soaMnmAiChronicle?.createCampaign?.(profile);
+    if(storedCampaign&&!migratedCampaign)throw new Error("The saved M&M campaign did not pass its character or save-format check.");
+    parsed.aiCampaign=migratedCampaign||null;
     const migration=migrateAdventureSave(parsed);
     save=migration.save;
     if(!validSave(save,profile))throw new Error("The M&M adventure save does not match the active character or current save format.");
@@ -203,7 +206,7 @@ function boot(){
  const app=el("div",undefined,"soa-mnm-game");
  screen.append(app);
  app.addEventListener("soa-mnm-system-update",()=>render());
- let view="adventure",statusText=loadMessage;
+ let view="ai",statusText=loadMessage;
  function button(label,description,onClick,cls){
   const b=el("button",undefined,"soa-mnm-choice"+(cls?" "+cls:""));b.type="button";
   b.append(el("strong",label),el("span",description));b.onclick=onClick;return b;
@@ -234,12 +237,12 @@ function boot(){
   render();
   app.querySelector("h2")?.focus();
  }
- function persistAiCampaign(){
+ function persistAiCampaign(options={}){
   if(blocked||!save)return false;
   if(window.soaSaveRules?.isIntegrityBlocked?.()){blocked=true;statusText="Saved data is paused until the character archive is recovered.";render();return false;}
   const previousUpdatedAt=save.updatedAt;
-  try{save.updatedAt=new Date().toISOString();localStorage.setItem(KEY,JSON.stringify(save));statusText="AI Chronicle saved to this character's story.";render();return true}
-  catch{save.updatedAt=previousUpdatedAt;statusText="AI Chronicle could not be saved. Your previous saved story is intact.";return false}
+  try{save.updatedAt=new Date().toISOString();localStorage.setItem(KEY,JSON.stringify(save));statusText=options.message||"Campaign saved to this character's story.";if(options.render!==false)render();return true}
+  catch{save.updatedAt=previousUpdatedAt;statusText="The campaign could not be saved. Your previous saved story is intact.";return false}
  }
  activeBindPointReturn=destination=>{
   if(blocked||!save)return false;
@@ -321,7 +324,7 @@ function boot(){
   }
   if(!foe){statusText="No active foe was found. Try starting the encounter again.";render();return}
   const next=clone(save);next.combatEncounterId=foe.id;next.combatKillsAtStart=systemState.rpg.kills;next.combatFoeName=cleanText(foe.name);
-  if(!persistAdventure(next,"You face "+foe.name+". Use Health, Focus, attacks, class techniques, items, or escape.")){render();return}
+  if(!persistAdventure(next,"You face "+foe.name+". Use Health, Focus, attacks, verified memorized abilities, items, or escape.")){render();return}
   render();
  }
  function useStoryCombatTactic(tactic){
@@ -365,7 +368,7 @@ function boot(){
    else panel.append(el("p","Combat could not be loaded. Your saved encounter is still intact.","soa-mnm-live"));
   }else{
    const foe=state?.ok?state.save.rpg.encounter:null;
-   panel.append(button(foe?"Resume the active fight":"Fight to clear the marker",foe?"Continue the current turn-based encounter.":"Start a regional foe encounter using Health, Focus, equipment, and class techniques.",beginStoryCombat,"med"));
+   panel.append(button(foe?"Resume the active fight":"Fight to clear the marker",foe?"Continue the current turn-based encounter.":"Start a regional foe encounter using Health, Focus, equipment, and verified memorized abilities.",beginStoryCombat,"med"));
    panel.append(button("Take a safe detour","Avoid the fight, warn the caravan, and complete the chapter with a safe route report.",()=>perform({type:"retreat"},false),"low"));
   }
  }
@@ -407,7 +410,7 @@ function boot(){
    for(const route of routes)grid.append(button(route.name,route.method+" \u00b7 "+route.detail,()=>perform({type:"travel",to:route.to},false)));
    panel.append(grid);
   }
-  panel.append(button("Continue the story","Return to Chapter One and continue from your saved step.",()=>setView("adventure",false),"med"));
+  panel.append(button("Continue the campaign","Return to your generated story and current location.",()=>setView("ai",false),"med"));
  }
  function render(){
   if(!app.isConnected)return;
@@ -424,7 +427,7 @@ function boot(){
   const racial=window.soaMnmRules.racialAbilities?.[profile.raceId];if(racial)hero.append(el("p","CUSTOM RACIAL FEATURE · "+racial.name+" - "+racial.description+" Effect: "+racial.effect,"soa-mnm-feature"));
   app.append(hero);
   const tabs=el("div",undefined,"soa-mnm-tabs");tabs.setAttribute("role","tablist");tabs.setAttribute("aria-label","M&M character views");
-  for(const [id,label] of [["adventure","Adventure"],["ai","AI Chronicle"],["world","World"],["character","Character"],["journal","Journey Log"],["combat","Combat"],["progress","Progress"],["inventory","Items"]]){
+  for(const [id,label] of [["ai","Adventure"],["adventure","Offline Chapter"],["world","World"],["character","Character"],["journal","Journey Log"],["combat","Combat"],["progress","Progress"],["inventory","Items"]]){
    const b=el("button",label,"soa-mnm-tab");b.type="button";b.dataset.view=id;b.setAttribute("role","tab");b.setAttribute("aria-selected",String(view===id));b.onclick=()=>setView(id,false);tabs.append(b);
   }
   app.append(tabs);
@@ -459,7 +462,7 @@ function boot(){
   }
   const rules=el("details",undefined,"soa-mnm-rules-disclosure");
   rules.append(el("summary","Story rules and M&M source note"));
-  rules.append(el("p","The fixed chapter's checks and the Combat, Progress, and Items systems use clearly labeled custom M&M: RPG rules. The optional AI Chronicle creates original scenes and choices; checks resolve locally and rewards require the player's claim. Confirmed M&M facts remain source-linked and separate from house rules. Custom attack, XP, item, carry, and shop values are not official M&M formulas or catalog data."));
+  rules.append(el("p","Adventure is the continuing generated campaign. Chapter choices and custom d20 checks are saved locally before the Story Director responds; previous chapters, combat outcomes, and unresolved leads carry forward. Offline Chapter One remains available. Combat, Progress, Items, and story-check values are original M&M: RPG rules, separate from confirmed M&M facts."));
   app.append(rules);
   const roster=el("button","\u2630 Character Select","soa-mnm-roster-button");roster.type="button";roster.onclick=()=>window.soaCharacters?.showMenu?.();app.append(roster);
  }
