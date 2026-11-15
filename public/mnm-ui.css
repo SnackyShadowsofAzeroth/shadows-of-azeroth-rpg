@@ -504,9 +504,9 @@ body.soa-ruleset-mnm .soa-mnm-ai-history>summary,
 body.soa-ruleset-mnm .soa-mnm-ai-connection label,
 body.soa-ruleset-mnm .soa-mnm-ai-connection p,
 body.soa-ruleset-mnm .soa-mnm-ai-history li,
-body.soa-ruleset-mnm .soa-mnm-ai-choice span,
 body.soa-ruleset-mnm .soa-mnm-system-label,
 body.soa-ruleset-mnm .soa-mnm-system-sources{color:#61472d!important}
+body.soa-ruleset-mnm .soa-mnm-ai-choice span{color:#fff3dc!important;font:600 13px/1.5 system-ui,sans-serif;text-shadow:0 1px 2px #25170f}
 body.soa-ruleset-mnm .soa-mnm-system-sources a{color:#8c4d2e}
 body.soa-ruleset-mnm .soa-mnm-meter-track{border-color:#8a6b43;background:#6b4b2e}
 body.soa-ruleset-mnm .soa-mnm-meter-track i{background:linear-gradient(#efc66d,#b45f32)}
