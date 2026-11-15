@@ -276,9 +276,9 @@ function boot(){
   if(profile.raceId==="gnome"&&!save.racialFeatureUsed)panel.append(button("Eureka - reveal the clue","Use a once-per-chapter insight to uncover the trail without a roll.",()=>perform({type:"racial",id:"gnome"},false),"med"));
  }
  const STORY_COMBAT_TACTICS={
-  dwarf:{id:"brace",label:"Titan's Craft",detail:"Brace against the next incoming strike."},
-  deep_dwarf:{id:"weaken",label:"Spirit Lattice",detail:"Bind a spirit to weaken the foe's next strike."},
-  high_elf:{id:"ward",label:"Calafrey Discipline",detail:"Set a ward that weakens the foe's next strike."},
+  dwarf:{id:"brace",label:"Titan's Craft",detail:"Gain +4 Defense against the next attack and take half damage if it hits."},
+  deep_dwarf:{id:"weaken",label:"Spirit Lattice",detail:"Bind a spirit to reduce the damage of the foe's next strike by 2."},
+  high_elf:{id:"ward",label:"Calafrey Discipline",detail:"Set a measured ward to reduce the damage of the foe's next strike by 2."},
   wood_elf:{id:"flank",label:"Wyrdpath",detail:"Follow living signs and deal a quick 4 damage from the flank."},
   deep_elf:{id:"ambush",label:"Shadow's Veil",detail:"Use a discovered opening to deal 5 damage unseen.",requiresClue:true},
   ogre:{id:"assault",label:"Storm Coast Fury",detail:"Commit to a forceful opening and deal 7 damage."},
