@@ -69,6 +69,13 @@ function migrateAdventureSave(value){
  }
  return {save:value,changed};
 }
+function statLine(profile){
+ const source=profile?.stats||{};
+ return Object.fromEntries(STATS.map(key=>{
+  const score=Number(source[key]);
+  return [key,Number.isFinite(score)?Math.trunc(score):10];
+ }));
+}
 function check(profile,stat,dc,roll,storyBonus=0){
  const n=Math.trunc(Number(roll));
  if(n<1||n>20)throw new RangeError("A check needs a d20 result from 1 to 20.");

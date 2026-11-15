@@ -101,6 +101,8 @@ test("custom combat awards XP, loot, currency, and a one-time chapter reward", (
   const first = game.systems.resolveRpgAction(game.profile, "attack", { random: () => 0.999 });
   assert.equal(first.ok, true);
   assert.equal(first.result.victory, undefined);
+  assert.equal(first.result.roll.roll, 20);
+  assert.equal(typeof first.result.roll.total, "number");
   const second = game.systems.resolveRpgAction(game.profile, "attack", { random: () => 0.999 });
   assert.equal(second.ok, true);
   assert.equal(second.result.victory, true);
