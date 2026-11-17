@@ -25,9 +25,17 @@ const LOCAL_ARCS=Object.freeze({
   {id:"old-door",title:"The Door That Answers",objective:"Learn why a sealed stone door has started answering knocks from inside.",site:"the abandoned eastern gallery",contact:"Serrit, a quiet stone tender",opening:"A sealed stone door has begun answering when the night crews pass the eastern gallery. The sound is measured, never frantic. Serrit says the door has stood untouched for generations, but fresh dust lies on its inner seam.",beats:["The knocks repeat an old shift pattern. Someone on the other side knows when the passage crews change.","Serrit finds a second seam beneath the stonework, too narrow for a person but wide enough for air and sound.","The answering knocks stop. A faint scrape comes from the other side, and the night crew is waiting for you to decide whether to open, seal, or call for help."],successEnding:"You discover who has been signaling and keep the gallery from becoming a danger to the night crews. Serrit marks the passage for a careful inspection.",partialEnding:"You reinforce the door and keep the crew safe, but the voice on the other side does not answer again.",thread:"Who has been signaling from beyond the eastern gallery?"}
  ]
 });
+const GENERIC_LOCAL_ARC_IDS=Object.freeze(["waystation-appeal","marked-passage"]);
+function genericLocalArcs(region){
+ const name=clean(region?.name||"this region",80);
+ return [
+  {id:"waystation-appeal",title:"The Waystation Appeal",objective:"Keep a dispute at the waystation in "+name+" from turning travelers against one another.",site:"the public waystation",contact:"Mira, the local waykeeper",opening:"Two travelers arrive with conflicting accounts of a blocked road. The waykeeper will close the passage if the quarrel turns violent, and neither side is willing to leave before being heard.",beats:["Their tracks show both groups traveled the same route at different times, yet each describes an hour when the road seemed empty.","A third traveler knows why the passage was blocked but fears being blamed for the delay.","Both groups reach the narrow crossing together as the weather turns. The waykeeper needs a decision before anyone tries to force a way through."],successEnding:"You uncover what caused the delay and settle the dispute before it divides the travelers. The waykeeper keeps the passage open under a clear plan.",partialEnding:"You prevent a fight and get everyone to shelter, but the reason the road was blocked remains uncertain.",thread:"What first caused the passage to close?"},
+  {id:"marked-passage",title:"The Marked Passage",objective:"Learn who has been changing the public route markers in "+name+".",site:"a public route-marker post",contact:"Orin, a local path warden",opening:"Travelers keep arriving by the wrong road after familiar route markers are turned aside. Orin has restored each marker, but someone changes them again before the next watch.",beats:["The turned markers point toward different roads, but each detour passes the same empty stretch of ground.","A nearby resident admits hearing someone at the markers after dark and has kept quiet to avoid losing access to the road.","The next marker has been loosened just before a group of travelers arrives. Orin is ready to stop the road, while the travelers press on."],successEnding:"You find who has been altering the route and give Orin enough to keep travelers on the safe road.",partialEnding:"You restore the markers and guide the travelers through, but whoever changed them is still nearby.",thread:"Why was someone redirecting travelers through the same stretch of road?"}
+ ];
+}
 function validLocalState(value){
  const ids=Object.values(LOCAL_ARCS).flat().map(arc=>arc.id);
- return object(value)&&typeof value.arcId==="string"&&(value.arcId==="continuation"||ids.includes(value.arcId))&&Number.isInteger(value.progress)&&value.progress>=0&&value.progress<=LOCAL_TURNS&&Number.isInteger(value.successes)&&value.successes>=0&&value.successes<=LOCAL_TURNS&&Number.isInteger(value.setbacks)&&value.setbacks>=0&&value.setbacks<=LOCAL_TURNS&&value.progress===value.successes+value.setbacks;
+ return object(value)&&typeof value.arcId==="string"&&(value.arcId==="continuation"||ids.includes(value.arcId)||GENERIC_LOCAL_ARC_IDS.includes(value.arcId))&&Number.isInteger(value.progress)&&value.progress>=0&&value.progress<=LOCAL_TURNS&&Number.isInteger(value.successes)&&value.successes>=0&&value.successes<=LOCAL_TURNS&&Number.isInteger(value.setbacks)&&value.setbacks>=0&&value.setbacks<=LOCAL_TURNS&&value.progress===value.successes+value.setbacks;
 }
 const STAT_NAMES={str:"Strength",sta:"Stamina",dex:"Dexterity",agi:"Agility",int:"Intelligence",wis:"Wisdom",cha:"Charisma"};
 const STORAGE_KEY="soa-mnm-ai-access-code";
@@ -87,6 +95,7 @@ function localArcFor(campaign,region){
   return {id:"continuation",title:campaign.chapterTitle||"A Continuing Lead",objective,site:"the streets and workrooms of "+region.name,contact:"a local witness who knows the ground",opening:"Your current lead remains open, and the people closest to it are waiting to see what you do next.",beats:["Your choice changes who is willing to speak, and a practical detail from the last scene points toward the next step.","A second account contradicts the first, but both point toward the same place. The situation will not wait for perfect certainty.","The people involved are close enough to hear one another. Your next move will decide whether the matter is settled openly or left for another day."],successEnding:"You turn the lead into a clear outcome and leave the people involved with a safer way forward.",partialEnding:"You contain the immediate trouble, but one important question remains unanswered.",thread:"Unresolved lead: "+objective};
  }
  for(const arc of Object.values(LOCAL_ARCS).flat())if(arc.id===local.arcId)return arc;
+ const generic=genericLocalArcs(region).find(arc=>arc.id===local.arcId);if(generic)return generic;
  return selectLocalArc(region.id,campaign.seed,campaign.chapter,"");
 }
 function seedIndex(seed,length){
@@ -95,7 +104,8 @@ function seedIndex(seed,length){
  return (hash>>>0)%length;
 }
 function selectLocalArc(regionId,seed,chapter,excludeId){
- const pool=LOCAL_ARCS[regionId]||LOCAL_ARCS["night-harbor"];
+ const region=regions().find(item=>item.id===regionId)||{id:regionId,name:regionId};
+ const pool=LOCAL_ARCS[regionId]||genericLocalArcs(region);
  let index=seedIndex(String(seed)+":"+chapter,pool.length);
  if(pool.length>1&&pool[index].id===excludeId)index=(index+1)%pool.length;
  return pool[index];
