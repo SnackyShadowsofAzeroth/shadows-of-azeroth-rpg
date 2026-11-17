@@ -31,7 +31,7 @@ Build M&M: RPG as an offline-first, mobile fantasy RPG inspired by Monsters & Me
 | Level and XP | Custom XP, levels, character record, and roster values are connected. The official level cap, group eligibility, and Rested bonus remain distinct from the house-rule curve and award values. |
 | Items | Custom gear, equipment, consumables, prices, four coin denominations with 100:1 conversion, market, carry limit, and loot are playable. Official weight formulas and full item catalog remain unknown. |
 | Abilities | Only source-linked official class ability records may be shown as class abilities. Rogue Backstab and Archer Point Blank are verified starter records; add other class abilities only when their names, ranks, and learning requirements are verified. |
-| Offline and mobile delivery | Gameplay scripts are cached by the service worker. Cache version is v166. Local story, travel, combat, Arena, inventory, and character saves work without AI generation. Save integrity and migration checks remain required for changes to these systems. |
+| Offline and mobile delivery | Gameplay scripts are cached by the service worker. Cache version is v167. Local story, travel, combat, Arena, inventory, and character saves work without AI generation. Save integrity and migration checks remain required for changes to these systems. |
 
 ## Remaining work
 1. Replace custom values with sourced official combat, XP, ability, item, weight, and carrying data only when reliable in-game references are available. Preserve the manual telegraphed turn loop unless the user supplies a different combat design.
