@@ -80,6 +80,116 @@ function resolveChoice(choice,scores,roll){
  const modifier=Math.floor((score-10)/2),dc=DIFFICULTY_DC[choice.difficulty],total=die+modifier;
  return {roll:die,stat:choice.stat,modifier,total,dc,success:die===20||die!==1&&total>=dc,critical:die===20};
 }
+function localArcFor(campaign,region){
+ const local=campaign.localState||{};
+ if(local.arcId==="continuation"){
+  const objective=clean(campaign.objective||"Follow the unresolved lead",200);
+  return {id:"continuation",title:campaign.chapterTitle||"A Continuing Lead",objective,site:"the streets and workrooms of "+region.name,contact:"a local witness who knows the ground",opening:"Your current lead remains open, and the people closest to it are waiting to see what you do next.",beats:["Your choice changes who is willing to speak, and a practical detail from the last scene points toward the next step.","A second account contradicts the first, but both point toward the same place. The situation will not wait for perfect certainty.","The people involved are close enough to hear one another. Your next move will decide whether the matter is settled openly or left for another day."],successEnding:"You turn the lead into a clear outcome and leave the people involved with a safer way forward.",partialEnding:"You contain the immediate trouble, but one important question remains unanswered.",thread:"Unresolved lead: "+objective};
+ }
+ for(const arc of Object.values(LOCAL_ARCS).flat())if(arc.id===local.arcId)return arc;
+ return selectLocalArc(region.id,campaign.seed,campaign.chapter,"");
+}
+function seedIndex(seed,length){
+ let hash=2166136261;
+ for(const char of String(seed||""))hash=Math.imul(hash^char.charCodeAt(0),16777619);
+ return (hash>>>0)%length;
+}
+function selectLocalArc(regionId,seed,chapter,excludeId){
+ const pool=LOCAL_ARCS[regionId]||LOCAL_ARCS["night-harbor"];
+ let index=seedIndex(String(seed)+":"+chapter,pool.length);
+ if(pool.length>1&&pool[index].id===excludeId)index=(index+1)%pool.length;
+ return pool[index];
+}
+function localChoices(arc,beat){
+ const sets=[
+  [
+   ["Inspect "+arc.site+" for signs of a changed account or hidden route.","int","standard"],
+   ["Ask "+arc.contact+" what the official story leaves out.","cha","easy"],
+   ["Scout the nearby passage before the next watch changes.","agi","hard"]
+  ],
+  [
+   ["Compare the witness accounts against the detail you found.","wis","standard"],
+   ["Invite someone overlooked to speak with you privately.","cha","standard"],
+   ["Follow the less-traveled route around "+arc.site+".","agi","hard"]
+  ],
+  [
+   ["Present the evidence and ask for a direct explanation.","int","hard"],
+   ["Bring the people involved together before rumor spreads.","cha","standard"],
+   ["Put yourself between the vulnerable and the danger.","str","hard"]
+  ],
+  [
+   ["Settle the matter through a careful public account.","cha","standard"],
+   ["Take the dangerous route and secure the truth firsthand.","agi","hard"],
+   ["Stand firm and demand that the immediate threat end.","str","hard"]
+  ]
+ ];
+ return sets[Math.min(3,beat)].map((row,index)=>({id:"choice-"+(index+1),text:row[0],stat:row[1],difficulty:row[2],dc:DIFFICULTY_DC[row[2]]}));
+}
+function localScene(campaign,region,arc,progress,lastOutcome){
+ const stages=["The first trace","A new complication","The final approach"];
+ const narration=progress===0
+  ?"In "+region.name+", the matter begins at "+arc.site+". "+arc.opening+" You have one chance to choose how to approach it before the next watch changes."
+  :(lastOutcome.success?"Your approach succeeds. ":"Your approach falters, costing time, but it reveals another way forward. ")+lastOutcome.summary+" "+arc.beats[progress-1]+" The people involved are waiting for your next move.";
+ return {title:progress===0?arc.title:arc.title+" · "+stages[progress-1],narration:clean(narration,1800),objective:campaign.objective||arc.objective,locationId:region.id,choices:localChoices(arc,progress)};
+}
+function localEnding(campaign,region,arc,state){
+ const solved=state.successes>=2,summary=solved?arc.successEnding:arc.partialEnding;
+ const narration=solved
+  ?"The pressure lifts from "+region.name+". "+summary+" The people you helped will remember how you handled the matter."
+  :"The immediate danger passes in "+region.name+", though the full truth remains out of reach. "+summary+" The unresolved lead is recorded in your journal.";
+ return {summary:clean(summary,500),scene:{title:campaign.chapterTitle+" · Outcome",narration:clean(narration,1800),objective:solved?"The immediate objective is resolved.":"The immediate danger is contained; an open lead remains.",locationId:region.id,choices:[]},thread:arc.thread,solved};
+}
+function startLocalChapter(profile,save,panel,status,onChange){
+ const original=save.aiCampaign,region=currentRegion(save);
+ if(!region){status.textContent="Choose a known region before beginning a local chapter.";return}
+ if(original.pending){status.textContent="Resolve the saved action first, or continue it locally with the same roll.";return}
+ if(original.status==="active"&&original.locationId===region.id){status.textContent="Finish the current chapter before starting another.";return}
+ const leftActive=original.status==="active"&&original.locationId!==region.id;
+ const chapter=original.status==="chapter-complete"||leftActive?original.chapter+1:original.chapter;
+ const archived=leftActive?[...original.chapters,chapterRecord(original,"paused","This lead remains open: "+original.objective+" "+original.summary,original.history)].slice(-40):original.chapters;
+ const threads=leftActive?["Unresolved lead: "+clean(original.objective,100),...original.threads].slice(0,6):original.threads;
+ const arc=selectLocalArc(region.id,randomSeed(),chapter,original.localState?.arcId||"");
+ const localState={arcId:arc.id,progress:0,successes:0,setbacks:0};
+ const next={...original,mode:"local",localState,version:VERSION,status:"active",seed:randomSeed(),chapterTitle:arc.title,chapter,turn:0,locationId:region.id,objective:arc.objective,summary:arc.opening,scene:null,chapters:archived,threads,pending:null,lastCombatSignature:original.lastCombatSignature,updatedAt:new Date().toISOString()};
+ next.scene=localScene(next,region,arc,0,null);
+ if(!commitCampaign(save,next,onChange,{render:true,message:"A local campaign begins in "+region.name+". Your choices and d20 rolls are saved on this device."}))status.textContent="The local campaign could not be saved; your previous story is intact.";
+}
+function continueLocally(profile,save,panel,status,onChange){
+ const original=save.aiCampaign,region=currentRegion(save);
+ if(!region||original.locationId!==region.id){status.textContent="Return to the scene's region before continuing locally.";return}
+ if(original.mode==="local"){status.textContent="This campaign already resolves locally.";return}
+ const next={...original,mode:"local",localState:{arcId:"continuation",progress:0,successes:0,setbacks:0},turn:0,pending:null,updatedAt:new Date().toISOString()};
+ if(original.pending)next.pending={...original.pending,turn:1};
+ if(!commitCampaign(save,next,onChange,{render:!next.pending,message:"Local play is ready. Existing story choices and saved history remain in place."})){status.textContent="Local play could not be saved; the prior campaign remains intact.";return}
+ if(next.pending)resolveLocalPending(profile,save,panel,status,onChange);
+}
+function localOutcomeSummary(resolution){
+ return clean(resolution.success?"The check succeeds, shifting the local situation in your favor.":"The check fails. It costs time, but exposes another way forward.",300);
+}
+function resolveLocalPending(profile,save,panel,status,onChange){
+ const campaign=save.aiCampaign,pending=campaign.pending,region=currentRegion(save);
+ if(!pending||campaign.mode!=="local"){status.textContent="There is no saved local action waiting to resolve.";return}
+ if(!region||campaign.locationId!==region.id){status.textContent="Return to the scene's region before resolving this saved action.";return}
+ const resolution=resolveChoice(pending.action,profile.stats,pending.roll),arc=localArcFor(campaign,region),progress=campaign.localState.progress+1;
+ const outcomeSummary=localOutcomeSummary(resolution),entry=historyEntry(campaign,campaign.scene,pending.action,{summary:outcomeSummary},resolution),history=[...campaign.history,entry].slice(-MAX_HISTORY);
+ const localState={...campaign.localState,progress,successes:campaign.localState.successes+(resolution.success?1:0),setbacks:campaign.localState.setbacks+(resolution.success?0:1)};
+ let statusValue="active",summary=outcomeSummary,scene,chapters=campaign.chapters,threads=campaign.threads;
+ if(progress>=LOCAL_TURNS){
+  const ending=localEnding(campaign,region,arc,localState);
+  summary=ending.summary;scene=ending.scene;statusValue="chapter-complete";
+  chapters=[...chapters,chapterRecord({...campaign,chapterTitle:campaign.chapterTitle||scene.title},"complete",summary,history)].slice(-40);
+  threads=ending.solved?threads:[ending.thread,...threads].slice(0,6);
+ }else scene=localScene(campaign,region,arc,progress,{success:resolution.success,summary:outcomeSummary});
+ const next={...campaign,mode:"local",localState,status:statusValue,turn:pending.turn,summary,scene,history,chapters,threads,pending:null,updatedAt:new Date().toISOString()};
+ const previousJournal=save.journal,previousUpdatedAt=save.updatedAt;
+ save.journal=[...save.journal,"Local campaign · Chapter "+campaign.chapter+", scene "+pending.turn+": "+entry.action+" — "+entry.result+" — "+entry.summary].slice(-100);
+ save.updatedAt=new Date().toISOString();
+ const rollText="d20 "+resolution.roll+(resolution.modifier>=0?" + ":" - ")+Math.abs(resolution.modifier)+" = "+resolution.total+" vs DC "+resolution.dc+" · "+(resolution.success?"success":"failure");
+ if(!commitCampaign(save,next,onChange,{render:true,message:rollText+" — "+outcomeSummary})){
+  save.journal=previousJournal;save.updatedAt=previousUpdatedAt;status.textContent="The local turn could not be saved. Your exact die roll remains available.";
+ }
+}
+
 function element(tag,text,className){const node=document.createElement(tag);if(text!==undefined)node.textContent=text;if(className)node.className=className;return node}
 function getCode(){try{return sessionStorage.getItem(STORAGE_KEY)||""}catch{return ""}}
 function setCode(value){try{sessionStorage.setItem(STORAGE_KEY,value)}catch{}}
