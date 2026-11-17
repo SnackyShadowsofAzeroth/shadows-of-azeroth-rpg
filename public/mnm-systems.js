@@ -233,6 +233,7 @@ function removeRpgItem(rpg,id,quantity=1){
 function logRpg(rpg,line){rpg.log=[line,...rpg.log].slice(0,30)}
 function rpgDefense(profile,save){return 10+statModifier(profile,"agi")+equipmentBonus(save.rpg,"armor","defense")+Math.floor((save.level-1)/2)}
 function rollDie(random,max=20){return Math.max(1,Math.min(max,Math.floor(Number(random())*max)+1))}
+function rollText(die,modifier,total,target,targetName){return "d20 "+die+" "+(modifier<0?"− ":"+ ")+Math.abs(modifier)+" = "+total+" vs "+targetName+" "+target}
 function grantExperience(save,baseAmount){
  const bonus=save.restedMinutes>0?Math.floor(baseAmount*RESTED_XP_BONUS):0,amount=baseAmount+bonus;
  if(bonus)save.restedMinutes=Math.max(0,save.restedMinutes-1);
@@ -286,16 +287,16 @@ function createEncounter(profile,locationId,serial,random,characterLevel=profile
 }
 function isRpgFoe(value){return FOES[value?.locationId]?.some(row=>row[0]===value?.name)||false}
 function attackFoe(save,profile,foe,random,{ability=null}={}){
- const rpg=save.rpg,stat=ability?.stat||primaryStat(profile),die=rollDie(random),weaponAttack=equipmentBonus(rpg,"weapon","attack"),opening=foe.exposed?2:0,guard=foe.defense+(foe.braced?2:0);
- const total=die+statModifier(profile,stat)+Math.floor((save.level-1)/2)+weaponAttack+opening,hit=die===20||die!==1&&total>=guard,label=ability?.name||"Strike",wasExposed=!!foe.exposed;
- if(!hit){foe.exposed=false;foe.braced=false;return {hit:false,roll:die,total,damage:0,defense:guard,line:label+" misses ("+total+" vs guard "+guard+")."}}
+ const rpg=save.rpg,stat=ability?.stat||primaryStat(profile),die=rollDie(random),weaponAttack=equipmentBonus(rpg,"weapon","attack"),opening=foe.exposed?2:0,guard=foe.defense+(foe.braced?2:0),modifier=statModifier(profile,stat)+Math.floor((save.level-1)/2)+weaponAttack+opening;
+ const total=die+modifier,hit=die===20||die!==1&&total>=guard,label=ability?.name||"Strike",wasExposed=!!foe.exposed,check=rollText(die,modifier,total,guard,"guard");
+ if(!hit){foe.exposed=false;foe.braced=false;return {hit:false,roll:die,modifier,total,damage:0,defense:guard,line:label+" · "+check+" · miss."}}
  const weaponDamage=equipmentBonus(rpg,"weapon","damage"),base=3+Math.floor((save.level-1)/4)+weaponDamage+Math.max(-2,statModifier(profile,stat)),openingBonus=ability?.rpgAction==="backstab"&&foe.playerHidden?Math.max(0,weaponDamage):0,exposedDamage=wasExposed?3:0,damage=Math.max(1,base+openingBonus+exposedDamage+(die===20?5:0));
  foe.hp=Math.max(0,foe.hp-damage);foe.exposed=false;foe.braced=false;
- return {hit:true,roll:die,total,damage,defense:guard,line:label+" hits for "+damage+(die===20?" critical damage":"")+(wasExposed?" through the opening":"")+" ("+total+" vs guard "+guard+")."};
+ return {hit:true,roll:die,modifier,total,damage,defense:guard,line:label+" · "+check+" · hits for "+damage+(die===20?" critical damage":"")+(wasExposed?" through the opening":".")};
 }
 function enemyExchange(save,profile,foe,random,{interrupt=false}={}){
  const rpg=save.rpg,intent=foe.intent||"strike";
- let damage=0,line="",roll=null,total=null,defense=null,healed=0;
+ let damage=0,line="",roll=null,total=null,modifier=null,defense=null,healed=0;
  if(foe.playerHidden){
   rpg.guarding=false;line=foe.name+" searches the shadows and loses your position.";
  }else if(interrupt&&intent!=="strike"){
@@ -306,20 +307,20 @@ function enemyExchange(save,profile,foe,random,{interrupt=false}={}){
   healed=Math.min(4,foe.maxHp-foe.hp);foe.hp+=healed;line=healed?foe.name+" recovers "+healed+" Health.":foe.name+" tries to recover, but is already at full Health.";
  }else{
   const die=rollDie(random),heavy=intent==="heavy",coverPenalty=foe.exposed?2:0,attackBonus=heavy?2:0;
-  total=die+foe.attack+attackBonus-coverPenalty;defense=rpgDefense(profile,save)+(rpg.guarding?4:0);
-  const hit=die===20||die!==1&&total>=defense;
+  modifier=foe.attack+attackBonus-coverPenalty;total=die+modifier;roll=die;defense=rpgDefense(profile,save)+(rpg.guarding?4:0);
+  const hit=die===20||die!==1&&total>=defense,check=rollText(die,modifier,total,defense,"Defense");
   if(hit){
    damage=Math.max(1,2+Math.floor(foe.level/2)+rollDie(random,4)+(heavy?2:0)-(foe.weakened?2:0)-equipmentBonus(rpg,"armor","damageReduction"));
    if(rpg.guarding)damage=Math.ceil(damage/2);rpg.hp=Math.max(0,rpg.hp-damage);
-   line=foe.name+(heavy?" lands its heavy blow":" strikes")+" for "+damage+" ("+total+" vs defense "+defense+").";
-  }else line=foe.name+(heavy?" misses with its heavy blow":" misses")+" ("+total+" vs defense "+defense+").";
+   line=foe.name+" · "+check+" · hits for "+damage+(heavy?" with its heavy move.":".");
+  }else line=foe.name+" · "+check+" · misses"+(heavy?" with its heavy move.":".");
   foe.weakened=false;
  }
  rpg.guarding=false;foe.round++;
  const prior=intent;foe.intent=chooseNextEnemyIntent(random,prior);
  const intentLine=foe.name+" prepares "+enemyIntentTitle(foe)+".";
  foe.log=[intentLine,line,...foe.log].slice(0,20);
- return {hit:damage>0,damage,line,roll,total,defense,healed,intent:prior,nextIntent:foe.intent,intentLine};
+ return {hit:damage>0,damage,line,roll,total,modifier,defense,healed,intent:prior,nextIntent:foe.intent,intentLine};
 }
 function storeRpgCorpse(save,now=Date.now(),locationId){
  const rpg=save.rpg,standardInventory=clone(save.inventory),customInventory=clone(rpg.inventory),hasItems=inventoryItems(standardInventory).length>0||customInventory.length>0;
@@ -347,14 +348,14 @@ function resolveRpgAction(profile,action,{random=Math.random,now=Date.now,return
   }
   if(action==="attack"||action==="strike"){
    if(profile.classId==="rogue"&&foe.playerHidden)return {error:"You are hidden; use Backstab while the opening lasts."};
-   const strike=attackFoe(save,profile,foe,random);playerLine=strike.line;rolled={roll:strike.roll,total:strike.total,dc:strike.defense,damage:strike.damage};
+   const strike=attackFoe(save,profile,foe,random);playerLine=strike.line;rolled={roll:strike.roll,modifier:strike.modifier,total:strike.total,dc:strike.defense,damage:strike.damage};
    if(strike.hit)rpg.focus=Math.min(rpg.maxFocus,rpg.focus+1);
   }else if(action==="stealth"){
    if(profile.classId!=="rogue")return {error:"Only Rogues can enter Stealth in this custom combat."};
    if(foe.playerHidden)return {error:"You are already hidden; use Backstab."};
-   const die=rollDie(random),total=die+statModifier(profile,"agi"),dc=10+foe.level;rolled={roll:die,total,dc,stat:"agi"};
-   if(die===20||die!==1&&total>=dc){foe.playerHidden=true;save.combat.autoAttack=false;playerLine="You enter Stealth ("+total+" vs DC "+dc+"). Backstab is ready."}
-   else playerLine="You fail to enter Stealth ("+total+" vs DC "+dc+").";
+   const die=rollDie(random),modifier=statModifier(profile,"agi"),total=die+modifier,dc=10+foe.level;rolled={roll:die,modifier,total,dc,stat:"agi"};
+   if(die===20||die!==1&&total>=dc){foe.playerHidden=true;save.combat.autoAttack=false;playerLine="You enter Stealth · "+rollText(die,modifier,total,dc,"DC")+" · Backstab is ready."}
+   else playerLine="You fail to enter Stealth · "+rollText(die,modifier,total,dc,"DC")+".";
   }else if(typeof action==="object"&&action?.type==="ability"){
    const abilityId=String(action.id||""),ability=PAGES.flatMap(page=>save.abilityBook[page]).find(record=>record.id===abilityId);
    if(!ability||!save.learnedAbilities.includes(abilityId)||!save.memorizedAbilities.includes(abilityId))return {error:"Learn and memorize this ability before using it."};
@@ -363,17 +364,17 @@ function resolveRpgAction(profile,action,{random=Math.random,now=Date.now,return
    if(!["strike","backstab"].includes(ability.rpgAction))return {error:"This ability has no custom combat resolution yet."};
    if(ability.rpgAction==="backstab"&&!foe.playerHidden)return {error:"Enter Stealth before using Backstab."};
    if(foe.playerHidden&&ability.rpgAction!=="backstab")return {error:"Use Backstab while you have the opening."};
-   const strike=attackFoe(save,profile,foe,random,{ability});playerLine=strike.line;rolled={roll:strike.roll,total:strike.total,dc:strike.defense,damage:strike.damage};
+   const strike=attackFoe(save,profile,foe,random,{ability});playerLine=strike.line;rolled={roll:strike.roll,modifier:strike.modifier,total:strike.total,dc:strike.defense,damage:strike.damage};
    if(ability.rpgAction==="backstab")foe.playerHidden=false;
   }else if(action==="feint"||typeof action==="object"&&action?.type==="feint"){
    if(rpg.focus<1)return {error:"Not enough Focus to attempt a Feint."};
    rpg.focus=Math.max(0,rpg.focus-1);
-   const die=rollDie(random),total=die+statModifier(profile,"agi"),dc=foe.defense+(foe.braced?2:0),success=die===20||die!==1&&total>=dc;
-   rolled={roll:die,total,dc,success,stat:"agi"};
+   const die=rollDie(random),modifier=statModifier(profile,"agi"),total=die+modifier,dc=foe.defense+(foe.braced?2:0),success=die===20||die!==1&&total>=dc;
+   rolled={roll:die,modifier,total,dc,success,stat:"agi"};
    if(success){
     foe.exposed=true;foe.braced=false;interruptEnemy=foe.intent!=="strike";
-    playerLine="Your feint succeeds ("+total+" vs guard "+dc+"). The foe is exposed"+(interruptEnemy?" and its telegraphed move is interrupted.":".");
-   }else playerLine="Your feint fails ("+total+" vs guard "+dc+"). The foe keeps its announced move.";
+    playerLine="Your feint succeeds · "+rollText(die,modifier,total,dc,"guard")+" · The foe is exposed"+(interruptEnemy?" and its telegraphed move is interrupted.":".");
+   }else playerLine="Your feint fails · "+rollText(die,modifier,total,dc,"guard")+" · The foe keeps its announced move.";
   }else if(action==="guard"){
    rpg.guarding=true;rpg.focus=Math.min(rpg.maxFocus,rpg.focus+2);playerLine="You guard: +4 Defense and half damage against the next hit.";
   }else if(typeof action==="object"&&action?.type==="item"){
@@ -406,9 +407,9 @@ function resolveRpgAction(profile,action,{random=Math.random,now=Date.now,return
    }
    playerLine=tactic.line;
   }else if(action==="flee"){
-   const die=rollDie(random),total=die+statModifier(profile,"agi"),dc=10+foe.level;
-   if(die===20||die!==1&&total>=dc){rpg.encounter=null;rpg.guarding=false;save.combat.autoAttack=false;logRpg(rpg,"You escape from "+foe.name+" without a reward.");return {escaped:true,roll:die,total,dc,line:"You break away from the encounter."}}
-   playerLine="You fail to find an opening to escape ("+total+" vs DC "+dc+").";rolled={roll:die,total,dc,stat:"agi"};
+   const die=rollDie(random),modifier=statModifier(profile,"agi"),total=die+modifier,dc=10+foe.level;
+   if(die===20||die!==1&&total>=dc){rpg.encounter=null;rpg.guarding=false;save.combat.autoAttack=false;logRpg(rpg,"You escape from "+foe.name+" without a reward · "+rollText(die,modifier,total,dc,"DC")+".");return {escaped:true,roll:die,modifier,total,dc,line:"You break away from the encounter."}}
+   playerLine="You fail to escape · "+rollText(die,modifier,total,dc,"DC")+".";rolled={roll:die,modifier,total,dc,stat:"agi"};
   }else return {error:"Unknown combat action."};
   logRpg(rpg,playerLine);
   if(foe.hp<=0){
@@ -423,7 +424,7 @@ function resolveRpgAction(profile,action,{random=Math.random,now=Date.now,return
   const incoming=enemyExchange(save,profile,foe,random,{interrupt:interruptEnemy});
   logRpg(rpg,incoming.line);if(incoming.intentLine)logRpg(rpg,incoming.intentLine);
   if(rpg.hp<=0){const bindPoint=save.bindPoint||profile.startingLocation||"night-harbor";storeRpgCorpse(save,now(),foe.locationId);logRpg(rpg,"You were defeated. Your carried items are on a recoverable corpse; you wake at your bind point.");return {defeated:true,bindPoint,line:"Defeated by "+foe.name+". Your items were left on a recoverable corpse; there is no custom XP loss."}}
-  return {turn:true,line:playerLine+" "+incoming.line,enemyHp:foe.hp,playerHp:rpg.hp,focus:rpg.focus,roll:rolled,enemyRoll:{roll:incoming.roll,total:incoming.total,defense:incoming.defense,damage:incoming.damage,intent:incoming.intent},nextIntent:foe.intent,usedItem};
+  return {turn:true,line:playerLine+" "+incoming.line,enemyHp:foe.hp,playerHp:rpg.hp,focus:rpg.focus,roll:rolled,enemyRoll:{roll:incoming.roll,modifier:incoming.modifier,total:incoming.total,defense:incoming.defense,damage:incoming.damage,intent:incoming.intent},nextIntent:foe.intent,usedItem};
  });
  if(result.ok&&result.result?.defeated){
   const destination=String(result.result.bindPoint||profile.startingLocation||"night-harbor");(returnToBindPoint||window.soaMnmAdventure?.returnToBindPoint)?.(destination);
