@@ -185,32 +185,28 @@ test("defeat returns to bind point and requires travel back to the corpse region
   assert.equal(game.stored().rpg.equipment.weapon, "road-worn-weapon");
 });
 
-test("Auto-attack uses the visible toggle and repeats basic attacks without a Q shortcut", () => {
+test("turn-based combat reveals foe intent and advances only after a chosen action", () => {
   const game = makeGame(character(), { render: true, random: () => 0.999 });
   game.systems.startEncounter(game.profile, "night-harbor", () => 0.999);
   let panel;
   const refresh = () => { panel = game.systems.render("combat", game.profile, refresh, { locationId: "night-harbor" }); };
   refresh();
-  const toggle = panel.children.find(node => String(node.textContent).startsWith("Auto-attack:"));
-  assert.ok(toggle);
   const textOf = node => [node.textContent || "", ...(node.children || []).map(textOf)].join(" ");
   const renderedText = panel.children.map(textOf).join(" ");
-  assert.match(renderedText, /basic Strike every 1\.6 seconds/i);
-  assert.match(renderedText, /Strikes do not spend Focus/i);
-  assert.equal(toggle.textContent, "Auto-attack: Off");
-  assert.equal(game.listeners.has("keydown"), false);
-  toggle.onclick();
-  assert.equal(game.timers.size, 1);
-  let currentToggle = panel.children.find(node => String(node.textContent).startsWith("Auto-attack:"));
-  assert.equal(currentToggle.textContent, "Auto-attack: On");
-  const timer = [...game.timers.values()][0];
-  assert.equal(timer.delay, 1600);
-  game.timers.clear();
-  timer.callback();
-  assert.equal(game.stored().rpg.encounter.round, 1);
-  assert.equal(game.timers.size, 1);
-  currentToggle = panel.children.find(node => String(node.textContent).startsWith("Auto-attack:"));
-  currentToggle.onclick();
+  assert.match(renderedText, /choose one action to advance the fight/i);
+  assert.match(renderedText, /Foe intent/i);
+  const findStrike = node => {
+    if (String(node.textContent || "").startsWith("Strike · take your turn")) return node;
+    for (const child of node.children || []) { const found = findStrike(child); if (found) return found; }
+    return null;
+  };
+  const strike = panel.children.map(findStrike).find(Boolean);
+  assert.ok(strike);
+  assert.equal(game.stored().rpg.encounter.round, 0);
   assert.equal(game.stored().combat.autoAttack, false);
   assert.equal(game.timers.size, 0);
+  strike.onclick();
+  assert.equal(game.stored().rpg.encounter.round, 1);
+  assert.equal(game.timers.size, 0);
+  assert.equal(game.listeners.has("keydown"), false);
 });
