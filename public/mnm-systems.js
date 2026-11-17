@@ -4,7 +4,6 @@ const PAGES=["skills","innates","spells"];
 const TRUE_CASTER_CLASSES=new Set(["cleric","druid","elementalist","enchanter","necromancer","shaman","wizard"]);
 const SAFE_HAVENS=new Set(["night-harbor","underdocks","penshaw","faelindral","ail-vorith"]);
 const RESTED_XP_BONUS=0.15,RESTED_CAP_MINUTES=20,REST_PER_CAMP_MINUTE=10;
-const AUTO_ATTACK_INTERVAL=1600;
 const MINUTE=60*1000,HOUR=60*MINUTE,DAY=24*HOUR;
 const object=value=>value!==null&&typeof value==="object"&&!Array.isArray(value);
 const clampLevel=value=>Math.max(1,Math.min(MAX_LEVEL,Math.trunc(Number(value)||1)));
@@ -67,7 +66,7 @@ function createRpgState(profile,level=profile?.level){
 function validRpgState(value,profile,level){
  if(!object(value)||value.version!==1||!Number.isInteger(value.hp)||!Number.isInteger(value.maxHp)||value.maxHp<1||value.maxHp>10000||value.hp<0||value.hp>value.maxHp||!Number.isInteger(value.focus)||!Number.isInteger(value.maxFocus)||value.maxFocus<1||value.maxFocus>100||value.focus<0||value.focus>value.maxFocus||!Number.isInteger(value.xp)||value.xp<0||value.xp>=Math.max(1,xpToNext(level))&&level<MAX_LEVEL||!Number.isInteger(value.totalXp)||value.totalXp<0||!Number.isInteger(value.kills)||value.kills<0||!Number.isInteger(value.coppers)||value.coppers<0||value.coppers>100000000||!Array.isArray(value.inventory)||value.inventory.length>40||value.inventory.some(entry=>!object(entry)||!RPG_ITEM_DEFS[entry.id]||!Number.isInteger(entry.quantity)||entry.quantity<1||entry.quantity>99)||!object(value.equipment)||!["weapon","armor"].every(slot=>value.equipment[slot]===null||typeof value.equipment[slot]==="string"&&RPG_ITEM_DEFS[value.equipment[slot]]?.slot===slot&&value.inventory.some(entry=>entry.id===value.equipment[slot]&&entry.quantity>0))||!Number.isInteger(value.encounterSerial)||value.encounterSerial<0||typeof value.guarding!=="boolean"||!Array.isArray(value.claimedStories)||value.claimedStories.length>500||value.claimedStories.some(id=>typeof id!=="string"||id.length>120)||!Array.isArray(value.log)||value.log.length>30||value.log.some(line=>typeof line!=="string"||line.length>240))return false;
  if(value.hp>value.maxHp||value.focus>value.maxFocus)return false;
- if(value.encounter!==null){const foe=value.encounter;if(!object(foe)||typeof foe.id!=="string"||foe.id.length>80||typeof foe.name!=="string"||foe.name.length>80||!isRpgFoe(foe)||!Number.isInteger(foe.level)||foe.level<1||foe.level>MAX_LEVEL||!Number.isInteger(foe.hp)||!Number.isInteger(foe.maxHp)||foe.maxHp<1||foe.hp<1||foe.hp>foe.maxHp||!Number.isInteger(foe.defense)||foe.defense<1||foe.defense>100||!Number.isInteger(foe.attack)||foe.attack<0||foe.attack>100||!Number.isInteger(foe.round)||foe.round<0||typeof foe.weakened!=="boolean"||foe.playerHidden!==undefined&&typeof foe.playerHidden!=="boolean"||!Array.isArray(foe.log)||foe.log.length>20||foe.log.some(line=>typeof line!=="string"||line.length>240))return false}
+ if(value.encounter!==null){const foe=value.encounter;if(!object(foe)||typeof foe.id!=="string"||foe.id.length>80||typeof foe.name!=="string"||foe.name.length>80||!isRpgFoe(foe)||!Number.isInteger(foe.level)||foe.level<1||foe.level>MAX_LEVEL||!Number.isInteger(foe.hp)||!Number.isInteger(foe.maxHp)||foe.maxHp<1||foe.hp<1||foe.hp>foe.maxHp||!Number.isInteger(foe.defense)||foe.defense<1||foe.defense>100||!Number.isInteger(foe.attack)||foe.attack<0||foe.attack>100||!Number.isInteger(foe.round)||foe.round<0||typeof foe.weakened!=="boolean"||foe.playerHidden!==undefined&&typeof foe.playerHidden!=="boolean"||foe.intent!==undefined&&!["strike","heavy","guard","recover"].includes(foe.intent)||foe.exposed!==undefined&&typeof foe.exposed!=="boolean"||foe.braced!==undefined&&typeof foe.braced!=="boolean"||!Array.isArray(foe.log)||foe.log.length>20||foe.log.some(line=>typeof line!=="string"||line.length>240))return false}
  return true;
 }
 function createSave(profile){
@@ -123,6 +122,9 @@ function read(profile){
  let changed=false;
  if(!stored.value.rpg){stored.value.rpg=createRpgState(profile,stored.value.level);changed=true}
  if(seedStartingAbilities(stored.value,profile))changed=true;
+ const foe=stored.value.rpg.encounter;
+ if(foe){if(!foe.intent){foe.intent="strike";changed=true}if(typeof foe.exposed!=="boolean"){foe.exposed=false;changed=true}if(typeof foe.braced!=="boolean"){foe.braced=false;changed=true}}
+ if(stored.value.combat.autoAttack){stored.value.combat.autoAttack=false;logRpg(stored.value.rpg,"Legacy auto-attack was disabled. Combat now advances only when you choose a turn.");changed=true}
  if(changed){const migrated=persist(profile,stored.value);if(!migrated.ok)return {ok:false,error:migrated.error}}
  return {ok:true,save:stored.value,created:false};
 }
@@ -206,7 +208,8 @@ function recoverCorpse(profile,now=Date.now(),locationId){
  });
 }
 function setAutoAttack(profile,value){
- return mutate(profile,save=>{save.combat.autoAttack=!!value;return null});
+ if(value)return {ok:false,error:"Turn-based combat advances only when you choose an action."};
+ return mutate(profile,save=>{save.combat.autoAttack=false;return null});
 }
 function rpgInventoryWeight(rpg){return rpg.inventory.reduce((sum,entry)=>sum+(RPG_ITEM_DEFS[entry.id]?.weight||0)*entry.quantity,0)}
 function rpgCarryCapacity(profile){return 12+Math.max(3,Math.trunc(Number(profile?.stats?.str)||10))}
@@ -242,27 +245,81 @@ function grantExperience(save,baseAmount){
  if(save.level>=MAX_LEVEL)rpg.xp=0;
  return {amount,restedBonus:bonus,levels,next:xpToNext(save.level)};
 }
-function createEncounter(profile,locationId,serial,random){
- const place=FOES[locationId]?locationId:"night-harbor",choices=FOES[place],template=choices[rollDie(random,choices.length)-1],level=clampLevel((Number(profile.level)||1)+rollDie(random,3)-2);
- return {id:"rpg-foe-"+serial,name:template[0],description:template[1],locationId:place,level,maxHp:14+7*level,hp:14+7*level,defense:11+Math.floor(level/2),attack:1+Math.floor(level*.6),round:0,weakened:false,playerHidden:false,log:[template[1]]};
+const FOE_MOVE_NAMES=Object.freeze({
+ "Dune jackal":{strike:"Snap",heavy:"Pouncing bite",guard:"Circle for an opening",recover:"Catch its breath"},
+ "Saltwind viper":{strike:"Quick strike",heavy:"Coiled lunge",guard:"Withdraw behind stone",recover:"Gather itself"},
+ "Quay cutpurse":{strike:"Knife jab",heavy:"Desperate slash",guard:"Parry",recover:"Regain footing"},
+ "Heap runner":{strike:"Quick jab",heavy:"Crate rush",guard:"Duck behind freight",recover:"Catch its breath"},
+ "Blind-echo skitter":{strike:"Scraping swipe",heavy:"Echoing lunge",guard:"Fold into the tunnel",recover:"Pause to listen"},
+ "Lost lift warden":{strike:"Iron swing",heavy:"Crushing drop",guard:"Lock its frame",recover:"Reset its gears"},
+ "Blightwood stalker":{strike:"Thorn swipe",heavy:"Rooted lunge",guard:"Close its boughs",recover:"Recoil into the brush"},
+ "Mossback wolf":{strike:"Bite",heavy:"Driving pounce",guard:"Circle low",recover:"Shake off dust"},
+ "Thorn-snag prowler":{strike:"Raking claw",heavy:"Low rush",guard:"Tangle in thorn cover",recover:"Regain its breath"},
+ "Branchlight wisp":{strike:"Flash of light",heavy:"Branchlight burst",guard:"Fold into leaves",recover:"Gather its glow"},
+ "Mossback guardian":{strike:"Bark-fist",heavy:"Root-breaking blow",guard:"Raise a bark shield",recover:"Settle its stance"},
+ "Fae-touched hound":{strike:"Quick bite",heavy:"Leaping bite",guard:"Circle the trail",recover:"Watch for movement"},
+ "Deepstone watcher":{strike:"Stone fist",heavy:"Falling hammer",guard:"Set its stone guard",recover:"Reform its stance"},
+ "Shadow-sworn prowler":{strike:"Knife cut",heavy:"Shadowing lunge",guard:"Fade behind cover",recover:"Regain composure"},
+ "Tunnel devourer":{strike:"Mandible snap",heavy:"Burrowing charge",guard:"Curl beneath its plates",recover:"Gather itself"}
+});
+function chooseNextEnemyIntent(random,previous=""){
+ const roll=rollDie(random,100);
+ let intent=roll<=58?"strike":roll<=80?"heavy":roll<=92?"guard":"recover";
+ if(intent===previous)intent=intent==="strike"?"heavy":"strike";
+ return intent;
+}
+function enemyIntentTitle(foe){
+ return FOE_MOVE_NAMES[foe?.name]?.[foe?.intent]||({strike:"Quick attack",heavy:"Heavy windup",guard:"Guard",recover:"Recover"}[foe?.intent]||"Quick attack");
+}
+function enemyIntentDetail(foe){
+ const descriptions={
+  strike:"A standard attack is coming. Guard raises your defense and halves damage if it hits.",
+  heavy:"A powerful blow is winding up. A successful Feint interrupts it; Guard can reduce the hit.",
+  guard:"The foe will brace, gaining +2 guard against your next Strike. A successful Feint breaks the stance.",
+  recover:"The foe will recover 4 Health. A successful Feint interrupts the recovery."
+ };
+ return descriptions[foe?.intent]||descriptions.strike;
+}
+function createEncounter(profile,locationId,serial,random,characterLevel=profile?.level){
+ const place=FOES[locationId]?locationId:"night-harbor",choices=FOES[place],template=choices[rollDie(random,choices.length)-1],level=clampLevel((Number(characterLevel)||1)+rollDie(random,3)-2);
+ return {id:"rpg-foe-"+serial,name:template[0],description:template[1],locationId:place,level,maxHp:14+7*level,hp:14+7*level,defense:11+Math.floor(level/2),attack:1+Math.floor(level*.6),round:0,intent:"strike",weakened:false,exposed:false,braced:false,playerHidden:false,log:[template[1]]};
 }
 function isRpgFoe(value){return FOES[value?.locationId]?.some(row=>row[0]===value?.name)||false}
 function attackFoe(save,profile,foe,random,{ability=null}={}){
- const rpg=save.rpg,stat=ability?.stat||primaryStat(profile),die=rollDie(random),weaponAttack=equipmentBonus(rpg,"weapon","attack");
- const total=die+statModifier(profile,stat)+Math.floor((save.level-1)/2)+weaponAttack,hit=die===20||die!==1&&total>=foe.defense,label=ability?.name||"Strike";
- if(!hit)return {hit:false,roll:die,total,damage:0,line:label+" misses ("+total+" vs guard "+foe.defense+")."};
- const weaponDamage=equipmentBonus(rpg,"weapon","damage"),base=3+Math.floor((save.level-1)/4)+weaponDamage+Math.max(-2,statModifier(profile,stat)),openingBonus=ability?.rpgAction==="backstab"&&foe.playerHidden?Math.max(0,weaponDamage):0,damage=Math.max(1,base+openingBonus+(die===20?5:0));
- foe.hp=Math.max(0,foe.hp-damage);
- return {hit:true,roll:die,total,damage,line:label+" hits for "+damage+(die===20?" critical damage":"")+" ("+total+" vs guard "+foe.defense+")."};
+ const rpg=save.rpg,stat=ability?.stat||primaryStat(profile),die=rollDie(random),weaponAttack=equipmentBonus(rpg,"weapon","attack"),opening=foe.exposed?2:0,guard=foe.defense+(foe.braced?2:0);
+ const total=die+statModifier(profile,stat)+Math.floor((save.level-1)/2)+weaponAttack+opening,hit=die===20||die!==1&&total>=guard,label=ability?.name||"Strike",wasExposed=!!foe.exposed;
+ if(!hit){foe.exposed=false;foe.braced=false;return {hit:false,roll:die,total,damage:0,defense:guard,line:label+" misses ("+total+" vs guard "+guard+")."}}
+ const weaponDamage=equipmentBonus(rpg,"weapon","damage"),base=3+Math.floor((save.level-1)/4)+weaponDamage+Math.max(-2,statModifier(profile,stat)),openingBonus=ability?.rpgAction==="backstab"&&foe.playerHidden?Math.max(0,weaponDamage):0,exposedDamage=wasExposed?3:0,damage=Math.max(1,base+openingBonus+exposedDamage+(die===20?5:0));
+ foe.hp=Math.max(0,foe.hp-damage);foe.exposed=false;foe.braced=false;
+ return {hit:true,roll:die,total,damage,defense:guard,line:label+" hits for "+damage+(die===20?" critical damage":"")+(wasExposed?" through the opening":"")+" ("+total+" vs guard "+guard+")."};
 }
-function enemyExchange(save,profile,foe,random){
- const rpg=save.rpg;
- if(foe.playerHidden){rpg.guarding=false;foe.round++;const line=foe.name+" searches the shadows and loses your position.";foe.log=[line,...foe.log].slice(0,20);logRpg(rpg,line);return {hit:false,damage:0,line,hidden:true}}
- const die=rollDie(random),total=die+foe.attack,bonus=equipmentBonus(rpg,"armor","defense"),guard=rpg.guarding?4:0,defense=rpgDefense(profile,save)+guard,hit=die===20||die!==1&&total>=defense;
- let damage=0,line;
- if(hit){damage=Math.max(1,2+Math.floor(foe.level/2)+rollDie(random,4)-equipmentBonus(rpg,"armor","damageReduction"));if(foe.weakened){damage=Math.max(1,damage-2);foe.weakened=false}if(rpg.guarding)damage=Math.ceil(damage/2);rpg.hp=Math.max(0,rpg.hp-damage);line=foe.name+" hits for "+damage+" ("+total+" vs defense "+defense+")."}
- else{line=foe.name+" misses ("+total+" vs defense "+defense+").";if(foe.weakened)foe.weakened=false}
- rpg.guarding=false;foe.round++;foe.log=[line,...foe.log].slice(0,20);return {hit,damage,line,defense,attack:total};
+function enemyExchange(save,profile,foe,random,{interrupt=false}={}){
+ const rpg=save.rpg,intent=foe.intent||"strike";
+ let damage=0,line="",roll=null,total=null,defense=null,healed=0;
+ if(foe.playerHidden){
+  rpg.guarding=false;line=foe.name+" searches the shadows and loses your position.";
+ }else if(interrupt&&intent!=="strike"){
+  foe.braced=false;line="Your feint interrupts "+foe.name+"'s "+enemyIntentTitle({...foe,intent})+".";
+ }else if(intent==="guard"){
+  foe.braced=true;line=foe.name+" braces; its next guard rises by 2.";
+ }else if(intent==="recover"){
+  healed=Math.min(4,foe.maxHp-foe.hp);foe.hp+=healed;line=healed?foe.name+" recovers "+healed+" Health.":foe.name+" tries to recover, but is already at full Health.";
+ }else{
+  const die=rollDie(random),heavy=intent==="heavy",coverPenalty=foe.exposed?2:0,attackBonus=heavy?2:0;
+  total=die+foe.attack+attackBonus-coverPenalty;defense=rpgDefense(profile,save)+(rpg.guarding?4:0);
+  const hit=die===20||die!==1&&total>=defense;
+  if(hit){
+   damage=Math.max(1,2+Math.floor(foe.level/2)+rollDie(random,4)+(heavy?2:0)-(foe.weakened?2:0)-equipmentBonus(rpg,"armor","damageReduction"));
+   if(rpg.guarding)damage=Math.ceil(damage/2);rpg.hp=Math.max(0,rpg.hp-damage);
+   line=foe.name+(heavy?" lands its heavy blow":" strikes")+" for "+damage+" ("+total+" vs defense "+defense+").";
+  }else line=foe.name+(heavy?" misses with its heavy blow":" misses")+" ("+total+" vs defense "+defense+").";
+  foe.weakened=false;
+ }
+ rpg.guarding=false;foe.round++;
+ const prior=intent;foe.intent=chooseNextEnemyIntent(random,prior);
+ const intentLine=foe.name+" prepares "+enemyIntentTitle(foe)+".";
+ foe.log=[intentLine,line,...foe.log].slice(0,20);
+ return {hit:damage>0,damage,line,roll,total,defense,healed,intent:prior,nextIntent:foe.intent,intentLine};
 }
 function storeRpgCorpse(save,now=Date.now(),locationId){
  const rpg=save.rpg,standardInventory=clone(save.inventory),customInventory=clone(rpg.inventory),hasItems=inventoryItems(standardInventory).length>0||customInventory.length>0;
@@ -274,7 +331,7 @@ function startEncounter(profile,locationId="night-harbor",random=Math.random){
  return mutate(profile,save=>{
   const rpg=save.rpg;if(rpg.encounter)return {error:"Finish or leave the current encounter first."};
   if(rpg.hp<=0)return {error:"Recover your gear and rest before starting another encounter."};
-  rpg.encounterSerial++;rpg.encounter=createEncounter(profile,locationId,rpg.encounterSerial,random);rpg.guarding=false;save.combat.autoAttack=false;
+  rpg.encounterSerial++;rpg.encounter=createEncounter(profile,locationId,rpg.encounterSerial,random,save.level);rpg.guarding=false;save.combat.autoAttack=false;
   logRpg(rpg,"Encounter started: "+rpg.encounter.name+" (level "+rpg.encounter.level+").");return {encounter:clone(rpg.encounter)};
  });
 }
@@ -283,43 +340,75 @@ function resolveRpgAction(profile,action,{random=Math.random,now=Date.now,return
   const rpg=save.rpg,foe=rpg.encounter;
   if(!foe)return {error:"Find a foe before choosing a combat action."};
   if(rpg.hp<=0)return {error:"Recover your character and gear before continuing."};
-  let playerLine="",usedItem=null,rolled=null;
-  if(action==="technique"){if(rpg.focus<2)return {error:"Not enough Focus for the retired custom class technique."};return {error:"Custom class techniques were removed. Use a verified memorized ability."}}
-  if(action==="attack"){
-    if(profile.classId==="rogue"&&foe.playerHidden)return {error:"You are hidden; use Backstab while the opening lasts."};
-    const strike=attackFoe(save,profile,foe,random);playerLine=strike.line;rolled={roll:strike.roll,total:strike.total,damage:strike.damage};
-    if(strike.hit)rpg.focus=Math.min(rpg.maxFocus,rpg.focus+1);
-   }else if(action==="stealth"){
-    if(profile.classId!=="rogue")return {error:"Only Rogues can enter Stealth in this custom combat."};
-    if(foe.playerHidden)return {error:"You are already hidden; use Backstab."};
-    const die=rollDie(random),total=die+statModifier(profile,"agi"),dc=10+foe.level;rolled={roll:die,total,dc};
-    if(die===20||die!==1&&total>=dc){
-     foe.playerHidden=true;save.combat.autoAttack=false;playerLine="You enter Stealth ("+total+" vs DC "+dc+"). Backstab is ready.";logRpg(rpg,playerLine);
-     const line=foe.name+" searches the shadows and loses your position.";foe.round++;foe.log=[line,...foe.log].slice(0,20);logRpg(rpg,line);
-     return {turn:true,stealthed:true,line:playerLine+" "+line,roll:rolled};
-    }
-    playerLine="You fail to enter Stealth ("+total+" vs DC "+dc+").";
-   }else if(typeof action==="object"&&action?.type==="ability"){
-    const abilityId=String(action.id||""),ability=PAGES.flatMap(page=>save.abilityBook[page]).find(record=>record.id===abilityId);
-    if(!ability||!save.learnedAbilities.includes(abilityId)||!save.memorizedAbilities.includes(abilityId))return {error:"Learn and memorize this ability before using it."};
-    if(!validAbility(ability,profile))return {error:"That ability is not a verified record for this class."};
-    if(ability.level>save.level)return {error:"This ability is above the character's current level."};
-    if(!["strike","backstab"].includes(ability.rpgAction))return {error:"This ability has no custom combat resolution yet."};
-    if(ability.rpgAction==="backstab"&&!foe.playerHidden)return {error:"Enter Stealth before using Backstab."};
-    if(foe.playerHidden&&ability.rpgAction!=="backstab")return {error:"Use Backstab while you have the opening."};
-    const strike=attackFoe(save,profile,foe,random,{ability});playerLine=strike.line;rolled={roll:strike.roll,total:strike.total,damage:strike.damage};
-    if(ability.rpgAction==="backstab")foe.playerHidden=false;
-   }else if(action==="guard"){
-   rpg.guarding=true;rpg.focus=Math.min(rpg.maxFocus,rpg.focus+2);playerLine="You brace behind your guard; the next incoming strike is reduced.";
+  let playerLine="",usedItem=null,rolled=null,interruptEnemy=false;
+  if(action==="technique"){
+   if(rpg.focus<2)return {error:"Not enough Focus for the retired custom class technique."};
+   return {error:"Class techniques are unavailable unless they are listed as verified, memorized abilities."};
+  }
+  if(action==="attack"||action==="strike"){
+   if(profile.classId==="rogue"&&foe.playerHidden)return {error:"You are hidden; use Backstab while the opening lasts."};
+   const strike=attackFoe(save,profile,foe,random);playerLine=strike.line;rolled={roll:strike.roll,total:strike.total,dc:strike.defense,damage:strike.damage};
+   if(strike.hit)rpg.focus=Math.min(rpg.maxFocus,rpg.focus+1);
+  }else if(action==="stealth"){
+   if(profile.classId!=="rogue")return {error:"Only Rogues can enter Stealth in this custom combat."};
+   if(foe.playerHidden)return {error:"You are already hidden; use Backstab."};
+   const die=rollDie(random),total=die+statModifier(profile,"agi"),dc=10+foe.level;rolled={roll:die,total,dc,stat:"agi"};
+   if(die===20||die!==1&&total>=dc){foe.playerHidden=true;save.combat.autoAttack=false;playerLine="You enter Stealth ("+total+" vs DC "+dc+"). Backstab is ready."}
+   else playerLine="You fail to enter Stealth ("+total+" vs DC "+dc+").";
+  }else if(typeof action==="object"&&action?.type==="ability"){
+   const abilityId=String(action.id||""),ability=PAGES.flatMap(page=>save.abilityBook[page]).find(record=>record.id===abilityId);
+   if(!ability||!save.learnedAbilities.includes(abilityId)||!save.memorizedAbilities.includes(abilityId))return {error:"Learn and memorize this ability before using it."};
+   if(!validAbility(ability,profile))return {error:"That ability is not a verified record for this class."};
+   if(ability.level>save.level)return {error:"This ability is above the character's current level."};
+   if(!["strike","backstab"].includes(ability.rpgAction))return {error:"This ability has no custom combat resolution yet."};
+   if(ability.rpgAction==="backstab"&&!foe.playerHidden)return {error:"Enter Stealth before using Backstab."};
+   if(foe.playerHidden&&ability.rpgAction!=="backstab")return {error:"Use Backstab while you have the opening."};
+   const strike=attackFoe(save,profile,foe,random,{ability});playerLine=strike.line;rolled={roll:strike.roll,total:strike.total,dc:strike.defense,damage:strike.damage};
+   if(ability.rpgAction==="backstab")foe.playerHidden=false;
+  }else if(action==="feint"||typeof action==="object"&&action?.type==="feint"){
+   if(rpg.focus<1)return {error:"Not enough Focus to attempt a Feint."};
+   rpg.focus=Math.max(0,rpg.focus-1);
+   const die=rollDie(random),total=die+statModifier(profile,"agi"),dc=foe.defense+(foe.braced?2:0),success=die===20||die!==1&&total>=dc;
+   rolled={roll:die,total,dc,success,stat:"agi"};
+   if(success){
+    foe.exposed=true;foe.braced=false;interruptEnemy=foe.intent!=="strike";
+    playerLine="Your feint succeeds ("+total+" vs guard "+dc+"). The foe is exposed"+(interruptEnemy?" and its telegraphed move is interrupted.":".");
+   }else playerLine="Your feint fails ("+total+" vs guard "+dc+"). The foe keeps its announced move.";
+  }else if(action==="guard"){
+   rpg.guarding=true;rpg.focus=Math.min(rpg.maxFocus,rpg.focus+2);playerLine="You guard: +4 Defense and half damage against the next hit.";
   }else if(typeof action==="object"&&action?.type==="item"){
    const item=RPG_ITEM_DEFS[action.id];if(!item||item.kind!=="consumable"||!hasRpgItem(rpg,action.id))return {error:"That consumable is not in your custom pack."};
    if(item.heal&&rpg.hp>=rpg.maxHp)return {error:"Your health is already full."};
    if(item.focus&&rpg.focus>=rpg.maxFocus)return {error:"Your Focus is already full."};
    removeRpgItem(rpg,action.id);rpg.hp=Math.min(rpg.maxHp,rpg.hp+(item.heal||0));rpg.focus=Math.min(rpg.maxFocus,rpg.focus+(item.focus||0));usedItem=item.name;playerLine="You use "+item.name+".";
+  }else if(typeof action==="object"&&action?.type==="racial"){
+   const tactics={
+    brace:{line:"Titan's Craft braces you behind a stronger guard."},
+    weaken:{line:"A binding ward weakens the foe's next attack."},
+    ward:{line:"A measured ward weakens the foe's next attack."},
+    flank:{line:"You follow the terrain and expose an opening."},
+    ambush:{line:"You strike through a known opening for 5 damage."},
+    assault:{line:"You press a forceful opening for 7 damage."},
+    recover:{line:"You steady yourself and recover Health and Focus."},
+    parley:{line:"A remembered tale persuades the foe to withdraw."}
+   };
+   const tactic=tactics[action.id];if(!tactic)return {error:"That racial combat feature is unavailable."};
+   if(action.id==="brace"){rpg.guarding=true;rpg.focus=Math.min(rpg.maxFocus,rpg.focus+1)}
+   else if(action.id==="weaken"||action.id==="ward")foe.weakened=true;
+   else if(action.id==="flank"){foe.exposed=true;foe.braced=false}
+   else if(action.id==="ambush")foe.hp=Math.max(1,foe.hp-5);
+   else if(action.id==="assault")foe.hp=Math.max(1,foe.hp-7);
+   else if(action.id==="recover"){rpg.hp=Math.min(rpg.maxHp,rpg.hp+8);rpg.focus=Math.min(rpg.maxFocus,rpg.focus+2)}
+   else if(action.id==="parley"){
+    if(foe.hp>Math.ceil(foe.maxHp*.25))return {error:"The foe must be near defeat before a peaceful parley can succeed."};
+    const enemy=foe.name;rpg.encounter=null;rpg.guarding=false;save.combat.autoAttack=false;
+    logRpg(rpg,tactic.line+" "+enemy+" withdraws without a reward.");return {parley:true,enemy,line:tactic.line};
+   }
+   playerLine=tactic.line;
   }else if(action==="flee"){
    const die=rollDie(random),total=die+statModifier(profile,"agi"),dc=10+foe.level;
    if(die===20||die!==1&&total>=dc){rpg.encounter=null;rpg.guarding=false;save.combat.autoAttack=false;logRpg(rpg,"You escape from "+foe.name+" without a reward.");return {escaped:true,roll:die,total,dc,line:"You break away from the encounter."}}
-   playerLine="You fail to find an opening to escape ("+total+" vs DC "+dc+").";
+   playerLine="You fail to find an opening to escape ("+total+" vs DC "+dc+").";rolled={roll:die,total,dc,stat:"agi"};
   }else return {error:"Unknown combat action."};
   logRpg(rpg,playerLine);
   if(foe.hp<=0){
@@ -331,43 +420,18 @@ function resolveRpgAction(profile,action,{random=Math.random,now=Date.now,return
    const line="Victory over "+foe.name+". +"+xp.amount+" custom XP, +"+formatCurrency(coins)+". "+lootText+(xp.levels.length?" Level up: "+xp.levels.join(", ")+".":"");logRpg(rpg,line);
    return {victory:true,enemy:foe.name,xp:xp.amount,restedBonus:xp.restedBonus,coins,loot:loot.ok?lootId:null,lootError:loot.error||null,levels:xp.levels,line,roll:rolled};
   }
-  const incoming=enemyExchange(save,profile,foe,random);logRpg(rpg,incoming.line);
-  if(rpg.hp<=0){const bindPoint=save.bindPoint||profile.startingLocation||"night-harbor";storeRpgCorpse(save,now(),foe.locationId);logRpg(rpg,"You were defeated. Your carried items are on a recoverable corpse; you wake at your bind point." );return {defeated:true,bindPoint,line:"Defeated by "+foe.name+". Your items were left on a recoverable corpse; there is no custom XP loss."}}
-  return {turn:true,line:playerLine+" "+incoming.line,enemyHp:foe.hp,playerHp:rpg.hp,focus:rpg.focus,roll:rolled,usedItem};
+  const incoming=enemyExchange(save,profile,foe,random,{interrupt:interruptEnemy});
+  logRpg(rpg,incoming.line);if(incoming.intentLine)logRpg(rpg,incoming.intentLine);
+  if(rpg.hp<=0){const bindPoint=save.bindPoint||profile.startingLocation||"night-harbor";storeRpgCorpse(save,now(),foe.locationId);logRpg(rpg,"You were defeated. Your carried items are on a recoverable corpse; you wake at your bind point.");return {defeated:true,bindPoint,line:"Defeated by "+foe.name+". Your items were left on a recoverable corpse; there is no custom XP loss."}}
+  return {turn:true,line:playerLine+" "+incoming.line,enemyHp:foe.hp,playerHp:rpg.hp,focus:rpg.focus,roll:rolled,enemyRoll:{roll:incoming.roll,total:incoming.total,defense:incoming.defense,damage:incoming.damage,intent:incoming.intent},nextIntent:foe.intent,usedItem};
  });
  if(result.ok&&result.result?.defeated){
   const destination=String(result.result.bindPoint||profile.startingLocation||"night-harbor");(returnToBindPoint||window.soaMnmAdventure?.returnToBindPoint)?.(destination);
  }
  return result;
 }
-function useRacialCombatTactic(profile,tacticId){
- const tactics={
-  brace:{line:"Titan's Craft braces you: +4 Defense against the next attack, and half damage if it hits."},
-  weaken:{line:"A bound spirit weakens the foe's next strike."},
-  ward:{line:"A measured ward weakens the foe's next strike."},
-  flank:{line:"You follow the living signs and deal 4 damage from the flank."},
-  ambush:{line:"You strike through a known opening for 5 damage."},
-  assault:{line:"You commit to a forceful opening for 7 damage."},
-  recover:{line:"You recover 8 Health and 2 Focus."},
-  parley:{line:"A remembered road-tale settles the encounter peacefully."}
- };
- const tactic=tactics[tacticId];if(!tactic)return {ok:false,error:"That racial combat feature is unavailable."};
- return mutate(profile,save=>{
-  const rpg=save.rpg,foe=rpg.encounter;if(!foe)return {error:"A foe must be present to use this feature."};
-  if(tacticId==="brace")rpg.guarding=true;
-  else if(tacticId==="weaken"||tacticId==="ward")foe.weakened=true;
-  else if(tacticId==="flank")foe.hp=Math.max(1,foe.hp-4);
-  else if(tacticId==="ambush")foe.hp=Math.max(1,foe.hp-5);
-  else if(tacticId==="assault")foe.hp=Math.max(1,foe.hp-7);
-  else if(tacticId==="recover"){rpg.hp=Math.min(rpg.maxHp,rpg.hp+8);rpg.focus=Math.min(rpg.maxFocus,rpg.focus+2);}
-  else if(tacticId==="parley"){
-   if(foe.hp>Math.ceil(foe.maxHp*.25))return {error:"The foe must be near defeat before a peaceful parley can succeed."};
-   const enemy=foe.name;rpg.encounter=null;rpg.guarding=false;save.combat.autoAttack=false;
-   logRpg(rpg,tactic.line+" "+enemy+" withdraws without a reward.");return {parley:true,enemy,line:tactic.line};
-  }
-  logRpg(rpg,tactic.line);
-  return {enemyHp:foe.hp,health:rpg.hp,focus:rpg.focus,line:tactic.line};
- });
+function useRacialCombatTactic(profile,tacticId,options={}){
+ return resolveRpgAction(profile,{type:"racial",id:tacticId},options);
 }
 function claimStoryReward(profile,storyId,baseXp=90){
  return mutate(profile,save=>{
@@ -486,63 +550,43 @@ function makeSystemButton(label,onClick,disabled=false){const button=document.cr
 function statusNode(){const p=document.createElement("p");p.className="soa-mnm-live soa-mnm-system-live";p.setAttribute("role","status");p.setAttribute("aria-live","polite");return p}
 function updateFromResult(result,onChange,status){if(!result.ok){status.textContent=result.error||"The action could not be saved.";return false}onChange?.();return true}
 let autoAttackTimer=null,autoAttackKey="";
-function stopAutoAttackRunner(){if(autoAttackTimer!==null)clearTimeout(autoAttackTimer);autoAttackTimer=null;autoAttackKey=""}
-function syncAutoAttackRunner(profile,save,onChange,context){
- const encounter=save.rpg?.encounter,key=profile.id+":"+(encounter?.id||"");
- if(!save.combat.autoAttack||!encounter){stopAutoAttackRunner();return}
- if(autoAttackKey&&autoAttackKey!==key)stopAutoAttackRunner();
- if(autoAttackTimer!==null)return;
- autoAttackKey=key;
- autoAttackTimer=setTimeout(()=>{
-  autoAttackTimer=null;
-  const latest=read(profile);
-  if(!latest.ok||!latest.save.combat.autoAttack||latest.save.rpg.encounter?.id!==encounter.id){stopAutoAttackRunner();return}
-  const result=resolveRpgAction(profile,"attack",{returnToBindPoint:context.returnToBindPoint});
-  if(!result.ok){setAutoAttack(profile,false);stopAutoAttackRunner()}
-  else if(result.result?.defeated)stopAutoAttackRunner();
-  onChange?.();
- },AUTO_ATTACK_INTERVAL);
-}
 function renderCombat(profile,onChange,context={}){
  const panel=document.createElement("section");panel.className="soa-mnm-adventure-panel soa-mnm-system-view";
- panel.append(kicker("M&M: RPG CUSTOM RULES \u00b7 TURN-BASED COMBAT"));
+ panel.append(kicker("M&M: RPG CUSTOM RULES · TURN-BASED COMBAT"));
  const h=document.createElement("h2");h.textContent="Combat";panel.append(h);
  const state=read(profile);if(!state.ok){panel.append(card("Combat paused",state.error));return panel}
  const save=state.save,rpg=save.rpg,locationId=FOES[context.locationId]?context.locationId:"night-harbor";
- panel.append(card("Custom project rules","These attack, defense, Focus, enemy, item, and reward values are original M&M: RPG rules. They are not official Monsters & Memories formulas or ability data."));
- const health=card("Health and Focus","Health "+rpg.hp+" / "+rpg.maxHp+" \u00b7 Focus "+rpg.focus+" / "+rpg.maxFocus+" \u00b7 Level "+save.level);
- panel.append(health);
+ panel.append(card("Deliberate turns","Choose one action to advance the fight. The foe's next move is shown before you act; after your move, it resolves and the foe reveals its next intent. Nothing attacks on a timer."));
+ panel.append(card("Custom project rules","Combat math, foe values, intent effects, Focus, items, and rewards are original M&M: RPG rules, separate from official M&M formulas and ability data."));
+ panel.append(card("Health and Focus","Health "+rpg.hp+" / "+rpg.maxHp+" · Focus "+rpg.focus+" / "+rpg.maxFocus+" · Level "+save.level));
  const status=statusNode();panel.append(status);
- panel.append(card("How auto-attack works","When enabled, your character makes a basic Strike every 1.6 seconds against the active foe. Each turn uses the custom d20 attack and gives the foe a chance to respond unless the strike defeats it. Strikes do not spend Focus; a hit restores 1 Focus. Auto-attack runs only while a Combat panel is open; Chapter One embeds it in Adventure during linked fights. Switching to a view without that panel pauses the timer, and returning resumes it if the same fight is still active. It stops when the encounter ends or you turn it off."));
- const toggle=makeSystemButton("Auto-attack: "+(save.combat.autoAttack?"On":"Off"),()=>{const result=setAutoAttack(profile,!save.combat.autoAttack);updateFromResult(result,onChange,status)},!!rpg.encounter?.playerHidden);toggle.setAttribute("aria-pressed",String(save.combat.autoAttack));panel.append(toggle);
- const act=action=>{const result=resolveRpgAction(profile,action,{returnToBindPoint:context.returnToBindPoint});if(result.ok&&result.result?.defeated)stopAutoAttackRunner();updateFromResult(result,onChange,status)};
+ const act=action=>{const result=resolveRpgAction(profile,action,{returnToBindPoint:context.returnToBindPoint});updateFromResult(result,onChange,status)};
  const foe=rpg.encounter;
  if(!foe){
   const regions=window.soaMnmAdventure?.regions||[],place=regions.find(row=>row.id===locationId);
-  panel.append(card("Looking for trouble",(place?.name||"This region")+" \u00b7 Select a custom encounter drawn from this area's original project foe table."));
+  panel.append(card("Looking for trouble",(place?.name||"This region")+" · Encounters are drawn from this area's original project foe table."));
   panel.append(makeSystemButton("Find a foe",()=>{const result=startEncounter(profile,locationId);updateFromResult(result,onChange,status)}));
  }else{
-  const encounter=card(foe.name+" \u00b7 Level "+foe.level,foe.description+" Guard "+foe.defense+" \u00b7 Round "+(foe.round+1));
+  panel.append(card("Foe intent · "+enemyIntentTitle(foe),enemyIntentDetail(foe)));
+  const encounter=card(foe.name+" · Level "+foe.level,foe.description+" Guard "+foe.defense+" · Round "+(foe.round+1)+(foe.exposed?" · Exposed":foe.braced?" · Guarded":""));
   const hp=document.createElement("p");hp.textContent="Foe health "+foe.hp+" / "+foe.maxHp;encounter.append(hp);panel.append(encounter);
   const actions=document.createElement("div");actions.className="soa-mnm-choice-grid";
-  const strikeLabel=save.combat.autoAttack?"Strike now":"Strike once";
-   actions.append(makeSystemButton(strikeLabel,()=>act("attack"),profile.classId==="rogue"&&!!foe.playerHidden));
-   if(profile.classId==="rogue")actions.append(makeSystemButton(foe.playerHidden?"Hidden · Backstab ready":"Enter Stealth · AGI check",()=>act("stealth"),!!foe.playerHidden));
-   const usedAbilityIds=new Set();
-   for(let i=0;i<ACTION_SLOTS;i++){const id=save.memorizedAbilities[i],ability=id&&PAGES.flatMap(page=>save.abilityBook[page]).find(item=>item.id===id);if(!ability||usedAbilityIds.has(id)||!ability.rpgAction)continue;usedAbilityIds.add(id);const ready=ability.level<=save.level&&(ability.rpgAction!=="backstab"||!!foe.playerHidden),label=ability.name+(ability.rpgAction==="backstab"&&!foe.playerHidden?" · Stealth required":"");actions.append(makeSystemButton(label,()=>act({type:"ability",id:ability.id}),!ready))}
-   actions.append(makeSystemButton("Guard",()=>act("guard")));
+  actions.append(makeSystemButton("Strike · take your turn",()=>act("attack"),profile.classId==="rogue"&&!!foe.playerHidden));
+  actions.append(makeSystemButton("Feint · AGI · 1 Focus",()=>act("feint"),rpg.focus<1));
+  if(profile.classId==="rogue")actions.append(makeSystemButton(foe.playerHidden?"Hidden · Backstab ready":"Enter Stealth · AGI check",()=>act("stealth"),!!foe.playerHidden));
+  const usedAbilityIds=new Set();
+  for(let i=0;i<ACTION_SLOTS;i++){const id=save.memorizedAbilities[i],ability=id&&PAGES.flatMap(page=>save.abilityBook[page]).find(item=>item.id===id);if(!ability||usedAbilityIds.has(id)||!ability.rpgAction)continue;usedAbilityIds.add(id);const ready=ability.level<=save.level&&(ability.rpgAction!=="backstab"||!!foe.playerHidden),label=ability.name+(ability.rpgAction==="backstab"&&!foe.playerHidden?" · Stealth required":"");actions.append(makeSystemButton(label,()=>act({type:"ability",id:ability.id}),!ready))}
+  actions.append(makeSystemButton("Guard · reduce the next hit",()=>act("guard")));
   const consumable=rpg.inventory.find(entry=>RPG_ITEM_DEFS[entry.id]?.kind==="consumable"&&((RPG_ITEM_DEFS[entry.id].heal&&rpg.hp<rpg.maxHp)||(RPG_ITEM_DEFS[entry.id].focus&&rpg.focus<rpg.maxFocus)));
-  if(consumable){const item=RPG_ITEM_DEFS[consumable.id];actions.append(makeSystemButton("Use "+item.name+" \u00b7 "+consumable.quantity+" left",()=>act({type:"item",id:consumable.id})))}
+  if(consumable){const item=RPG_ITEM_DEFS[consumable.id];actions.append(makeSystemButton("Use "+item.name+" · "+consumable.quantity+" left",()=>act({type:"item",id:consumable.id})))}
   actions.append(makeSystemButton("Try to escape",()=>act("flee")));
   panel.append(actions);
  }
  const log=document.createElement("section");log.className="soa-mnm-system-card";const logHeading=document.createElement("h3");logHeading.textContent="Encounter journal";log.append(logHeading);
  const entries=document.createElement("ol");entries.className="soa-mnm-journal";for(const line of rpg.log.slice(0,12)){const row=document.createElement("li");row.textContent=line;entries.append(row)}log.append(entries);panel.append(log);
- const slots=document.createElement("div");slots.className="soa-mnm-system-grid";
-  for(let i=0;i<ACTION_SLOTS;i++){const id=save.memorizedAbilities[i],ability=id&&PAGES.flatMap(page=>save.abilityBook[page]).find(item=>item.id===id),detail=ability?(ability.description||ability.name)+" · "+(ability.rpgStarter?"Starter ability in this RPG":"M&M level "+ability.level):"Empty";slots.append(card("Ability slot "+(i===9?"0":i+1),detail))}
-  panel.append(card("Using class abilities","Official class ability names use source-linked M&M records. This RPG resolves attacks with custom d20 rules. Rogue Backstab requires a successful Stealth check; a successful opening hit doubles this game's weapon-damage bonus. The official Stealth timer, weapon-ratio damage, and cooldowns are not simulated."));
-  panel.append(slots);
- syncAutoAttackRunner(profile,save,onChange,context);
+ const memorized=save.memorizedAbilities.filter(Boolean).map(id=>PAGES.flatMap(page=>save.abilityBook[page]).find(item=>item.id===id)).filter(Boolean);
+ panel.append(card("Memorized abilities",memorized.length?memorized.map(item=>item.name+" · level "+item.level).join(" · "):"No verified M&M abilities are memorized. Basic Strike, Guard, Feint, items, and escape remain available."));
+ panel.append(card("Using class abilities","Only learned, memorized, class-matching M&M ability records can appear here. This game uses separate custom d20 resolution. Backstab requires Stealth and gains the custom exposed-opening bonus; official M&M damage ratios and cooldowns are not simulated."));
  const sources=document.createElement("p");sources.className="soa-mnm-system-sources";sources.append(link("Official combat controls and ability rules","https://monstersandmemories.com/new-player-guide"));const classSource=STARTER_CLASS_ABILITIES[profile.classId]?.sourceUrl;if(classSource)sources.append(document.createTextNode(" · "),link("Official class ability Deep Dive",classSource));panel.append(sources);
  return panel;
 }
@@ -606,12 +650,11 @@ function formatDuration(ms){
  return [days?days+"d":"",hours?hours+"h":"",remaining?remaining+"m":""].filter(Boolean).join(" ")||"under 1m";
 }
 function render(view,profile,onChange,context={}){
- if(view!=="combat")stopAutoAttackRunner();
  if(view==="combat")return renderCombat(profile,onChange,context);
  if(view==="progress")return renderProgress(profile,onChange,context);
  if(view==="inventory")return renderInventory(profile,onChange,context);
  return null;
 }
-window.soaMnmSystems=Object.freeze({key:KEY,maxLevel:MAX_LEVEL,actionSlots:ACTION_SLOTS,createSave,validSave,read,progressFor,render,formatCurrency,formatWallet,currencyExchange:CURRENCY_EXCHANGE,groupExperienceEligibility,corpseDurationMs,weightSummary,recordDeath,recoverCorpse,recordRestInterval,experienceMultiplier,scribeAbility,memorizeAbility,startEncounter,resolveRpgAction,useRacialCombatTactic,claimStoryReward,restAtSafeHaven,useRpgItem,equipRpgItem,discardRpgItem,purchaseRpgItem,sellRpgItem,setAutoAttack,stopAutoAttackRunner});
+window.soaMnmSystems=Object.freeze({key:KEY,maxLevel:MAX_LEVEL,actionSlots:ACTION_SLOTS,createSave,validSave,read,progressFor,render,formatCurrency,formatWallet,currencyExchange:CURRENCY_EXCHANGE,groupExperienceEligibility,corpseDurationMs,weightSummary,recordDeath,recoverCorpse,recordRestInterval,experienceMultiplier,scribeAbility,memorizeAbility,startEncounter,resolveRpgAction,useRacialCombatTactic,claimStoryReward,restAtSafeHaven,useRpgItem,equipRpgItem,discardRpgItem,purchaseRpgItem,sellRpgItem,setAutoAttack});
 })();
 
