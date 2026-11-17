@@ -305,23 +305,26 @@ function chooseAction(profile,save,panel,status,onChange,code,choice){
  resolvePending(profile,save,panel,status,onChange,code);
 }
 function render(profile,save,onChange){
- const panel=element("section",undefined,"soa-mnm-adventure-panel soa-mnm-ai-chronicle");panel.setAttribute("aria-label","M&M generated campaign");
- panel.append(element("div","AÊTHORIL · YOUR CAMPAIGN","soa-mnm-kicker"),element("h2","A living story in Aêthoril"));
- const region=currentRegion(save),campaign=save.aiCampaign;
- const connection=element("details",undefined,"soa-mnm-ai-connection");connection.open=campaign.status==="idle"||!getCode();
+ const panel=element("section",undefined,"soa-mnm-adventure-panel soa-mnm-ai-chronicle");panel.setAttribute("aria-label","M&M Adventure campaign");
+ const region=currentRegion(save),campaign=save.aiCampaign,isLocal=campaign.mode==="local",code=getCode();
+ panel.append(element("div",isLocal?"LOCAL CAMPAIGN · SAVED ON THIS DEVICE":"AÊTHORIL · AI CHRONICLE","soa-mnm-kicker"),element("h2",isLocal?"A local campaign in Aêthoril":"A living story in Aêthoril"));
+ const connection=element("details",undefined,"soa-mnm-ai-connection");connection.open=campaign.status==="idle"||!isLocal&&!code;
  connection.append(element("summary","AI connection and story rules"));
- connection.append(element("p","Your choices and d20 results are saved before the Story Director responds. Completed chapters, open leads, recent decisions, your character's current resources, and learned official abilities guide each new scene. The AI writes story only; it cannot change character stats, health, Focus, level, XP, abilities, currency, inventory, or combat results."));
+ connection.append(element("p","AI-written scenes need the separate Cloudflare access code and a working internet connection. A local campaign works on this device without either. Both modes save choices and custom d20 checks; story text cannot change Health, Focus, levels, XP, abilities, items, currency, or combat results."));
  const label=element("label","AI access code (not an API key)","soa-mnm-system-label");label.htmlFor="soa-mnm-ai-code";
  const codeInput=element("input",undefined,"soa-mnm-system-input");codeInput.id="soa-mnm-ai-code";codeInput.type="password";codeInput.autocomplete="off";codeInput.placeholder="Cloudflare AI_ACCESS_CODE";codeInput.value=getCode();label.append(codeInput);connection.append(label);
- const connectionStatus=element("p","Stored only for this browser tab. Each generated scene uses the game's configured AI quota.","soa-mnm-live");connectionStatus.setAttribute("role","status");connectionStatus.setAttribute("aria-live","polite");connection.append(connectionStatus);
+ const connectionStatus=element("p","The access code stays in this browser tab. Local campaigns do not use it or consume AI quota.","soa-mnm-live");connectionStatus.setAttribute("role","status");connectionStatus.setAttribute("aria-live","polite");connection.append(connectionStatus);
  const test=element("button","Test AI connection","soa-mnm-system-button");test.type="button";test.dataset.aiConnection="true";
  test.onclick=async()=>{const code=codeInput.value.trim();if(!code){connectionStatus.textContent="Enter the separate AI access code configured in Cloudflare.";return}setCode(code);test.disabled=true;connectionStatus.textContent="Checking the Story Director…";try{const result=await apiRequest(code,null);if(!panel.isConnected||!sameActiveCharacter(profile.id))return;connectionStatus.textContent=result.status||"AI connection ready."}catch(error){if(panel.isConnected)connectionStatus.textContent=error.message}finally{test.disabled=false}};
  connection.append(test);panel.append(connection);
  const status=element("p","", "soa-mnm-live");status.dataset.aiStatus="true";status.setAttribute("role","status");status.setAttribute("aria-live","polite");panel.append(status);
  if(!region){panel.append(element("p","No connected world region is available for this character."));return panel}
  if(campaign.status==="idle"){
-  panel.append(element("p","Begin in "+region.name+(region.zone?", "+region.zone:"")+". The campaign is generated around this character's race, class, official learned abilities, and starting home. Story choices never spend or alter combat resources."));
-  const start=element("button","Begin your campaign","soa-mnm-system-button soa-mnm-ai-primary");start.type="button";start.onclick=()=>startChapter(profile,save,panel,status,onChange,codeInput.value.trim()||getCode());panel.append(start);
+  panel.append(element("p","Begin in "+region.name+(region.zone?", "+region.zone:"")+". Choose AI-written scenes if you have the access code, or start a saved local adventure immediately. Your race, class, and starting home shape the setting; custom d20 checks decide how each lead changes."));
+  const aiStart=element("button","Begin an AI-generated campaign","soa-mnm-system-button");aiStart.type="button";aiStart.onclick=()=>startChapter(profile,save,panel,status,onChange,codeInput.value.trim()||getCode());
+  const localStart=element("button","Start a local campaign now","soa-mnm-system-button soa-mnm-ai-primary");localStart.type="button";localStart.onclick=()=>startLocalChapter(profile,save,panel,status,onChange);
+  if(code){panel.append(aiStart,localStart)}else{panel.append(localStart,aiStart)}
+  panel.append(element("p","Local chapters are selected from original regional story arcs. Each has four d20 decisions, success and setback branches, an ending, and an optional custom XP claim; local play does not need an AI service.","soa-mnm-note"));
   return panel;
  }
  const migrated=migrateCampaign(campaign,profile);
