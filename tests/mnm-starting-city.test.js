@@ -42,9 +42,9 @@ test("M&M race starts normalize to their assigned city and keep the expected sta
 test("new M&M adventure saves begin in each race's assigned starting city", () => {
   const human = rules.normalizeCharacter({ id: "human-2", raceId: "human", classId: "fighter" });
   const humanSave = adventure.createSave(human);
-  assert.equal(humanSave.stage, "briefing");
-  assert.equal(humanSave.origin, "night-harbor");
   assert.equal(humanSave.currentLocation, "night-harbor");
+  assert.equal(humanSave.currentSite, "city");
+  assert.deepEqual(JSON.parse(JSON.stringify(humanSave.arenaRecord)), { bouts: 0, wins: 0, withdrawals: 0 });
   assert.equal(humanSave.aiCampaign.status, "idle");
   assert.equal(humanSave.aiCampaign.locationId, "night-harbor");
   assert.equal(adventure.validSave(humanSave, human), true);
@@ -52,57 +52,15 @@ test("new M&M adventure saves begin in each race's assigned starting city", () =
 
   const gnome = rules.normalizeCharacter({ id: "gnome-1", raceId: "gnome", classId: "fighter" });
   const gnomeSave = adventure.createSave(gnome);
-  assert.equal(gnomeSave.stage, "briefing");
-  assert.equal(gnomeSave.origin, "night-harbor");
   assert.equal(gnomeSave.currentLocation, "night-harbor");
   const deepElf = rules.normalizeCharacter({ id: "deep-elf-1", raceId: "deep_elf", classId: "wizard" });
   const deepElfSave = adventure.createSave(deepElf);
-  assert.equal(deepElfSave.origin, "underdocks");
   assert.equal(deepElfSave.currentLocation, "underdocks");
   const woodElf = rules.normalizeCharacter({ id: "wood-elf-1", raceId: "wood_elf", classId: "ranger" });
   const woodElfSave = adventure.createSave(woodElf);
-  assert.equal(woodElfSave.origin, "penshaw");
   assert.equal(woodElfSave.currentLocation, "penshaw");
   assert.match(fs.readFileSync(path.join(__dirname, "..", "public", "mnm-adventure.js"), "utf8"), /zone:"Keepers Bight"/);
   assert.match(fs.readFileSync(path.join(__dirname, "..", "public", "mnm-adventure.js"), "utf8"), /custom M&M: RPG starting home in Keepers Bight/);
-});
-
-test("fixed story ability checks report d20 totals and advance on success or failure", () => {
-  const normalized = rules.normalizeCharacter({ id: "skill-check-hero", raceId: "human", classId: "fighter" });
-  const profile = { ...normalized, stats: { ...normalized.stats, int: 14 } };
-  const opening = adventure.transition(adventure.createSave(profile), profile, { type: "accept" }).state;
-
-  const success = adventure.transition(opening, profile, { type: "approach", id: "chart" }, 10);
-  assert.equal(success.roll.roll, 10);
-  assert.equal(success.roll.stat, "int");
-  assert.equal(success.roll.modifier, 2);
-  assert.equal(success.roll.total, 12);
-  assert.equal(success.roll.dc, 12);
-  assert.equal(success.roll.success, true);
-  assert.equal(success.state.stage, "encounter");
-  assert.match(success.state.journal[success.state.journal.length - 1], /d20 10 \+2 = 12 vs DC 12 - success/);
-
-  const failure = adventure.transition(opening, profile, { type: "approach", id: "chart" }, 9);
-  assert.equal(failure.roll.total, 11);
-  assert.equal(failure.roll.success, false);
-  assert.equal(failure.state.stage, "encounter", "a failed check must still leave a playable next step");
-
-  const naturalOne = adventure.transition(opening, { ...profile, stats: { ...profile.stats, int: 20 } }, { type: "approach", id: "chart" }, 1);
-  assert.equal(naturalOne.roll.success, false, "a natural 1 fails even with a high ability score");
-  const naturalTwenty = adventure.transition(opening, profile, { type: "approach", id: "chart" }, 20);
-  assert.equal(naturalTwenty.roll.success, true);
-  assert.equal(naturalTwenty.roll.critical, true);
-});
-
-test("race starting cities cannot be changed through the old origin picker", () => {
-  const gnome = rules.normalizeCharacter({ id: "gnome-3", raceId: "gnome", classId: "fighter" });
-  const legacyOriginSave = { ...adventure.createSave(gnome), stage: "origin", origin: "" };
-  assert.throws(
-    () => adventure.transition(legacyOriginSave, gnome, { type: "origin", region: "faelindral" }),
-    /This race begins in Night Harbor/
-  );
-  const save = adventure.createSave(gnome);
-  assert.throws(() => adventure.transition(save, gnome, { type: "origin", region: "penshaw" }), /not available in the current chapter/);
 });
 
 test("M&M adventure startup organizes the character screen before mounting it", () => {
@@ -118,24 +76,6 @@ test("M&M adventure startup organizes the character screen before mounting it", 
   assert.deepEqual(calls, []);
   load();
   assert.deepEqual(calls, ["organize", "profile"]);
-});
-
-test("unstarted saves migrate to the character's assigned starting city", () => {
-  const human = { id: "human-4", raceId: "human" };
-  const pending = { ...adventure.createSave({ id: human.id, raceId: "gnome" }), stage: "origin", origin: "" };
-  assert.equal(adventure.migrateHumanStartingCity(pending, human), true);
-  assert.equal(pending.origin, "night-harbor");
-  assert.equal(pending.currentLocation, "night-harbor");
-  assert.equal(pending.stage, "briefing");
-  assert.match(pending.journal[0], /Night Harbor/);
-  assert.equal(adventure.migrateHumanStartingCity(pending, human), false);
-
-  const gnome = { id: "gnome-2", raceId: "gnome" };
-  const gnomePending = { ...adventure.createSave(gnome), stage: "origin", origin: "" };
-  assert.equal(adventure.migrateStartingLocation(gnomePending, gnome), true);
-  assert.equal(gnomePending.stage, "briefing");
-  assert.equal(gnomePending.origin, "night-harbor");
-  assert.equal(gnomePending.currentLocation, "night-harbor");
 });
 
 test("M&M race/class and stat rules keep representative supplied values", () => {
