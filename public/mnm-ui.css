@@ -561,3 +561,10 @@ body.soa-ruleset-mnm .soa-mnm-rules-disclosure>p{color:#49331f!important;font-si
 .soa-mnm-ai-action-controls select{width:100%}
 .soa-mnm-ai-chronicle input:focus-visible,.soa-mnm-ai-chronicle textarea:focus-visible,.soa-mnm-ai-chronicle select:focus-visible,.soa-mnm-ai-chronicle button:focus-visible{outline:3px solid #e0c786;outline-offset:3px}
 @media(max-width:640px){.soa-mnm-ai-action-controls{grid-template-columns:1fr}.soa-mnm-ai-custom-action{padding:12px}}
+
+/* Keep racial-feature copy light inside the parchment character-record panel. */
+body.soa-ruleset-mnm .panel .soa-mnm-racial-ability{color:#eee7d7}
+body.soa-ruleset-mnm .panel .soa-mnm-racial-ability .soa-mnm-custom-label{color:#dfbd79}
+body.soa-ruleset-mnm .panel .soa-mnm-racial-ability h3{color:#f0d69d;text-shadow:0 1px #11130f}
+body.soa-ruleset-mnm .panel .soa-mnm-racial-ability p{color:#ebe5d8;line-height:1.55}
+body.soa-ruleset-mnm .panel .soa-mnm-racial-ability small{color:#cfcbc0}

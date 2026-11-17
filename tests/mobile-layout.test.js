@@ -115,8 +115,8 @@ test("M&M adventure tabs use readable desktop and phone grids",()=>{
  assert.match(mnmUiCss,/\.soa-ruleset-mnm #soa-character-screen \.soa-mnm-tabs\{display:grid!important;grid-template-columns:repeat\(8,minmax\(0,1fr\)\)/);
  assert.match(mnmUiCss,/@media\(max-width:900px\)\{[\s\S]*?\.soa-ruleset-mnm #soa-character-screen \.soa-mnm-tabs\{grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
  assert.match(mnmUiCss,/\.soa-ruleset-mnm \.soa-mnm-tab\{[^}]*text-align:center[^}]*white-space:normal/);
- assert.match(html,/href="\.\/mnm-ui\.css\?v=15"/);
- assert.match(serviceWorker,/\.\/mnm-ui\.css\?v=15/);
+ assert.match(html,/href="\.\/mnm-ui\.css\?v=16"/);
+ assert.match(serviceWorker,/\.\/mnm-ui\.css\?v=16/);
 });
 
 test("contract and bounty board belongs to the Quest tab",()=>{
