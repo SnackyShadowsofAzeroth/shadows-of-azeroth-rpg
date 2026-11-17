@@ -337,7 +337,8 @@ function render(profile,save,onChange){
   panel.append(element("p","Your action and exact die roll are saved with the scene at "+(regions().find(x=>x.id===campaign.locationId)?.name||"another location")+". Return there through the World tab before retrying; the roll cannot be changed."));
  }else if(!currentMatches){
   panel.append(element("p","This scene is saved at "+(regions().find(x=>x.id===campaign.locationId)?.name||"another location")+". Start a chapter here and the unresolved lead will carry into the campaign journal."));
-  const move=element("button","Start a chapter in "+region.name,"soa-mnm-system-button soa-mnm-ai-primary");move.type="button";move.onclick=()=>startChapter(profile,save,panel,status,onChange,codeInput.value.trim()||getCode());panel.append(move);
+  const move=element("button","Start an AI chapter in "+region.name,"soa-mnm-system-button");move.type="button";move.onclick=()=>startChapter(profile,save,panel,status,onChange,codeInput.value.trim()||getCode());panel.append(move);
+  const localMove=element("button","Start a local chapter here","soa-mnm-system-button soa-mnm-ai-primary");localMove.type="button";localMove.onclick=()=>startLocalChapter(profile,save,panel,status,onChange);panel.append(localMove);
  }else if(campaign.status==="chapter-complete"){
   panel.append(element("p","Chapter summary · "+campaign.summary,"soa-mnm-feature-status"));
   const rewardId="ai-chapter-"+campaign.chapter,systems=window.soaMnmSystems,systemSave=systems?.read?.(profile),rewardClaimed=!!(systemSave?.ok&&systemSave.save.rpg.claimedStories.includes(rewardId));
@@ -346,12 +347,23 @@ function render(profile,save,onChange){
    const reward=element("button","Claim optional 90 custom XP","soa-mnm-system-button");reward.type="button";reward.onclick=()=>{const result=systems?.claimStoryReward?.(profile,rewardId,90);if(!result?.ok){status.textContent=result?.error||"The chapter reward could not be saved.";return}status.textContent="Claimed "+result.result.xp+" custom XP for this AI chapter.";onChange?.({render:true,message:status.textContent})};panel.append(reward);
   }
   panel.append(element("small","Chapter rewards and the leveling curve are original M&M: RPG rules. You can continue without claiming the reward.","soa-mnm-note"));
-  const next=element("button","Continue the campaign","soa-mnm-system-button soa-mnm-ai-primary");next.type="button";next.onclick=()=>startChapter(profile,save,panel,status,onChange,codeInput.value.trim()||getCode());panel.append(next);
+  if(isLocal){
+   const next=element("button","Continue the local campaign","soa-mnm-system-button soa-mnm-ai-primary");next.type="button";next.onclick=()=>startLocalChapter(profile,save,panel,status,onChange);panel.append(next);
+   const aiNext=element("button","Continue with AI-generated chapters","soa-mnm-system-button");aiNext.type="button";aiNext.onclick=()=>startChapter(profile,save,panel,status,onChange,codeInput.value.trim()||getCode());panel.append(aiNext);
+  }else{
+   const next=element("button","Continue the AI campaign","soa-mnm-system-button soa-mnm-ai-primary");next.type="button";next.onclick=()=>startChapter(profile,save,panel,status,onChange,codeInput.value.trim()||getCode());panel.append(next);
+   const localNext=element("button","Continue locally with a new chapter","soa-mnm-system-button");localNext.type="button";localNext.onclick=()=>startLocalChapter(profile,save,panel,status,onChange);panel.append(localNext);
+  }
  }else if(campaign.pending){
   const outcome=resolveChoice(campaign.pending.action,profile.stats,campaign.pending.roll);
   panel.append(element("p","Saved choice · "+campaign.pending.action.text+" ("+STAT_NAMES[campaign.pending.action.stat]+" · DC "+outcome.dc+")","soa-mnm-feature-status"));
-  panel.append(element("p","Locked roll · d20 "+outcome.roll+" + "+outcome.modifier+" = "+outcome.total+" vs DC "+outcome.dc+" · "+(outcome.success?"success":"failure")+"; retrying will use this same roll."));
-  const retry=element("button","Retry this same roll","soa-mnm-system-button soa-mnm-ai-primary");retry.type="button";retry.onclick=()=>resolvePending(profile,save,panel,status,onChange,codeInput.value.trim()||getCode());panel.append(retry);
+  panel.append(element("p","Locked roll · d20 "+outcome.roll+" + "+outcome.modifier+" = "+outcome.total+" vs DC "+outcome.dc+" · "+(outcome.success?"success":"failure")+"; the saved roll cannot change."));
+  if(isLocal){
+   const resolve=element("button","Resolve this saved roll","soa-mnm-system-button soa-mnm-ai-primary");resolve.type="button";resolve.onclick=()=>resolveLocalPending(profile,save,panel,status,onChange);panel.append(resolve);
+  }else{
+   const retry=element("button","Retry this same roll","soa-mnm-system-button soa-mnm-ai-primary");retry.type="button";retry.onclick=()=>resolvePending(profile,save,panel,status,onChange,codeInput.value.trim()||getCode());panel.append(retry);
+   const local=element("button","Continue locally with the same roll","soa-mnm-system-button");local.type="button";local.onclick=()=>continueLocally(profile,save,panel,status,onChange);panel.append(local);
+  }
  }else{
   const grid=element("div",undefined,"soa-mnm-choice-grid");
   campaign.scene.choices.forEach(choice=>{const button=element("button",undefined,"soa-mnm-choice soa-mnm-ai-choice");button.type="button";button.append(element("strong",choice.text),element("span",STAT_NAMES[choice.stat]+" · "+choice.difficulty+" · DC "+choice.dc+" (custom story check)"));button.onclick=()=>chooseAction(profile,save,panel,status,onChange,codeInput.value.trim()||getCode(),choice);grid.append(button)});
@@ -366,6 +378,9 @@ function render(profile,save,onChange){
   const submit=element("button","Resolve my action","soa-mnm-system-button");submit.type="submit";form.append(submit);
   form.addEventListener("submit",event=>{event.preventDefault();const text=clean(actionInput.value,180);if(text.length<8){status.textContent="Describe your action in at least eight characters.";return}chooseAction(profile,save,panel,status,onChange,codeInput.value.trim()||getCode(),{text,stat:statSelect.value,difficulty:difficultySelect.value})});
   panel.append(form);
+  if(!isLocal){
+   const local=element("button","Continue this scene locally","soa-mnm-system-button");local.type="button";local.onclick=()=>continueLocally(profile,save,panel,status,onChange);panel.append(local);
+  }
  }
  const history=campaign.history.slice(-8);
  if(history.length){const details=element("details",undefined,"soa-mnm-ai-history");details.append(element("summary","Recent choices and rolls"));const list=element("ol",undefined,"soa-mnm-journal");history.forEach(row=>list.append(element("li","Ch. "+row.chapter+" · "+row.title+" — "+row.action+" ("+row.result+") · "+row.summary)));details.append(list);panel.append(details)}
