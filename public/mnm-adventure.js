@@ -50,7 +50,7 @@ function validSave(value,profile){
  if(value.combatKillsAtStart===undefined)value.combatKillsAtStart=0;
  if(value.combatFoeName===undefined)value.combatFoeName="";
  if(typeof value.combatEncounterId!=="string"||value.combatEncounterId.length>100||!Number.isInteger(value.combatKillsAtStart)||value.combatKillsAtStart<0||typeof value.combatFoeName!=="string"||value.combatFoeName.length>220)return false;
- if(!["","victory","driven-off","withdrew","mapped","parley"].includes(value.outcome)||typeof value.completed!=="boolean"||!Array.isArray(value.journal)||value.journal.length>100||value.journal.some(x=>typeof x!=="string"))return false;
+ if(!["","victory","driven-off","withdrew","mapped","parley","defeated"].includes(value.outcome)||typeof value.completed!=="boolean"||!Array.isArray(value.journal)||value.journal.length>100||value.journal.some(x=>typeof x!=="string"))return false;
  if(value.racialFeatureUsed!==undefined&&typeof value.racialFeatureUsed!=="boolean")return false;
  if(value.racialFeatureUsed===undefined)value.racialFeatureUsed=false;
  return value.stage!=="complete"||value.completed===true;
@@ -166,7 +166,7 @@ function transition(current,profile,action,roll){
  }
  if(action?.type==="complete"&&next.stage==="aftermath"){
   next.stage="complete";next.completed=true;
-  const resultText=next.outcome==="victory"?"Cleared the broken signal marker and helped restore the warning bell.":next.outcome==="parley"?"Reached a peaceful resolution and helped restore the warning bell.":next.outcome==="mapped"?"Mapped a reliable safe route and warned the caravan.":next.outcome==="driven-off"?"Marked the threat's escape route and restored a safe warning at Dune Gate.":"Reported a safe detour so the caravan could pass Dune Gate.";
+  const resultText=next.outcome==="victory"?"Cleared the broken signal marker and helped restore the warning bell.":next.outcome==="parley"?"Reached a peaceful resolution and helped restore the warning bell.":next.outcome==="mapped"?"Mapped a reliable safe route and warned the caravan.":next.outcome==="defeated"?"Survived a defeat; Sera rerouted the caravan while the threat remained.":next.outcome==="driven-off"?"Marked the threat's escape route and restored a safe warning at Dune Gate.":"Reported a safe detour so the caravan could pass Dune Gate.";
   addJournal(next,"Chapter complete: "+resultText);
   return {state:next,message:"Chapter complete. The signal route is recorded in the journal."};
  }
@@ -298,12 +298,13 @@ function boot(){
   if(!save?.combatEncounterId)return false;
   const systemState=window.soaMnmSystems?.read?.(profile);
   if(!systemState?.ok){statusText=systemState?.error||"Combat data could not be read.";return false}
-  const outcome=outcomeOverride||(systemState.save.rpg.kills>save.combatKillsAtStart?"victory":"withdrew");
+  const defeated=systemState.save.rpg.log.some(line=>String(line).startsWith("You were defeated."));
+  const outcome=outcomeOverride||(systemState.save.rpg.kills>save.combatKillsAtStart?"victory":defeated?"defeated":"withdrew");
   const foeName=save.combatFoeName||"the threat";
   const next=clone(save);next.stage="aftermath";next.outcome=outcome;next.combatEncounterId="";next.combatFoeName="";next.combatKillsAtStart=systemState.save.rpg.kills;
-  const line=outcome==="victory"?"Defeated "+foeName+" and cleared the broken signal marker.":outcome==="parley"?"Settled the encounter with "+foeName+" through a peaceful exchange.":"Withdrew from "+foeName+" and helped Sera mark a safe detour.";
+  const line=outcome==="victory"?"Defeated "+foeName+" and cleared the broken signal marker.":outcome==="parley"?"Settled the encounter with "+foeName+" through a peaceful exchange.":outcome==="defeated"?"Defeated by "+foeName+"; your belongings remain on a recoverable corpse.":"Withdrew from "+foeName+" and helped Sera mark a safe detour.";
   addJournal(next,line);
-  return persistAdventure(next,outcome==="victory"?"The threat is defeated. Sera can restore the warning bell.":outcome==="parley"?"The encounter ended peacefully; the caravan is safe.":"You reached safety. Sera marks a detour for the caravan.");
+  return persistAdventure(next,outcome==="victory"?"The threat is defeated. Sera can restore the warning bell.":outcome==="parley"?"The encounter ended peacefully; the caravan is safe.":outcome==="defeated"?"You wake at your bind point. Sera marks a detour while the threat remains.":"You reached safety. Sera marks a detour for the caravan.");
  }
  function synchronizeStoryCombat(){
   if(save?.stage!=="encounter"||!save.combatEncounterId)return false;
@@ -331,7 +332,7 @@ function boot(){
   if(!tactic||save.racialFeatureUsed)return;
   const before=clone(save),next=clone(save);next.racialFeatureUsed=true;addJournal(next,"Used "+tactic.label+" during the encounter.");
   if(!persistAdventure(next))return;
-  const result=window.soaMnmSystems?.useRacialCombatTactic?.(profile,tactic.id);
+  const result=window.soaMnmSystems?.useRacialCombatTactic?.(profile,tactic.id,{returnToBindPoint:destination=>activeBindPointReturn(destination)});
   if(!result?.ok){
    persistAdventure(before,result?.error||"The racial feature could not be used.");
    render();return;
@@ -359,7 +360,7 @@ function boot(){
    const foe=state?.ok?state.save.rpg.encounter:null;
    const tactic=STORY_COMBAT_TACTICS[profile.raceId];
    if(foe?.id===save.combatEncounterId&&tactic&&!save.racialFeatureUsed&&(!tactic.requiresClue||save.clue)&&(!tactic.requiresYield||foe.hp<=Math.ceil(foe.maxHp*.25))){
-    panel.append(button(tactic.label,tactic.detail,()=>useStoryCombatTactic(tactic),"med"));
+    panel.append(button(tactic.label,tactic.detail+" · Uses your turn; the foe responds.",()=>useStoryCombatTactic(tactic),"med"));
    }else if(tactic?.requiresYield&&!save.racialFeatureUsed&&foe?.id===save.combatEncounterId){
     panel.append(el("p","Fontborn Memory is ready once the foe's Health falls below one quarter.","soa-mnm-feature-status"));
    }
@@ -373,8 +374,10 @@ function boot(){
   }
  }
  function renderAftermath(panel){
-  panel.append(el("div","QUEST · RETURN","soa-mnm-kicker"),el("h2",save.outcome==="victory"?"The route is safe":save.outcome==="parley"?"The threat stands down":save.outcome==="mapped"?"A safe route is mapped":"A safer route home"));
-  const line=save.outcome==="victory"?"With the threat cleared, Sera restores the warning bell before the caravan arrives.":save.outcome==="parley"?"The creature turns away after a peaceful exchange, and Sera restores the warning bell.":save.outcome==="mapped"?"The threat remains, but the safe alternate route is marked and Sera warns the caravan.":"You fall back from the threat. Sera marks a safe detour so the caravan can pass.";
+  const defeated=save.outcome==="defeated";
+  const title=save.outcome==="victory"?"The route is safe":save.outcome==="parley"?"The threat stands down":save.outcome==="mapped"?"A safe route is mapped":defeated?"Driven back from the marker":"A safer route home";
+  panel.append(el("div","QUEST · RETURN","soa-mnm-kicker"),el("h2",title));
+  const line=save.outcome==="victory"?"With the threat cleared, Sera restores the warning bell before the caravan arrives.":save.outcome==="parley"?"The creature turns away after a peaceful exchange, and Sera restores the warning bell.":save.outcome==="mapped"?"The threat remains, but the safe alternate route is marked and Sera warns the caravan.":defeated?"The threat remains at the marker. You wake at your bind point with a recoverable corpse, and Sera organizes a detour for the caravan.":"You fall back from the threat. Sera marks a safe detour so the caravan can pass.";
   panel.append(el("p",line),el("p","Your choices and the encounter are saved in the Journey Log."));
   panel.append(button("Record the chapter","Complete the quest and preserve its outcome in the journal.",()=>perform({type:"complete"},false),"med"));
  }
@@ -416,7 +419,6 @@ function boot(){
   if(!app.isConnected)return;
   if(!blocked)synchronizeStoryCombat();
   const storyCombatVisible=view==="adventure"&&save?.stage==="encounter"&&Boolean(save?.combatEncounterId);
-  if(view!=="combat"&&!storyCombatVisible)window.soaMnmSystems?.stopAutoAttackRunner?.();
   app.replaceChildren();
   const hero=el("section",undefined,"soa-mnm-game-heading");
   hero.append(el("div","MONSTERS & MEMORIES \u00b7 ORIGINAL ADVENTURE","soa-mnm-kicker"),el("h1",profile.name));
