@@ -1,5 +1,5 @@
 // Static-shell offline cache. API requests are network-only and are never cached.
-const CACHE="mm-rpg-v164";
+const CACHE="mm-rpg-v165";
 const CRAFTING_FILE="./crafting.js";
 const FILES=["./","./index.html","./manifest.webmanifest","./icon.svg","./campaign.js","./racial-abilities.js","./specializations.js","./class-abilities.js","./druid.js","./druid-vines.svg","./class-themes.js","./class-themes.css","./mnm-ui.css?v=16","./mnm-world.png","./frontier-menu.png","./night-harbor-hero.jpg","./mnm-ai-chronicle.js","./quests.js","./equipment.js","./forever-items.js","./enchanting.js","./combat-rules.js","./companions.js","./theme.css","./characters.css","./characters.js","./mnm-adventure.js","./mnm-systems.js","./character-rules.js","./mnm-rules.js","./resource-rules.js","./save-rules.js","./reputation.css","./reputation.js","./portraits.css","./portraits.js","./chronicle.css","./chapters.css","./chronicle.js","./progression.js","./progression.css","./abilities.js","./abilities.css","./mobile-layout.js","./mobile-layout.css","./arena.js"];
 self.addEventListener("install",event=>{

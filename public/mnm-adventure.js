@@ -241,10 +241,14 @@ function boot(){
    return;
   }
   panel.append(el("p","Current location · "+current.name+" city streets."));
-  const state=window.soaMnmSystems?.read?.(profile),hasEncounter=!!(state?.ok&&state.save.rpg.encounter);
+  const state=window.soaMnmSystems?.read?.(profile);
+  const encounter=state?.ok?state.save.rpg.encounter:null,hasEncounter=!!encounter;
+  if(hasEncounter){
+   panel.append(el("p","Active encounter · "+encounter.name+" · Level "+encounter.level+" · Health "+encounter.hp+" / "+encounter.maxHp,"soa-mnm-feature-status"));
+   panel.append(button("Continue the encounter","Open Combat to take a turn or try to escape. City travel unlocks when the encounter ends.",()=>setView("combat",true),"med"));
+  }
   const arenaButton=button("Travel to "+arena,"Visit the city arena in person. The Arena tab stays unavailable for bouts until you arrive.",()=>travelWithinCity("arena"),"med");
   arenaButton.disabled=!state?.ok||hasEncounter;panel.append(arenaButton);
-  if(hasEncounter)panel.append(el("p","Finish or escape your current encounter before traveling around the city."));
   const routes=TRAVEL_ROUTES.filter(route=>route.from===current.id);
   if(routes.length){
    panel.append(el("h3","Travel from here"));
