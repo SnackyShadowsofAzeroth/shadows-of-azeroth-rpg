@@ -38,6 +38,16 @@ function createNavigation(){
 }
 function init(){
  removeLegacyNavigation();
+ const hasCharacterApi=typeof window.soaCharacters?.profile==="function";
+ const profile=hasCharacterApi?window.soaCharacters.profile():undefined;
+ // The legacy tab controller must not reopen prototype panels over the M&M character gate.
+ // M&M: RPG renders its own navigation inside the active character screen.
+ if(hasCharacterApi&&(!profile||profile.system==="mnm")){
+  document.body.classList.remove("soa-tabbed");
+  if(profile)window.soaCharacters?.organizeSections?.();
+  else sections().forEach(section=>{section.hidden=true});
+  return;
+ }
  window.soaCharacters?.organizeSections?.();
  const nav=createNavigation();
  const buttons=[...nav.querySelectorAll("button")];

@@ -323,7 +323,8 @@ function drawMenu(){
  }
  shell.append(list);
  const savedCount=roster.characters.length;
- const saveNote=make("p",savedCount?savedCount+" saved "+(savedCount===1?"M&M character":"M&M characters")+" in this browser. The open form is a draft until you tap Save Character & Play. Character data stays on this device.":"No M&M characters are saved in this browser. Create your first adventurer below.","soa-menu-save-note");
+ const saveScope=location.hostname?" on "+location.hostname:" on this website";
+ const saveNote=make("p",savedCount?savedCount+" M&M "+(savedCount===1?"character":"characters")+" saved locally"+saveScope+". The open form is a draft until you tap Save Character & Play. Preview and production addresses keep separate saves.":"No M&M characters are saved locally"+saveScope+". The open form is a draft until you tap Save Character & Play. Saves belong to this browser and exact website address; preview and production links do not share them. Safari Private Browsing may clear local data when the private session ends.","soa-menu-save-note");
  saveNote.setAttribute("role","status");shell.append(saveNote);
  const createToggle=make("button","＋ Create M&M Character");createToggle.type="button";createToggle.className="soa-roster-backup";createToggle.setAttribute("aria-expanded","true");createToggle.setAttribute("aria-controls","soa-character-creation");shell.append(createToggle);
  const expand=make("section");expand.id="soa-character-creation";expand.className="soa-create-new";expand.setAttribute("aria-label","Create a new M&M character");
