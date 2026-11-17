@@ -253,7 +253,8 @@ async function startChapter(profile,save,panel,status,onChange,code){
   const payload=makePayload("opening",profile,payloadCampaign,region.id,chapter,0,{previousSummary:prior}),data=await apiRequest(code,payload);
   if(!sameActiveCharacter(profile.id))return;
   const scene=sceneFromResponse(data,region.id);
-  const next={...original,version:VERSION,status:"active",seed:randomSeed(),chapter,chapterTitle:scene.title,turn:0,locationId:region.id,objective:scene.objective,summary:clean(data.summary,600),scene,chapters:archived,threads:Array.isArray(data.threads)?data.threads.map(x=>clean(x,150)).filter(Boolean).slice(0,6):carriedThreads,pending:null,lastCombatSignature:payload.combatSignature||original.lastCombatSignature,updatedAt:new Date().toISOString()};
+  const next={...original,version:VERSION,mode:"ai",status:"active",seed:randomSeed(),chapter,chapterTitle:scene.title,turn:0,locationId:region.id,objective:scene.objective,summary:clean(data.summary,600),scene,chapters:archived,threads:Array.isArray(data.threads)?data.threads.map(x=>clean(x,150)).filter(Boolean).slice(0,6):carriedThreads,pending:null,lastCombatSignature:payload.combatSignature||original.lastCombatSignature,updatedAt:new Date().toISOString()};
+  delete next.localState;
   if(!commitCampaign(save,next,onChange,{render:true,message:"A new chapter is saved to this character's campaign."})){status.textContent="The AI chapter could not be saved. Your previous story is intact.";return}
  }catch(error){
   if(panel.isConnected)status.textContent=error.message;
@@ -286,9 +287,15 @@ async function resolvePending(profile,save,panel,status,onChange,code){
 }
 function chooseAction(profile,save,panel,status,onChange,code,choice){
  const campaign=save.aiCampaign,region=currentRegion(save);
- if(!code){status.textContent="Enter the AI access code configured in Cloudflare first.";return}
- if(campaign.pending){status.textContent="Your previous action is already saved. Retry that same roll before choosing again.";return}
+ if(campaign.pending){status.textContent="Your previous action is already saved. Resolve that same roll before choosing again.";return}
  if(!region||campaign.locationId!==region.id){status.textContent="Open a fresh chapter at your current location first.";return}
+ if(campaign.mode==="local"){
+  const roll=Math.floor(Math.random()*20)+1,pending={turn:campaign.turn+1,action:{text:clean(choice.text,180),stat:choice.stat,difficulty:choice.difficulty},roll};
+  if(pending.turn>LOCAL_TURNS){status.textContent="This local chapter is ready to conclude. Continue the campaign for another generated adventure.";return}
+  if(!commitCampaign(save,{...campaign,pending,updatedAt:new Date().toISOString()},onChange,{render:false,message:"Your choice and exact d20 roll are saved locally."})){status.textContent="Your action could not be saved; no roll was spent.";return}
+  resolveLocalPending(profile,save,panel,status,onChange);return;
+ }
+ if(!code){status.textContent="Enter the AI access code in Story rules, or continue this scene locally.";return}
  const roll=Math.floor(Math.random()*20)+1,pending={turn:campaign.turn+1,action:{text:clean(choice.text,180),stat:choice.stat,difficulty:choice.difficulty},roll};
  if(pending.turn>MAX_TURNS){status.textContent="This chapter is ready to conclude. Continue the chronicle to start the next one.";return}
  setCode(code);
