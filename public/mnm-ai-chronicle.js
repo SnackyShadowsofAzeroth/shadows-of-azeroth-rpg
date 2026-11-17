@@ -308,7 +308,7 @@ function render(profile,save,onChange){
  const panel=element("section",undefined,"soa-mnm-adventure-panel soa-mnm-ai-chronicle");panel.setAttribute("aria-label","M&M Adventure campaign");
  const region=currentRegion(save),campaign=save.aiCampaign,isLocal=campaign.mode==="local",code=getCode();
  panel.append(element("div",isLocal?"LOCAL CAMPAIGN · SAVED ON THIS DEVICE":"AÊTHORIL · AI CHRONICLE","soa-mnm-kicker"),element("h2",isLocal?"A local campaign in Aêthoril":"A living story in Aêthoril"));
- const connection=element("details",undefined,"soa-mnm-ai-connection");connection.open=campaign.status==="idle"||!isLocal&&!code;
+ const connection=element("details",undefined,"soa-mnm-ai-connection");connection.open=campaign.status==="idle"||!code&&(!isLocal||campaign.status==="chapter-complete");
  connection.append(element("summary","AI connection and story rules"));
  connection.append(element("p","AI-written scenes need the separate Cloudflare access code and a working internet connection. A local campaign works on this device without either. Both modes save choices and custom d20 checks; story text cannot change Health, Focus, levels, XP, abilities, items, currency, or combat results."));
  const label=element("label","AI access code (not an API key)","soa-mnm-system-label");label.htmlFor="soa-mnm-ai-code";
@@ -330,8 +330,9 @@ function render(profile,save,onChange){
  const migrated=migrateCampaign(campaign,profile);
  if(!migrated||!validCampaign(campaign,profile)){panel.append(element("p","Campaign data did not pass its save check and was preserved. No story state was reset."));return panel}
  const currentMatches=campaign.locationId===region.id;
- panel.append(element("div","CHAPTER "+campaign.chapter+(campaign.turn?" · SCENE "+campaign.turn:""),"soa-mnm-kicker"),element("h3",campaign.chapterTitle||campaign.scene.title),element("p",campaign.scene.narration,"soa-mnm-ai-narrative"));
+ panel.append(element("div",(isLocal?"LOCAL CHAPTER ":"CHAPTER ")+campaign.chapter+(campaign.turn?" · SCENE "+campaign.turn:""),"soa-mnm-kicker"),element("h3",campaign.chapterTitle||campaign.scene.title),element("p",campaign.scene.narration,"soa-mnm-ai-narrative"));
  if(campaign.objective)panel.append(element("p","Current aim · "+campaign.objective,"soa-mnm-feature-status"));
+ if(isLocal&&campaign.history.length){const latest=campaign.history.filter(row=>row.chapter===campaign.chapter).slice(-1)[0];if(latest)panel.append(element("p","Last check · "+latest.result+" — "+latest.summary,"soa-mnm-feature-status"))}
  if(campaign.threads.length){const leads=element("details",undefined,"soa-mnm-ai-history");leads.append(element("summary","Open leads and unresolved threads"));const list=element("ul",undefined,"soa-mnm-journal");campaign.threads.forEach(thread=>list.append(element("li",thread)));leads.append(list);panel.append(leads)}
  if(!currentMatches&&campaign.pending){
   panel.append(element("p","Your action and exact die roll are saved with the scene at "+(regions().find(x=>x.id===campaign.locationId)?.name||"another location")+". Return there through the World tab before retrying; the roll cannot be changed."));
@@ -344,7 +345,7 @@ function render(profile,save,onChange){
   const rewardId="ai-chapter-"+campaign.chapter,systems=window.soaMnmSystems,systemSave=systems?.read?.(profile),rewardClaimed=!!(systemSave?.ok&&systemSave.save.rpg.claimedStories.includes(rewardId));
   if(rewardClaimed)panel.append(element("p","This chapter's optional custom XP reward has already been claimed."));
   else{
-   const reward=element("button","Claim optional 90 custom XP","soa-mnm-system-button");reward.type="button";reward.onclick=()=>{const result=systems?.claimStoryReward?.(profile,rewardId,90);if(!result?.ok){status.textContent=result?.error||"The chapter reward could not be saved.";return}status.textContent="Claimed "+result.result.xp+" custom XP for this AI chapter.";onChange?.({render:true,message:status.textContent})};panel.append(reward);
+   const reward=element("button","Claim optional 90 custom XP","soa-mnm-system-button");reward.type="button";reward.onclick=()=>{const result=systems?.claimStoryReward?.(profile,rewardId,90);if(!result?.ok){status.textContent=result?.error||"The chapter reward could not be saved.";return}status.textContent="Claimed "+result.result.xp+" custom XP for this campaign chapter.";onChange?.({render:true,message:status.textContent})};panel.append(reward);
   }
   panel.append(element("small","Chapter rewards and the leveling curve are original M&M: RPG rules. You can continue without claiming the reward.","soa-mnm-note"));
   if(isLocal){
