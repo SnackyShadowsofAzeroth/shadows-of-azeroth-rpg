@@ -129,7 +129,7 @@ function localScene(campaign,region,arc,progress,lastOutcome){
  const stages=["The first trace","A new complication","The final approach"];
  const narration=progress===0
   ?"In "+region.name+", the matter begins at "+arc.site+". "+arc.opening+" You have one chance to choose how to approach it before the next watch changes."
-  :(lastOutcome.success?"Your approach succeeds. ":"Your approach falters, costing time, but it reveals another way forward. ")+lastOutcome.summary+" "+arc.beats[progress-1]+" The people involved are waiting for your next move.";
+  :lastOutcome.summary+" "+arc.beats[progress-1]+" The people involved are waiting for your next move.";
  return {title:progress===0?arc.title:arc.title+" · "+stages[progress-1],narration:clean(narration,1800),objective:campaign.objective||arc.objective,locationId:region.id,choices:localChoices(arc,progress)};
 }
 function localEnding(campaign,region,arc,state){
@@ -163,15 +163,18 @@ function continueLocally(profile,save,panel,status,onChange){
  if(!commitCampaign(save,next,onChange,{render:!next.pending,message:"Local play is ready. Existing story choices and saved history remain in place."})){status.textContent="Local play could not be saved; the prior campaign remains intact.";return}
  if(next.pending)resolveLocalPending(profile,save,panel,status,onChange);
 }
-function localOutcomeSummary(resolution){
- return clean(resolution.success?"The check succeeds, shifting the local situation in your favor.":"The check fails. It costs time, but exposes another way forward.",300);
+function localOutcomeSummary(resolution,action){
+ const approach=clean(action?.text||"your approach",180).replace(/^./,letter=>letter.toLowerCase());
+ return clean(resolution.success
+  ?"Your decision to "+approach+" succeeds and shifts the matter in your favor."
+  :"Your attempt to "+approach+" falls short and costs time, but reveals another way forward.",300);
 }
 function resolveLocalPending(profile,save,panel,status,onChange){
  const campaign=save.aiCampaign,pending=campaign.pending,region=currentRegion(save);
  if(!pending||campaign.mode!=="local"){status.textContent="There is no saved local action waiting to resolve.";return}
  if(!region||campaign.locationId!==region.id){status.textContent="Return to the scene's region before resolving this saved action.";return}
  const resolution=resolveChoice(pending.action,profile.stats,pending.roll),arc=localArcFor(campaign,region),progress=campaign.localState.progress+1;
- const outcomeSummary=localOutcomeSummary(resolution),entry=historyEntry(campaign,campaign.scene,pending.action,{summary:outcomeSummary},resolution),history=[...campaign.history,entry].slice(-MAX_HISTORY);
+ const outcomeSummary=localOutcomeSummary(resolution,pending.action),entry=historyEntry(campaign,campaign.scene,pending.action,{summary:outcomeSummary},resolution),history=[...campaign.history,entry].slice(-MAX_HISTORY);
  const localState={...campaign.localState,progress,successes:campaign.localState.successes+(resolution.success?1:0),setbacks:campaign.localState.setbacks+(resolution.success?0:1)};
  let statusValue="active",summary=outcomeSummary,scene,chapters=campaign.chapters,threads=campaign.threads;
  if(progress>=LOCAL_TURNS){
