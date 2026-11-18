@@ -49,22 +49,25 @@ The race page's Deep Gnome list omits Bard, but the later official 0.30.6.0 patc
 - Do not assign a race a class outside its listed access. Human class access may depend on origin/start location. The M&M: RPG character creator starts Humans in Night Harbor, the world's trade hub; it does not model the official faith/class city gate.
 
 
-## Custom racial features - M&M: RPG
+## Playable heritages
 
-The following effects are original, once-per-chapter features for the current custom story. They are not official M&M racial abilities, stat bonuses, or promises about future M&M rules. Their effects use the chapter's small Resolve/Danger encounter and are intentionally different from one another.
+Use the [official race descriptions](https://monstersandmemories.com/races) for cultural context. The [official traits preview](https://monstersandmemories.com/updates/necromancer-ranger-and-shadow-knight-deep-dives-and-traits-preview) describes a different system. The following are original M&M: RPG actions. They do not change the supplied stat lines or class eligibility.
 
-| Race | Feature | General custom effect | Lore connection |
+Adventure heritages have one use per chapter. Combat heritages take the character’s turn and have one use per encounter, including arena bouts. Deep Dwarf, High Elf, Troll and Var’nai entries are for existing characters only.
+
+| Race | Heritage | Where | What it does |
 |---|---|---|---|
-| Human | Many Roads | After a failed effort to learn or discover something, try another approach with a fresh roll and no racial modifier. | Human cultures and individuals vary widely; flexibility comes from choosing another way forward. |
-| Gnome | Eureka | Notice a decisive detail without a roll; the opposition begins less prepared at 2 Resolve. | Inventive epiphanies and relentless truth-seeking. |
-| Deep Gnome | Spiral Cartographer | Map a safe alternate route and leave a reliable warning, even if the opposition remains. | Multiversal, dreamscape, and astral-path exploration; it maps a route rather than opening a portal. |
-| Dwarf | Titan's Craft | Reduce Danger by 1, or reinforce your position to prevent the next Danger increase. | Craft, stone lore, and steadfastness; it does not assume every dwarf is a smith. |
-| Deep Dwarf | Spirit Lattice | On the next failed encounter exchange, reduce an opponent's Resolve by 1 even if Danger rises. | Spirit-binding creations and precise work with corrupted stone. |
-| High Elf | Calafrey Discipline | Prepare a ward that prevents Danger rising on the next failed exchange. | Magical mastery, measured temperament, and Cilindrine doctrine. |
-| Wood Elf | Wyrdpath | Prepare a living flank; the next successful exchange removes 2 Resolve instead of 1, without a roll bonus. | Faelewyn affinity for forests and living paths; it does not create a Wyrdgate. |
-| Deep Elf | Shadow's Veil | After identifying an opening, remove 1 Resolve without raising Danger. | Deliberate movement in the dark Deep beneath the Shadow. |
-| Ogre | Storm Coast Fury | Make a committed assault: remove 1 Resolve and add 1 Danger. | Created for war, then shaped into a disciplined martial society. |
-| Halfling | Fontborn Memory | When the opposition is close to yielding, use a remembered tale to de-escalate and end the encounter peacefully. | Ancient lorekeeping and stories of a world they have witnessed across ages. |
-| Troll | Tempered Survivor | When Danger would force the opposition to withdraw, hold at 2 Danger and counter to remove 1 Resolve. | Resilience, adaptation, and survival craft. |
-| Goblin | Secret-Sense | Attempt an unmodified Dexterity check (DC 13) to exploit a hidden route; failure increases Danger. | Hidden entrances, secrets, deception, and opportunistic perception. |
+| Human | Many Roads | Adventure | Choose a different stat for one offered story action. Its difficulty and what you are trying to accomplish stay the same. |
+| Gnome | Eureka | Adventure | Take a 12 instead of rolling for one offered action. Your usual modifier and the target still apply. |
+| Deep Gnome | Spiral Cartographer | Adventure | Bypass an early scene without a roll or a discovery. On the next scene, the offered approaches are one difficulty tier easier, to a minimum of Easy. |
+| Goblin | Secret-Sense | Adventure | See your next d20 before choosing a story action. Choose how to use it; that die is yours even if you write your own approach. |
+| Halfling | Fontborn Memory | Adventure | Recall one of your successes from this chapter. Use its die for a new offered action, with the new action’s modifier and difficulty. |
+| Dwarf | Galdri Foothold | Combat | Meet a heavy windup head-on. Stop the blow and expose the foe: your next weapon attack gets +2 to hit and deals 3 extra damage on a hit. |
+| Ogre | Storm Coast Breaker | Combat | Make a Strength weapon attack. Break through an existing brace and deal 3 extra damage on a hit. A surviving foe still takes its turn. |
+| Deep Elf | Shadow’s Patience | Combat | Against an exposed foe, make a weapon attack with the opening’s bonuses. A hit also denies its reply; on a miss it acts normally. |
+| Wood Elf | Keeper’s Footfall | Combat | When the foe is guarding or recovering, withdraw safely. There is no escape roll, enemy reply, or victory reward. |
+| Deep Dwarf | Spirit Lattice | Combat | Interrupt Guard or Recover, strip an existing brace, and restore up to 4 Health. |
+| High Elf | Cilindrine Ward | Combat | Spend 1 Focus to absorb up to 6 damage from the next hit in this fight. A miss does not expend the ward. |
+| Troll | Tempered Survivor | Combat | At half Health or less, regain one fifth of your maximum Health, rounded up. The foe still takes its turn. |
+| Var’nai | Stillwater Breath | Combat | When short of Focus and facing a quick or heavy strike, regain up to 3 Focus and guard this turn: +4 Defense and half damage if hit. |
 

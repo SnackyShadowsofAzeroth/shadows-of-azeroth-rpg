@@ -66,6 +66,7 @@ function createRpgState(profile,level=profile?.level){
 function validRpgState(value,profile,level){
  if(!object(value)||value.version!==1||!Number.isInteger(value.hp)||!Number.isInteger(value.maxHp)||value.maxHp<1||value.maxHp>10000||value.hp<0||value.hp>value.maxHp||!Number.isInteger(value.focus)||!Number.isInteger(value.maxFocus)||value.maxFocus<1||value.maxFocus>100||value.focus<0||value.focus>value.maxFocus||!Number.isInteger(value.xp)||value.xp<0||value.xp>=Math.max(1,xpToNext(level))&&level<MAX_LEVEL||!Number.isInteger(value.totalXp)||value.totalXp<0||!Number.isInteger(value.kills)||value.kills<0||!Number.isInteger(value.coppers)||value.coppers<0||value.coppers>100000000||!Array.isArray(value.inventory)||value.inventory.length>40||value.inventory.some(entry=>!object(entry)||!RPG_ITEM_DEFS[entry.id]||!Number.isInteger(entry.quantity)||entry.quantity<1||entry.quantity>99)||!object(value.equipment)||!["weapon","armor"].every(slot=>value.equipment[slot]===null||typeof value.equipment[slot]==="string"&&RPG_ITEM_DEFS[value.equipment[slot]]?.slot===slot&&value.inventory.some(entry=>entry.id===value.equipment[slot]&&entry.quantity>0))||!Number.isInteger(value.encounterSerial)||value.encounterSerial<0||typeof value.guarding!=="boolean"||!Array.isArray(value.claimedStories)||value.claimedStories.length>500||value.claimedStories.some(id=>typeof id!=="string"||id.length>120)||!Array.isArray(value.log)||value.log.length>30||value.log.some(line=>typeof line!=="string"||line.length>240))return false;
  if(value.hp>value.maxHp||value.focus>value.maxFocus)return false;
+ if(value.encounter && [value.encounter.heritageUsed,value.encounter.heritageWard].some(flag=>flag!==undefined&&typeof flag!=="boolean"))return false;
  if(value.encounter!==null){const foe=value.encounter;if(!object(foe)||typeof foe.id!=="string"||foe.id.length>80||typeof foe.name!=="string"||foe.name.length>80||!isRpgFoe(foe)||!Number.isInteger(foe.level)||foe.level<1||foe.level>MAX_LEVEL||!Number.isInteger(foe.hp)||!Number.isInteger(foe.maxHp)||foe.maxHp<1||foe.hp<1||foe.hp>foe.maxHp||!Number.isInteger(foe.defense)||foe.defense<1||foe.defense>100||!Number.isInteger(foe.attack)||foe.attack<0||foe.attack>100||!Number.isInteger(foe.round)||foe.round<0||typeof foe.weakened!=="boolean"||foe.playerHidden!==undefined&&typeof foe.playerHidden!=="boolean"||foe.intent!==undefined&&!["strike","heavy","guard","recover"].includes(foe.intent)||foe.exposed!==undefined&&typeof foe.exposed!=="boolean"||foe.braced!==undefined&&typeof foe.braced!=="boolean"||!Array.isArray(foe.log)||foe.log.length>20||foe.log.some(line=>typeof line!=="string"||line.length>240))return false}
  return true;
 }
@@ -286,18 +287,20 @@ function createEncounter(profile,locationId,serial,random,characterLevel=profile
  return {id:"rpg-foe-"+serial,name:template[0],description:template[1],locationId:place,level,maxHp:14+7*level,hp:14+7*level,defense:11+Math.floor(level/2),attack:1+Math.floor(level*.6),round:0,intent:"strike",weakened:false,exposed:false,braced:false,playerHidden:false,log:[template[1]]};
 }
 function isRpgFoe(value){return FOES[value?.locationId]?.some(row=>row[0]===value?.name)||false}
-function attackFoe(save,profile,foe,random,{ability=null}={}){
+function attackFoe(save,profile,foe,random,{ability=null,bonusDamage=0}={}){
  const rpg=save.rpg,stat=ability?.stat||primaryStat(profile),die=rollDie(random),weaponAttack=equipmentBonus(rpg,"weapon","attack"),opening=foe.exposed?2:0,guard=foe.defense+(foe.braced?2:0),modifier=statModifier(profile,stat)+Math.floor((save.level-1)/2)+weaponAttack+opening;
  const total=die+modifier,hit=die===20||die!==1&&total>=guard,label=ability?.name||"Strike",wasExposed=!!foe.exposed,check=rollText(die,modifier,total,guard,"guard");
  if(!hit){foe.exposed=false;foe.braced=false;return {hit:false,roll:die,modifier,total,damage:0,defense:guard,line:label+" · "+check+" · miss."}}
- const weaponDamage=equipmentBonus(rpg,"weapon","damage"),base=3+Math.floor((save.level-1)/4)+weaponDamage+Math.max(-2,statModifier(profile,stat)),openingBonus=ability?.rpgAction==="backstab"&&foe.playerHidden?Math.max(0,weaponDamage):0,exposedDamage=wasExposed?3:0,damage=Math.max(1,base+openingBonus+exposedDamage+(die===20?5:0));
+ const weaponDamage=equipmentBonus(rpg,"weapon","damage"),base=3+Math.floor((save.level-1)/4)+weaponDamage+Math.max(-2,statModifier(profile,stat)),openingBonus=ability?.rpgAction==="backstab"&&foe.playerHidden?Math.max(0,weaponDamage):0,exposedDamage=wasExposed?3:0,damage=Math.max(1,base+openingBonus+exposedDamage+bonusDamage+(die===20?5:0));
  foe.hp=Math.max(0,foe.hp-damage);foe.exposed=false;foe.braced=false;
  return {hit:true,roll:die,modifier,total,damage,defense:guard,line:label+" · "+check+" · hits for "+damage+(die===20?" critical damage":"")+(wasExposed?" through the opening":".")};
 }
-function enemyExchange(save,profile,foe,random,{interrupt=false}={}){
+function enemyExchange(save,profile,foe,random,{interrupt=false,stoppedBy=""}={}){
  const rpg=save.rpg,intent=foe.intent||"strike";
  let damage=0,line="",roll=null,total=null,modifier=null,defense=null,healed=0;
- if(foe.playerHidden){
+ if(stoppedBy){
+  line=stoppedBy+" stops "+foe.name+"'s "+enemyIntentTitle(foe)+".";
+ }else if(foe.playerHidden){
   rpg.guarding=false;line=foe.name+" searches the shadows and loses your position.";
  }else if(interrupt&&intent!=="strike"){
   foe.braced=false;line="Your feint interrupts "+foe.name+"'s "+enemyIntentTitle({...foe,intent})+".";
@@ -311,8 +314,10 @@ function enemyExchange(save,profile,foe,random,{interrupt=false}={}){
   const hit=die===20||die!==1&&total>=defense,check=rollText(die,modifier,total,defense,"Defense");
   if(hit){
    damage=Math.max(1,2+Math.floor(foe.level/2)+rollDie(random,4)+(heavy?2:0)-(foe.weakened?2:0)-equipmentBonus(rpg,"armor","damageReduction"));
-   if(rpg.guarding)damage=Math.ceil(damage/2);rpg.hp=Math.max(0,rpg.hp-damage);
-   line=foe.name+" · "+check+" · hits for "+damage+(heavy?" with its heavy move.":".");
+   if(rpg.guarding)damage=Math.ceil(damage/2);
+   const absorbed=foe.heritageWard?Math.min(damage,6):0;damage-=absorbed;if(absorbed)foe.heritageWard=false;
+   rpg.hp=Math.max(0,rpg.hp-damage);
+   line=foe.name+" · "+check+" · hits for "+damage+(heavy?" with its heavy move.":".")+(absorbed?" Your ward absorbs "+absorbed+" damage and fades.":"");
   }else line=foe.name+" · "+check+" · misses"+(heavy?" with its heavy move.":".");
   foe.weakened=false;
  }
@@ -336,12 +341,32 @@ function startEncounter(profile,locationId="night-harbor",random=Math.random){
   logRpg(rpg,"Encounter started: "+rpg.encounter.name+" (level "+rpg.encounter.level+").");return {encounter:clone(rpg.encounter)};
  });
 }
+function combatHeritage(profile){
+ const feature=window.soaMnmRules?.racialAbilities?.[profile?.raceId];
+ return feature?.mode==="combat"&&feature.combatAction?feature:null;
+}
+// Both the button and the turn resolver use the same eligibility rules. Missing
+// flags in an older encounter mean its heritage has not been used.
+function heritageBlocked(id,rpg,foe){
+ if(foe.heritageUsed)return "Used this encounter.";
+ if(foe.playerHidden)return "Finish your Stealth opening first.";
+ switch(id){
+  case "brace":return foe.intent==="heavy"?"":"Wait for a heavy windup.";
+  case "assault":return "";
+  case "ambush":return foe.exposed?"":"Expose the foe with a successful Feint first.";
+  case "flank":case "weaken":return ["guard","recover"].includes(foe.intent)?"":"Wait for the foe to guard or recover.";
+  case "ward":return rpg.focus>0?"":"Requires 1 Focus.";
+  case "recover":return rpg.hp*2<=rpg.maxHp?"":"Available at half Health or less.";
+  case "riptide":return rpg.focus>=rpg.maxFocus?"Your Focus is full.":["strike","heavy"].includes(foe.intent)?"":"Wait for an incoming attack.";
+  default:return "This heritage has no combat action.";
+ }
+}
 function resolveRpgAction(profile,action,{random=Math.random,now=Date.now,returnToBindPoint}={}){
  const result=mutate(profile,save=>{
   const rpg=save.rpg,foe=rpg.encounter;
   if(!foe)return {error:"Find a foe before choosing a combat action."};
   if(rpg.hp<=0)return {error:"Recover your character and gear before continuing."};
-  let playerLine="",usedItem=null,rolled=null,interruptEnemy=false;
+  let playerLine="",usedItem=null,rolled=null,interruptEnemy=false,stoppedBy="";
   if(action==="technique"){
    if(rpg.focus<2)return {error:"Not enough Focus for the retired custom class technique."};
    return {error:"Class techniques are unavailable unless they are listed as verified, memorized abilities."};
@@ -383,29 +408,43 @@ function resolveRpgAction(profile,action,{random=Math.random,now=Date.now,return
    if(item.focus&&rpg.focus>=rpg.maxFocus)return {error:"Your Focus is already full."};
    removeRpgItem(rpg,action.id);rpg.hp=Math.min(rpg.maxHp,rpg.hp+(item.heal||0));rpg.focus=Math.min(rpg.maxFocus,rpg.focus+(item.focus||0));usedItem=item.name;playerLine="You use "+item.name+".";
   }else if(typeof action==="object"&&action?.type==="racial"){
-   const tactics={
-    brace:{line:"Titan's Craft braces you behind a stronger guard."},
-    weaken:{line:"A binding ward weakens the foe's next attack."},
-    ward:{line:"A measured ward weakens the foe's next attack."},
-    flank:{line:"You follow the terrain and expose an opening."},
-    ambush:{line:"You strike through a known opening for 5 damage."},
-    assault:{line:"You press a forceful opening for 7 damage."},
-    recover:{line:"You steady yourself and recover Health and Focus."},
-    parley:{line:"A remembered tale persuades the foe to withdraw."}
-   };
-   const tactic=tactics[action.id];if(!tactic)return {error:"That racial combat feature is unavailable."};
-   if(action.id==="brace"){rpg.guarding=true;rpg.focus=Math.min(rpg.maxFocus,rpg.focus+1)}
-   else if(action.id==="weaken"||action.id==="ward")foe.weakened=true;
-   else if(action.id==="flank"){foe.exposed=true;foe.braced=false}
-   else if(action.id==="ambush")foe.hp=Math.max(1,foe.hp-5);
-   else if(action.id==="assault")foe.hp=Math.max(1,foe.hp-7);
-   else if(action.id==="recover"){rpg.hp=Math.min(rpg.maxHp,rpg.hp+8);rpg.focus=Math.min(rpg.maxFocus,rpg.focus+2)}
-   else if(action.id==="parley"){
-    if(foe.hp>Math.ceil(foe.maxHp*.25))return {error:"The foe must be near defeat before a peaceful parley can succeed."};
-    const enemy=foe.name;rpg.encounter=null;rpg.guarding=false;save.combat.autoAttack=false;
-    logRpg(rpg,tactic.line+" "+enemy+" withdraws without a reward.");return {parley:true,enemy,line:tactic.line};
+   const feature=combatHeritage(profile);
+   if(!feature||feature.combatAction!==action.id)return {error:"That combat heritage does not belong to this character."};
+   const blocked=heritageBlocked(action.id,rpg,foe);if(blocked)return {error:blocked};
+   foe.heritageUsed=true;
+   switch(action.id){
+    case "brace":
+     stoppedBy=feature.name;foe.exposed=true;foe.braced=false;
+     playerLine=feature.name+": the blow falls wide. Your footing holds and the foe is exposed.";break;
+    case "assault":case "ambush":{
+     const breaker=action.id==="assault",wasBraced=foe.braced;
+     if(breaker)foe.braced=false;
+     const strike=attackFoe(save,profile,foe,random,{ability:{name:feature.name,stat:breaker?"str":primaryStat(profile)},bonusDamage:breaker?3:0});
+     playerLine=strike.line+(breaker&&wasBraced?" The foe's brace breaks.":"");
+     rolled={roll:strike.roll,modifier:strike.modifier,total:strike.total,dc:strike.defense,damage:strike.damage};
+     if(!breaker&&strike.hit)stoppedBy=feature.name;
+     break;
+    }
+    case "flank":{
+     const enemy=foe.name;rpg.encounter=null;rpg.guarding=false;save.combat.autoAttack=false;
+     const line="You escape from "+enemy+" without a reward. "+feature.name+" carries you out of reach.";
+     logRpg(rpg,line);return {escaped:true,enemy,line};
+    }
+    case "weaken":{
+     stoppedBy=feature.name;foe.braced=false;const restored=Math.min(4,rpg.maxHp-rpg.hp);rpg.hp+=restored;
+     playerLine=feature.name+": the lattice steals the foe's moment of respite."+(restored?" You recover "+restored+" Health.":"");break;
+    }
+    case "ward":
+     rpg.focus--;foe.heritageWard=true;playerLine=feature.name+": you spend 1 Focus. Your ward will absorb up to 6 damage from the next hit.";break;
+    case "recover":{
+     const healed=Math.min(Math.ceil(rpg.maxHp/5),rpg.maxHp-rpg.hp);rpg.hp+=healed;
+     playerLine=feature.name+": you draw breath and recover "+healed+" Health.";break;
+    }
+    case "riptide":{
+     rpg.guarding=true;const restored=Math.min(3,rpg.maxFocus-rpg.focus);rpg.focus+=restored;
+     playerLine=feature.name+": you settle into guard and recover "+restored+" Focus.";break;
+    }
    }
-   playerLine=tactic.line;
   }else if(action==="flee"){
    const die=rollDie(random),modifier=statModifier(profile,"agi"),total=die+modifier,dc=10+foe.level;
    if(die===20||die!==1&&total>=dc){rpg.encounter=null;rpg.guarding=false;save.combat.autoAttack=false;logRpg(rpg,"You escape from "+foe.name+" without a reward · "+rollText(die,modifier,total,dc,"DC")+".");return {escaped:true,roll:die,modifier,total,dc,line:"You break away from the encounter."}}
@@ -421,7 +460,7 @@ function resolveRpgAction(profile,action,{random=Math.random,now=Date.now,return
    const line="Victory over "+foe.name+". +"+xp.amount+" custom XP, +"+formatCurrency(coins)+". "+lootText+(xp.levels.length?" Level up: "+xp.levels.join(", ")+".":"");logRpg(rpg,line);
    return {victory:true,enemy:foe.name,xp:xp.amount,restedBonus:xp.restedBonus,coins,loot:loot.ok?lootId:null,lootError:loot.error||null,levels:xp.levels,line,roll:rolled};
   }
-  const incoming=enemyExchange(save,profile,foe,random,{interrupt:interruptEnemy});
+  const incoming=enemyExchange(save,profile,foe,random,{interrupt:interruptEnemy,stoppedBy});
   logRpg(rpg,incoming.line);if(incoming.intentLine)logRpg(rpg,incoming.intentLine);
   if(rpg.hp<=0){const bindPoint=save.bindPoint||profile.startingLocation||"night-harbor";storeRpgCorpse(save,now(),foe.locationId);logRpg(rpg,"You were defeated. Your carried items are on a recoverable corpse; you wake at your bind point.");return {defeated:true,bindPoint,line:"Defeated by "+foe.name+". Your items were left on a recoverable corpse; there is no custom XP loss."}}
   return {turn:true,line:playerLine+" "+incoming.line,enemyHp:foe.hp,playerHp:rpg.hp,focus:rpg.focus,roll:rolled,enemyRoll:{roll:incoming.roll,modifier:incoming.modifier,total:incoming.total,defense:incoming.defense,damage:incoming.damage,intent:incoming.intent},nextIntent:foe.intent,usedItem};
@@ -572,7 +611,7 @@ function renderCombat(profile,onChange,context={}){
   h.textContent=foe.name;
   const encounter=card("Round "+(foe.round+1)+" · Foe intent: "+enemyIntentTitle(foe),enemyIntentDetail(foe));
   const hp=document.createElement("p");hp.textContent="Foe health "+foe.hp+" / "+foe.maxHp+" · Guard "+(foe.defense+(foe.braced?2:0))+(foe.exposed?" · Exposed":"");encounter.append(hp);
-  const vitals=document.createElement("p");vitals.textContent="Your health "+rpg.hp+" / "+rpg.maxHp+" · Focus "+rpg.focus+" / "+rpg.maxFocus;encounter.append(vitals);panel.append(encounter);
+  const vitals=document.createElement("p");vitals.textContent="Your health "+rpg.hp+" / "+rpg.maxHp+" · Focus "+rpg.focus+" / "+rpg.maxFocus+(foe.heritageWard?" · Ward ready: 6 damage":"");encounter.append(vitals);panel.append(encounter);
   const actions=document.createElement("div");actions.className="soa-mnm-choice-grid";
   actions.append(makeSystemButton("Strike · take your turn",()=>act("attack"),profile.classId==="rogue"&&!!foe.playerHidden));
   actions.append(makeSystemButton("Feint · AGI · 1 Focus",()=>act("feint"),rpg.focus<1));
@@ -584,6 +623,14 @@ function renderCombat(profile,onChange,context={}){
   if(consumable){const item=RPG_ITEM_DEFS[consumable.id];actions.append(makeSystemButton("Use "+item.name+" · "+consumable.quantity+" left",()=>act({type:"item",id:consumable.id})))}
   actions.append(makeSystemButton("Try to escape",()=>act("flee")));
   panel.append(actions);
+  const feature=combatHeritage(profile);
+  if(feature){
+   const blocked=heritageBlocked(feature.combatAction,rpg,foe);
+   const heritage=card(feature.name,feature.effect);
+   const availability=document.createElement("p");availability.textContent=blocked||"Ready · Once this encounter · Uses your turn";
+   heritage.append(availability,makeSystemButton("Use "+feature.name,()=>act({type:"racial",id:feature.combatAction}),!!blocked));
+   panel.append(heritage);
+  }
  }
  if(foe?.round>0&&rpg.log[0]===foe.log[0]&&rpg.log[2])panel.append(card("Last exchange",rpg.log[2]+" "+rpg.log[1]));
  const log=document.createElement("details");log.className="soa-mnm-system-card";const logHeading=document.createElement("summary");logHeading.textContent="Encounter journal · dice and damage";log.append(logHeading);

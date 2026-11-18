@@ -84,8 +84,29 @@ function parseRequest(value){
  if(value.kind==="turn"){
   const scene=object(value.scene)?{title:clean(value.scene.title,90),narration:clean(value.scene.narration,1800),objective:clean(value.scene.objective,200)}:null;
   const action=object(value.action)?{text:clean(value.action.text,180),stat:String(value.action.stat||""),difficulty:String(value.action.difficulty||"")}:null;
-  const roll=Number(value.roll);
-  if(!scene?.title||!scene.narration||!action?.text||!STAT_KEYS.includes(action.stat)||!Object.prototype.hasOwnProperty.call(DIFFICULTY_DC,action.difficulty)||!Number.isInteger(roll)||roll<1||roll>20)return null;
+  const roll=Number(value.roll),heritage=value.action?.heritage;
+  if(!scene?.title||!scene.narration||!action?.text||!STAT_KEYS.includes(action.stat)||!Object.prototype.hasOwnProperty.call(DIFFICULTY_DC,action.difficulty))return null;
+  if(heritage!==undefined){
+   if(heritage!==character.raceId||!["human","gnome","deep_gnome","goblin","halfling"].includes(heritage))return null;
+   context.heritage={human:"Changed the method of this approach; use its submitted stat.",gnome:"Used a fixed 12 in place of the die.",goblin:"Saw the die before choosing an approach.",halfling:"Remembered an earlier successful deed and reused its die.",deep_gnome:"Mapped a safe detour around the immediate obstacle. No check, goal, evidence or victory is earned. Describe the passage and provide three next choices in the same region; the player will have mapped approaches."}[heritage];
+   if(heritage==="deep_gnome"){
+    if(value.roll!==null||turn>=MIN_CHAPTER_TURNS||action.text!=="Chart a safe detour around the immediate obstacle."||action.stat!=="wis"||action.difficulty!=="standard")return null;
+    context.scene=scene;context.action=action;context.resolution={detour:true,roll:null};return context;
+   }
+   if(heritage==="gnome"&&roll!==12)return null;
+   if(heritage==="human"){
+    const prior=value.action.sourceStat;
+    if(!STAT_KEYS.includes(prior)||prior===action.stat)return null;
+    action.originalStat=prior;
+   }
+   if(heritage==="halfling"){
+    const memory=clean(value.action.memory,180);
+    const deed=context.history.find(h=>h.chapter===chapter&&h.action===memory&&new RegExp("^d20 "+roll+" .* · success$").test(h.result));
+    if(!deed)return null;
+    action.rememberedDeed=deed.action;
+   }
+  }
+  if(!Number.isInteger(roll)||roll<1||roll>20)return null;
   const modifier=Math.floor((character.stats[action.stat]-10)/2),dc=DIFFICULTY_DC[action.difficulty],total=roll+modifier;
   context.scene=scene;context.action=action;context.resolution={roll,stat:action.stat,modifier,total,dc,success:roll===20||roll!==1&&total>=dc,critical:roll===20};
  }
@@ -113,6 +134,7 @@ function normalizeOutput(value,context,model){
  if(title.length<3||narration.length<80||objective.length<3||summary.length<3)return null;
  const forcedComplete=context.kind==="turn"&&context.turn>=MAX_TURNS;
  const prematureComplete=context.kind==="turn"&&context.turn<MIN_CHAPTER_TURNS&&value.chapterComplete===true;
+ if(prematureComplete&&context.resolution?.detour)return null;
  const chapterComplete=context.kind==="turn"&&(forcedComplete||value.chapterComplete===true&&context.turn>=MIN_CHAPTER_TURNS);
  let sourceChoices=Array.isArray(value.choices)?value.choices:[];
  if(prematureComplete){
