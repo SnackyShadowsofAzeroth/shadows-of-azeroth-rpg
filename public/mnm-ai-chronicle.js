@@ -118,7 +118,7 @@ function genericLocalArcs(region){
 }
 function validLocalState(value){
  const ids=Object.values(LOCAL_ARCS).flat().map(arc=>arc.id);
- return object(value)&&typeof value.arcId==="string"&&(value.arcId==="continuation"||ids.includes(value.arcId)||GENERIC_LOCAL_ARC_IDS.includes(value.arcId))&&Number.isInteger(value.progress)&&value.progress>=0&&value.progress<=LOCAL_TURNS&&Number.isInteger(value.successes)&&value.successes>=0&&value.successes<=LOCAL_TURNS&&Number.isInteger(value.setbacks)&&value.setbacks>=0&&value.setbacks<=LOCAL_TURNS&&value.progress===value.successes+value.setbacks
+ return object(value)&&typeof value.arcId==="string"&&(value.arcId==="continuation"||ids.includes(value.arcId)||GENERIC_LOCAL_ARC_IDS.includes(value.arcId))&&Number.isInteger(value.progress)&&value.progress>=0&&value.progress<=LOCAL_TURNS&&Number.isInteger(value.successes)&&value.successes>=0&&value.successes<=LOCAL_TURNS&&Number.isInteger(value.setbacks)&&value.setbacks>=0&&value.setbacks<=LOCAL_TURNS&&(value.detours===undefined||value.detours===1)&&value.progress===value.successes+value.setbacks+(value.detours||0)
   &&(value.edges===undefined||Number.isInteger(value.edges)&&value.edges>=0&&value.edges<=7)
   &&(value.lastLane===undefined||value.lastLane===-1||validLane(value.lastLane))
   &&(value.lastWon===undefined||typeof value.lastWon==="boolean")
@@ -149,13 +149,21 @@ function validHistoryRow(row){
 function validChapter(row){
  return object(row)&&Number.isInteger(row.chapter)&&row.chapter>=1&&row.chapter<=1000&&["complete","paused"].includes(row.status)&&typeof row.title==="string"&&row.title.length<=90&&typeof row.locationId==="string"&&regions().some(region=>region.id===row.locationId)&&typeof row.summary==="string"&&row.summary.length<=500&&Array.isArray(row.decisions)&&row.decisions.length<=10&&row.decisions.every(item=>typeof item==="string"&&item.length<=280);
 }
+const storyHeritages=["human","gnome","deep_gnome","goblin","halfling"];
+const humanMethods={str:"apply leverage",sta:"outlast the obstacle",dex:"work with a careful hand",agi:"act before the opening closes",int:"plan another way",wis:"read the situation",cha:"enlist help"};
+const d20Value=n=>Number.isInteger(n)&&n>=1&&n<=20;
+const featureName=id=>window.soaMnmRules?.racialAbilities?.[id]?.name||"Heritage";
+const spentHeritage=c=>c.heritage?.chapter===c.chapter;
 function validPending(value,campaign){
  const maxTurn=campaign.mode==="local"?LOCAL_TURNS:MAX_TURNS;
- return value===null||object(value)&&Number.isInteger(value.turn)&&value.turn===campaign.turn+1&&value.turn>=1&&value.turn<=maxTurn&&Number.isInteger(value.roll)&&value.roll>=1&&value.roll<=20&&object(value.action)&&typeof value.action.text==="string"&&value.action.text.length>=8&&value.action.text.length<=180&&STATS.includes(value.action.stat)&&Object.prototype.hasOwnProperty.call(DIFFICULTY_DC,value.action.difficulty);
+ return value===null||object(value)&&Number.isInteger(value.turn)&&value.turn===campaign.turn+1&&value.turn>=1&&value.turn<=maxTurn&&object(value.action)&&typeof value.action.text==="string"&&value.action.text.length>=8&&value.action.text.length<=180&&STATS.includes(value.action.stat)&&Object.prototype.hasOwnProperty.call(DIFFICULTY_DC,value.action.difficulty)
+  &&(value.action.heritage===undefined||spentHeritage(campaign)&&value.action.heritage===campaign.heritage.race)
+  &&(value.action.heritage==="deep_gnome"?value.roll===null&&value.turn<MIN_CHAPTER_TURNS:d20Value(value.roll));
 }
 function validCampaign(value,profile){
  if(!object(value)||value.version!==VERSION||value.characterId!==String(profile?.id||"")||!["idle","active","chapter-complete"].includes(value.status)||typeof value.seed!=="string"||value.seed.length<1||value.seed.length>64||!Number.isInteger(value.chapter)||value.chapter<1||value.chapter>1000||typeof value.chapterTitle!=="string"||value.chapterTitle.length>90||!Number.isInteger(value.turn)||value.turn<0||value.turn>MAX_TURNS||!regions().some(x=>x.id===value.locationId)||typeof value.objective!=="string"||value.objective.length>200||typeof value.summary!=="string"||value.summary.length>600||!Array.isArray(value.history)||value.history.length>MAX_HISTORY||!value.history.every(validHistoryRow)||!Array.isArray(value.chapters)||value.chapters.length>40||!value.chapters.every(validChapter)||!Array.isArray(value.threads)||value.threads.length>6||value.threads.some(item=>typeof item!=="string"||item.length>150)||typeof value.lastCombatSignature!=="string"||value.lastCombatSignature.length>2000||!validPending(value.pending,value)||!((value.status==="idle"&&value.scene===null&&value.pending===null)||(value.status!=="idle"&&validScene(value.scene,value.status,value.locationId))))return false;
  const mode=value.mode||"ai";
+ if(value.heritage!==undefined){const h=value.heritage;if(!object(h)||!Number.isInteger(h.chapter)||h.chapter<1||h.chapter>value.chapter||!storyHeritages.includes(h.race)||h.race!==profile.raceId||h.peek!==undefined&&(h.race!=="goblin"||!d20Value(h.peek)))return false}
  if(!["ai","local"].includes(mode))return false;
  if(mode==="local"&&(!validLocalState(value.localState)||value.turn>LOCAL_TURNS))return false;
  if(mode==="ai"&&value.localState!==undefined&&value.localState!==null)return false;
@@ -170,6 +178,7 @@ function migrateCampaign(value,profile){
  return validCampaign(migrated,profile)?migrated:null;
 }
 function resolveChoice(choice,scores,roll){
+ if(choice.heritage==="deep_gnome"&&roll===null)return {detour:true,roll:null,stat:choice.stat,success:false};
  const die=Math.trunc(Number(roll)),score=Number(scores?.[choice?.stat]);
  if(!STATS.includes(choice?.stat)||!Object.prototype.hasOwnProperty.call(DIFFICULTY_DC,choice?.difficulty)||!Number.isInteger(die)||die<1||die>20||!Number.isFinite(score))throw new Error("Invalid custom story check.");
  const modifier=Math.floor((score-10)/2),dc=DIFFICULTY_DC[choice.difficulty],total=die+modifier;
@@ -242,7 +251,7 @@ function localChoices(arc,beat,state){
 }
 function localScene(campaign,region,arc,progress,lastOutcome,introduction=""){
  const stages=["The first trace","Gather your allies","The turning point"];
- let narration=progress===0?introduction+arc.opening:lastOutcome.summary+" "+arc.beats[progress-1];
+ let narration=progress===0?introduction+arc.opening:lastOutcome.detour?lastOutcome.summary:lastOutcome.summary+" "+arc.beats[progress-1];
  if(progress===2&&LOCAL_ROUTES[arc.id])narration+=" There is time to prepare for one course of action.";
  return {title:clean(progress===0?arc.title:arc.title+" · "+stages[progress-1],90),narration:clean(narration,1800),objective:campaign.objective||arc.objective,locationId:region.id,choices:localChoices(arc,progress,campaign.localState)};
 }
@@ -331,19 +340,20 @@ function resolveLocalPending(profile,save,panel,status,onChange){
  const resolution=resolveChoice(pending.action,profile.stats,pending.roll),arc=localArcFor(campaign,region),progress=campaign.localState.progress+1;
  // Match the saved decision, including its check. Free actions and older, already
  // displayed scenes must not silently acquire a different authored intention.
- const offered=campaign.scene.choices.find(c=>c.text===pending.action.text&&c.stat===pending.action.stat&&c.difficulty===pending.action.difficulty);
+ const offered=campaign.scene.choices.find(c=>c.text===pending.action.text&&c.stat===(pending.action.sourceStat||pending.action.stat)&&c.difficulty===pending.action.difficulty);
  const lane=LOCAL_ROUTES[arc.id]&&validLane(offered?.lane)?offered.lane:-1;
- const outcomeSummary=lane===-1?localOutcomeSummary(resolution,arc):regionalOutcome(arc,campaign.localState,lane,resolution.success);
+ const outcomeSummary=resolution.detour?"You mark a way around the obstruction and come out beside "+arc.site+". You leave the immediate question unanswered, but now you know how to approach the ground ahead.":lane===-1?localOutcomeSummary(resolution,arc):regionalOutcome(arc,campaign.localState,lane,resolution.success);
  const entry=historyEntry(campaign,campaign.scene,pending.action,{summary:outcomeSummary},resolution),history=[...campaign.history,entry].slice(-MAX_HISTORY);
  const edges=(campaign.localState.edges||0)|(progress<=2&&lane>=0&&resolution.success?1<<lane:0);
- const localState={...campaign.localState,progress,edges,lastLane:lane,lastWon:resolution.success,successes:campaign.localState.successes+(resolution.success?1:0),setbacks:campaign.localState.setbacks+(resolution.success?0:1)};
+ const localState={...campaign.localState,progress,edges,lastLane:lane,lastWon:resolution.success,successes:campaign.localState.successes+(resolution.success?1:0),setbacks:campaign.localState.setbacks+(resolution.success||resolution.detour?0:1),...(resolution.detour?{detours:1}:{})};
  let statusValue="active",summary=outcomeSummary,scene,chapters=campaign.chapters,threads=campaign.threads;
  if(progress>=LOCAL_TURNS){
   const ending=localEnding(campaign,region,arc,localState,lane>=0?outcomeSummary:null);
   summary=ending.summary;scene=ending.scene;statusValue="chapter-complete";
   chapters=[...chapters,chapterRecord({...campaign,chapterTitle:campaign.chapterTitle||scene.title},"complete",summary,history)].slice(-40);
   threads=ending.solved?threads:[ending.thread,...threads.filter(t=>t!==ending.thread)].slice(0,6);
- }else scene=localScene({...campaign,localState},region,arc,progress,{success:resolution.success,summary:outcomeSummary});
+ }else scene=localScene({...campaign,localState},region,arc,progress,{success:resolution.success,detour:resolution.detour,summary:outcomeSummary});
+ if(resolution.detour)mapApproaches(scene);
  const next={...campaign,mode:"local",localState,status:statusValue,turn:pending.turn,summary,scene,history,chapters,threads,pending:null,updatedAt:new Date().toISOString()};
  const previousJournal=save.journal,previousUpdatedAt=save.updatedAt;
  save.journal=[...save.journal,"Local campaign · Chapter "+campaign.chapter+", scene "+pending.turn+": "+entry.action+" — "+entry.result+" — "+entry.summary].slice(-100);
@@ -379,8 +389,16 @@ function contextCharacter(profile,lastCombatSignature=""){
  return {character:{id:String(profile.id),name:clean(profile.name,36),raceId:profile.raceId,classId:profile.classId,level:Number(system?.level||profile.level)||1,stats:Object.fromEntries(STATS.map(key=>[key,Math.trunc(Number(profile.stats?.[key])||10)])),health:rpg?{current:Number(rpg.hp)||0,max:Number(rpg.maxHp)||0}:null,focus:rpg?{current:Number(rpg.focus)||0,max:Number(rpg.maxFocus)||0}:null,knownAbilities:abilities},recentCombat:combatSignature&&combatSignature!==lastCombatSignature?recentCombat:[],combatSignature:combatSignature||lastCombatSignature};
 }
 function historyEntry(campaign,scene,action,result,roll){
- const check="d20 "+roll.roll+(roll.modifier>=0?" + ":" - ")+Math.abs(roll.modifier)+" = "+roll.total+" vs DC "+roll.dc+" · "+(roll.success?"success":"failure");
- return {chapter:campaign.chapter,title:scene.title,action:clean(action.text,180),result:check,summary:clean(result.summary,300)};
+ const check=roll.detour?"Safe passage · no roll":(action.heritage==="gnome"?"fixed ":action.heritage==="halfling"?"remembered ": "d20 ")+roll.roll+(roll.modifier>=0?" + ":" - ")+Math.abs(roll.modifier)+" = "+roll.total+" vs DC "+roll.dc+" · "+(roll.success?"success":"failure");
+ const approach=action.heritage==="human"?humanMethods[action.stat]+": ":"";
+ return {chapter:campaign.chapter,title:scene.title,action:clean(approach+action.text,180),result:(action.heritage?featureName(action.heritage)+" · ":"")+check,summary:clean(result.summary,300),...(d20Value(roll.roll)?{die:roll.roll,success:roll.success}:{})};
+}
+function mapApproaches(scene){
+ for(const c of scene.choices){const tier={hard:"standard",standard:"easy",easy:"easy"}[c.difficulty];if(tier!==c.difficulty){c.difficulty=tier;c.dc=DIFFICULTY_DC[tier];c.advantage="Mapped approach"}}
+}
+function rememberedRolls(campaign){
+ // Pre-heritage journals stored the roll only as display text.
+ return campaign.history.filter(h=>h.chapter===campaign.chapter).map(h=>{const old=/^d20 (\d+) .* · success$/.exec(h.result);return {action:h.action,die:h.success?h.die:old?Number(old[1]):null}}).filter(h=>d20Value(h.die));
 }
 function makePayload(kind,profile,campaign,regionId,chapter,turn,extra={}){
  const chapters=campaign.chapters.slice(-8).map(row=>({chapter:row.chapter,status:row.status,title:row.title,locationId:row.locationId,summary:row.summary,decisions:row.decisions.slice(-5)})),characterState=contextCharacter(profile,campaign.lastCombatSignature);
@@ -430,11 +448,12 @@ async function resolvePending(profile,save,panel,status,onChange,code){
  if(!region||campaign.locationId!==region.id){status.textContent="Return to the scene's region before resolving this saved action.";return}
  setCode(code);
  const resolution=resolveChoice(pending.action,profile.stats,pending.roll);
- setBusy(panel,true,"Your saved d20 result is locked. The Story Director is continuing from it…");
+ setBusy(panel,true,resolution.detour?"Your route is saved. The Story Director is charting the next scene…":"Your saved d20 result is locked. The Story Director is continuing from it…");
  try{
   const payload=makePayload("turn",profile,campaign,region.id,campaign.chapter,pending.turn,{scene:{title:campaign.scene.title,narration:campaign.scene.narration,objective:campaign.scene.objective},action:pending.action,roll:pending.roll}),data=await apiRequest(code,payload);
   if(!sameActiveCharacter(profile.id)||!panel.isConnected||save.aiCampaign!==campaign)return;
   const scene=sceneFromResponse(data,region.id),entry=historyEntry(campaign,campaign.scene,pending.action,data,resolution),complete=data.chapterComplete===true;
+  if(resolution.detour){if(complete)throw new Error("The detour cannot settle this chapter.");mapApproaches(scene)}
   const history=[...campaign.history,entry].slice(-MAX_HISTORY),chapters=complete?[...campaign.chapters,chapterRecord({...campaign,chapterTitle:campaign.chapterTitle||campaign.scene.title},"complete",data.summary,history)].slice(-40):campaign.chapters;
   const next={...campaign,status:complete?"chapter-complete":"active",turn:pending.turn,locationId:region.id,objective:scene.objective,summary:clean(data.summary,600),scene,history,chapters,threads:Array.isArray(data.threads)?data.threads.map(x=>clean(x,150)).filter(Boolean).slice(0,6):campaign.threads,pending:null,lastCombatSignature:payload.combatSignature||campaign.lastCombatSignature,updatedAt:new Date().toISOString()};
   const previousJournal=save.journal,previousUpdatedAt=save.updatedAt;
@@ -444,26 +463,36 @@ async function resolvePending(profile,save,panel,status,onChange,code){
    save.journal=previousJournal;save.updatedAt=previousUpdatedAt;status.textContent="The AI turn could not be saved. Your exact die roll remains available to retry.";return;
   }
  }catch(error){
-  if(panel.isConnected&&sameActiveCharacter(profile.id)&&save.aiCampaign===campaign){setBusy(panel,false);onChange?.({render:true,message:"Your exact d20 roll is saved. "+error.message+" Retry this roll or continue locally."})}
+  if(panel.isConnected&&sameActiveCharacter(profile.id)&&save.aiCampaign===campaign){setBusy(panel,false);onChange?.({render:true,message:resolution.detour?"Your detour is saved. The Story Director could not continue it. Retry or continue locally.":"Your exact d20 roll is saved. "+error.message+" Retry this roll or continue locally."})}
  }finally{if(panel.isConnected)setBusy(panel,false)}
 }
-function chooseAction(profile,save,panel,status,onChange,code,choice){
+function chooseAction(profile,save,panel,status,onChange,code,choice,use=null){
  const campaign=save.aiCampaign,region=currentRegion(save);
  if(campaign.pending){status.textContent="Your previous action is already saved. Resolve that same roll before choosing again.";return}
  if(!region||campaign.locationId!==region.id){status.textContent="Open a fresh chapter at your current location first.";return}
- if(campaign.mode==="local"){
-  const roll=Math.floor(Math.random()*20)+1,pending={turn:campaign.turn+1,action:{text:clean(choice.text,180),stat:choice.stat,difficulty:choice.difficulty},roll};
-  if(pending.turn>LOCAL_TURNS){status.textContent="This local chapter is ready to conclude. Continue the campaign for another generated adventure.";return}
-  if(!commitCampaign(save,{...campaign,pending,updatedAt:new Date().toISOString()},onChange,{render:false,message:"Your choice and exact d20 roll are saved locally."})){status.textContent="Your action could not be saved; no roll was spent.";return}
-  resolveLocalPending(profile,save,panel,status,onChange);return;
+ if(campaign.status!=="active")return;
+ const turn=campaign.turn+1,local=campaign.mode==="local";
+ if(turn>(local?LOCAL_TURNS:MAX_TURNS)){status.textContent="This chapter is ready to conclude.";return}
+ const race=profile.raceId,action={text:clean(choice.text,180),stat:choice.stat,difficulty:choice.difficulty};
+ let heritage=campaign.heritage,roll;
+ if(use){
+  if(!storyHeritages.includes(race)||race==="goblin"||spentHeritage(campaign)||race!=="deep_gnome"&&!campaign.scene.choices.includes(choice))return;
+  if(race==="human"){if(!STATS.includes(use.stat)||use.stat===choice.stat)return;action.sourceStat=choice.stat;action.stat=use.stat}
+  if(race==="gnome")roll=12;
+  if(race==="halfling"){const deed=rememberedRolls(campaign)[use.deed];if(!deed)return;roll=deed.die;action.memory=clean(deed.action,180)}
+  if(race==="deep_gnome"){if(turn>=MIN_CHAPTER_TURNS)return;roll=null}
+  action.heritage=race;heritage={race,chapter:campaign.chapter};
+ }else if(spentHeritage(campaign)&&heritage.race==="goblin"&&d20Value(heritage.peek)){
+  roll=heritage.peek;action.heritage="goblin";heritage={race,chapter:campaign.chapter};
  }
- const roll=Math.floor(Math.random()*20)+1,pending={turn:campaign.turn+1,action:{text:clean(choice.text,180),stat:choice.stat,difficulty:choice.difficulty},roll};
- if(pending.turn>MAX_TURNS){status.textContent="This chapter is ready to conclude. Continue the chronicle to start the next one.";return}
+ if(roll===undefined)roll=Math.floor(Math.random()*20)+1;
+ const pending={turn,action,roll};
  if(code)setCode(code);
- const next={...campaign,pending,updatedAt:new Date().toISOString()};
- if(!commitCampaign(save,next,onChange,{render:false,message:"Your action and d20 roll are saved before the story continues."})){status.textContent="Your action could not be saved; no roll was spent.";return}
- if(!code){onChange?.({render:true,message:"Your roll is saved. Continue locally or connect the Story Director.",focusScene:true});return}
- status.textContent="Your d20 result is saved. The Story Director is writing what follows.";
+ const next={...campaign,pending,...(heritage?{heritage}:{}),updatedAt:new Date().toISOString()};
+ if(!commitCampaign(save,next,onChange,{render:false,message:"Your decision is saved."})){status.textContent="The decision could not be saved. No use was spent.";return}
+ if(local){resolveLocalPending(profile,save,panel,status,onChange);return}
+ if(!code){onChange?.({render:true,message:"Your choice is saved. Continue locally or connect the Story Director.",focusScene:true});return}
+ status.textContent="Your choice is saved. The Story Director is writing what follows.";
  resolvePending(profile,save,panel,status,onChange,code);
 }
 const ARRIVAL_NOTES=Object.freeze({
@@ -508,12 +537,12 @@ function render(profile,save,onChange,navigation={}){
  panel.append(element("div",sceneRegion+" · Chapter "+campaign.chapter+(complete?" · Complete":isLocal?" · Scene "+sceneNo+" of "+LOCAL_TURNS:" · Scene "+sceneNo),"soa-mnm-kicker"),element("h2",displayTitle),element("p",campaign.scene.narration,"soa-mnm-ai-narrative"),status);
  if(!complete&&campaign.objective)panel.append(element("p","Your aim: "+campaign.objective,"soa-mnm-feature-status"));
  const latest=campaign.history.filter(row=>row.chapter===campaign.chapter).slice(-1)[0];
- if(latest){const roll=disclosure("Last roll: "+latest.result,"soa-mnm-roll-receipt");roll.append(element("p",latest.action));panel.append(roll)}
+ if(latest){const roll=disclosure("Last action: "+latest.result,"soa-mnm-roll-receipt");roll.append(element("p",latest.action));panel.append(roll)}
  const systems=window.soaMnmSystems,sys=systems?.read?.(profile);
  const rewardButton=(chapter,caption)=>button(caption,()=>{const result=systems?.claimStoryReward?.(profile,"ai-chapter-"+chapter,90);if(!result?.ok){status.textContent=result?.error||"The reward could not be saved.";return}onChange?.({render:true,message:result.result.alreadyClaimed?"You already claimed this chapter reward.":"Chapter "+chapter+": "+result.result.xp+" XP claimed."})});
  const claimed=chapter=>sys?.ok&&sys.save.rpg.claimedStories.includes("ai-chapter-"+chapter);
  if(!currentMatches&&campaign.pending){
-  panel.append(element("p","Your action and its roll are waiting in "+sceneRegion+". Return there to see what happens."));if(navigation.onOpenWorld)panel.append(button("Find the route to "+sceneRegion,navigation.onOpenWorld,true));
+  panel.append(element("p","Your saved action is waiting in "+sceneRegion+". Return there to see what happens."));if(navigation.onOpenWorld)panel.append(button("Find the route to "+sceneRegion,navigation.onOpenWorld,true));
  }else if(!currentMatches){
   panel.append(element("p",complete?"You are now in "+region.name+". Pick up your next lead here.":"You are now in "+region.name+". Starting a chapter here leaves your old lead in the journal. You can also travel back to finish it."));
   leadButtons("Follow a lead in "+region.name,"Begin an AI chapter here");if(!complete&&navigation.onOpenWorld)panel.append(button("Find the route back to "+sceneRegion,navigation.onOpenWorld));
@@ -523,17 +552,58 @@ function render(profile,save,onChange,navigation={}){
   if(navigation.onOpenWorld)panel.append(button("Take the road",navigation.onOpenWorld));
  }else if(campaign.pending){
   const p=campaign.pending,outcome=resolveChoice(p.action,profile.stats,p.roll);
-  panel.append(element("h3","Your move is recorded","soa-mnm-decision-heading"),element("p",p.action.text),element("p",STAT_NAMES[p.action.stat]+" · d20 "+outcome.roll+(outcome.modifier<0?" − ":" + ")+Math.abs(outcome.modifier)+" = "+outcome.total+" vs DC "+outcome.dc+" · "+(outcome.success?"Success":"Setback"),"soa-mnm-feature-status"));
+  panel.append(element("h3","Your move is recorded","soa-mnm-decision-heading"),element("p",p.action.text),element("p",historyEntry(campaign,campaign.scene,p.action,{},outcome).result,"soa-mnm-feature-status"));
   if(isLocal)panel.append(button("Reveal the outcome",()=>resolveLocalPending(profile,save,panel,status,onChange),true));
   else{
-   const local=button("Play out this roll locally",()=>continueLocally(profile,save,panel,status,onChange),!savedCode),remote=button("Resolve with the Story Director",()=>withDirector(value=>resolvePending(profile,save,panel,status,onChange,value)),!!savedCode);
+   const local=button("Continue this action locally",()=>continueLocally(profile,save,panel,status,onChange),!savedCode),remote=button("Resolve with the Story Director",()=>withDirector(value=>resolvePending(profile,save,panel,status,onChange,value)),!!savedCode);
    panel.append(...(savedCode?[remote,local]:[local,remote]));
   }
  }else{
   panel.append(element("h3","What do you do?","soa-mnm-decision-heading"));
   const signed=n=>n<0?"−"+Math.abs(n):"+"+n,mod=stat=>Math.floor((Number(profile.stats?.[stat]??10)-10)/2);
+  const race=profile.raceId,feature=window.soaMnmRules?.racialAbilities?.[race];
+  const peek=spentHeritage(campaign)?campaign.heritage.peek:undefined;
+  if(d20Value(peek))panel.append(element("p",featureName(race)+" · Your next die is "+peek+". Choose which approach to take; this die stays fixed.","soa-mnm-feature-status"));
   const grid=element("div",undefined,"soa-mnm-choice-grid");
   campaign.scene.choices.forEach(choice=>{const b=element("button",undefined,"soa-mnm-choice soa-mnm-ai-choice");b.type="button";b.append(element("strong",choice.text),element("span",STAT_NAMES[choice.stat]+" "+signed(mod(choice.stat))+" · DC "+choice.dc+(choice.advantage?" · "+choice.advantage:"")));b.onclick=()=>chooseAction(profile,save,panel,status,onChange,code(),choice);grid.append(b)});panel.append(grid);
+  if(feature&&storyHeritages.includes(race)){
+   const used=spentHeritage(campaign),trait=disclosure(feature.name+(used?" · Used this chapter":" · Heritage action"),"soa-mnm-ai-custom-disclosure");
+   trait.append(element("p",feature.effect));
+   const play=(choice,use)=>chooseAction(profile,save,panel,status,onChange,code(),choice,use);
+   if(!used&&race==="goblin"){
+    trait.append(button("Read the opening · reveal your die",()=>{
+     if(save.aiCampaign!==campaign||campaign.pending||spentHeritage(campaign))return;
+     const next={...campaign,heritage:{chapter:campaign.chapter,race,peek:Math.floor(Math.random()*20)+1},updatedAt:new Date().toISOString()};
+     if(!commitCampaign(save,next,onChange,{render:true,message:"",focusScene:true}))status.textContent="The opening could not be saved. No use was spent.";
+    }));
+   }else if(!used&&race==="deep_gnome"){
+    if(campaign.turn+1<MIN_CHAPTER_TURNS)trait.append(button("Chart a detour · no roll",()=>play({text:"Chart a safe detour around the immediate obstacle.",stat:"wis",difficulty:"standard"},{})));
+    else trait.append(element("p","The decisive moment has come. A detour is available only for the first three decisions."));
+   }else if(!used){
+    const notes=rememberedRolls(campaign);
+    if(race==="halfling"&&!notes.length)trait.append(element("p","First succeed on a check in this chapter to give your tale a deed to recall."));
+    else{
+     const form=element("form",undefined,"soa-mnm-ai-custom-action"),picker=(caption,items)=>{
+      const label=element("label",caption,"soa-mnm-system-label"),select=element("select",undefined,"soa-mnm-system-input");
+      for(const [value,text] of items){const opt=element("option",text);opt.value=String(value);select.append(opt)}label.append(select);form.append(label);return select;
+     };
+     const route=picker("Approach",campaign.scene.choices.map((c,i)=>[i,c.text]));
+     let pick;
+     if(race==="human")pick=picker("Draw on a different strength",STATS.map(s=>[s,STAT_NAMES[s]+" "+signed(mod(s))+" · "+humanMethods[s]]));
+     if(race==="halfling")pick=picker("Remember a deed",notes.map((h,i)=>[i,h.die+" · "+h.action]));
+     const preview=element("p",undefined,"soa-mnm-feature-status"),submit=element("button","Use "+feature.name,"soa-mnm-system-button");submit.type="submit";
+     const refresh=()=>{const c=campaign.scene.choices[Number(route.value)],s=race==="human"?pick.value:c.stat;
+      const fixed=race==="gnome"?12:race==="halfling"?notes[Number(pick.value)].die:null;
+      submit.disabled=race==="human"&&s===c.stat;
+      preview.textContent=submit.disabled?"Choose a different stat for this approach.":(fixed===null?"d20":String(fixed))+" "+signed(mod(s))+" ("+STAT_NAMES[s]+") vs DC "+c.dc+(fixed===null?"":resolveChoice({...c,stat:s},profile.stats,fixed).success?" · Will succeed":" · Will fall short");
+     };
+     route.onchange=refresh;if(pick)pick.onchange=refresh;refresh();
+     form.onsubmit=e=>{e.preventDefault();const c=campaign.scene.choices[Number(route.value)];play(c,race==="human"?{stat:pick.value}:race==="halfling"?{deed:Number(pick.value)}:{})};
+     form.append(preview,submit);trait.append(form);
+    }
+   }
+   panel.append(trait);
+  }
   const manual=disclosure("Try your own approach","soa-mnm-ai-custom-disclosure"),form=element("form",undefined,"soa-mnm-ai-custom-action");
   const actionLabel=element("label","Describe your action","soa-mnm-system-label"),action=element("textarea",undefined,"soa-mnm-system-input");action.maxLength=180;action.minLength=8;action.required=true;action.rows=2;actionLabel.append(action);form.append(actionLabel);
   const controls=element("div",undefined,"soa-mnm-ai-action-controls"),statLabel=element("label","Roll with","soa-mnm-system-label"),stat=element("select",undefined,"soa-mnm-system-input");

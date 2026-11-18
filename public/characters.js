@@ -18,6 +18,11 @@ const startingZone=p=>p?.system==="mnm"?mnmStartingZone(p):START_ZONES[p.race]||
 let roster,active,rosterLoadBlocked=false;
 const get=id=>document.getElementById(id);
 const make=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e};
+function drawHeritage(card,feature,titleTag="h3"){
+ card.replaceChildren();card.hidden=!feature;if(!feature)return;
+ const combat=feature.mode==="combat";
+ card.append(make("span",combat?"COMBAT HERITAGE · ONCE PER ENCOUNTER":"ADVENTURE HERITAGE · ONCE PER CHAPTER","soa-mnm-custom-label"),make(titleTag,feature.name),make("p",feature.description),make("p",feature.effect),make("small","Original M&M: RPG ability · "+(combat?"Use it on your turn in Combat or the Arena.":"Use it when choosing an action in Adventure.")));
+}
 // Keep grouped game content visible, except the intentional character-creation disclosure.
 function keepGameSectionsExpanded(root=document){
  if(document.body?.classList?.contains("soa-ruleset-mnm"))return;
@@ -359,9 +364,7 @@ function drawMenu(){
    card.append(make("span",labels[key],"soa-mnm-stat-name"),make("strong",String(sheet.stats[key]),"soa-mnm-stat-total"),make("small","Base "+r.statBase+" · Race "+signed(sheet.racialBonuses[key])+" · Class "+signed(sheet.classBonuses[key]),"soa-mnm-stat-breakdown"));
    statGrid.append(card);
   }
-  const feature=r.racialAbilities[race.value];
-  racialFeature.replaceChildren();
-  if(feature)racialFeature.append(make("span","CUSTOM RACIAL FEATURE · ORIGINAL GAME RULE","soa-mnm-custom-label"),make("strong",feature.name),make("p",feature.description),make("p","General effect: "+feature.effect),make("small","Once per chapter in the custom story. This is an M&M: RPG rule, not an official M&M racial trait."));
+  drawHeritage(racialFeature,r.racialAbilities[race.value],"strong");
   const sourceNote=make("p",raceInfo?.provisional?"Race modifiers for "+raceInfo.name+" are provisional, based on the supplied stat pattern.":"Race and class modifiers are from the supplied in-game table.","muted soa-mnm-note");
   if(raceInfo?.selectable===false)sourceNote.textContent="No current in-game stat line supplied for "+(raceInfo?.name||"this race")+"; new character creation is disabled for it.";
   statPanel.querySelector(".soa-mnm-stat-source")?.remove();
@@ -488,7 +491,7 @@ function drawProfessions(){
  root.append(make("div",active.system==="mnm"?"M&M CHARACTER RECORD":"CHARACTER RECORD","soa-roster-kicker"),make("h2",active.name+" · "+active.race+" "+active.className));
  if(active.system==="mnm"){
   root.classList.add("soa-mnm-record");
-  const rules=window.soaMnmRules,race=rules.raceById(active.raceId||active.race),klass=rules.classById(active.classId);
+  const rules=window.soaMnmRules,race=rules.raceById(active.raceId)||rules.raceByName(active.race),klass=rules.classById(active.classId);
   const progress=window.soaMnmSystems?.progressFor?.(active),level=progress?.level||active.level||1;
   let sheet;
   try{sheet=rules.startingStats(race.id,klass.id)}catch{sheet=null}
@@ -502,11 +505,10 @@ function drawProfessions(){
     grid.append(card);
    }
    root.append(grid);
-   const feature=rules.racialAbilities[race.id];
-   if(feature){const ability=make("section",undefined,"soa-mnm-racial-ability");ability.append(make("span","CUSTOM RACIAL FEATURE · ORIGINAL GAME RULE","soa-mnm-custom-label"),make("h3",feature.name),make("p",feature.description),make("p","General effect: "+feature.effect),make("small","Once per chapter in the custom story. This is an M&M: RPG rule, not an official M&M racial trait."));root.append(ability)}
    const xpLine=level>=60?level+" · "+(progress?.totalXp||0)+" total custom XP":level+" · "+(progress?.xp||0)+" / "+(progress?.xpToNext||100)+" custom XP to next level";
    root.append(make("p","LEVEL "+xpLine+" · "+active.classPrefix+" · No extra point allocation is included; these are the complete starting totals.","soa-mnm-note"));
   }else root.append(make("p","No verified starting-stat line is available for this saved race/class combination. Existing profile data is preserved.","soa-mnm-warning"));
+  if(race){const ability=make("section",undefined,"soa-mnm-racial-ability");drawHeritage(ability,rules.racialAbilities[race.id]);root.append(ability)}
   return;
  }
  root.classList.remove("soa-mnm-record");
