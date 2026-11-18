@@ -20,6 +20,7 @@ const get=id=>document.getElementById(id);
 const make=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e};
 // Keep grouped game content visible, except the intentional character-creation disclosure.
 function keepGameSectionsExpanded(root=document){
+ if(document.body?.classList?.contains("soa-ruleset-mnm"))return;
  const expand=scope=>scope.querySelectorAll?.("details:not(.soa-collapsible-quests):not(.soa-create-new):not(.soa-allies-drawer)").forEach(node=>{node.open=true});
  expand(root);
  const observer=new MutationObserver(records=>records.forEach(record=>record.addedNodes.forEach(node=>{

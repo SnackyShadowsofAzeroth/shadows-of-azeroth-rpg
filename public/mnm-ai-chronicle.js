@@ -26,6 +26,89 @@ const LOCAL_ARCS=Object.freeze({
  ]
 });
 const GENERIC_LOCAL_ARC_IDS=Object.freeze(["waystation-appeal","marked-passage"]);
+// Original regional adventures. Each lead names something the player can act on;
+// each settlement offers three different things worth fighting for at the end.
+const LOCAL_ROUTES={
+ "salt-ledger":{
+  leads:["the paired quay tallies","the deckhand who signed the load","the warehouse gangway"],
+  finds:["Both tallies carry the same knife nick. Only the tally kept ashore has a second figure in ink.","The deckhand remembers signing with a thumbprint. The receipt in the book bears a neat signature.","Wet tracks end by a locked warehouse door; the ship's hold is already dry."],
+  ends:[
+   ["Set the paired tallies side by side","Name the false entry before the harbor watch","Mara strikes the false entry in red. The crew leaves with its pay and the clerk must answer for the second figure.","The watch agrees to hold the account open. The crew can sail, but its pay stays in the strongbox."],
+   ["Give the deck crew a private hearing","Bargain for the crew's release","The crew sails on the tide. Mara keeps the deckhand's name out of the public book; the false account remains for another day.","The crew gains one more tide to make its case. The deckhand stays ashore as surety."],
+   ["Arrange a watch at the storehouse","Follow the goods to their receiver","The watch catches the receiver opening the missing consignment. The crate seal will speak for the accused crew.","The receiver abandons the crate and runs. You recover the load, but have no name for the inquiry."]]},
+ "low-tide-lanterns":{
+  leads:["the ferry's tide board","the last pilot ashore","the breakwater at water level"],
+  finds:["The lamps appear at the same depth of water, never the same hour.","The pilot heard an oar knock three times before the first lamp opened.","A wet painter trails from an iron ring below the harbor wall. A shallow boat has tied up here."],
+  ends:[
+   ["Mark each light against the tide board","Publish a chart of the secret channel","At dawn the ferry crews hang your chart beside the tide board. No boat can use the channel unseen again.","You mark the entrance, but the outer rocks disappear beneath the incoming tide before you can fix their bearings."],
+   ["Call in the late-watch ferries","Escort the next crew through the dark","Every ferry returns with its crew. The pilots agree to cross in pairs; whoever lit the lamps slips away.","The last ferry spends the tide grounded by the wall. Everyone is safe, but the night crossing must close."],
+   ["Find a place to land on the rocks","Reach the lantern keeper before the tide turns","You find the lookout counting sealed cargoes and recover a list of ships from the hollow of the lantern.","The lookout escapes across the rocks. You extinguish the lantern before it can signal another boat."]]},
+ "vacant-lift":{
+  leads:["the cage floor and its guide shoes","the relief hand at the bell","the lower maintenance ledge"],
+  finds:["A scrape crosses the cage sill halfway up the door, too high for either public landing.","The relief hand heard a second bell after the cage had already left the lower platform.","Through the guide rail you see a bootprint in the dust of a landing the lift should never serve."],
+  ends:[
+   ["Match the stray bell to the lift tally","Expose the illicit stop to the lift crew","Hessa rings the hidden stop in front of the crew. They chalk it onto the shaft plan and send a search party down.","The crew hears the second bell but cannot place the landing. The next shift posts a listener in the shaft."],
+   ["Set up a line for the missing rider","Haul the rider back to the landing","Two tugs answer. The rider comes over the rail alive, still clutching the lunch tin Hessa counted on the outbound trip.","The line is too short, but the rider answers from a dry shelf. Hessa holds the cage while the crew fetches a longer rope."],
+   ["Brace the counterweight above the service walk","Stop the runaway cage at the hidden landing","The brake bites. The cage becomes a bridge to the service walk, and the crew can sweep it end to end.","The cage jams a span short. You secure the landing against another accident, but the service walk stays out of reach."]]},
+ "cistern-echo":{
+  leads:["the wheel's old shift marks","the carrier on the dawn draw","the dry lip below the grate"],
+  finds:["The wheel stalls at an old chisel mark. In the silence someone behind the wall calls for air.","The carrier delivers water to one more bucket than appears on Brel's rounds.","A fresh wooden wedge holds a trickle of clean water away from the main cistern."],
+  ends:[
+   ["Sound the buried channel","Trace who has been tending the water route","The sound leads to a hand-cut sluice. Its keeper shows Brel how to drain the passage without fouling the cistern.","You mark the sluice for the next dry season. Its keeper will only answer from behind the stone."],
+   ["Rig a sling behind the grate","Bring the caller up before the gallery floods","A soaked tunnel hand catches the sling. The carriers give up their bucket ropes to pull her clear.","The caller reaches an air shelf. Brel keeps talking to her while the carriers lower the water by hand."],
+   ["Clear the catch on the spill gate","Divert the flood away from the water stores","The overflow takes the surge. Fresh water runs clear from all three spouts before the carriers' next round.","The upper store stays clean. The lower cistern has to be closed until the mud settles."]]},
+ "fallen-bough":{
+  leads:["the split beneath the fallen bough","the last cart driver through","the uphill side of the fallen trunk"],
+  finds:["Sap has dried around a row of shallow cuts: the wood was scored before the storm.","The cart driver heard chopping after the wardens had sent the timber crews home.","A narrow track leads uphill from the break to a small shelter under the roots."],
+  ends:[
+   ["Lay out a section of the cut wood","Show both camps how the bough was felled","The two camps see where the axe bit before the storm. Eryn opens an inquiry, and neither camp can take the timber as stormfall.","The cut wood settles the timing, but nobody can name the hand that held the axe. The timber stays in the wardens' keeping."],
+   ["Give the glade's traveler safe company","Bring the witness out under your protection","The traveler walks openly beside Eryn. Both camps hear the same account, and the shelter in the glade is left untouched.","The traveler chooses the wardens' shelter over a public hearing. The camps disperse without an answer."],
+   ["Set ropes around the split trunk","Turn the bough into a crossing for the road","The bough settles into place over the washout. Both camps need the crossing more than they need the timber.","You win room for a footpath. Carts will have to wait for the wardens to move the trunk."]]},
+ "fern-road":{
+  leads:["the tracks around the first boundary stone","the traveler with fern spores on their coat","the edge of the flattened fern bed"],
+  finds:["The same heel crosses the stone twice, heading out both times. Someone has made a loop of the path.","The traveler says the bell called in a familiar voice, but would not answer a question.","Below the fern heads the ground is level; only the tall fronds conceal the return path."],
+  ends:[
+   ["Plot the footprints around the ringing ground","Mark the false turning where everyone can see it","Sael sets a stone at each false turn. Travelers can hear the bell now without losing the road.","The first turn is marked. Sael closes the outer loop at dusk, when the other tracks disappear."],
+   ["Tie a guide line to the boundary","Bring the traveler back from the ringing ferns","Your line goes taut. The traveler follows it home and tells Sael what the bell promised them.","The traveler returns at first light. You spend the night at the boundary answering their calls."],
+   ["Approach the sound below the fern heads","Find what rings inside the loop","You uncover a hollow bough strung with old road bells. Sael removes them, but neither of you forgets the voice.","The sound moves on before you reach it. You close the dangerous crossing and leave the bell beyond the boundary."]]},
+ "branchlight":{
+  leads:["the handrail repair marks","the tender who worked the last crossing","the maintenance walk beneath the bridge"],
+  finds:["Each fresh repair mark faces an unfinished span. The light has been stopping at the gaps.","The tender recalls a lamp left on the maintenance line after the old walkway fell.","A frayed guide cord runs below the bridge, all the way to the sealed landing."],
+  ends:[
+   ["Compare the builders' marks to the light's path","Reveal the forgotten gaps to the bridge tenders","The tenders map the unfinished spans. The pale light guides their first inspection instead of another lost traveler.","The nearest gap is marked. The eastern walkway must close each night until the others can be surveyed."],
+   ["Station guides at the two loose handrails","Guide the stranded travelers home","From rail to rail each traveler passes a guiding hand. All reach the lit walk before the wind rises.","The travelers shelter on the next platform. Ilan stays with them until the wind drops."],
+   ["String a safety line across the last span","Reach the branchlight on the sealed landing","The light falls still beside an old work lantern. You bring the lantern back to Ilan; the walkway goes dark.","The wind pulls the line sideways. You secure the broken rail and leave the light on its high landing."]]},
+ "rootway-market":{
+  leads:["the marks on the measuring stone","the basket seller last in the queue","the turn below the weighing steps"],
+  finds:["A shallow second notch adds a load to the measure every time a basket turns on the stone.","The seller was charged once at the steps and again below, by someone claiming to work for the scale keeper.","A chalk line below the steps tells porters which baskets are to be weighed twice."],
+  ends:[
+   ["Set aside one basket of known weight","Demonstrate the false measure to the market","The basket acquires weight without changing hands. The market removes the false measure before the next trading day.","The weighing is suspended. The traders recover today's overcharge, but old accounts still stand."],
+   ["Find someone willing to stand beside the porter","Guarantee a hearing for the young porter","With a merchant at each shoulder, the porter names who gave the orders. Nobody can quietly lay the blame on them.","Veya gives the porter shelter. The traders agree to hear them out when tempers cool."],
+   ["Wait beside the second chalk line","Follow the takings to the person giving orders","You follow the overcharge to a private counting table. Its keeper must return the traders' money in public.","The keeper takes flight, leaving the last day's takings on the table. Earlier losses remain unpaid."]]},
+ "silent-runner":{
+  leads:["the scrape beneath the route mark","the gate hand who saw the courier leave","the stone ledge beside the council passage"],
+  finds:["A fingernail has traced a warning beneath the false turn. It points away from a split in the floor.","The gate hand recalls the courier stopping to send two younger runners the long way around.","Dust has settled everywhere but a narrow strip by the wall. Someone hugged the ledge to cross."],
+  ends:[
+   ["Trace the fault back to the first warning","Mark the unstable passage for the council crews","Your marks link the warnings from end to end. The council closes the faulted walk before the stone gives way.","Darel closes the near arch. Until the fault can be traced, every runner must take the long road."],
+   ["Ready a lamp and a line for the courier","Guide the courier out of the shifting passage","The courier passes the lamp back to you, then takes your hand. Darel counts both of you through the arch.","The courier reaches a stable recess. Darel stands watch over them while a shoring crew is called."],
+   ["Find a route wide enough for one runner","Carry the courier's message through the old arch","The message reaches the council before the watch changes. Darel can now call for help in the courier's name.","The passage pinches shut. You relay the message by voice from arch to arch, with no seal left to prove its origin."]]},
+ "old-door":{
+  leads:["the dust along the door seam","the stone tender on the night shift","the listening niche across the gallery"],
+  finds:["The dust blows outward at each knock. There is moving air beyond the stone.","The oldest tender taps a shift signal; the door answers with the proper count.","A thread of air reaches the listening niche from a second seam low in the wall."],
+  ends:[
+   ["Write down the old shift signals","Exchange names with the knocker through the seam","An old crew signal brings back a name. Serrit can now speak for the people beyond the stone at a proper hearing.","A final answer confirms someone is alive. You leave the shift signals with the crews to keep contact open."],
+   ["Gather hands and wedges at the door","Open the door far enough to help the caller","Hands meet through the gap. The crews bring the caller into the gallery before setting the wedges back.","The seam opens just wide enough for water and a lamp. The caller agrees to wait for the stone crew."],
+   ["Shore the masonry around the air seam","Secure a second way to the gallery","The air seam opens onto a narrow service passage. Serrit can keep the crews safe without sealing anyone in.","The masonry holds, but there is no safe way through tonight. Serrit posts a watch beside the door."]]}
+};
+const LOCAL_FINAL_STATS={
+ "salt-ledger":["int","cha","agi"],"low-tide-lanterns":["wis","sta","agi"],
+ "vacant-lift":["int","str","dex"],"cistern-echo":["wis","str","dex"],
+ "fallen-bough":["int","cha","str"],"fern-road":["wis","sta","agi"],
+ branchlight:["wis","cha","dex"],"rootway-market":["int","cha","agi"],
+ "silent-runner":["wis","sta","agi"],"old-door":["int","str","dex"]
+};
+const LEAD_STATS=["int","cha","agi"];
+const validLane=lane=>Number.isInteger(lane)&&lane>=0&&lane<=2;
 function genericLocalArcs(region){
  const name=clean(region?.name||"this region",80);
  return [
@@ -35,7 +118,11 @@ function genericLocalArcs(region){
 }
 function validLocalState(value){
  const ids=Object.values(LOCAL_ARCS).flat().map(arc=>arc.id);
- return object(value)&&typeof value.arcId==="string"&&(value.arcId==="continuation"||ids.includes(value.arcId)||GENERIC_LOCAL_ARC_IDS.includes(value.arcId))&&Number.isInteger(value.progress)&&value.progress>=0&&value.progress<=LOCAL_TURNS&&Number.isInteger(value.successes)&&value.successes>=0&&value.successes<=LOCAL_TURNS&&Number.isInteger(value.setbacks)&&value.setbacks>=0&&value.setbacks<=LOCAL_TURNS&&value.progress===value.successes+value.setbacks;
+ return object(value)&&typeof value.arcId==="string"&&(value.arcId==="continuation"||ids.includes(value.arcId)||GENERIC_LOCAL_ARC_IDS.includes(value.arcId))&&Number.isInteger(value.progress)&&value.progress>=0&&value.progress<=LOCAL_TURNS&&Number.isInteger(value.successes)&&value.successes>=0&&value.successes<=LOCAL_TURNS&&Number.isInteger(value.setbacks)&&value.setbacks>=0&&value.setbacks<=LOCAL_TURNS&&value.progress===value.successes+value.setbacks
+  &&(value.edges===undefined||Number.isInteger(value.edges)&&value.edges>=0&&value.edges<=7)
+  &&(value.lastLane===undefined||value.lastLane===-1||validLane(value.lastLane))
+  &&(value.lastWon===undefined||typeof value.lastWon==="boolean")
+  &&(value.favor===undefined||validLane(value.favor));
 }
 const STAT_NAMES={str:"Strength",sta:"Stamina",dex:"Dexterity",agi:"Agility",int:"Intelligence",wis:"Wisdom",cha:"Charisma"};
 const STORAGE_KEY="soa-mnm-ai-access-code";
@@ -110,7 +197,25 @@ function selectLocalArc(regionId,seed,chapter,excludeId){
  if(pool.length>1&&pool[index].id===excludeId)index=(index+1)%pool.length;
  return pool[index];
 }
-function localChoices(arc,beat){
+function regionalChoices(arc,beat,state){
+ const route=LOCAL_ROUTES[arc.id],{leads,ends}=route;
+ const opening=["Examine "+leads[0],"Get the story from "+leads[1],"Scout "+leads[2]];
+ const follow=["Preserve the marks on "+leads[0],"Bring "+leads[1]+" forward as a witness","Mark a safe route along "+leads[2]];
+ const recover=["Reconstruct what was disturbed at "+leads[0],"Offer "+leads[1]+" a private hearing","Find another way past "+leads[2]];
+ return leads.map((_,lane)=>{
+  const repeated=lane===state.lastLane,edge=Boolean((state.edges||0)&(1<<lane));
+  const text=beat===0?opening[lane]:beat===1?(repeated?(state.lastWon?follow:recover)[lane]:opening[lane]):ends[lane][beat===2?0:1];
+  const difficulty=beat===0?(state.favor===lane?"easy":"standard"):
+   beat===1?(repeated&&state.lastWon?"easy":"standard"):
+   beat===2?(edge?"easy":"standard"):
+   repeated&&state.lastWon?"easy":edge?"standard":"hard";
+  const stat=beat>=2?LOCAL_FINAL_STATS[arc.id][lane]:LEAD_STATS[lane];
+  const advantage=beat===0&&state.favor===lane?"A local favor":beat===1&&repeated&&state.lastWon?"Following your lead":beat===3&&repeated&&state.lastWon?"Your prepared plan":beat>=2&&edge?"Earlier groundwork":"";
+  return {id:"choice-"+(lane+1),lane,text,stat,difficulty,dc:DIFFICULTY_DC[difficulty],advantage};
+ });
+}
+function localChoices(arc,beat,state){
+ if(LOCAL_ROUTES[arc.id])return regionalChoices(arc,beat,state);
  const sets=[
   [
    ["Inspect "+arc.site+" for signs of a changed account or hidden route.","int","standard"],
@@ -135,19 +240,22 @@ function localChoices(arc,beat){
  ];
  return sets[Math.min(3,beat)].map((row,index)=>({id:"choice-"+(index+1),text:row[0],stat:row[1],difficulty:row[2],dc:DIFFICULTY_DC[row[2]]}));
 }
-function localScene(campaign,region,arc,progress,lastOutcome){
- const stages=["The first trace","A new complication","The final approach"];
- const narration=progress===0
-  ?"In "+region.name+", the matter begins at "+arc.site+". "+arc.opening+" You have one chance to choose how to approach it before the next watch changes."
-  :lastOutcome.summary+" "+arc.beats[progress-1]+" The people involved are waiting for your next move.";
- return {title:progress===0?arc.title:arc.title+" · "+stages[progress-1],narration:clean(narration,1800),objective:campaign.objective||arc.objective,locationId:region.id,choices:localChoices(arc,progress)};
+function localScene(campaign,region,arc,progress,lastOutcome,introduction=""){
+ const stages=["The first trace","Gather your allies","The turning point"];
+ let narration=progress===0?introduction+arc.opening:lastOutcome.summary+" "+arc.beats[progress-1];
+ if(progress===2&&LOCAL_ROUTES[arc.id])narration+=" There is time to prepare for one course of action.";
+ return {title:clean(progress===0?arc.title:arc.title+" · "+stages[progress-1],90),narration:clean(narration,1800),objective:campaign.objective||arc.objective,locationId:region.id,choices:localChoices(arc,progress,campaign.localState)};
 }
-function localEnding(campaign,region,arc,state){
- const solved=state.successes>=2,summary=solved?arc.successEnding:arc.partialEnding;
+function localEnding(campaign,region,arc,state,settlement){
+ if(settlement){
+  const solved=state.lastWon,summary=clean(settlement,500),thread=clean(arc.thread,150);
+  return {summary,scene:{title:clean(campaign.chapterTitle+" · Outcome",90),narration:clean(summary+" "+(solved?"By the change of watch, word of your part in it has reached "+arc.site+".":"At the change of watch, "+arc.contact+" keeps a place for the unfinished business."),1800),objective:solved?"Your chosen course is settled.":"The watch ends with unfinished business.",locationId:region.id,choices:[]},thread,solved};
+ }
+ const solved=state.lastWon??(state.successes>=2),summary=solved?arc.successEnding:arc.partialEnding;
  const narration=solved
   ?"The pressure lifts from "+region.name+". "+summary+" The people you helped will remember how you handled the matter."
   :"The immediate danger passes in "+region.name+", though the full truth remains out of reach. "+summary+" The unresolved lead is recorded in your journal.";
- return {summary:clean(summary,500),scene:{title:campaign.chapterTitle+" · Outcome",narration:clean(narration,1800),objective:solved?"The immediate objective is resolved.":"The immediate danger is contained; an open lead remains.",locationId:region.id,choices:[]},thread:arc.thread,solved};
+ return {summary:clean(summary,500),scene:{title:clean(campaign.chapterTitle+" · Outcome",90),narration:clean(narration,1800),objective:solved?"The immediate objective is resolved.":"The immediate danger is contained; an open lead remains.",locationId:region.id,choices:[]},thread:clean(arc.thread,150),solved};
 }
 function startLocalChapter(profile,save,panel,status,onChange){
  const original=save.aiCampaign,region=currentRegion(save);
@@ -160,9 +268,16 @@ function startLocalChapter(profile,save,panel,status,onChange){
  const threads=leftActive?["Unresolved lead: "+clean(original.objective,100),...original.threads].slice(0,6):original.threads;
  const arc=selectLocalArc(region.id,randomSeed(),chapter,original.localState?.arcId||"");
  const localState={arcId:arc.id,progress:0,successes:0,setbacks:0};
+ let introduction="";
+ if(original.status==="chapter-complete"&&original.locationId===region.id&&original.mode==="local"&&original.localState?.lastWon&&validLane(original.localState.lastLane)&&LOCAL_ROUTES[arc.id]){
+  const oldArc=localArcFor(original,region),lane=original.localState.lastLane,leads=LOCAL_ROUTES[arc.id].leads;
+  const favor=["points out a detail on "+leads[0],"arranges a meeting with "+leads[1],"draws you a way in by "+leads[2]][lane];
+  localState.favor=lane;
+  introduction=oldArc.contact.split(",")[0]+" remembers your help and "+favor+". ";
+ }
  const next={...original,mode:"local",localState,version:VERSION,status:"active",seed:randomSeed(),chapterTitle:arc.title,chapter,turn:0,locationId:region.id,objective:arc.objective,summary:arc.opening,scene:null,chapters:archived,threads,pending:null,lastCombatSignature:original.lastCombatSignature,updatedAt:new Date().toISOString()};
- next.scene=localScene(next,region,arc,0,null);
- if(!commitCampaign(save,next,onChange,{render:true,message:"A local campaign begins in "+region.name+". Your choices and d20 rolls are saved on this device."}))status.textContent="The local campaign could not be saved; your previous story is intact.";
+ next.scene=localScene(next,region,arc,0,null,introduction);
+ if(!commitCampaign(save,next,onChange,{render:true,message:"",focusScene:true}))status.textContent="The local campaign could not be saved; your previous story is intact.";
 }
 function continueLocally(profile,save,panel,status,onChange){
  const original=save.aiCampaign,region=currentRegion(save);
@@ -173,32 +288,67 @@ function continueLocally(profile,save,panel,status,onChange){
  if(!commitCampaign(save,next,onChange,{render:!next.pending,message:"Local play is ready. Existing story choices and saved history remain in place."})){status.textContent="Local play could not be saved; the prior campaign remains intact.";return}
  if(next.pending)resolveLocalPending(profile,save,panel,status,onChange);
 }
-function localOutcomeSummary(resolution,action){
- const approach=clean(action?.text||"your approach",180).replace(/^./,letter=>letter.toLowerCase());
- return clean(resolution.success
-  ?"Your decision to "+approach+" succeeds and shifts the matter in your favor."
-  :"Your attempt to "+approach+" falls short and costs time, but reveals another way forward.",300);
+function localOutcomeSummary(resolution,arc){
+ const name=arc.contact.split(",")[0],support={
+  str:"Your effort clears the way for the people who could not get through on their own.",
+  sta:"You hold out long enough for the others to catch up. Nobody has to go on alone.",
+  agi:"You get into position before anyone sees you move.",
+  dex:"A steady hand makes the difference; the work is done before anyone calls attention to it.",
+  wis:"A small detail gives away what the first account missed. You know where to look next.",
+  int:"You fit two pieces of the account together. The discrepancy gives you something to follow.",
+  cha:"A hesitant listener steps forward. You have someone willing to speak for your account."
+ };
+ return resolution.success?support[resolution.stat]:"The watch changes before your plan comes together. At "+arc.site+", "+name+" still has a way to move the inquiry forward.";
+}
+function regionalOutcome(arc,previous,lane,won){
+ const route=LOCAL_ROUTES[arc.id],beat=previous.progress,name=arc.contact.split(",")[0];
+ if(beat===3)return route.ends[lane][won?2:3];
+ if(beat===2)return won?name+" watches your preparations, then steps in beside you. “If you go through with it, I'll be right here.”":
+  name+" calls time before the preparations are finished. You can still go through with the plan, or commit to another.";
+ if(beat===1&&previous.lastLane===lane){
+  if(won)return [
+   "You piece together a record that someone else could check. "+name+" agrees to keep it safe.",
+   "This time the account comes with a name. You have a witness willing to stand beside you.",
+   name+" follows your marks through the turning without a word of guidance. You can get back here in a hurry."
+  ][lane];
+  return [
+   "The marks are too far gone to prove what happened. "+name+" tells you where to look for a second account.",
+   "The witness draws away as footsteps approach. You'll have to proceed without their word in public.",
+   "The footing gives before you can mark the crossing. You get back safely, but cannot count on a quick way through."
+  ][lane];
+ }
+ if(won)return route.finds[lane];
+ return [
+  "A second pair of hands has disturbed the marks. You can try to reconstruct them, but there is nothing yet to show "+name+".",
+  "Someone is listening. You get a warning glance and no answer; a private hearing might still open the way.",
+  "The way narrows out of sight of "+name+". You turn back before you lose your bearings; another approach might still get through."
+ ][lane];
 }
 function resolveLocalPending(profile,save,panel,status,onChange){
  const campaign=save.aiCampaign,pending=campaign.pending,region=currentRegion(save);
  if(!pending||campaign.mode!=="local"){status.textContent="There is no saved local action waiting to resolve.";return}
  if(!region||campaign.locationId!==region.id){status.textContent="Return to the scene's region before resolving this saved action.";return}
  const resolution=resolveChoice(pending.action,profile.stats,pending.roll),arc=localArcFor(campaign,region),progress=campaign.localState.progress+1;
- const outcomeSummary=localOutcomeSummary(resolution,pending.action),entry=historyEntry(campaign,campaign.scene,pending.action,{summary:outcomeSummary},resolution),history=[...campaign.history,entry].slice(-MAX_HISTORY);
- const localState={...campaign.localState,progress,successes:campaign.localState.successes+(resolution.success?1:0),setbacks:campaign.localState.setbacks+(resolution.success?0:1)};
+ // Match the saved decision, including its check. Free actions and older, already
+ // displayed scenes must not silently acquire a different authored intention.
+ const offered=campaign.scene.choices.find(c=>c.text===pending.action.text&&c.stat===pending.action.stat&&c.difficulty===pending.action.difficulty);
+ const lane=LOCAL_ROUTES[arc.id]&&validLane(offered?.lane)?offered.lane:-1;
+ const outcomeSummary=lane===-1?localOutcomeSummary(resolution,arc):regionalOutcome(arc,campaign.localState,lane,resolution.success);
+ const entry=historyEntry(campaign,campaign.scene,pending.action,{summary:outcomeSummary},resolution),history=[...campaign.history,entry].slice(-MAX_HISTORY);
+ const edges=(campaign.localState.edges||0)|(progress<=2&&lane>=0&&resolution.success?1<<lane:0);
+ const localState={...campaign.localState,progress,edges,lastLane:lane,lastWon:resolution.success,successes:campaign.localState.successes+(resolution.success?1:0),setbacks:campaign.localState.setbacks+(resolution.success?0:1)};
  let statusValue="active",summary=outcomeSummary,scene,chapters=campaign.chapters,threads=campaign.threads;
  if(progress>=LOCAL_TURNS){
-  const ending=localEnding(campaign,region,arc,localState);
+  const ending=localEnding(campaign,region,arc,localState,lane>=0?outcomeSummary:null);
   summary=ending.summary;scene=ending.scene;statusValue="chapter-complete";
   chapters=[...chapters,chapterRecord({...campaign,chapterTitle:campaign.chapterTitle||scene.title},"complete",summary,history)].slice(-40);
-  threads=ending.solved?threads:[ending.thread,...threads].slice(0,6);
- }else scene=localScene(campaign,region,arc,progress,{success:resolution.success,summary:outcomeSummary});
+  threads=ending.solved?threads:[ending.thread,...threads.filter(t=>t!==ending.thread)].slice(0,6);
+ }else scene=localScene({...campaign,localState},region,arc,progress,{success:resolution.success,summary:outcomeSummary});
  const next={...campaign,mode:"local",localState,status:statusValue,turn:pending.turn,summary,scene,history,chapters,threads,pending:null,updatedAt:new Date().toISOString()};
  const previousJournal=save.journal,previousUpdatedAt=save.updatedAt;
  save.journal=[...save.journal,"Local campaign · Chapter "+campaign.chapter+", scene "+pending.turn+": "+entry.action+" — "+entry.result+" — "+entry.summary].slice(-100);
  save.updatedAt=new Date().toISOString();
- const rollText="d20 "+resolution.roll+(resolution.modifier>=0?" + ":" - ")+Math.abs(resolution.modifier)+" = "+resolution.total+" vs DC "+resolution.dc+" · "+(resolution.success?"success":"failure");
- if(!commitCampaign(save,next,onChange,{render:true,message:rollText+" — "+outcomeSummary})){
+ if(!commitCampaign(save,next,onChange,{render:true,message:"",focusScene:true})){
   save.journal=previousJournal;save.updatedAt=previousUpdatedAt;status.textContent="The local turn could not be saved. Your exact die roll remains available.";
  }
 }
@@ -264,11 +414,11 @@ async function startChapter(profile,save,panel,status,onChange,code){
  setBusy(panel,true,"The Story Director is shaping the next part of your campaign…");
  try{
   const payload=makePayload("opening",profile,payloadCampaign,region.id,chapter,0,{previousSummary:prior}),data=await apiRequest(code,payload);
-  if(!sameActiveCharacter(profile.id))return;
+  if(!sameActiveCharacter(profile.id)||!panel.isConnected||save.aiCampaign!==original)return;
   const scene=sceneFromResponse(data,region.id);
   const next={...original,version:VERSION,mode:"ai",status:"active",seed:randomSeed(),chapter,chapterTitle:scene.title,turn:0,locationId:region.id,objective:scene.objective,summary:clean(data.summary,600),scene,chapters:archived,threads:Array.isArray(data.threads)?data.threads.map(x=>clean(x,150)).filter(Boolean).slice(0,6):carriedThreads,pending:null,lastCombatSignature:payload.combatSignature||original.lastCombatSignature,updatedAt:new Date().toISOString()};
   delete next.localState;
-  if(!commitCampaign(save,next,onChange,{render:true,message:"A new chapter is saved to this character's campaign."})){status.textContent="The AI chapter could not be saved. Your previous story is intact.";return}
+  if(!commitCampaign(save,next,onChange,{render:true,message:"",focusScene:true})){status.textContent="The AI chapter could not be saved. Your previous story is intact.";return}
  }catch(error){
   if(panel.isConnected)status.textContent=error.message;
  }finally{if(panel.isConnected)setBusy(panel,false)}
@@ -283,19 +433,18 @@ async function resolvePending(profile,save,panel,status,onChange,code){
  setBusy(panel,true,"Your saved d20 result is locked. The Story Director is continuing from it…");
  try{
   const payload=makePayload("turn",profile,campaign,region.id,campaign.chapter,pending.turn,{scene:{title:campaign.scene.title,narration:campaign.scene.narration,objective:campaign.scene.objective},action:pending.action,roll:pending.roll}),data=await apiRequest(code,payload);
-  if(!sameActiveCharacter(profile.id))return;
+  if(!sameActiveCharacter(profile.id)||!panel.isConnected||save.aiCampaign!==campaign)return;
   const scene=sceneFromResponse(data,region.id),entry=historyEntry(campaign,campaign.scene,pending.action,data,resolution),complete=data.chapterComplete===true;
   const history=[...campaign.history,entry].slice(-MAX_HISTORY),chapters=complete?[...campaign.chapters,chapterRecord({...campaign,chapterTitle:campaign.chapterTitle||campaign.scene.title},"complete",data.summary,history)].slice(-40):campaign.chapters;
   const next={...campaign,status:complete?"chapter-complete":"active",turn:pending.turn,locationId:region.id,objective:scene.objective,summary:clean(data.summary,600),scene,history,chapters,threads:Array.isArray(data.threads)?data.threads.map(x=>clean(x,150)).filter(Boolean).slice(0,6):campaign.threads,pending:null,lastCombatSignature:payload.combatSignature||campaign.lastCombatSignature,updatedAt:new Date().toISOString()};
   const previousJournal=save.journal,previousUpdatedAt=save.updatedAt;
   save.journal=[...save.journal,"AI Chronicle · Chapter "+campaign.chapter+", turn "+pending.turn+": "+entry.action+" — "+entry.result+" — "+entry.summary].slice(-100);
   save.updatedAt=new Date().toISOString();
-  if(!commitCampaign(save,next,onChange,{render:true,message:(resolution.success?"Your approach succeeds. ":"The check fails, and the story carries that setback forward. ")+"The result is saved in the Journey Log."})){
+  if(!commitCampaign(save,next,onChange,{render:true,message:"",focusScene:true})){
    save.journal=previousJournal;save.updatedAt=previousUpdatedAt;status.textContent="The AI turn could not be saved. Your exact die roll remains available to retry.";return;
   }
  }catch(error){
-  if(panel.isConnected){setBusy(panel,false);status.textContent="Your exact d20 roll is saved. "+error.message+" Retry when ready."}
-  onChange?.({render:true,message:"Your exact d20 roll is saved. "+error.message+" Retry the same action when ready."});
+  if(panel.isConnected&&sameActiveCharacter(profile.id)&&save.aiCampaign===campaign){setBusy(panel,false);onChange?.({render:true,message:"Your exact d20 roll is saved. "+error.message+" Retry this roll or continue locally."})}
  }finally{if(panel.isConnected)setBusy(panel,false)}
 }
 function chooseAction(profile,save,panel,status,onChange,code,choice){
@@ -308,98 +457,99 @@ function chooseAction(profile,save,panel,status,onChange,code,choice){
   if(!commitCampaign(save,{...campaign,pending,updatedAt:new Date().toISOString()},onChange,{render:false,message:"Your choice and exact d20 roll are saved locally."})){status.textContent="Your action could not be saved; no roll was spent.";return}
   resolveLocalPending(profile,save,panel,status,onChange);return;
  }
- if(!code){status.textContent="Enter the AI access code in Story rules, or continue this scene locally.";return}
  const roll=Math.floor(Math.random()*20)+1,pending={turn:campaign.turn+1,action:{text:clean(choice.text,180),stat:choice.stat,difficulty:choice.difficulty},roll};
  if(pending.turn>MAX_TURNS){status.textContent="This chapter is ready to conclude. Continue the chronicle to start the next one.";return}
- setCode(code);
+ if(code)setCode(code);
  const next={...campaign,pending,updatedAt:new Date().toISOString()};
  if(!commitCampaign(save,next,onChange,{render:false,message:"Your action and d20 roll are saved before the story continues."})){status.textContent="Your action could not be saved; no roll was spent.";return}
+ if(!code){onChange?.({render:true,message:"Your roll is saved. Continue locally or connect the Story Director.",focusScene:true});return}
  status.textContent="Your d20 result is saved. The Story Director is writing what follows.";
  resolvePending(profile,save,panel,status,onChange,code);
 }
-function render(profile,save,onChange){
+const ARRIVAL_NOTES=Object.freeze({
+ "night-harbor":"A porter shoulders a bale past you. Beyond the awnings, a brass bell rings twice and a pilot calls for the tide. Half the quay is already moving; the other half is listening.",
+ underdocks:"The lift vanishes into the rock overhead. Water ticks from its chain into the black harbor. On the landing, a crew waits with its lamps turned low.",
+ penshaw:"A boat noses up to the pilings. Someone catches the painter before the hull can knock against the wood. Farther up the landing, a quiet argument breaks off as people turn to look.",
+ faelindral:"A basket comes up through the leaves on a creaking rope. Above you, travelers step aside on the wooden walk to let its keeper pass.",
+ "ail-vorith":"Footsteps carry a long way through the gallery. A stone tender cups a lamp against a cold draft and listens until the last echo fades."
+});
+function render(profile,save,onChange,navigation={}){
  const panel=element("section",undefined,"soa-mnm-adventure-panel soa-mnm-ai-chronicle");panel.setAttribute("aria-label","M&M Adventure campaign");
- const region=currentRegion(save),campaign=save.aiCampaign,isLocal=campaign.mode==="local",code=getCode();
- panel.append(element("div",isLocal?"LOCAL CAMPAIGN · SAVED ON THIS DEVICE":"AÊTHORIL · AI CHRONICLE","soa-mnm-kicker"),element("h2",isLocal?"A local campaign in Aêthoril":"A living story in Aêthoril"));
- const connection=element("details",undefined,"soa-mnm-ai-connection");connection.open=campaign.status==="idle"||!code&&(!isLocal||campaign.status==="chapter-complete");
- connection.append(element("summary","AI connection and story rules"));
- connection.append(element("p","AI-written scenes need the separate Cloudflare access code and a working internet connection. A local campaign works on this device without either. Both modes save choices and custom d20 checks; story text cannot change Health, Focus, levels, XP, abilities, items, currency, or combat results."));
- const label=element("label","AI access code (not an API key)","soa-mnm-system-label");label.htmlFor="soa-mnm-ai-code";
- const codeInput=element("input",undefined,"soa-mnm-system-input");codeInput.id="soa-mnm-ai-code";codeInput.type="password";codeInput.autocomplete="off";codeInput.placeholder="Cloudflare AI_ACCESS_CODE";codeInput.value=getCode();label.append(codeInput);connection.append(label);
- const connectionStatus=element("p","The access code stays in this browser tab. Local campaigns do not use it or consume AI quota.","soa-mnm-live");connectionStatus.setAttribute("role","status");connectionStatus.setAttribute("aria-live","polite");connection.append(connectionStatus);
- const test=element("button","Test AI connection","soa-mnm-system-button");test.type="button";test.dataset.aiConnection="true";
- test.onclick=async()=>{const code=codeInput.value.trim();if(!code){connectionStatus.textContent="Enter the separate AI access code configured in Cloudflare.";return}setCode(code);test.disabled=true;connectionStatus.textContent="Checking the Story Director…";try{const result=await apiRequest(code,null);if(!panel.isConnected||!sameActiveCharacter(profile.id))return;connectionStatus.textContent=result.status||"AI connection ready."}catch(error){if(panel.isConnected)connectionStatus.textContent=error.message}finally{test.disabled=false}};
- connection.append(test);panel.append(connection);
- const status=element("p","", "soa-mnm-live");status.dataset.aiStatus="true";status.setAttribute("role","status");status.setAttribute("aria-live","polite");panel.append(status);
- if(!region){panel.append(element("p","No connected world region is available for this character."));return panel}
+ const region=currentRegion(save),campaign=save.aiCampaign,isLocal=campaign?.mode==="local",savedCode=getCode();
+ const button=(text,action,primary=false)=>{const b=element("button",text,"soa-mnm-system-button"+(primary?" soa-mnm-ai-primary":""));b.type="button";b.onclick=action;return b};
+ const disclosure=(title,cls)=>{const d=element("details",undefined,cls);d.append(element("summary",title));return d};
+ const status=element("p","","soa-mnm-live");status.dataset.aiStatus="true";status.setAttribute("role","status");status.setAttribute("aria-live","polite");
+ if(!region||!campaign||!validCampaign(campaign,profile)){panel.append(element("h2","Adventure paused"),element("p","The saved campaign or its location could not be loaded. Your story has been preserved."));return panel}
+ const connection=disclosure("Story Director connection and game rules","soa-mnm-ai-connection");
+ connection.append(element("p","Connect the Story Director for AI-written scenes. You can also play a complete local chapter without signing in. Both use the same dice: roll a d20 and add your stat modifier to meet the target. A natural 20 always succeeds; a natural 1 always fails."));
+ const label=element("label","Story access code","soa-mnm-system-label");
+ const input=element("input",undefined,"soa-mnm-system-input");input.type="password";input.id="soa-mnm-ai-code";label.htmlFor=input.id;input.autocomplete="off";input.value=savedCode;input.placeholder="Access code";input.onchange=()=>setCode(input.value.trim());label.append(input);
+ const feedback=element("p","The code is kept in this tab.","soa-mnm-live");feedback.setAttribute("role","status");
+ const code=()=>input.value.trim();
+ let waitingForCode=null;
+ const proceed=button("Continue with this code",()=>{const value=code();if(!value){input.focus();return}const next=waitingForCode;waitingForCode=null;proceed.hidden=true;next?.(value)});proceed.hidden=true;
+ const withDirector=cb=>{const value=code();if(value){waitingForCode=null;proceed.hidden=true;cb(value);return}waitingForCode=cb;connection.open=true;proceed.hidden=false;feedback.textContent="Enter your story access code to continue.";input.focus()};
+ input.onkeydown=event=>{if(event.key==="Enter"&&waitingForCode){event.preventDefault();proceed.click()}};
+ const test=button("Check connection",()=>withDirector(async value=>{setCode(value);test.disabled=true;feedback.textContent="Contacting the Story Director…";try{const result=await apiRequest(value,null);if(panel.isConnected&&sameActiveCharacter(profile.id))feedback.textContent=result.status||"Connection ready."}catch(error){if(panel.isConnected)feedback.textContent=error.message}finally{test.disabled=false}}));test.dataset.aiConnection="true";
+ connection.append(label,proceed,test,feedback);
+ const localButton=(text,primary=true)=>button(text,()=>startLocalChapter(profile,save,panel,status,onChange),primary);
+ const directorButton=(text,primary=false)=>button(text,()=>withDirector(value=>startChapter(profile,save,panel,status,onChange,value)),primary);
+ const leadButtons=(localText,aiText)=>{
+  if(savedCode&&!isLocal)panel.append(directorButton(aiText,true),localButton(localText,false));
+  else panel.append(localButton(localText),directorButton(aiText));
+ };
  if(campaign.status==="idle"){
-  panel.append(element("p","Begin in "+region.name+(region.zone?", "+region.zone:"")+". Choose AI-written scenes if you have the access code, or start a saved local adventure immediately. Your race, class, and starting home shape the setting; custom d20 checks decide how each lead changes."));
-  const aiStart=element("button","Begin an AI-generated campaign","soa-mnm-system-button");aiStart.type="button";aiStart.onclick=()=>startChapter(profile,save,panel,status,onChange,codeInput.value.trim()||getCode());
-  const localStart=element("button","Start a local campaign now","soa-mnm-system-button soa-mnm-ai-primary");localStart.type="button";localStart.onclick=()=>startLocalChapter(profile,save,panel,status,onChange);
-  if(code){panel.append(aiStart,localStart)}else{panel.append(localStart,aiStart)}
-  panel.append(element("p","Local chapters are selected from original regional story arcs. Each has four d20 decisions, success and setback branches, an ending, and an optional custom XP claim; local play does not need an AI service.","soa-mnm-note"));
-  return panel;
+  panel.append(element("div",region.name+" · "+(region.zone||"Aêthoril"),"soa-mnm-kicker"),element("h2","Arrival in "+region.name),element("p",ARRIVAL_NOTES[region.id]||"A few travelers linger where the road reaches "+region.name+". Someone here has a story to tell.","soa-mnm-ai-narrative"),status);
+  leadButtons("Follow a local lead","Begin an AI-written adventure");
+  panel.append(connection);return panel;
  }
- const migrated=migrateCampaign(campaign,profile);
- if(!migrated||!validCampaign(campaign,profile)){panel.append(element("p","Campaign data did not pass its save check and was preserved. No story state was reset."));return panel}
- const currentMatches=campaign.locationId===region.id;
- panel.append(element("div",(isLocal?"LOCAL CHAPTER ":"CHAPTER ")+campaign.chapter+(campaign.turn?" · SCENE "+campaign.turn:""),"soa-mnm-kicker"),element("h3",campaign.chapterTitle||campaign.scene.title),element("p",campaign.scene.narration,"soa-mnm-ai-narrative"));
- if(campaign.objective)panel.append(element("p","Current aim · "+campaign.objective,"soa-mnm-feature-status"));
- if(isLocal&&campaign.history.length){const latest=campaign.history.filter(row=>row.chapter===campaign.chapter).slice(-1)[0];if(latest)panel.append(element("p","Last check · "+latest.result+" — "+latest.summary,"soa-mnm-feature-status"))}
- if(campaign.threads.length){const leads=element("details",undefined,"soa-mnm-ai-history");leads.append(element("summary","Open leads and unresolved threads"));const list=element("ul",undefined,"soa-mnm-journal");campaign.threads.forEach(thread=>list.append(element("li",thread)));leads.append(list);panel.append(leads)}
+ const currentMatches=campaign.locationId===region.id,sceneRegion=regions().find(x=>x.id===campaign.locationId)?.name||"another region",complete=campaign.status==="chapter-complete";
+ const displayTitle=campaign.scene.title||campaign.chapterTitle,sceneNo=campaign.turn+1;
+ panel.append(element("div",sceneRegion+" · Chapter "+campaign.chapter+(complete?" · Complete":isLocal?" · Scene "+sceneNo+" of "+LOCAL_TURNS:" · Scene "+sceneNo),"soa-mnm-kicker"),element("h2",displayTitle),element("p",campaign.scene.narration,"soa-mnm-ai-narrative"),status);
+ if(!complete&&campaign.objective)panel.append(element("p","Your aim: "+campaign.objective,"soa-mnm-feature-status"));
+ const latest=campaign.history.filter(row=>row.chapter===campaign.chapter).slice(-1)[0];
+ if(latest){const roll=disclosure("Last roll: "+latest.result,"soa-mnm-roll-receipt");roll.append(element("p",latest.action));panel.append(roll)}
+ const systems=window.soaMnmSystems,sys=systems?.read?.(profile);
+ const rewardButton=(chapter,caption)=>button(caption,()=>{const result=systems?.claimStoryReward?.(profile,"ai-chapter-"+chapter,90);if(!result?.ok){status.textContent=result?.error||"The reward could not be saved.";return}onChange?.({render:true,message:result.result.alreadyClaimed?"You already claimed this chapter reward.":"Chapter "+chapter+": "+result.result.xp+" XP claimed."})});
+ const claimed=chapter=>sys?.ok&&sys.save.rpg.claimedStories.includes("ai-chapter-"+chapter);
  if(!currentMatches&&campaign.pending){
-  panel.append(element("p","Your action and exact die roll are saved with the scene at "+(regions().find(x=>x.id===campaign.locationId)?.name||"another location")+". Return there through the World tab before retrying; the roll cannot be changed."));
+  panel.append(element("p","Your action and its roll are waiting in "+sceneRegion+". Return there to see what happens."));if(navigation.onOpenWorld)panel.append(button("Find the route to "+sceneRegion,navigation.onOpenWorld,true));
  }else if(!currentMatches){
-  panel.append(element("p","This scene is saved at "+(regions().find(x=>x.id===campaign.locationId)?.name||"another location")+". Start a chapter here and the unresolved lead will carry into the campaign journal."));
-  const move=element("button","Start an AI chapter in "+region.name,"soa-mnm-system-button");move.type="button";move.onclick=()=>startChapter(profile,save,panel,status,onChange,codeInput.value.trim()||getCode());panel.append(move);
-  const localMove=element("button","Start a local chapter here","soa-mnm-system-button soa-mnm-ai-primary");localMove.type="button";localMove.onclick=()=>startLocalChapter(profile,save,panel,status,onChange);panel.append(localMove);
- }else if(campaign.status==="chapter-complete"){
-  panel.append(element("p","Chapter summary · "+campaign.summary,"soa-mnm-feature-status"));
-  const rewardId="ai-chapter-"+campaign.chapter,systems=window.soaMnmSystems,systemSave=systems?.read?.(profile),rewardClaimed=!!(systemSave?.ok&&systemSave.save.rpg.claimedStories.includes(rewardId));
-  if(rewardClaimed)panel.append(element("p","This chapter's optional custom XP reward has already been claimed."));
-  else{
-   const reward=element("button","Claim optional 90 custom XP","soa-mnm-system-button");reward.type="button";reward.onclick=()=>{const result=systems?.claimStoryReward?.(profile,rewardId,90);if(!result?.ok){status.textContent=result?.error||"The chapter reward could not be saved.";return}status.textContent="Claimed "+result.result.xp+" custom XP for this campaign chapter.";onChange?.({render:true,message:status.textContent})};panel.append(reward);
-  }
-  panel.append(element("small","Chapter rewards and the leveling curve are original M&M: RPG rules. You can continue without claiming the reward.","soa-mnm-note"));
-  if(isLocal){
-   const next=element("button","Continue the local campaign","soa-mnm-system-button soa-mnm-ai-primary");next.type="button";next.onclick=()=>startLocalChapter(profile,save,panel,status,onChange);panel.append(next);
-   const aiNext=element("button","Continue with AI-generated chapters","soa-mnm-system-button");aiNext.type="button";aiNext.onclick=()=>startChapter(profile,save,panel,status,onChange,codeInput.value.trim()||getCode());panel.append(aiNext);
-  }else{
-   const next=element("button","Continue the AI campaign","soa-mnm-system-button soa-mnm-ai-primary");next.type="button";next.onclick=()=>startChapter(profile,save,panel,status,onChange,codeInput.value.trim()||getCode());panel.append(next);
-   const localNext=element("button","Continue locally with a new chapter","soa-mnm-system-button");localNext.type="button";localNext.onclick=()=>startLocalChapter(profile,save,panel,status,onChange);panel.append(localNext);
-  }
+  panel.append(element("p",complete?"You are now in "+region.name+". Pick up your next lead here.":"You are now in "+region.name+". Starting a chapter here leaves your old lead in the journal. You can also travel back to finish it."));
+  leadButtons("Follow a lead in "+region.name,"Begin an AI chapter here");if(!complete&&navigation.onOpenWorld)panel.append(button("Find the route back to "+sceneRegion,navigation.onOpenWorld));
+ }else if(complete){
+  panel.append(element("h3","Where next?","soa-mnm-decision-heading"));
+  leadButtons("Follow another local lead","Continue with the Story Director");
+  if(navigation.onOpenWorld)panel.append(button("Take the road",navigation.onOpenWorld));
  }else if(campaign.pending){
-  const outcome=resolveChoice(campaign.pending.action,profile.stats,campaign.pending.roll);
-  panel.append(element("p","Saved choice · "+campaign.pending.action.text+" ("+STAT_NAMES[campaign.pending.action.stat]+" · DC "+outcome.dc+")","soa-mnm-feature-status"));
-  panel.append(element("p","Locked roll · d20 "+outcome.roll+" + "+outcome.modifier+" = "+outcome.total+" vs DC "+outcome.dc+" · "+(outcome.success?"success":"failure")+"; the saved roll cannot change."));
-  if(isLocal){
-   const resolve=element("button","Resolve this saved roll","soa-mnm-system-button soa-mnm-ai-primary");resolve.type="button";resolve.onclick=()=>resolveLocalPending(profile,save,panel,status,onChange);panel.append(resolve);
-  }else{
-   const retry=element("button","Retry this same roll","soa-mnm-system-button soa-mnm-ai-primary");retry.type="button";retry.onclick=()=>resolvePending(profile,save,panel,status,onChange,codeInput.value.trim()||getCode());panel.append(retry);
-   const local=element("button","Continue locally with the same roll","soa-mnm-system-button");local.type="button";local.onclick=()=>continueLocally(profile,save,panel,status,onChange);panel.append(local);
+  const p=campaign.pending,outcome=resolveChoice(p.action,profile.stats,p.roll);
+  panel.append(element("h3","Your move is recorded","soa-mnm-decision-heading"),element("p",p.action.text),element("p",STAT_NAMES[p.action.stat]+" · d20 "+outcome.roll+(outcome.modifier<0?" − ":" + ")+Math.abs(outcome.modifier)+" = "+outcome.total+" vs DC "+outcome.dc+" · "+(outcome.success?"Success":"Setback"),"soa-mnm-feature-status"));
+  if(isLocal)panel.append(button("Reveal the outcome",()=>resolveLocalPending(profile,save,panel,status,onChange),true));
+  else{
+   const local=button("Play out this roll locally",()=>continueLocally(profile,save,panel,status,onChange),!savedCode),remote=button("Resolve with the Story Director",()=>withDirector(value=>resolvePending(profile,save,panel,status,onChange,value)),!!savedCode);
+   panel.append(...(savedCode?[remote,local]:[local,remote]));
   }
  }else{
+  panel.append(element("h3","What do you do?","soa-mnm-decision-heading"));
+  const signed=n=>n<0?"−"+Math.abs(n):"+"+n,mod=stat=>Math.floor((Number(profile.stats?.[stat]??10)-10)/2);
   const grid=element("div",undefined,"soa-mnm-choice-grid");
-  campaign.scene.choices.forEach(choice=>{const button=element("button",undefined,"soa-mnm-choice soa-mnm-ai-choice");button.type="button";button.append(element("strong",choice.text),element("span",STAT_NAMES[choice.stat]+" · "+choice.difficulty+" · DC "+choice.dc+" (custom story check)"));button.onclick=()=>chooseAction(profile,save,panel,status,onChange,codeInput.value.trim()||getCode(),choice);grid.append(button)});
-  panel.append(grid);
-  const form=element("form",undefined,"soa-mnm-ai-custom-action");
-  form.append(element("h3","Try your own approach"),element("p","Describe a different action. Choose the stat and difficulty; this uses the same local d20 rules as the generated choices."));
-  const actionLabel=element("label","Your action","soa-mnm-system-label"),actionInput=element("textarea",undefined,"soa-mnm-system-input");actionInput.maxLength=180;actionInput.required=true;actionInput.rows=3;actionInput.placeholder="What do you try?";actionLabel.append(actionInput);form.append(actionLabel);
-  const controls=element("div",undefined,"soa-mnm-ai-action-controls"),statLabel=element("label","Stat","soa-mnm-system-label"),statSelect=element("select",undefined,"soa-mnm-system-input"),sorted=STATS.slice().sort((a,b)=>Number(profile.stats?.[b]||10)-Number(profile.stats?.[a]||10));
-  sorted.forEach(stat=>{const option=element("option",STAT_NAMES[stat]);option.value=stat;statSelect.append(option)});statLabel.append(statSelect);
-  const difficultyLabel=element("label","Difficulty","soa-mnm-system-label"),difficultySelect=element("select",undefined,"soa-mnm-system-input");
-  [["easy","Easy · DC 11"],["standard","Standard · DC 13"],["hard","Hard · DC 15"]].forEach(([value,labelText])=>{const option=element("option",labelText);option.value=value;difficultySelect.append(option)});difficultyLabel.append(difficultySelect);controls.append(statLabel,difficultyLabel);form.append(controls);
-  const submit=element("button","Resolve my action","soa-mnm-system-button");submit.type="submit";form.append(submit);
-  form.addEventListener("submit",event=>{event.preventDefault();const text=clean(actionInput.value,180);if(text.length<8){status.textContent="Describe your action in at least eight characters.";return}chooseAction(profile,save,panel,status,onChange,codeInput.value.trim()||getCode(),{text,stat:statSelect.value,difficulty:difficultySelect.value})});
-  panel.append(form);
-  if(!isLocal){
-   const local=element("button","Continue this scene locally","soa-mnm-system-button");local.type="button";local.onclick=()=>continueLocally(profile,save,panel,status,onChange);panel.append(local);
-  }
+  campaign.scene.choices.forEach(choice=>{const b=element("button",undefined,"soa-mnm-choice soa-mnm-ai-choice");b.type="button";b.append(element("strong",choice.text),element("span",STAT_NAMES[choice.stat]+" "+signed(mod(choice.stat))+" · DC "+choice.dc+(choice.advantage?" · "+choice.advantage:"")));b.onclick=()=>chooseAction(profile,save,panel,status,onChange,code(),choice);grid.append(b)});panel.append(grid);
+  const manual=disclosure("Try your own approach","soa-mnm-ai-custom-disclosure"),form=element("form",undefined,"soa-mnm-ai-custom-action");
+  const actionLabel=element("label","Describe your action","soa-mnm-system-label"),action=element("textarea",undefined,"soa-mnm-system-input");action.maxLength=180;action.minLength=8;action.required=true;action.rows=2;actionLabel.append(action);form.append(actionLabel);
+  const controls=element("div",undefined,"soa-mnm-ai-action-controls"),statLabel=element("label","Roll with","soa-mnm-system-label"),stat=element("select",undefined,"soa-mnm-system-input");
+  STATS.slice().sort((a,b)=>mod(b)-mod(a)).forEach(key=>{const option=element("option",STAT_NAMES[key]+" "+signed(mod(key)));option.value=key;stat.append(option)});statLabel.append(stat);
+  const diffLabel=element("label","Difficulty","soa-mnm-system-label"),diff=element("select",undefined,"soa-mnm-system-input");
+  Object.entries(DIFFICULTY_DC).forEach(([key,dc])=>{const opt=element("option",key[0].toUpperCase()+key.slice(1)+" · DC "+dc);opt.value=key;diff.append(opt)});diff.value="standard";diffLabel.append(diff);controls.append(statLabel,diffLabel);form.append(controls);
+  const submit=element("button","Roll for this action","soa-mnm-system-button");submit.type="submit";form.append(submit);
+  form.addEventListener("submit",event=>{event.preventDefault();const text=clean(action.value,180);if(text.length<8){action.setCustomValidity("Describe your action in at least eight characters.");action.reportValidity();return}chooseAction(profile,save,panel,status,onChange,code(),{text,stat:stat.value,difficulty:diff.value})});action.oninput=()=>action.setCustomValidity("");
+  manual.append(form);panel.append(manual);
+  if(!isLocal)connection.append(button("Switch this chapter to local play",()=>continueLocally(profile,save,panel,status,onChange)));
  }
- const history=campaign.history.slice(-8);
- if(history.length){const details=element("details",undefined,"soa-mnm-ai-history");details.append(element("summary","Recent choices and rolls"));const list=element("ol",undefined,"soa-mnm-journal");history.forEach(row=>list.append(element("li","Ch. "+row.chapter+" · "+row.title+" — "+row.action+" ("+row.result+") · "+row.summary)));details.append(list);panel.append(details)}
- if(campaign.chapters.length){const details=element("details",undefined,"soa-mnm-ai-history");details.append(element("summary","Earlier chapters · "+campaign.chapters.length));const list=element("ol",undefined,"soa-mnm-journal");campaign.chapters.slice(-8).forEach(row=>list.append(element("li","Ch. "+row.chapter+" · "+row.title+" ["+row.status+"] — "+row.summary)));details.append(list);panel.append(details)}
- return panel;
+ if(complete&&!claimed(campaign.chapter))panel.append(rewardButton(campaign.chapter,"Claim chapter reward · 90 XP"));
+ if(campaign.threads.length){const leads=disclosure("Unresolved leads · "+campaign.threads.length,"soa-mnm-ai-history"),list=element("ul",undefined,"soa-mnm-journal");campaign.threads.forEach(thread=>list.append(element("li",thread)));leads.append(list);panel.append(leads)}
+ if(campaign.history.length){const history=disclosure("Recent choices and rolls","soa-mnm-ai-history"),list=element("ol",undefined,"soa-mnm-journal");list.reversed=true;campaign.history.slice(-8).reverse().forEach(row=>list.append(element("li","Chapter "+row.chapter+" · "+row.action+" — "+row.result+". "+row.summary)));history.append(list);panel.append(history)}
+ if(campaign.chapters.length){const records=disclosure("Chapter journal · "+campaign.chapters.length,"soa-mnm-ai-history"),list=element("ul",undefined,"soa-mnm-journal");campaign.chapters.slice().reverse().forEach(row=>{const item=element("li","Chapter "+row.chapter+" · "+row.title+" · "+(row.status==="paused"?"Lead left open":"Complete")+". "+row.summary);if(row.status==="complete"&&!claimed(row.chapter)&&!(complete&&row.chapter===campaign.chapter))item.append(rewardButton(row.chapter,"Claim chapter "+row.chapter+" reward · 90 XP"));list.append(item)});records.append(list);panel.append(records)}
+ panel.append(connection);return panel;
 }
 window.soaMnmAiChronicle=Object.freeze({version:VERSION,maxTurns:MAX_TURNS,difficultyDC:DIFFICULTY_DC,createCampaign,validCampaign,validScene,migrateCampaign,resolveChoice,render});
 })();
