@@ -100,19 +100,32 @@ function boot(){
  screen.append(app);
  app.addEventListener("soa-mnm-system-update",()=>render());
  let view="ai",statusText=loadMessage;
+ const views=[["ai","Adventure"],["arena","Arena"],["world","World"],["character","Character"],["journal","Journey Log"],["combat","Combat"],["progress","Progress"],["inventory","Items"]];
  function button(label,description,onClick,cls){
   const b=el("button",undefined,"soa-mnm-choice"+(cls?" "+cls:""));b.type="button";
   b.append(el("strong",label),el("span",description));b.onclick=onClick;return b;
  }
  function setView(name,focus){
+  if(!blocked)statusText="";
   view=name;render();
   if(focus)app.querySelector('[data-view="'+name+'"]')?.focus();
+ }
+ function focusScene(){
+  const heading=app.querySelector(".soa-mnm-ai-chronicle h2");
+  if(!heading)return;
+  heading.tabIndex=-1;
+  heading.focus({preventScroll:true});
+  const box=heading.getBoundingClientRect?.();
+  if(box&&(box.top<0||box.bottom>window.innerHeight))heading.scrollIntoView?.({block:"start"});
+ }
+ function systemContext(){
+  return {locationId:save.currentLocation,returnToBindPoint:destination=>activeBindPointReturn(destination),onResumeAdventure:()=>setView("ai",true),onOpenWorld:()=>setView("world",true)};
  }
  function persistAiCampaign(options={}){
   if(blocked||!save)return false;
   if(window.soaSaveRules?.isIntegrityBlocked?.()){blocked=true;statusText="Saved data is paused until the character archive is recovered.";render();return false;}
   const previousUpdatedAt=save.updatedAt;
-  try{save.updatedAt=new Date().toISOString();localStorage.setItem(KEY,JSON.stringify(save));statusText=options.message||"Campaign saved to this character's story.";if(options.render!==false)render();return true}
+  try{save.updatedAt=new Date().toISOString();localStorage.setItem(KEY,JSON.stringify(save));statusText=options.message??"";if(options.render!==false){render();if(view==="ai"&&options.focusScene)focusScene()}return true}
   catch{save.updatedAt=previousUpdatedAt;statusText="The campaign could not be saved. Your previous saved story is intact.";return false}
  }
  function currentStoryProfile(){
@@ -148,7 +161,7 @@ function boot(){
   const next=clone(save),region=REGIONS.find(item=>item.id===next.currentLocation),name=arenaNameForRegion(next.currentLocation);
   next.currentSite=site;
   addJournal(next,site==="arena"?"Traveled from "+region.name+" city streets to "+name+".":"Returned from "+name+" to "+region.name+" city streets.");
-  if(persistAdventure(next,site==="arena"?"You arrive at "+name+". Arena challenges are available here.":"You return to the streets of "+region.name+"."))render();
+  if(persistAdventure(next,site==="arena"?"You arrive at "+name+".":"You return to the streets of "+region.name+".")){view=site==="arena"?"arena":"world";render();app.querySelector('[data-view="'+view+'"]')?.focus()}
  }
  function travelToRegion(to){
   if(blocked||!save)return;
@@ -201,8 +214,10 @@ function boot(){
   const region=REGIONS.find(item=>item.id===save.currentLocation)||REGIONS[0],name=arenaNameForRegion(region.id);
   panel.append(el("div","CITY ARENA · CUSTOM M&M: RPG RULES","soa-mnm-kicker"),el("h2",name));
   if(save.currentSite!=="arena"){
-   panel.append(el("p","You are in "+region.name+", not at its arena. Arena services only work after traveling there in person."));
-   panel.append(button("Travel through the city","Open World and travel to "+name+". Choosing this tab does not move your character.",()=>setView("world",true),"med"));
+   const state=window.soaMnmSystems?.read?.(profile),foe=state?.ok&&state.save.rpg.encounter;
+   panel.append(el("p","From the streets of "+region.name+", you can make your way to "+name+" to challenge a local opponent."));
+   if(foe)panel.append(button("Continue the encounter",foe.name+" is still in your path. Finish the fight or escape before you travel.",()=>setView("combat",true),"med"));
+   else panel.append(button("Walk to "+name,"Travel to the arena. You can inspect the ring before you enter a bout.",()=>travelWithinCity("arena"),"med"));
    return;
   }
   panel.append(el("p","You are physically at "+name+". Bouts use the shared turn-based combat system and this region's custom encounter table. Standard M&M: RPG custom combat rewards apply; these are not official M&M arena rules."));
@@ -210,8 +225,8 @@ function boot(){
   if(!state?.ok){panel.append(el("p",state?.error||"Arena combat could not be loaded safely."));return}
   const foe=state.save.rpg.encounter;
   if(save.arenaEncounterId&&foe?.id===save.arenaEncounterId){
-   panel.append(el("p","Arena bout in progress · "+foe.name+" · Round "+foe.round,"soa-mnm-feature-status"));
-   const combat=window.soaMnmSystems.render("combat",currentStoryProfile(),()=>{synchronizeArenaCombat();render()},{locationId:save.currentLocation,returnToBindPoint:destination=>activeBindPointReturn(destination)});
+   panel.append(el("p","Arena bout in progress · "+foe.name+" · Round "+(foe.round+1),"soa-mnm-feature-status"));
+   const combat=window.soaMnmSystems.render("combat",currentStoryProfile(),()=>{synchronizeArenaCombat();render()},systemContext());
    if(combat)panel.append(combat);else panel.append(el("p","Combat could not be loaded. Your saved bout remains intact.","soa-mnm-live"));
   }else if(foe){
    panel.append(el("p","Finish or escape your current encounter in the Combat tab before entering the arena."));
@@ -226,7 +241,7 @@ function boot(){
  function renderJournal(panel){
   panel.append(el("div","YOUR ADVENTURE · LOCAL JOURNAL","soa-mnm-kicker"),el("h2","Journey Log"));
   if(!save?.journal?.length)panel.append(el("p","No journal entries have been recorded yet. Begin a generated chapter or travel through the World tab."));
-  else{const list=el("ol",undefined,"soa-mnm-journal");for(const line of save.journal)list.append(el("li",line));panel.append(list)}
+  else{const list=el("ol",undefined,"soa-mnm-journal");list.reversed=true;for(const line of save.journal.slice().reverse())list.append(el("li",line));panel.append(list)}
   panel.append(el("p","Saved on this device with the selected character's other save data. It is included in the character archive backup."));
  }
  function renderWorld(panel){
@@ -246,6 +261,7 @@ function boot(){
   if(hasEncounter){
    panel.append(el("p","Active encounter · "+encounter.name+" · Level "+encounter.level+" · Health "+encounter.hp+" / "+encounter.maxHp,"soa-mnm-feature-status"));
    panel.append(button("Continue the encounter","Open Combat to take a turn or try to escape. City travel unlocks when the encounter ends.",()=>setView("combat",true),"med"));
+   return;
   }
   const arenaButton=button("Travel to "+arena,"Visit the city arena in person. The Arena tab stays unavailable for bouts until you arrive.",()=>travelWithinCity("arena"),"med");
   arenaButton.disabled=!state?.ok||hasEncounter;panel.append(arenaButton);
@@ -263,16 +279,18 @@ function boot(){
   if(!blocked)synchronizeArenaCombat();
   app.replaceChildren();
   const hero=el("section",undefined,"soa-mnm-game-heading");
-  hero.append(el("div","MONSTERS & MEMORIES \u00b7 ORIGINAL ADVENTURE","soa-mnm-kicker"),el("h1",profile.name));
+  hero.append(el("div","MONSTERS & MEMORIES · ADVENTURER","soa-mnm-kicker"),el("h1",profile.name));
   const current=REGIONS.find(x=>x.id===save?.currentLocation);
+  hero.dataset.region=current?.id||"";
   const currentLevel=window.soaMnmSystems?.progressFor?.(profile)?.level||profile.level||1;
   const currentProfile={...profile,level:currentLevel};
   hero.append(el("p",profile.race+" "+profile.className+" · Level "+currentLevel+" · "+(current?(save.currentSite==="arena"?"At "+arenaNameForRegion(current.id)+" · "+current.zone:"In "+current.name+(current.zone?" · "+current.zone:"")):"Choose a starting city"),"soa-mnm-subtitle"));
-  const racial=window.soaMnmRules.racialAbilities?.[profile.raceId];if(racial)hero.append(el("p","CUSTOM RACIAL FEATURE · "+racial.name+" - "+racial.description+" Effect: "+racial.effect,"soa-mnm-feature"));
   app.append(hero);
   const tabs=el("div",undefined,"soa-mnm-tabs");tabs.setAttribute("role","tablist");tabs.setAttribute("aria-label","M&M character views");
-  for(const [id,label] of [["ai","Adventure"],["arena","Arena"],["world","World"],["character","Character"],["journal","Journey Log"],["combat","Combat"],["progress","Progress"],["inventory","Items"]]){
-   const b=el("button",label,"soa-mnm-tab");b.type="button";b.dataset.view=id;b.setAttribute("role","tab");b.setAttribute("aria-selected",String(view===id));b.onclick=()=>setView(id,false);tabs.append(b);
+  for(const [index,[id,label]] of views.entries()){
+   const b=el("button",label,"soa-mnm-tab");b.type="button";b.dataset.view=id;b.id="soa-mnm-tab-"+id;b.tabIndex=view===id?0:-1;b.setAttribute("role","tab");b.setAttribute("aria-selected",String(view===id));b.onclick=()=>setView(id,true);
+   b.onkeydown=event=>{const target={Home:0,End:views.length-1,ArrowLeft:(index-1+views.length)%views.length,ArrowRight:(index+1)%views.length}[event.key];if(target===undefined)return;event.preventDefault();setView(views[target][0],true)};
+   tabs.append(b);
   }
   app.append(tabs);
   if(statusText){const live=el("p",statusText,"soa-mnm-live");live.setAttribute("role","status");live.setAttribute("aria-live","polite");app.append(live)}
@@ -285,11 +303,17 @@ function boot(){
   }else if(view==="world"){
    const pane=el("section",undefined,"soa-mnm-adventure-panel");renderWorld(pane);app.append(pane);
   }else if(view==="ai"){
-   const aiPanel=window.soaMnmAiChronicle?.render?.(currentProfile,save,persistAiCampaign);
+   const state=window.soaMnmSystems?.read?.(profile),foe=state?.ok&&state.save.rpg.encounter;
+   if(foe){
+    const pane=el("section",undefined,"soa-mnm-adventure-panel soa-mnm-encounter-resume");
+    pane.append(el("div","ENCOUNTER IN PROGRESS · ROUND "+(foe.round+1),"soa-mnm-kicker"),el("h2",foe.name),el("p","Your chapter is bookmarked. Take your next turn or try to escape to continue the story."),button("Resume the encounter","Face "+foe.name+" · "+foe.hp+" / "+foe.maxHp+" Health",()=>setView(save.arenaEncounterId===foe.id?"arena":"combat",true),"med"));app.append(pane);
+   }else{
+   const aiPanel=window.soaMnmAiChronicle?.render?.(currentProfile,save,persistAiCampaign,{onOpenWorld:()=>setView("world",true)});
    if(aiPanel)app.append(aiPanel);
    else{const pane=el("section",undefined,"soa-mnm-adventure-panel");pane.append(el("h2","AI Chronicle unavailable"),el("p","The AI story module did not load. World travel, combat, the Arena, inventory, and character-bound saves remain available."));app.append(pane)}
+   }
   }else if(view==="combat"||view==="progress"||view==="inventory"){
-   const systemPanel=window.soaMnmSystems?.render?.(view,currentProfile,()=>render(),{locationId:save.currentLocation,returnToBindPoint:destination=>activeBindPointReturn(destination)});
+   const systemPanel=window.soaMnmSystems?.render?.(view,currentProfile,()=>render(),systemContext());
    if(systemPanel)app.append(systemPanel);
    else{const pane=el("section",undefined,"soa-mnm-adventure-panel");pane.append(el("h2","M&M system unavailable"),el("p","The M&M rules module did not load."));app.append(pane)}
   }else if(view==="arena"){
@@ -297,6 +321,7 @@ function boot(){
   }else{
    const pane=el("section",undefined,"soa-mnm-adventure-panel");pane.append(el("h2","View unavailable"),el("p","Choose one of the available character views."));app.append(pane);
   }
+  const activePanel=app.lastElementChild;if(activePanel&&activePanel!==tabs){activePanel.setAttribute("role","tabpanel");if(!activePanel.id)activePanel.id="soa-mnm-view-"+view;activePanel.setAttribute("aria-labelledby","soa-mnm-tab-"+view);app.querySelector('[data-view="'+view+'"]')?.setAttribute("aria-controls",activePanel.id)}
   const rules=el("details",undefined,"soa-mnm-rules-disclosure");
   rules.append(el("summary","Story rules and M&M source note"));
   rules.append(el("p","Adventure is the continuing generated campaign. Choices and custom d20 checks are saved locally before the Story Director responds; previous chapters, combat outcomes, and unresolved leads carry forward. City arenas require physical travel through the World tab and use the shared turn-based combat system. Combat, Progress, Items, and story-check values are original M&M: RPG rules, separate from confirmed M&M facts."));

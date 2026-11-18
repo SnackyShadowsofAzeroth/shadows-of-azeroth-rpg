@@ -408,16 +408,26 @@ body.soa-ruleset-mnm .tag,
 body.soa-ruleset-mnm .abilities,
 body.soa-ruleset-mnm .soa-mnm-ai-status{color:#745739!important}
 body.soa-ruleset-mnm .soa-mnm-game-heading{
- border:3px ridge #b8955d;
- background:linear-gradient(100deg,#352116ec 0%,#50341fe3 54%,#39261bb8 100%),url("./night-harbor-hero.jpg") center 42%/cover;
- box-shadow:inset 0 0 0 2px #27180f,inset 0 1px #fff3,0 12px 28px #21130999;
+ --region-trim:#e2b468;
+ --region-setting:linear-gradient(94deg,#2a1b14f5 0%,#3c261be6 43%,#40291b44 85%),url("./night-harbor-hero.jpg") center 49%/cover;
+ border:1px solid #b8955d;border-inline-start:4px solid var(--region-trim);
+ padding:clamp(15px,2vw,24px) clamp(16px,3vw,32px);background:var(--region-setting),#38271c;
+ box-shadow:inset 0 1px #f7d79966,0 4px 13px #21130977;
+}
+body.soa-ruleset-mnm .soa-mnm-game-heading:is([data-region="underdocks"],[data-region="ail-vorith"]){
+ --region-trim:#cf9566;
+ --region-setting:linear-gradient(90deg,#25201cf2 12%,#302620bb 50%,transparent 83%),radial-gradient(ellipse at 86% 75%,#a56836 0%,transparent 32%),repeating-linear-gradient(82deg,#292623 0 29px,#38312c 30px 32px,#282522 33px 74px);
+}
+body.soa-ruleset-mnm .soa-mnm-game-heading:is([data-region="penshaw"],[data-region="faelindral"]){
+ --region-trim:#d9bd83;
+ --region-setting:linear-gradient(94deg,#30231af2 12%,#453126c9 51%,transparent 89%),radial-gradient(ellipse at 88% 0%,#c6a168 0%,transparent 41%),repeating-linear-gradient(63deg,#594730 0 9px,#5f4e36 10px 12px,#4b3e2e 13px 33px);
 }
 body.soa-ruleset-mnm .soa-mnm-game-heading h1{color:#f1d79d;text-shadow:0 2px #28190f}
 body.soa-ruleset-mnm .soa-mnm-game-heading p{color:#f1e4ca}
-body.soa-ruleset-mnm .soa-mnm-tabs{
- border:2px ridge #947044;border-radius:3px;
- background:linear-gradient(180deg,#563b29f5,#302117f7);
- box-shadow:inset 0 0 0 2px #21160f,0 7px 18px #1e120c80;
+body.soa-ruleset-mnm #soa-character-screen .soa-mnm-tabs{
+ gap:3px;padding:4px;border:1px solid #a28255;border-radius:3px;
+ background:#34251d;
+ box-shadow:inset 0 1px #d4b47c44,0 3px 8px #1e120c66;
 }
 body.soa-ruleset-mnm .soa-mnm-tab,
 body.soa-ruleset-mnm .soa-mnm-system-button,
@@ -429,7 +439,8 @@ body.soa-ruleset-mnm .soa-mnm-ai-primary{
 body.soa-ruleset-mnm .soa-mnm-tab:hover,
 body.soa-ruleset-mnm .soa-mnm-system-button:hover,
 body.soa-ruleset-mnm .soa-mnm-ai-primary:hover{border-color:#e4c17c;background:linear-gradient(#93693e,#634225);filter:none}
-body.soa-ruleset-mnm .soa-mnm-tab[aria-selected="true"]{color:#fff4d7;border-color:#e6bd68;background:linear-gradient(#c28b3d,#875229);box-shadow:inset 0 0 0 1px #ffe0a355,0 0 10px #b2763038}
+body.soa-ruleset-mnm .soa-mnm-tab{min-height:44px;background:#4c3527;border:1px solid #8b6a47;box-shadow:none;color:#fff0d7;font-weight:600}
+body.soa-ruleset-mnm .soa-mnm-tab[aria-selected="true"]{color:#362114;border:1px solid #e2bd7a;background:linear-gradient(#f8e8c4,#dfbe82);box-shadow:inset 0 -3px #945728;font-weight:750}
 body.soa-ruleset-mnm .soa-mnm-roster-button{border-color:#b8945d;background:linear-gradient(#79583a,#3d291d);color:#f8edd6}
 body.soa-ruleset-mnm button.low{border-left-color:#c2965b;background:linear-gradient(90deg,#785333,#4f3827)}
 body.soa-ruleset-mnm button.med{border-left-color:#e0ae55;background:linear-gradient(90deg,#8a6031,#543a26)}
@@ -478,9 +489,13 @@ body.soa-ruleset-mnm .soa-mnm-meter>span,
 body.soa-ruleset-mnm .soa-mnm-meter>strong,
 body.soa-ruleset-mnm .soa-mnm-action-slot span,
 body.soa-ruleset-mnm .soa-mnm-item-row p{color:#665039}
-body.soa-ruleset-mnm .soa-mnm-choice{border-color:#a98a5b;background:linear-gradient(145deg,#79583a,#503623);box-shadow:inset 0 1px #fff3,0 3px 7px #3a231480}
-body.soa-ruleset-mnm .soa-mnm-choice strong{color:#f3dba7}
-body.soa-ruleset-mnm .soa-mnm-choice span{color:#f1e7d3}
+body.soa-ruleset-mnm .soa-mnm-choice{position:relative;gap:5px;min-width:0;min-height:66px;margin:0;padding:13px 16px;border:1px solid #785536;border-inline-start:4px solid #bf8748;background:linear-gradient(108deg,#563a28,#443025);box-shadow:inset 0 1px #fff2,0 2px 4px #3a23144d}
+body.soa-ruleset-mnm .soa-mnm-choice strong{color:#fff1d4;font-size:clamp(1rem,1.8vw,1.2rem);line-height:1.35;overflow-wrap:anywhere}
+body.soa-ruleset-mnm .soa-mnm-choice span{color:#f4e4ca;font-size:.875rem;line-height:1.45}
+body.soa-ruleset-mnm .soa-mnm-choice-grid>.soa-mnm-system-button{margin:0;min-height:46px}
+body.soa-ruleset-mnm .soa-mnm-adventure-panel>.soa-mnm-choice{margin-block:9px}
+body.soa-ruleset-mnm .soa-mnm-adventure-panel .soa-mnm-choice:disabled{opacity:1;filter:none;border-color:#a88f6e;background:#e4d6bc;box-shadow:none;cursor:not-allowed}
+body.soa-ruleset-mnm .soa-mnm-adventure-panel .soa-mnm-choice:disabled :is(strong,span){color:#5c4938!important;text-shadow:none}
 body.soa-ruleset-mnm .soa-mnm-live,
 body.soa-ruleset-mnm .soa-mnm-rule-note,
 body.soa-ruleset-mnm .soa-mnm-feature,
@@ -540,7 +555,6 @@ body.soa-ruleset-mnm .soa-druid-panel summary{color:#49331f}
 body.soa-ruleset-mnm .soa-druid-pool[data-resource="health"] i{background:linear-gradient(#dc8862,#a54d37);box-shadow:inset 0 1px #fff4,0 0 8px #a54d3744}
 @media(max-width:700px){
  body.soa-ruleset-mnm{background-attachment:scroll;background-position:center top}
- body.soa-ruleset-mnm .soa-mnm-game-heading{background-position:center 35%}
  body.soa-ruleset-mnm .soa-mnm-adventure-panel{padding:clamp(16px,4vw,24px)}
 }
 
@@ -568,3 +582,68 @@ body.soa-ruleset-mnm .panel .soa-mnm-racial-ability .soa-mnm-custom-label{color:
 body.soa-ruleset-mnm .panel .soa-mnm-racial-ability h3{color:#f0d69d;text-shadow:0 1px #11130f}
 body.soa-ruleset-mnm .panel .soa-mnm-racial-ability p{color:#ebe5d8;line-height:1.55}
 body.soa-ruleset-mnm .panel .soa-mnm-racial-ability small{color:#cfcbc0}
+
+body.soa-ruleset-mnm main>header{
+ width:min(100%,1100px);margin:0 auto 12px;min-height:0;padding:8px clamp(12px,2vw,22px);
+ display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:2px 16px;align-items:center;text-align:start;
+ border-width:1px;border-inline:0;border-radius:0;background:#31231bed;box-shadow:0 2px 6px #21130966;
+}
+body.soa-ruleset-mnm main>header::after{content:none}
+body.soa-ruleset-mnm main>header #soa-brand-name{grid-column:1;grid-row:1/3;margin:0;font-size:clamp(18px,2.4vw,26px);letter-spacing:.035em}
+body.soa-ruleset-mnm main>header .eyebrow{grid-column:2;font-size:.65rem;letter-spacing:.11em}
+body.soa-ruleset-mnm main>header #soa-characters-button{grid-column:3;grid-row:1/3;justify-self:end;margin:0;padding:8px 12px;min-height:44px;color:#fff1d4;background:#503927;border:1px solid #aa8956}
+body.soa-ruleset-mnm .soa-mnm-game-heading h1{max-width:32ch;overflow-wrap:anywhere;font-size:clamp(1.65rem,4vw,2.5rem);letter-spacing:.015em}
+body.soa-ruleset-mnm .soa-mnm-game-heading .soa-mnm-subtitle{letter-spacing:normal}
+body.soa-ruleset-mnm .soa-mnm-game :is(.soa-mnm-adventure-panel,.soa-mnm-record){min-width:0;overflow-wrap:break-word}
+body.soa-ruleset-mnm .soa-mnm-adventure-panel>h3,
+body.soa-ruleset-mnm .soa-mnm-action-slot strong{color:#54371f;text-shadow:none}
+body.soa-ruleset-mnm .soa-mnm-adventure-panel>h2{letter-spacing:-.015em;line-height:1.16;text-wrap:balance}
+body.soa-ruleset-mnm .soa-mnm-adventure-panel .soa-mnm-ai-narrative{
+ max-width:66ch;padding:0;margin:.9em 0 1em;border:0;background:transparent;box-shadow:none;
+ color:#382617!important;font:clamp(1.06rem,1.8vw,1.24rem)/1.68 Georgia,serif!important;
+}
+body.soa-ruleset-mnm .soa-mnm-decision-heading{font:700 1.2rem/1.3 Georgia,serif;margin:1.15em 0 .45em}
+body.soa-ruleset-mnm .soa-mnm-decision-heading+.soa-mnm-choice-grid{margin-top:0}
+body.soa-ruleset-mnm .soa-mnm-ai-primary{width:auto;min-height:48px;margin-block:8px;padding:12px 20px;border:1px solid #835225;background:linear-gradient(#74401f,#57321f);color:#fff4db;font-size:.95rem}
+body.soa-ruleset-mnm .soa-mnm-encounter-resume{margin:0 0 14px;padding:12px 16px;border:1px solid #ad744e;border-inline-start:4px solid #8b4529;background:#f8e5c3;color:#402c1e}
+body.soa-ruleset-mnm .soa-mnm-encounter-resume :is(h2,h3,strong,p){color:#452e1f;text-shadow:none}
+body.soa-ruleset-mnm .soa-mnm-game .soa-mnm-live:empty{margin:0;padding:0;border:0;min-height:0;background:none;box-shadow:none}
+body.soa-ruleset-mnm .soa-mnm-game :is(.soa-mnm-ai-history,.soa-mnm-ai-connection,.soa-mnm-rules-disclosure,.soa-mnm-ai-custom-disclosure,.soa-mnm-roll-receipt){
+ margin:.65rem 0;padding:0 12px;border:1px solid #b3986c;background:#f2e3c3;color:#4c3521;box-shadow:none;
+}
+body.soa-ruleset-mnm .soa-mnm-game :is(.soa-mnm-ai-history,.soa-mnm-ai-connection,.soa-mnm-rules-disclosure,.soa-mnm-ai-custom-disclosure,.soa-mnm-roll-receipt)>summary{
+ min-height:44px;padding:12px 1px;color:#523822;cursor:pointer;font:650 .875rem/1.45 system-ui,sans-serif;text-shadow:none;
+}
+body.soa-ruleset-mnm .soa-mnm-game :is(.soa-mnm-ai-history,.soa-mnm-ai-connection,.soa-mnm-rules-disclosure,.soa-mnm-ai-custom-disclosure,.soa-mnm-roll-receipt)[open]{padding-bottom:12px}
+body.soa-ruleset-mnm :is(.soa-mnm-game,.soa-menu-card) details>summary{pointer-events:auto;cursor:pointer;list-style:disclosure-closed inside}
+body.soa-ruleset-mnm :is(.soa-mnm-game,.soa-menu-card) details[open]>summary{list-style-type:disclosure-open}
+body.soa-ruleset-mnm :is(.soa-mnm-game,.soa-menu-card) details>summary::-webkit-details-marker{display:inline-block}
+body.soa-ruleset-mnm .soa-mnm-roll-receipt[open]>summary{border-bottom:1px solid #b3986c}
+body.soa-ruleset-mnm .soa-mnm-ai-custom-disclosure .soa-mnm-ai-custom-action{margin:0;padding:0;border:0;background:none}
+body.soa-ruleset-mnm .soa-mnm-system-card p{margin:.35em 0}
+body.soa-ruleset-mnm .soa-mnm-system-card+.soa-mnm-system-card{margin-top:.6rem}
+body.soa-ruleset-mnm .soa-mnm-adventure-panel .soa-mnm-system-button{font-size:.875rem;min-height:44px}
+body.soa-ruleset-mnm .soa-mnm-game :is(a,button,summary,input,select,textarea):focus-visible,
+body.soa-ruleset-mnm .soa-menu-card :is(a,button,summary,input,select,textarea):focus-visible{
+ outline:3px solid #542b16;outline-offset:3px;box-shadow:0 0 0 3px #ffe2a1;
+}
+body.soa-ruleset-mnm footer{width:fit-content;max-width:100%;margin:24px auto 0;padding:6px 12px;background:#35251de8;color:#f3e5c9;font-size:.75rem}
+@media(min-width:940px){
+ .soa-mnm-ai-chronicle>.soa-mnm-choice-grid:has(>.soa-mnm-choice:nth-child(3):last-child){grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:700px){
+ body.soa-ruleset-mnm main{padding-block-start:max(8px,env(safe-area-inset-top));padding-bottom:max(28px,env(safe-area-inset-bottom))}
+ body.soa-ruleset-mnm main>header{grid-template-columns:minmax(0,1fr) auto;padding:4px 10px;margin-block-end:9px}
+ body.soa-ruleset-mnm main>header :is(#soa-brand-kicker,#soa-brand-tagline){display:none}
+ body.soa-ruleset-mnm main>header #soa-characters-button{grid-column:2;grid-row:1;line-height:1.2}
+ body.soa-ruleset-mnm main>header #soa-brand-name{grid-row:1}
+ body.soa-ruleset-mnm .soa-mnm-game-heading{margin:0 0 8px}
+ body.soa-ruleset-mnm #soa-character-screen .soa-mnm-tabs{margin-bottom:10px}
+ body.soa-ruleset-mnm #soa-character-screen .soa-mnm-tab{padding:7px 2px;font-size:clamp(.75rem,3.35vw,.875rem);line-height:1.2}
+ body.soa-ruleset-mnm .soa-mnm-ai-primary{width:100%}
+ body.soa-ruleset-mnm .soa-mnm-form :is(input,select){font-size:1rem}
+ body.soa-ruleset-mnm .soa-mnm-stat-breakdown{font-size:.72rem}
+ body.soa-ruleset-mnm .soa-mnm-stat-tile{column-gap:5px}
+ body.soa-ruleset-mnm .soa-mnm-record-score{min-width:0;padding:9px;column-gap:5px}
+ body.soa-ruleset-mnm .soa-mnm-system-input{min-width:0;max-width:100%}
+}

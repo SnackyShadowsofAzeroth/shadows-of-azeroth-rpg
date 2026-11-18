@@ -557,20 +557,22 @@ function renderCombat(profile,onChange,context={}){
  const h=document.createElement("h2");h.textContent="Combat";panel.append(h);
  const state=read(profile);if(!state.ok){panel.append(card("Combat paused",state.error));return panel}
  const save=state.save,rpg=save.rpg,locationId=FOES[context.locationId]?context.locationId:"night-harbor";
- panel.append(card("Deliberate turns","Choose one action to advance the fight. The foe's next move is shown before you act; after your move, it resolves and the foe reveals its next intent. Nothing attacks on a timer."));
- panel.append(card("Custom project rules","Combat math, foe values, intent effects, Focus, items, and rewards are original M&M: RPG rules, separate from official M&M formulas and ability data."));
- panel.append(card("Health and Focus","Health "+rpg.hp+" / "+rpg.maxHp+" · Focus "+rpg.focus+" / "+rpg.maxFocus+" · Level "+save.level));
  const status=statusNode();panel.append(status);
  const act=action=>{const result=resolveRpgAction(profile,action,{returnToBindPoint:context.returnToBindPoint});updateFromResult(result,onChange,status)};
  const foe=rpg.encounter;
  if(!foe){
   const regions=window.soaMnmAdventure?.regions||[],place=regions.find(row=>row.id===locationId);
-  panel.append(card("Looking for trouble",(place?.name||"This region")+" · Encounters are drawn from this area's original project foe table."));
+  const aftermath=rpg.log.find(line=>/^(Victory over |You escape from |You were defeated\.|A remembered tale persuades)/.test(line));
+  if(aftermath)panel.append(card("Last encounter",aftermath));
+  if(context.onResumeAdventure)panel.append(makeSystemButton("Continue the adventure",context.onResumeAdventure));
+  if(context.onOpenWorld)panel.append(makeSystemButton("Return to city travel",context.onOpenWorld));
+  panel.append(card(place?.name||"Beyond the city gates","Health "+rpg.hp+" / "+rpg.maxHp+" · Focus "+rpg.focus+" / "+rpg.maxFocus+". Seek a local opponent when you are ready."));
   panel.append(makeSystemButton("Find a foe",()=>{const result=startEncounter(profile,locationId);updateFromResult(result,onChange,status)}));
  }else{
-  panel.append(card("Foe intent · "+enemyIntentTitle(foe),enemyIntentDetail(foe)));
-  const encounter=card(foe.name+" · Level "+foe.level,foe.description+" Guard "+foe.defense+" · Round "+(foe.round+1)+(foe.exposed?" · Exposed":foe.braced?" · Guarded":""));
-  const hp=document.createElement("p");hp.textContent="Foe health "+foe.hp+" / "+foe.maxHp;encounter.append(hp);panel.append(encounter);
+  h.textContent=foe.name;
+  const encounter=card("Round "+(foe.round+1)+" · Foe intent: "+enemyIntentTitle(foe),enemyIntentDetail(foe));
+  const hp=document.createElement("p");hp.textContent="Foe health "+foe.hp+" / "+foe.maxHp+" · Guard "+(foe.defense+(foe.braced?2:0))+(foe.exposed?" · Exposed":"");encounter.append(hp);
+  const vitals=document.createElement("p");vitals.textContent="Your health "+rpg.hp+" / "+rpg.maxHp+" · Focus "+rpg.focus+" / "+rpg.maxFocus;encounter.append(vitals);panel.append(encounter);
   const actions=document.createElement("div");actions.className="soa-mnm-choice-grid";
   actions.append(makeSystemButton("Strike · take your turn",()=>act("attack"),profile.classId==="rogue"&&!!foe.playerHidden));
   actions.append(makeSystemButton("Feint · AGI · 1 Focus",()=>act("feint"),rpg.focus<1));
@@ -583,12 +585,15 @@ function renderCombat(profile,onChange,context={}){
   actions.append(makeSystemButton("Try to escape",()=>act("flee")));
   panel.append(actions);
  }
- const log=document.createElement("section");log.className="soa-mnm-system-card";const logHeading=document.createElement("h3");logHeading.textContent="Encounter journal";log.append(logHeading);
+ if(foe?.round>0&&rpg.log[0]===foe.log[0]&&rpg.log[2])panel.append(card("Last exchange",rpg.log[2]+" "+rpg.log[1]));
+ const log=document.createElement("details");log.className="soa-mnm-system-card";const logHeading=document.createElement("summary");logHeading.textContent="Encounter journal · dice and damage";log.append(logHeading);
  const entries=document.createElement("ol");entries.className="soa-mnm-journal";for(const line of rpg.log.slice(0,12)){const row=document.createElement("li");row.textContent=line;entries.append(row)}log.append(entries);panel.append(log);
  const memorized=save.memorizedAbilities.filter(Boolean).map(id=>PAGES.flatMap(page=>save.abilityBook[page]).find(item=>item.id===id)).filter(Boolean);
- panel.append(card("Memorized abilities",memorized.length?memorized.map(item=>item.name+" · level "+item.level).join(" · "):"No verified M&M abilities are memorized. Basic Strike, Guard, Feint, items, and escape remain available."));
- panel.append(card("Using class abilities","Only learned, memorized, class-matching M&M ability records can appear here. This game uses separate custom d20 resolution. Backstab requires Stealth and gains the custom exposed-opening bonus; official M&M damage ratios and cooldowns are not simulated."));
- const sources=document.createElement("p");sources.className="soa-mnm-system-sources";sources.append(link("Official combat controls and ability rules","https://monstersandmemories.com/new-player-guide"));const classSource=STARTER_CLASS_ABILITIES[profile.classId]?.sourceUrl;if(classSource)sources.append(document.createTextNode(" · "),link("Official class ability Deep Dive",classSource));panel.append(sources);
+ const guide=document.createElement("details");guide.className="soa-mnm-system-card";const guideTitle=document.createElement("summary");guideTitle.textContent="Combat rules and memorized abilities";guide.append(guideTitle);panel.append(guide);
+ guide.append(card("Taking a turn","Choose one action to advance the fight. Your action resolves first. A foe still standing can respond. A basic Strike costs no Focus and restores one Focus on a hit. Combat uses original M&M: RPG rules."));
+ guide.append(card("Memorized abilities",memorized.length?memorized.map(item=>item.name+" · level "+item.level).join(" · "):"No verified M&M abilities are memorized. Basic Strike, Guard, Feint, items, and escape remain available."));
+ guide.append(card("Using class abilities","Only learned, memorized, class-matching M&M ability records can appear here. This game uses separate custom d20 resolution. Backstab requires Stealth and gains the custom exposed-opening bonus; official M&M damage ratios and cooldowns are not simulated."));
+ const sources=document.createElement("p");sources.className="soa-mnm-system-sources";sources.append(link("Official combat controls and ability rules","https://monstersandmemories.com/new-player-guide"));const classSource=STARTER_CLASS_ABILITIES[profile.classId]?.sourceUrl;if(classSource)sources.append(document.createTextNode(" · "),link("Official class ability Deep Dive",classSource));guide.append(sources);
  return panel;
 }
 function renderProgress(profile,onChange,context={}){

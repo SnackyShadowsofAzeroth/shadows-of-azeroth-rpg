@@ -115,8 +115,9 @@ test("M&M adventure tabs use readable desktop and phone grids",()=>{
  assert.match(mnmUiCss,/\.soa-ruleset-mnm #soa-character-screen \.soa-mnm-tabs\{display:grid!important;grid-template-columns:repeat\(8,minmax\(0,1fr\)\)/);
  assert.match(mnmUiCss,/@media\(max-width:900px\)\{[\s\S]*?\.soa-ruleset-mnm #soa-character-screen \.soa-mnm-tabs\{grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
  assert.match(mnmUiCss,/\.soa-ruleset-mnm \.soa-mnm-tab\{[^}]*text-align:center[^}]*white-space:normal/);
- assert.match(html,/href="\.\/mnm-ui\.css\?v=16"/);
- assert.match(serviceWorker,/\.\/mnm-ui\.css\?v=16/);
+ const stylesheet=html.match(/href="(\.\/mnm-ui\.css\?v=\d+)"/);
+ assert.ok(stylesheet,"The M&M theme must have a versioned URL");
+ assert.ok(serviceWorker.includes(JSON.stringify(stylesheet[1])),"Precache the same theme URL the player receives");
 });
 
 test("contract and bounty board belongs to the Quest tab",()=>{

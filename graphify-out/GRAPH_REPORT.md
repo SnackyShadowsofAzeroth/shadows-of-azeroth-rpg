@@ -1,17 +1,17 @@
-# Graph Report - game-custom-choices  (2026-11-13)
+# Graph Report - mm-playability  (2026-11-17)
 
 ## Corpus Check
-- 81 files · ~79,761 words
+- 85 files · ~91,794 words
 - Verdict: corpus is large enough that graph structure adds value.
-- Unclassified: 15 file(s) not represented in the graph (top: .css 11, (none) 2, .webmanifest 1)
+- Unclassified: 14 file(s) not represented in the graph (top: .css 11, (none) 1, .webmanifest 1)
 
 ## Summary
-- 991 nodes · 1794 edges · 87 communities (70 shown, 17 thin omitted)
-- Extraction: 89% EXTRACTED · 11% INFERRED · 0% AMBIGUOUS · INFERRED: 201 edges (avg confidence: 0.85)
+- 1133 nodes · 2160 edges · 87 communities (70 shown, 17 thin omitted)
+- Extraction: 89% EXTRACTED · 11% INFERRED · 0% AMBIGUOUS · INFERRED: 232 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `81fc81b3`
+- Built from commit: `e215dacd`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -25,14 +25,14 @@
 - progression.js
 - steps
 - dungeons.test.js
-- companions.js
-- api/campaign.js
+- boot
+- mnm-chronicle.js
 - mobile-layout.test.js
 - quests.js
 - steps
 - equipment.js
 - save-rules.js
-- ref_node_assert
+- ref_node_test
 - reputation.js
 - enemy-combat-display.test.js
 - racial-abilities.test.js
@@ -47,7 +47,7 @@
 - relationship-onboarding.test.js
 - selection-timeout.test.js
 - specializations.test.js
-- story-actions.test.js
+- mnm-ai-chronicle.js
 - dungeons.js
 - enchanting.js
 - Project Memory
@@ -64,11 +64,11 @@
 - arena.js
 - crafting.js
 - init
-- ref_node_vm
-- check-syntax.cjs
+- mnm-ai-chronicle.test.js
+- mnm-custom-rpg.test.js
 - ref_node_path
-- character-rules.test.js
-- class-themes.test.js
+- ref_node_vm
+- ref_node_test
 - quests-migration.test.js
 - resource-rules.test.js
 - package.json
@@ -92,34 +92,34 @@
 - Reversible Stormwind SI:7 visual theme (v10)
 - AGENTS.md
 - mnm-systems.js
-- boot
+- check-syntax.cjs
 - M&M Race Lore and Class Eligibility
-- ref_node_path
-- ref_node_vm
+- mnm-starting-city.test.js
+- ref_node_fs
 
 ## God Nodes (most connected - your core abstractions)
-1. `M&M: RPG — Development Handoff` - 38 edges
+1. `M&M: RPG — Development Handoff` - 39 edges
 2. `M&M: RPG — Living Campaign (v0.3)` - 37 edges
 3. `choose()` - 26 edges
 4. `draw()` - 26 edges
-5. `livingEnemies()` - 23 edges
-6. `advance()` - 19 edges
-7. `boot()` - 19 edges
-8. `fightExchange()` - 17 edges
-9. `result()` - 17 edges
-10. `status()` - 17 edges
+5. `boot()` - 23 edges
+6. `renderInventory()` - 23 edges
+7. `livingEnemies()` - 23 edges
+8. `mutate()` - 20 edges
+9. `advance()` - 19 edges
+10. `render()` - 18 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `Mission ledger phase 2 (2026-10-16)` --references--> `save()`  [INFERRED]
   DEVELOPMENT_HANDOFF.md → public/companions.js
-- `questPanel()` --indirect_call--> `current()`  [INFERRED]
-  public/chronicle.js → public/druid.js
 - `render()` --indirect_call--> `view()`  [INFERRED]
   public/mnm-adventure.js → public/chronicle.js
-- `perform()` --indirect_call--> `save()`  [INFERRED]
-  public/mnm-adventure.js → public/companions.js
+- `questPanel()` --indirect_call--> `current()`  [INFERRED]
+  public/chronicle.js → public/druid.js
 - `organizeGameSections()` --indirect_call--> `get()`  [INFERRED]
   public/characters.js → public/class-abilities.js
+- `persistAiCampaign()` --indirect_call--> `save()`  [INFERRED]
+  public/mnm-adventure.js → public/companions.js
 
 ## Import Cycles
 - None detected.
@@ -132,11 +132,11 @@ Nodes (75): accessCode(), actionOdds(), advance(), bribeCopper(), canonicalStory
 
 ### Community 1 - "M&M: RPG — Development Handoff"
 Cohesion: 0.05
-Nodes (38): 2026-10-16 equipment visibility and legacy narration cleanup, Approved character requirements, Automatic class UI skins: Druid woodland (2026-10-22), Character-card equipped gear relocation (2026-10-16), Classic dungeon expeditions (2026-10-23), Code review and consistency hardening (2026-10-16), Combat overhaul (2026-10-16), Companion combat update (2026-10-16) (+30 more)
+Nodes (39): 2026-10-16 equipment visibility and legacy narration cleanup, Approved character requirements, Automatic class UI skins: Druid woodland (2026-10-22), Character-card equipped gear relocation (2026-10-16), Classic dungeon expeditions (2026-10-23), Code review and consistency hardening (2026-10-16), Combat overhaul (2026-10-16), Companion combat update (2026-10-16) (+31 more)
 
 ### Community 2 - "characters.js"
 Cohesion: 0.11
-Nodes (32): applyProfession(), baseState(), commitRoster(), create(), defaults(), deleteCharacter(), drawMenu(), drawProfessions() (+24 more)
+Nodes (35): applyProfession(), baseState(), characterLevel(), clearCharacterSaveState(), clearLegacySaveState(), commitRoster(), create(), deleteCharacter() (+27 more)
 
 ### Community 3 - "druid.js"
 Cohesion: 0.18
@@ -151,8 +151,8 @@ Cohesion: 0.08
 Nodes (24): Architecture, Campaign Chronicle, chapter system and Quest Journal (v30), Campaign continuity audit and guardrails (v20), Canonical story transition: Hollow Raven → Stormwind (v21), Combat health and damage ledger (v29), Companion conversations in Adventure (v32), Companion identities and class specializations (v34), Custom dialogue now changes relationships (+16 more)
 
 ### Community 6 - "progression.js"
-Cohesion: 0.24
-Nodes (20): award(), awardCore(), bar(), battle(), bonus(), check(), commitMutation(), companionBadge() (+12 more)
+Cohesion: 0.12
+Nodes (31): award(), awardCore(), bar(), battle(), bonus(), check(), commitMutation(), companionBadge() (+23 more)
 
 ### Community 7 - "steps"
 Cohesion: 0.09
@@ -162,17 +162,17 @@ Nodes (22): concurrency, cancel-in-progress, group, runs-on, steps, timeout-minu
 Cohesion: 0.09
 Nodes (8): assert, Element, fs, path, setup(), source(), test, vm
 
-### Community 9 - "companions.js"
-Cohesion: 0.25
-Nodes (19): add(), adjust(), applyDialogueOutcome(), applyStoryConsequence(), canSpendNightTogether(), draw(), encounter(), establishedPeople() (+11 more)
+### Community 9 - "boot"
+Cohesion: 0.13
+Nodes (44): add(), adjust(), applyDialogueOutcome(), applyStoryConsequence(), canSpendNightTogether(), draw(), encounter(), establishedPeople() (+36 more)
 
-### Community 10 - "api/campaign.js"
-Cohesion: 0.18
-Nodes (17): clean(), fetchGeminiWithRetry(), intentionalTravel(), json(), onRequestGet(), onRequestPost(), polishNarrative(), REGION_MARKERS (+9 more)
+### Community 10 - "mnm-chronicle.js"
+Cohesion: 0.09
+Nodes (43): clean(), fetchGeminiWithRetry(), intentionalTravel(), json(), onRequestGet(), onRequestPost(), polishNarrative(), REGION_MARKERS (+35 more)
 
 ### Community 11 - "mobile-layout.test.js"
-Cohesion: 0.11
-Nodes (17): assert, campaign, characterCss, characters, chronicleStyles, element(), fs, html (+9 more)
+Cohesion: 0.10
+Nodes (18): assert, campaign, characterCss, characters, chronicleStyles, element(), fs, html (+10 more)
 
 ### Community 12 - "quests.js"
 Cohesion: 0.23
@@ -190,7 +190,7 @@ Nodes (13): baselineModifiers(), canonicalSlots(), equip(), equipment(), formatS
 Cohesion: 0.23
 Nodes (10): readStoredJSON(), reportCorruption(), validateCampaignSave(), validateCharacterRoster(), validateChronicle(), validateCompanionsSave(), validateOfflineSave(), validateProgressionSave() (+2 more)
 
-### Community 16 - "ref_node_assert"
+### Community 16 - "ref_node_test"
 Cohesion: 0.25
 Nodes (3): assert, campaignModule, test
 
@@ -250,9 +250,9 @@ Nodes (8): assert, end, fs, path, source, start, test, vm
 Cohesion: 0.18
 Nodes (10): assert, classes, context, fs, path, profile, root, test (+2 more)
 
-### Community 31 - "story-actions.test.js"
-Cohesion: 0.19
-Nodes (11): assert, bearReturnSetup(), block(), campaignSource, fs, path, setup(), ctx (+3 more)
+### Community 31 - "mnm-ai-chronicle.js"
+Cohesion: 0.14
+Nodes (40): apiRequest(), chapterRecord(), chooseAction(), commitCampaign(), contextCharacter(), continueLocally(), createCampaign(), currentRegion() (+32 more)
 
 ### Community 32 - "dungeons.js"
 Cohesion: 0.36
@@ -263,8 +263,8 @@ Cohesion: 0.44
 Nodes (9): apply(), atEnchanter(), atTrainer(), bonuses(), disenchant(), displaySlot(), eligibleSlots(), panel() (+1 more)
 
 ### Community 34 - "Project Memory"
-Cohesion: 0.40
-Nodes (4): Graphify workflow, Monsters & Memories rewrite status, Product and architecture, Project Memory
+Cohesion: 0.29
+Nodes (6): Graphify workflow, M&M character rules, Playable custom rules and official facts, Product and architecture, Project Memory, Save, AI, and offline behavior
 
 ### Community 35 - "chronicle-anchor.test.js"
 Cohesion: 0.20
@@ -318,25 +318,25 @@ Nodes (7): addItem(), buy(), craft(), panel(), recover(), recoverable(), require
 Cohesion: 0.46
 Nodes (7): createNavigation(), group(), init(), render(), select(), removeLegacyNavigation(), sections()
 
-### Community 48 - "ref_node_vm"
-Cohesion: 0.25
-Nodes (5): assert, fs, path, {test}, vm
+### Community 48 - "mnm-ai-chronicle.test.js"
+Cohesion: 0.15
+Nodes (10): apiPromise, assert, character(), credentials, fs, path, payload(), test (+2 more)
 
-### Community 49 - "check-syntax.cjs"
-Cohesion: 0.20
-Nodes (8): files, fs, html, path, roots, { spawnSync }, visit(), vm
+### Community 49 - "mnm-custom-rpg.test.js"
+Cohesion: 0.25
+Nodes (5): assert, fs, path, test, vm
 
 ### Community 50 - "ref_node_path"
 Cohesion: 0.25
-Nodes (6): assert, context, fs, path, test, vm
+Nodes (5): assert, fs, path, {test}, vm
 
-### Community 51 - "character-rules.test.js"
-Cohesion: 0.25
-Nodes (7): assert, context, fs, path, rulesPath, sharedSkyborneClasses, vm
+### Community 51 - "ref_node_vm"
+Cohesion: 0.12
+Nodes (13): assert, context, fs, path, rulesPath, sharedSkyborneClasses, vm, assert (+5 more)
 
-### Community 52 - "class-themes.test.js"
-Cohesion: 0.25
-Nodes (6): assert, fs, path, source, test, vm
+### Community 52 - "ref_node_test"
+Cohesion: 0.14
+Nodes (10): assert, credentials, storyModule, test, assert, fs, path, source (+2 more)
 
 ### Community 53 - "quests-migration.test.js"
 Cohesion: 0.25
@@ -364,7 +364,7 @@ Nodes (4): classesFor(), displayFaction(), pathForFaction(), validSelection()
 
 ### Community 59 - "M&M Rules Conversion Plan"
 Cohesion: 0.29
-Nodes (6): Current implementation, Goal, Guardrails, M&M Rules Conversion Plan, Readiness audit (2026-11-13), Remaining conversion order
+Nodes (6): Current implementation, Goal, Guardrails, M&M Rules Conversion Plan, Readiness audit (2026-11-13), Remaining work
 
 ### Community 60 - "Reputation overhaul (v17)"
 Cohesion: 0.50
@@ -387,22 +387,22 @@ Cohesion: 0.67
 Nodes (3): Improvements, Multi-pass stability and iPhone polish review (v38), Regression review
 
 ### Community 82 - "mnm-systems.js"
-Cohesion: 0.15
-Nodes (34): card(), corpseDurationMs(), createItem(), createSave(), emptyInventory(), equippedSpellbook(), experienceMultiplier(), formatDuration() (+26 more)
+Cohesion: 0.07
+Nodes (78): addRpgItem(), attackFoe(), card(), chooseNextEnemyIntent(), claimStoryReward(), corpseDurationMs(), createEncounter(), createItem() (+70 more)
 
-### Community 83 - "boot"
-Cohesion: 0.23
-Nodes (27): addJournal(), bestClassStat(), boot(), actionList(), button(), el(), meter(), perform() (+19 more)
+### Community 83 - "check-syntax.cjs"
+Cohesion: 0.20
+Nodes (8): files, fs, html, path, roots, { spawnSync }, visit(), vm
 
 ### Community 84 - "M&M Race Lore and Class Eligibility"
 Cohesion: 0.29
 Nodes (6): Current patch exception, Custom racial features - M&M: RPG, M&M Race Lore and Class Eligibility, Race and class restrictions, Race descriptions, Writing guidance
 
-### Community 85 - "ref_node_path"
-Cohesion: 0.15
-Nodes (10): assert, credentials, storyModule, test, assert, context, fs, path (+2 more)
+### Community 85 - "mnm-starting-city.test.js"
+Cohesion: 0.20
+Nodes (6): assert, context, fs, path, test, vm
 
-### Community 86 - "ref_node_vm"
+### Community 86 - "ref_node_fs"
 Cohesion: 0.25
 Nodes (6): assert, context, fs, path, test, vm
 
@@ -412,17 +412,17 @@ Nodes (6): assert, context, fs, path, test, vm
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `save()` connect `companions.js` to `M&M: RPG — Development Handoff`, `boot`, `ref_node_path`?**
-  _High betweenness centrality (0.135) - this node is a cross-community bridge._
 - **Should `public/campaign.js` be split into smaller, more focused modules?**
   _Cohesion score 0.09996754300551769 - nodes in this community are weakly interconnected._
-- **Why does `perform()` connect `boot` to `companions.js`?**
-  _High betweenness centrality (0.083) - this node is a cross-community bridge._
 - **Should `M&M: RPG — Development Handoff` be split into smaller, more focused modules?**
-  _Cohesion score 0.05128205128205128 - nodes in this community are weakly interconnected._
-- **Why does `render()` connect `boot` to `chronicle.js`?**
-  _High betweenness centrality (0.061) - this node is a cross-community bridge._
+  _Cohesion score 0.05 - nodes in this community are weakly interconnected._
 - **Should `characters.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.11261261261261261 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.1076923076923077 - nodes in this community are weakly interconnected._
 - **Should `M&M: RPG — Living Campaign (v0.3)` be split into smaller, more focused modules?**
   _Cohesion score 0.08 - nodes in this community are weakly interconnected._
+- **Should `progression.js` be split into smaller, more focused modules?**
+  _Cohesion score 0.11932773109243698 - nodes in this community are weakly interconnected._
+- **Should `steps` be split into smaller, more focused modules?**
+  _Cohesion score 0.08695652173913043 - nodes in this community are weakly interconnected._
+- **Should `dungeons.test.js` be split into smaller, more focused modules?**
+  _Cohesion score 0.09090909090909091 - nodes in this community are weakly interconnected._
